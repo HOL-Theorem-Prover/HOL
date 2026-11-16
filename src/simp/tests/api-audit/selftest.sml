@@ -11,12 +11,11 @@ fun member x = List.exists (equal x)
 fun loaded name = member name (Meta.loaded ()) orelse
   Option.isSome (#lookupStruct PolyML.globalNameSpace name)
 fun forbidden name = String.isSuffix "Ext" name orelse
-  String.isSuffix "ExtLib" name orelse String.isPrefix "simpMarker" name
-  orelse member name ["SplitData","splitLib","splitPersistLib"]
+  String.isSuffix "ExtLib" name orelse
+  member name ["SplitData","splitLib","splitPersistLib"]
 val forbidden_names =
   ["TraverseExt","Cond_rewrExt",
-   "simpExtLib","congExtLib","simpMarkerTheory",
-   "simpMarkerLib","SplitData","splitLib","splitPersistLib"]
+   "simpExtLib","congExtLib","SplitData","splitLib","splitPersistLib"]
 val used = ref ([] : string list)
 fun files stage = List.app (fn (file,dir) =>
   print ("OBS " ^ stage ^ ".loaded.path=" ^ OS.Path.concat (dir,file) ^ "\n"))

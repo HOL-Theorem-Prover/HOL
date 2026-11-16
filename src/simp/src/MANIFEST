@@ -1,8 +1,7 @@
 High-level view of what the simplifier files in this directory do
 
-The opt-in extension engine (the *Ext* modules, splitLib and
-simpMarkerLib) depends on the ordinary simplifier, never the reverse; see
-notes.md.
+The opt-in extension engine (the *Ext* modules and splitLib) depends on
+the ordinary simplifier, never the reverse; see notes.md.
 
 Cache.sml:     Caching for context-aware decision procedures.
 
@@ -74,10 +73,6 @@ pureSimps.sml: A simpset that transforms rewrites according to
                the BOUNDED/UNBOUNDED tag.
 
 SplitData.sml: Storage of the persistent [split] rules as theory data.
-
-simpMarkerScript.sml, simpMarkerLib.sml:
-               The Split and ExcludeX markers of the extension engine's
-               theorem-list arguments, and their processing.
 
 splitLib.sml:  Case splitting with split rules, and the [split] attribute.
 

@@ -131,13 +131,13 @@ val _ = let
   exception PrematureBinding
   fun bind _ _ = (bound := !bound + 1; raise PrematureBinding)
   val _ = check "failed pretactic never invokes the binding callback"
-    (case error (simpMarkerLib.process_taclist_then_bind {arg=args} bind) of
+    (case error (markerLib.process_taclist_then_bind {arg=args} bind) of
          SOME e => String.isSubstring "No assumption of the form"
                      (Feedback.message_of e) andalso !bound = 0
        | NONE => false)
   val _ = check "successful pretactic invokes binding exactly once"
     (case Exn.capture (fn () => runtac
-       (simpMarkerLib.process_taclist_then_bind {arg=[]} bind) g) () of
+       (markerLib.process_taclist_then_bind {arg=[]} bind) g) () of
          Exn.Exn PrematureBinding => !bound = 1
        | _ => false)
 in () end
@@ -241,8 +241,8 @@ val _ = let
   val _ = tactic "generic marker tactic forwards extension markers inertly"
     (markerLib.process_taclist_then {arg=markers}
       (fn ths => (seen := ths; ALL_TAC))) ([],target) [([],target)]
-  val _ = check "generic directive classifier does not recognize extensions"
-    (List.all (not o markerLib.is_directive) markers andalso
+  val _ = check "generic tactic passes recognised extension markers on"
+    (List.all markerLib.is_directive markers andalso
      ListPair.allEq (fn (a,b) => same a b) (!seen,markers))
 in check "extension/generic tactic execution creates no split registrations"
   (registrations = ThmSetData.all_set_types () andalso

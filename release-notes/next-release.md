@@ -138,6 +138,7 @@ New features
     It also provides child-first simplification (`SIMP_CONV_CHILD_FIRST`), simplification of assumptions and conclusion to a joint fixpoint (`GEN_GLOBAL_SIMP_TAC`), exclusion of loopers, solvers and split rules from one call (`ExclX`), and rewrites prepared once for use in several calls (`prepare_rewrite_bundle`).
     Ordinary fragments and simpsets are converted for it with `lift_ssfrag` and `lift_simpset`.
     The splitter is also available on its own, as `splitLib`, which can also enable a persistent `[split]` theorem attribute (`splitLib.enable_split_attribute`).
+    Its theorem-list directives `Split` and `ExclX` are also in `markerLib`, whose `directive` type gains `DSplit` and `DExclX`; the ordinary simplifier rejects them.
     The help entry for `simpExtLib.mk_simpset` is the place to start.
 
 Bugs fixed

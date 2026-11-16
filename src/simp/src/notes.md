@@ -124,7 +124,8 @@ Loading `simpLib` or `congLib` does not load any of it.
 | `Cond_rewrExt` | Conditional rewriting with configurable depth and term order. |
 | `congExtLib` | `congLib` over extension simpsets. |
 | `splitLib`, `SplitData`, `splitPersistLib` | Case splitting, and the persistent `[split]` attribute. |
-| `simpMarker`, `simpMarkerLib` | The `Split` and `ExcludeX` markers. |
+
+Its `Split` and `ExclX` directives are markers in `src/marker` (`markerLib`), so that code built before `src/simp` can recognise them; the ordinary simplifier rejects them.
 
 The extension types are distinct from the ordinary ones, and conversion is one-way: `simpExtLib.lift_ssfrag` and `simpExtLib.lift_simpset` (which replays the ordinary simpset's history) bring ordinary fragments and simpsets into the extension engine, and `TraverseExt.lift` an ordinary `reducer`.
 There is no conversion back.

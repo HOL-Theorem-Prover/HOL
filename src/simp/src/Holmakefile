@@ -18,7 +18,7 @@ EXTRA_CLEANS = selftest.exe simp-selftest.log fresh-load-selftest.exe \
   ../tests/congruence-ext/.hol/ \
   ../tests/traverse-ext/selftest.exe \
   ../tests/traverse-ext/.hol/ split-registration.log \
-  split-persistence.log split-lifecycle.log simp-marker-tests.log \
+  split-persistence.log split-lifecycle.log \
   replay-order.log \
   $(FRESH_LOAD)/selftest.exe $(FRESH_LOAD)/.hol/ \
   $(SPLIT_REGISTRATION)/selftest.exe $(SPLIT_REGISTRATION)/.hol/ \
@@ -27,7 +27,7 @@ EXTRA_CLEANS = selftest.exe simp-selftest.log fresh-load-selftest.exe \
   ../tests/split-lifecycle/selftest.exe ../tests/split-lifecycle/repair.exe \
   ../tests/split-lifecycle/.hol/ \
   ../tests/split-lifecycle/split-proof.state \
-  ../tests/markers/selftest.exe ../tests/replay-order/selftest.exe \
+  ../tests/replay-order/selftest.exe \
   type-boundaries.log ../tests/type-boundaries/selftest.exe \
   ../tests/type-boundaries/.hol/
 
@@ -64,11 +64,11 @@ congLib.uo: congLib.sml congLib.ui congLibFn.uo \
 # library prerequisites are not imports.
 FRESH_LOAD = ../tests/fresh-load
 # The extension modules the shadowed-load launcher loads.  Its SML name
-# rule (ext_patterns in the launcher) lists the same four patterns; keep the
+# rule (ext_patterns in the launcher) lists the same three patterns; keep the
 # two in step.  Holmake has no filter-out, so the launcher skips theory
 # scripts that match a pattern.
 FRESH_EXT_UO = $(patsubst %.sml,%.uo,\
-  $(wildcard *Ext*.sml split*.sml SplitData.sml simpMarker*Lib.sml))
+  $(wildcard *Ext*.sml split*.sml SplitData.sml))
 FRESH_SCENARIOS = control attribute-first set-first attribute-after set-after \
   syntax-first
 
@@ -202,20 +202,11 @@ simp-selftest.log: selftest.exe
 	$(tee ./selftest.exe,$@)
 endif
 
-# Simplifier-owned directives and the characterized generic replay contract.
-.PHONY: simp-marker-tests replay-order
-simp-marker-tests: simpMarkerLib.uo
-	$(HOLDIR)/bin/Holmake --no-project --no-cache -j1 -C ../tests/markers selftest.exe
-	$(tee cd ../tests/markers && ./selftest.exe,simp-marker-tests.log)
-
+.PHONY: replay-order
 replay-order: SplitData.uo splitLib.uo
 	$(HOLDIR)/bin/Holmake --no-project --no-cache -j1 -C ../tests/replay-order selftest.exe
 	$(tee cd ../tests/replay-order && ./selftest.exe,replay-order.log)
 
 ifdef HOLSELFTESTLEVEL
-all: simp-marker-tests replay-order
-endif
-
-ifeq ($(KERNELID),otknl)
-all: simpMarker.ot.art
+all: replay-order
 endif

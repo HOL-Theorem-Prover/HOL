@@ -511,7 +511,14 @@ val tactic_only = simpCommon.tactic_only
    result, so it is an error.  Assumption-policy directives are the
    tactic layer's too, but rule-level calls inside a tactic (SIMP_RULE
    within FULL_SIMP_TAC) still see them, so they are dropped.  Bounded
-   rewrites are honoured by the rewriter and pass through. *)
+   rewrites are honoured by the rewriter and pass through.  Split and ExclX
+   are the extension simplifier's; ignoring one would silently change the
+   result, so they are errors too. *)
+fun extension_only name =
+    raise ERR ("process_tags",
+               name ^ " is honoured only by the extension simplifier " ^
+               "(simpExtLib)")
+
 fun process_tags ss thl =
     let
       fun sort (th, acc as (congs, acs, excls, exclfrags, frags, rest)) =
@@ -534,6 +541,8 @@ fun process_tags ss thl =
             | SOME (DIgnAsm _) => acc
             | SOME (DAbbr _) => acc
             | SOME (DLabel _) => acc
+            | SOME (DSplit _) => extension_only "Split"
+            | SOME (DExclX _) => extension_only "ExclX"
       val (congs, acs, excludes, exclfrags, frags, rst) =
           List.foldr sort ([], [], [], [], [], []) thl
     in

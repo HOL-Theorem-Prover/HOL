@@ -13,15 +13,15 @@ val _ = check "goal_split_rules on a COND goal gives the bool type rules"
   (same_concls (splitLib.goal_split_rules [tm],
                 splitLib.type_split_rules bool));
 val local_ss = (add_split rule bool_ss ++ split_ss) &&
-  [simpMarkerLib.ExclX "case:bool"];
+  [markerLib.ExclX "case:bool"];
 val (goals,_) = runtac (VALID (SIMP_TAC local_ss [])) ([],tm);
 val _ = check "explicit extension splitting works under foreign ownership"
   (case goals of [([],g)] => not (aconv g tm) | _ => false);
 val _ = check "local extension use leaves persistence uninitialized"
   (null (named_split_thms ()) andalso no_private ());
 val _ = List.app (fn name => check ("qualified extension marker: " ^ name)
-  (same_const (Parse.Term [QUOTE ("simpMarker$" ^ name)])
-     (prim_mk_const {Thy="simpMarker",Name=name}))) ["Split","ExcludeX"];
+  (same_const (Parse.Term [QUOTE ("marker$" ^ name)])
+     (prim_mk_const {Thy="marker",Name=name}))) ["Split","ExcludeX"];
 val entry = Context.snapshot ();
 val entry_hooks = hooks ();
 val outcome = Exn.capture enable_split_attribute ();

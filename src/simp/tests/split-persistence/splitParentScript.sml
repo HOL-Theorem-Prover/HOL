@@ -1,6 +1,6 @@
 Theory splitParent[bare]
 Libs
-  HolKernel Parse boolLib splitLib splitPersistLib simpMarkerLib testutils
+  HolKernel Parse boolLib splitLib splitPersistLib markerLib testutils
 
 (* Libs initializes this script; the ML dependency initializes fresh imports.
    It belongs on this earliest split-bearing theory, not just its child. *)
@@ -17,6 +17,6 @@ val _ = if map #1 (splitLib.named_split_thms ()) =
              ["splitParent$drop", "splitParent$keep"]
         then testutils.OK () else testutils.die "parent split names"
 
-(* Exported extension theorems must record their new theory dependency. *)
-Theorem split_marker = simpMarkerLib.Split boolTheory.TRUTH;
-Theorem exclusion_marker = simpMarkerLib.ExclX "case:bool";
+(* Exported marker theorems must keep their marker$ constants. *)
+Theorem split_marker = markerLib.Split boolTheory.TRUTH;
+Theorem exclusion_marker = markerLib.ExclX "case:bool";

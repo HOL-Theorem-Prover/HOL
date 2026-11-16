@@ -34,6 +34,9 @@ with `&&`, rule, looper and solver exclusions remove what the simpset
 contains at that point, while split and case exclusions also suppress
 matching split rules added later.
 
+`simpExtLib.ExclX` is [`markerLib.ExclX`](#markerLib.ExclX). The ordinary
+simplifier (`simpLib`) cannot honour it, and fails if given it.
+
 ### Failure
 
 Never fails. The simplifier call fails if the target is malformed,
@@ -50,6 +53,7 @@ ambiguous or matches nothing.
 ### See also
 
 [`simpLib.Excl`](#simpLib.Excl),
+[`markerLib.ExclX`](#markerLib.ExclX),
 [`simpExtLib.add_looper`](#simpExtLib.add_looper),
 [`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
 [`simpExtLib.add_split`](#simpExtLib.add_split),
