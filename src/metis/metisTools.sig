@@ -62,4 +62,6 @@ val FULL_METIS_PROVE : thm list -> term -> thm  (* + combinators & booleans *)
 val METIS_TAC   : thm list -> tactic
 val METIS_PROVE : thm list -> term -> thm
 
+val metis_trace : HOLFlags.flag
+
 end

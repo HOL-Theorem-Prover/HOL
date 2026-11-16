@@ -20,7 +20,7 @@ loadPath :=
 
 map load ["quantHeuristicsTheory"];
 load "ConseqConv"
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 quietdec := true;
 *)
 

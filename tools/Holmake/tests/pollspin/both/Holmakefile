@@ -15,7 +15,11 @@ all: hung talky
 hung:
 	echo starting ; exec 1>&- 2>&- ; sleep 2 && touch hung
 
-# See talky/Holmakefile for why this runs from the parent directory.
+# chatter.exe is run from its own directory because it is a wrapper
+# that asks hol to load the `chatter' module, and that is looked up
+# relative to the working directory.  `&&' rather than `;' so that a
+# chatter which failed to run cannot leave a touched target behind
+# looking like a build that worked.
 talky:
 	( cd .. && ./chatter.exe ) && touch talky
 

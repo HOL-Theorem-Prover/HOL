@@ -8,7 +8,7 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 
 val _ = numLib.temp_prefer_num();
 

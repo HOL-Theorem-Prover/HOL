@@ -27,7 +27,8 @@ all: lsp-protocol-selftest.log
 # `sorting' groups run servers too, and are deliberately not listed
 # against them: nine more tests are not worth another 50s per edit.
 LSPDIR = $(dprot $(HOLDIR)/tools-poly/lsp)
-LSPINIT = $(LSPDIR)/deferred_proofs.ML $(LSPDIR)/pretty_printers_init.ML \
+LSPINIT = $(LSPDIR)/error_locn_init.ML $(LSPDIR)/deferred_proofs.ML \
+          $(LSPDIR)/pretty_printers_init.ML \
           $(LSPDIR)/defnbase_init.ML $(LSPDIR)/hover_quote_init.ML \
           $(LSPDIR)/tactic_steps.ML $(LSPDIR)/tactic_walker.ML \
           $(LSPDIR)/goal_state_init.ML $(LSPDIR)/db_symbols_init.ML \

@@ -170,7 +170,7 @@ sig
   (* A pretty printer is defined and added for PMATCH.
      Whether it is use can be controled via the trace
 
-     "use pmatch_pp"
+     "patternMatches.use_pp"
   *)
 
   (* Enable Parser *)
@@ -270,5 +270,7 @@ sig
      generator for strings starting with [pr], which are all distinct
      from each other *)
   val mk_new_label_gen : string -> (unit -> string)
+
+  val use_pp : HOLFlags.bflag
 
 end

@@ -218,7 +218,7 @@ Boolean variables only, not arbitrary HOL terms.
 #### Tracing
 
 Tracing output can be controlled via
-`Feedback.set_trace "HolQbfLib"`.  See the source code in
+`HOLFlags.set_trace "HolQbfLib"`.  See the source code in
 `QbfTrace.sml` for possible values.
 
 Communication between HOL and Squolem is via temporary files.

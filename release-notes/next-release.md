@@ -21,6 +21,10 @@ Contents
 New features
 ------------
 
+-   Types and constants of theories loaded from disk now get canonical kernel ids, the same in every process whatever was loaded before.
+    On Poly/ML runtimes with dependent modules, `Meta.configureTheoryModuleCache` saves a loaded theory's signature, theorems and decoded data in a module (up to `Meta.theoryModuleWriteLimit` per process), so later loads skip compiling the generated code and reading the `.dat`, and repeat only the theory's registration and load hooks.  `Meta.writeTheoryModules` writes modules from `.dat` files alone, for stores the loading processes must not write.
+    Missing or unusable modules fall back to source loading.
+
 -   A new theorem attribute, `datatype_simp`, says how a datatype's induction principle should be phrased.
 
     A type that recurses under an operator gets induction hypotheses stated through that operator's set function, which is correct but is not how a development states its own lemmas, so proofs normalise them by hand at every induction.
@@ -36,7 +40,7 @@ New features
     The package now automatically defines map, set and relator constants for those types that are themselves functors (*e.g.*, lists), and the user can specify what names they want for those new constants.
 
 -   `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
-    Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
+    Files that use this feature do not need to mention `HOLFlags.set_trace "TheoryPP.include_html_docs" 0` anymore.
     (Indeed, see below, that trace doesn’t exist with that name anymore.)
 
 -   Lists and finite-map updates (previously achieved with `LUPDATE v i l` and `fm |+ (k,v)` syntax) can now be written with a syntax using the “maps to” arrow and special bracket delimiters.
@@ -81,6 +85,12 @@ New features
 
     See the *Project files* sub-section of *Maintaining HOL Formalizations with Holmake* in the DESCRIPTION manual.
 
+-   `tools/h4pedant` now also checks `Holmakefile`s: a `Holmakefile` that declares an `all` rule must leave `all` as the directory's *default goal*, which is to say `all` must be its first explicit target.
+    Because `Holmake` builds that first target when given none on the command line — and because `src/parallel_builds/core` reaches most of `src/` recursively with `CLINE_OPTIONS = -r`, which asks each included directory for exactly its default goal — a rule written above `all` silently reduces a directory to building that one rule's target.
+    Nothing fails when this happens; the directory just builds less than it owes, and what goes missing is whatever nothing else depends on, typically its self-test.
+    A `Holmakefile` with no `all` rule has nothing to demote and is not checked.
+    The check is disabled for a subtree with `default_goal_ok = true` under `[h4pedant]` or `[[h4pedant.dir]]`, and globally with `--nodefaultgoal`.
+
 -   Holmake now uses recorded build times to do its parallel scheduling of build tasks.
     This can make a big difference to wall clock times when building big projects.
     Further, a project can now commit a *seed* of build times for this purpose, so that a fresh checkout schedules well before it has measured anything itself.
@@ -97,6 +107,11 @@ New features
     `n = 2` allows at most two concurrent jobs total while any of this directory's targets is running, and so on.
 
 -   `Holmake` (under Poly/ML) takes a new option `--retry-oos=n`, which allows each target up to `n` further attempts when its build fails with the Poly/ML runtime reporting that it has run out of store.
+
+-   Every trace that a library exposes to its users is now also available as a *value*, not only as a string.
+    `HOLFlags.create_trace` and `create_btrace` return a `flag` (or `bflag`) naming what they made, and the owning module exports it: `Parse.show_types`, `Theory.allow_rebinds`, `blastLib.trace`, `wordsLib.guessing_word_lengths` and so on.
+    Passing one to `set_flag`, `set_bflag`, `with_flags` or `with_bflags` is checked when the caller is compiled, where `set_trace "PP.typse" 1` fails only when that line is reached.
+    The string form still works and remains the right choice when the name is computed at run time.
 
 -   `bossLib` provides three new short names for common tactics:
     * `have ‘t’` states an intermediate result, leaving it as the first subgoal and adding it (stripped) to the assumptions of the other; it is the tactic already available as `sg`.
@@ -122,6 +137,18 @@ New features
 Bugs fixed
 ----------
 
+- HolRefute's model finder now builds adaptive scopes one solver batch at
+  a time, avoids repeated cardinality-repair and monotonicity work, and
+  reports counted reasons when Kodkod problems cannot be assembled.
+
+-   HolRefute now applies polymorphic `upd_box` type patterns to concrete instances.
+-   Omega's model reconstruction no longer fails when eliminating a variable
+    leaves a single constrained variable and another unconstrained variable.
+
+-   Once `intLib` was loaded, simplifying a ground integer division by zero with `srw_ss`, *e.g.*, `SIMP_CONV (srw_ss()) [] “5 % 0i”`, never returned.
+    The simplifier's integer-calculation conversion now fails on terms it cannot reduce, as the `num` one already did.
+    HolRefute's certificate replay also bounds the simplification of each leaf, so a looping rewrite there no longer uses up the whole replay deadline.
+
 -   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
     Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
@@ -140,6 +167,12 @@ Bugs fixed
     An uncaught exception is deliberately not treated the same way: the declarations after it still run and the run still succeeds, because the script did reach its end.
 
 -   `Holmake -r` now overrides `--no_prereqs`, as the documentation has always said it does.
+
+-   `Holmake`'s progress display no longer assumes that anything it can call a terminal will act on the carriage returns the display is made of.
+    Emacs runs an `M-x compile` subprocess on a pty, so `Holmake` took its output for a terminal's and animated the running jobs in place; because a compilation buffer never moves back over a line it has printed, a whole build's worth of status updates piled up into one enormous line, which Emacs then hid behind a clickable `[...]` button -- taking every per-target completion line with it.
+    An Emacs compilation or `comint` buffer is now recognised as not being a terminal, whatever `TERM` says, so each job is announced and reported on a line of its own instead; `M-x term`, `ansi-term` and `vterm` are terminals and still get the animated display.
+    The `Scanning` frames of the opening directory walk, which mean something only while each is overwriting the last, are likewise printed only on a terminal: elsewhere just the `Scanned `*n*` directories` line they end with is.
+    `Holmake` also now takes the terminal width from `COLUMNS` when `stty size` cannot answer, which is how Emacs passes it the window width.
 
 -   Three kernel bugs (github issues [#1838](https://github.com/HOL-Theorem-Prover/HOL/issues/1838), [#1839](https://github.com/HOL-Theorem-Prover/HOL/issues/1839), and [#1840](https://github.com/HOL-Theorem-Prover/HOL/issues/1840)) in CV-compute were fixed.
     Thanks to Ramana Kumar for finding these!
@@ -175,12 +208,38 @@ Bugs fixed
     `mkFileline` now reads the text once, keeping the offsets of its newlines and the position after each `#(FILE=…)` / `#(LINE=…)` pragma, and answers each query by binary search; the same files now scan 0.9 million characters and take 2.2s.
     Two errors of the cursor go with it: a backward move onto the line of a `#(LINE=n,c)` pragma reported the column as if the pragma were absent, and a malformed `#(LINE=…)` pragma could raise `Subscript`.
 
+-   The language server's 30-second backstop on a goal-state or try-tactic answer could fail to fire, leaving the server unresponsive to every later request.
+    Its single interrupt was caught by the pretty-printing of the answer, which renders as empty on any error, so a rendering that looped ran on unbounded.
+    The pretty-printer now lets the interrupt through, and the request answers with a timeout instead.
+    
 -   Loading a theory merged its parents' simpsets, grammars and other ancestry-based data by walking each parent's whole ancestry again and decoding every parent list on the way, once per kind of data.
     Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors now takes about half the CPU time it did.
     What is merged, and in what order, is unchanged.
 
+-   When a process loaded a theory's ancestors, each kind of ancestry-based data (simpsets, grammars, theorem sets and the rest) built the set of ancestors of every loaded theory, though most of these sets were never read.
+    A theory's ancestor sets are now built when its data is first read, and kept as bit vectors; on a theory with 3,832 ancestors, the live heap after loading them falls from 1,756 MB to 1,066 MB.
+    What is merged, and in what order, is unchanged, except that a loaded theory whose recorded ancestry names the theory itself (as after `set_grammar_ancestry [current_theory(), "bool"]`) now gets its own value; before, it had none.
+
+-   `DefnBase.current_userdefs` and `DefnBase.thy_userdefs` failed with a `prim_mk_const` error in any session that had defined a function with recursion or complex patterns.
+    TFL registers the support definitions it makes on the way (the `_tupled` one, for example) as user definitions and then deletes their constants once the real definition is made, so the table of user definitions kept entries for constants that no longer existed.
+    Such entries are now skipped.
+
+-   `global_simp_tac` (behind `gvs` and `gs`) did a lot of work again on every round.
+    Each round simplifies every assumption in the context of the others, and it re-simplified assumptions that had come out unchanged under exactly the same context the round before, and turned every context assumption into rewrites again for every assumption it simplified.
+    It now skips the first and reuses the second; and the contextual decision-procedure cache behind `ARITH_ss` and its kin summarises each context once rather than on every lookup.
+    The tactics' results are unchanged.
+    Over 476 slow `gvs`/`gs` calls recorded from a large development, skipping the unchanged assumptions and summarising each context once cut the time from 96.1s to 84.8s, with identical subgoals for every call.
+
+-   The scratch files of the SML-inspection tools (`smlOpen`, `smlExecScripts`, `smlRedirect`, and so TacticToe) went by default to one directory per user, `$XDG_CACHE_HOME/hol4/scratch`, so two HOL builds run at once by the same user overwrote each other's files there, and one could fail with `OpenStruct` while building the documentation.
+    Unless `HOL4_SCRATCH` names a directory, each process now uses a subdirectory of its own there, which is removed when the process exits.
+    When `HOL4_TACTICTOE_CACHE` is set, those subdirectories go under its `tmp/scratch` directory, as was intended; before, that setting was ignored whenever `XDG_CACHE_HOME` or `HOME` was set.
+
 New theories
 ------------
+
+-   `expMod` provides binary modular exponentiation and its accumulator
+    correctness equation. AKS numeric computations and elliptic prime-field
+    computations now share this implementation.
 
 -  `lebesgue_measure`: The equivalence of Lebesgue and Gauge integration.
    A (measurable) function is Lebesgue integrable iff it is Gauge absolutely integrable.
@@ -248,6 +307,11 @@ New examples
     ring interface, with inverse laws and a homogeneous-coordinate
     denominator-clearing example checked by `ringLib.RING_TAC`.
 
+-   `examples/algebra/primality` provides kernel-checked Lucas primality
+    certificates, using the shared `expMod` implementation and its `cv_std`
+    translations, with examples for elliptic-curve primes. Decimal certificate
+    keys are normalized before lookup, including keys with leading zeros.
+
 -   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 
 -  `examples/lambda/barendregt`: new theories (`solvable`, `boehm`, `lameta_complete`, `separability`, etc.) containing a formalisation of Böhm trees, Böhm's separation theorem for untyped λ-calculus, completeness of λη-equational theory, Wadsworth's theorem (solvable iff has hnf), Takahashi's modern proofs about η-reduction, etc.
@@ -273,6 +337,25 @@ Incompatibilities
     `holyHammer.lemmas_glob` has been removed in favor of `main_hh_lemmas`.
     Z3 is no longer in the default prover set: `z3` remains registered but
     has no scheduler slices.
+
+-   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
+    Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.
+    When two independently loaded ancestors translate the same pattern differently, loading still works, but using that pattern fails with an "ambiguous translation" error naming both theorems until one is removed with `cv_rep_delete`.
+    The same theorem reached through several ancestors is not a conflict.
+
+-   AKS's `computeBasic` no longer defines numeric modular exponentiation;
+    use `expModTheory` for `exp_mod_binary`, `exp_mod_step`, their definitions,
+    and their correctness equations. The `exp_mod_compute` wrapper and its
+    theorems have been removed; use `exp_mod_binary` instead.
+    Elliptic's `field$modexp` and Miller–Rabin's `miller_rabin$modexp` have
+    likewise been replaced by `expMod$exp_mod_binary`. Miller–Rabin's witness
+    now uses the core function's value for modulus 1 and exponent 0: 0, not 1.
+    The old `MODEXP_CORRECT` and `MODEXP_ML` exports have been removed.
+    The ACL2 example's fuelled `modexpa` now takes a fifth argument, an
+    accumulator: use `modexpa b n a b 1` to compute `exp_mod_binary a b n`.
+    With zero fuel and nonzero modulus it returns `acc MOD n`, rather than
+    the old constant `1`; with modulus zero it follows the core expression
+    `(acc * a ** b) MOD 0`, regardless of fuel.
 
 -   `Term.subst` now fails if the same redex occurs more than once in its theta-list, whether or not the repeats map it to the same residue.
     Previously such a theta-list was silently resolved by letting the last entry win, which did not agree with the first-match lookup used while terms are being matched.
@@ -340,6 +423,29 @@ Incompatibilities
     An `itself` argument over a *parameter* rather than over the type being declared — a field of type `'a itself` pinning a type variable that occurs nowhere else — does not recurse and is unaffected.
 
 -   `ind_types.munge_ind_thm` is now `legacyInduction.munge_ind_thm`.
+
+-   HOL's flags and traces have moved out of `Feedback` and `Globals` into a new structure, `HOLFlags`.
+    The settings now live in a slot of the prevailing `Context.t`, so they travel with a context across `Context.snapshot` and `Context.restore`, and the `C`-suffixed accessors (`get_flagC`, `set_bflagC`, …) read and write the flags of a context the caller supplies rather than the ambient one.
+
+    `set_trace`, `current_trace`, `reset_trace`, `reset_traces`, `trace`, `traces` and `with_traces` keep their types and behaviour; they are reached as `HOLFlags.…` rather than `Feedback.…`, and are no longer in scope unqualified through `open HolKernel`.
+
+-   `Feedback.register_trace` and `register_btrace` are replaced by `HOLFlags.create_trace` and `create_btrace`, which have a different shape: where the old pair adopted a reference the caller already held, the new pair creates the trace and returns `{get, set, flag}`.
+
+    `Feedback.register_ftrace`, which registered a trace over an arbitrary get/set pair, **has no replacement**.
+    One consequence is visible in the kernel: `Context`'s two ambient-read diagnostics could not be re-registered, because `HOLFlags` keeps its map in a `Context.Data` slot and so is built on `Context`.
+    They are now set with `Context.set_ambient_report_level` and `Context.set_ambient_sig_report_level` instead of with a trace.
+
+-   Trace names are now qualified by the library that owns them, and contain no spaces.
+    For example `"types"` is `"PP.types"`, `"assumptions"` is `"PP.show_assums"`, `"metis"` is `"metis.trace"`, `"simplifier"` is `"simplifier.trace"`, `"word printing"` is `"words.printing"`, `"bit blast"` is `"blastLib.trace"`, and `"Univ pretty-printing"` is `"pred_set.univ_printing"`.
+    `HOLFlags.traces()` lists what a session has.
+
+    The `"Unicode"` trace is gone.
+    It was registered as the *inverse* of `"PP.avoid_unicode"`, and the new machinery has no inverting alias, so uses of it should be written in terms of `Parse.avoid_unicode` with the sense flipped: `set_trace "Unicode" 0` becomes `HOLFlags.set_bflag (Parse.avoid_unicode, true)`.
+
+-   The printing and parsing flags that used to be references in `Globals` — `show_types`, `show_assums`, `show_tags`, `show_axioms`, `show_numeral_types`, `show_scrub`, `guessing_tyvars`, `guessing_overloads` and `notify_on_tyvar_guess` — are no longer references, so `:=`, `!` and `Lib.with_flag` do not apply to them.
+    They are values of type `HOLFlags.bflag`, set with `HOLFlags.set_bflag` and bracketed with `HOLFlags.with_bflags`.
+    `Parse` exports the common ones; `show_tags` and `show_axioms` come from `HOLFlags` itself.
+    `type_pp.pp_num_types` and `type_pp.pp_array_types` have gone the same way, as `type_pp.num_types` and `type_pp.array_types`.
 
 Deprecations
 ------------

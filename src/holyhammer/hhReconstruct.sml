@@ -26,7 +26,7 @@ val reconstruction_timeout = ref 1.0
    Minimization and pretty-printing
  -----------------------------------------------------------------------------*)
 
-val TC_OFF = trace ("show_typecheck_errors", 0)
+val TC_OFF = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
 (* the trace setting, the timeout and the handler all have to span the
    context application, which is when the tactic does its work *)
 fun timeout_tactic t tac g =

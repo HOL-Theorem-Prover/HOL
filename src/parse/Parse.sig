@@ -303,5 +303,14 @@ signature Parse = sig
     structure UChar : UnicodeChars
   end
 
+  (* common parse/pp flags *)
+  val avoid_unicode : HOLFlags.bflag
+  val show_types : HOLFlags.bflag
+  val show_assums : HOLFlags.bflag
+
+  val ambiguous_grammar_warning : HOLFlags.flag
+  val notify_on_tyvar_guess : HOLFlags.bflag
+  val show_typecheck_errors : HOLFlags.bflag
+  val show_syntax_errors : HOLFlags.bflag
 
 end

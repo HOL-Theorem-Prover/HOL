@@ -6,6 +6,9 @@ sig
   datatype stack_terminal = datatype parse_term_dtype.stack_terminal
   val STtoString : term_grammar.grammar -> stack_terminal -> string
 
+  val ambiguous_grammar_warning : HOLFlags.flag
+  val show_syntax_errors : HOLFlags.bflag
+
   val initial_pstack : 'a PStack
   val is_final_pstack : 'a PStack -> bool
   val top_nonterminal : term PStack -> Absyn.absyn

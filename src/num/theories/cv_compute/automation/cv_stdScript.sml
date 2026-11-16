@@ -4,12 +4,19 @@
 Theory cv_std
 Ancestors
   cv cv_type arithmetic words byte cv_rep cv_prim pair list option sum
-  alist indexedLists rich_list sptree finite_set
+  alist indexedLists rich_list sptree finite_set expMod
 Libs
   dep_rewrite wordsLib cv_typeLib cv_repLib cv_transLib
 
 Overload Num[local] = “cv$Num”
 Overload Pair[local] = “cv$Pair”
+
+(*----------------------------------------------------------*
+   modular exponentiation
+ *----------------------------------------------------------*)
+
+val _ = cv_trans exp_mod_step_def;
+val _ = cv_trans exp_mod_binary_def;
 
 (*----------------------------------------------------------*
    pair

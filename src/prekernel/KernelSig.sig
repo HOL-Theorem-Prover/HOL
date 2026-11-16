@@ -23,6 +23,16 @@ sig
   exception NotPresent of kernelname
   val empty_table : 'a symboltable
   val insert : kernelname * 'a -> 'a symboltable -> 'a symboltable * kernelid
+  (* For types and constants of theories loaded from disk: refuses a name
+     already present; the first such insertion of a name in the process
+     gets the canonical epoch, canonical_type_epoch for insert_sealed_type
+     and canonical_const_epoch for insert_sealed_const. *)
+  val canonical_type_epoch : int
+  val canonical_const_epoch : int
+  val insert_sealed_type : kernelname * 'a -> 'a symboltable ->
+                           'a symboltable * kernelid
+  val insert_sealed_const : kernelname * 'a -> 'a symboltable ->
+                            'a symboltable * kernelid
   val find : 'a symboltable * kernelname -> kernelid * 'a
   val peek : 'a symboltable * kernelname -> (kernelid * 'a) symtab_error
   val symtab_epoch : 'a symboltable -> int

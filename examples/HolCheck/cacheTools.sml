@@ -253,9 +253,9 @@ fun mk_inv_fp_ante args ithml ithm chc state seth  =
                          val _=  DMSG(TM(List.last args)) val _=dbgTools.DST (dpfx^" last args\n") (*DBG*)*)
                          val (l,bod) = strip_forall (concl ithm)
                          val jf = (fn _ => let val (ql,_) = strip_forall(concl cthm)
-                                               (*val _ = with_flag (show_types,true) DMSG(TM(List.hd ql))  *)
+                                               (*val _ = HOLFlags.with_bflags [(Parse.show_types, true)] DMSG(TM(List.hd ql))  *)
                                                (*val _ = dbgTools.DST (dpfx^ " hd ql\n") (*DBG*)*)
-                                               (*val _ = with_flag(show_types,true) DMSG(TM(List.last ql))  *)
+                                               (*val _ = HOLFlags.with_bflags [(Parse.show_types, true)] DMSG(TM(List.last ql))  *)
                                                (*val _ =dbgTools.DST (dpfx^ " last ql\n") (*DBG*)*)
                                                val geninv = ISPECL [List.hd args, List.last args,List.hd ql,List.last ql] ithm
                                                (*val _ = dbgTools.DTH (dpfx^ geninv) val _ = dbgTools.DST (dpfx^  " geninv\n") (*DBG*)*)
@@ -328,9 +328,9 @@ fun mk_inv_thm opr args env ithml (githms as [AP_I,RV_I,T_I,F_I,NEG_I,NEG_I2,CON
     let val _ = dbgTools.DEN dpfx "mit" (*DBG*)
         val _ = profTools.bgt (dpfx^"mit")(*PRF*)
         val res = case (fst (dest_const opr)) of
-            "AP"      => let (*val _ = with_flag(show_types,true) dbgTools.DTH (dpfx^   AP_I)  (*DBG*)
+            "AP"      => let (*val _ = HOLFlags.with_bflags [(Parse.show_types, true)] dbgTools.DTH (dpfx^   AP_I)  (*DBG*)
                              val _ = dbgTools.DST (dpfx^  " (AP_I)\n") (*DBG*)
-                             val _ = with_flag(show_types,true)dbgTools.DTM (dpfx^  (List.hd args)) (*DBG*)
+                             val _ = HOLFlags.with_bflags [(Parse.show_types, true)]dbgTools.DTM (dpfx^  (List.hd args)) (*DBG*)
                              val _ = dbgTools.DST (dpfx^  " (hd args)\n") (*DBG*) *)
                          in ISPEC (List.hd args) AP_I end
           | "RV"      => ISPEC (List.hd args) RV_I (* note this is not used if this RV is current bound *)

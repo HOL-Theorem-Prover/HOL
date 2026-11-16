@@ -63,4 +63,6 @@ sig
    val MOVE_COND_RULE: term -> rule
    val PC_CONV: string -> conv
    val PRE_COND_CONV: conv -> conv
+  val spec_debug : HOLFlags.bflag
+
 end

@@ -1,10 +1,40 @@
 
 open HolKernel Parse boolLib bossLib cvTheory cv_repTheory cv_primTheory;
-open cv_string_fmapTheory;
+open cv_string_fmapTheory cv_stdTheory;
 open cv_typeTheory cv_typeLib cv_repLib cv_transLib;
 open arithmeticTheory integerTheory wordsTheory sptreeTheory wordsLib;
 
 val _ = new_theory "scratch"
+
+(* These use translations restored from cv_std, before translating locally. *)
+val _ = List.app
+  (fn (tm, expected) =>
+    testutils.convtest ("cv_eval: " ^ term_to_string tm,
+                       cv_eval, tm, expected))
+  [(“exp_mod_binary 3 10 17”, “8:num”),
+   (“exp_mod_binary 3 11 17”, “7:num”),
+   (“exp_mod_binary 3 0 17”, “1:num”),
+   (“exp_mod_binary 0 0 17”, “1:num”),
+   (“exp_mod_binary 0 7 17”, “0:num”),
+   (“exp_mod_binary 3 5 0”, “243:num”),
+   (“exp_mod_binary 3 0 0”, “1:num”),
+   (“exp_mod_binary 3 0 1”, “0:num”),
+   (“exp_mod_binary 3 12 1”, “0:num”),
+   (“exp_mod_step 3 10 17 5”, “6:num”),
+   (“exp_mod_step 3 11 17 5”, “1:num”),
+   (“exp_mod_step 3 0 17 123”, “4:num”),
+   (“exp_mod_step 3 10 17 0”, “0:num”),
+   (“exp_mod_step 3 5 0 5”, “1215:num”),
+   (“exp_mod_binary 3 1000000000000000000000000000001 17”, “3:num”)]
+
+val use_exp_mod_def = Define ‘
+  use_exp_mod b e m = exp_mod_binary b e m
+’
+
+val _ = cv_trans use_exp_mod_def
+val _ = testutils.convtest
+  ("cv_trans: reuse modular exponentiation", cv_eval,
+   “use_exp_mod 3 1000000000000000000000000000001 17”, “3:num”)
 
 (*---------------------------------------------------------------------------*
   Testing only cv_type
@@ -56,6 +86,9 @@ val ty = “:('a,'b,'c) word_tree”
 val res = define_from_to ty
 val _ = (type_of “from_scratch_word_tree f0 t” = “:cv$cv”) orelse fail()
 
+(* cv_std already encodes spt: its constructors' translations must be
+   removed before another encoding can translate them *)
+val _ = cv_rep_delete "cv_std.cv_rep_sptree_sptree_spt_datatype"
 val res = define_from_to “:'a sptree$spt”
 
 val _ = Datatype‘
@@ -201,6 +234,8 @@ val num_sum_def = Define `
 `
 
 val res = cv_trans num_sum_def;
+(* cv_std translates LENGTH already; replace that translation *)
+val _ = cv_rep_delete "cv_std.cv_LENGTH_thm";
 val res = cv_trans listTheory.LENGTH;
 (* val res = cv_trans_pre "" lookup_def; *)
 
@@ -387,3 +422,28 @@ val _ = testutils.convtest
   ("cv_eval finite-set cardinality with duplicates", cv_eval,
    “finite_set$fCARD (finite_set$fset_ABS [1; 2; 1; 3; 2] : num fset)”,
    “3:num”);
+
+(*---------------------------------------------------------------------------*
+  Conflicting cv_rep translations and cv_rep_delete
+ *---------------------------------------------------------------------------*)
+
+val cv_inc_thm = fetch "-" "cv_inc_thm";
+val cv_inc_weak = DISCH “T ∧ T” cv_inc_thm;
+
+(* the same theorem under a second name is not a conflict *)
+val _ = save_thm ("cv_inc_again[cv_rep]", cv_inc_thm);
+val _ = cv_eval “inc 3” |> concl |> rhs |> aconv “4:num” orelse fail();
+
+(* a different translation of inc is *)
+val _ = test_for_failure save_thm ("cv_inc_weak[cv_rep]", cv_inc_weak);
+
+(* after removing both names of the first translation, the second can be
+   added and used *)
+val _ = cv_rep_delete "cv_inc_thm";
+val _ = test_for_failure save_thm ("cv_inc_weak[cv_rep]", cv_inc_weak);
+val _ = cv_rep_delete "cv_inc_again";
+val _ = save_thm ("cv_inc_weak2[cv_rep]", cv_inc_weak);
+val _ = test_for_failure cv_rep_delete "cv_inc_thm";
+val _ = cv_eval “inc 3” |> concl |> rhs |> aconv “4:num” orelse fail();
+
+val _ = test_for_failure cv_rep_delete "no_such_cv_rep_thm";

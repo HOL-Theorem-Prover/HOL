@@ -1,0 +1,23 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `current_trace`
+
+``` hol4
+HOLFlags.current_trace : string -> int
+```
+
+------------------------------------------------------------------------
+
+Returns the current value of the tracing variable specified.
+
+### Failure
+
+Fails if the name given is not associated with a registered tracing
+variable.
+
+### See also
+
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

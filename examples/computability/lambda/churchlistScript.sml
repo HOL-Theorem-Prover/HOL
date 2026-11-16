@@ -7,7 +7,7 @@ Libs
 
 val lSYM = MATCH_MP chap2Theory.lameq_SYM
 
-val _ = set_trace "Unicode" 1
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, false)
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 Definition ccons_def:

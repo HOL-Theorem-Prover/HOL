@@ -8,7 +8,7 @@ loadPath := (Globals.HOLDIR ^ "/examples/separationLogic/src") ::
             !loadPath;
 
 map load ["finite_mapTheory", "separationLogicTheory"];
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open HolKernel Parse boolLib separationLogicTheory

@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Three deliberate reaches outside the [Refute] signature.  One is a
+(* Four deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -17,7 +17,11 @@ local open Refute_Rat Refute_Real in end
    theory bracket, called by "a theory bracket leaves the global message
    flags alone": the defect it pins is a process-global flag held flipped
    while a sibling backend of the same call runs, and the only public
-   observer would be a second backend racing the first. *)
+   observer would be a second backend racing the first.  The fourth is
+   [Refute_Cert.equality_portfolio], called by "a looping srw_ss
+   conversion stops at the step limit": the bound is on one replay step, and
+   the only public observer of a looping step is the whole call's
+   deadline. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -29,7 +33,7 @@ in end
 
 val _ = Thm.setCT "scratch"
 val _ = numLib.prefer_num ()
-val _ = Feedback.set_trace "Refute" 0
+val _ = HOLFlags.set_flag (Refute_Core.Private.trace, 0)
 
 val erc = ref 0
 val _ = diemode := Remember erc
@@ -80,7 +84,7 @@ fun capture level action =
     fun output text = chunks := text :: !chunks
     val result = Lib.with_flag (Feedback.MESG_outstream, output)
       (Lib.with_flag (Feedback.WARNING_outstream, output)
-        (Feedback.with_traces [("Refute", level)] action)) ()
+        (HOLFlags.with_traces [("Refute.trace", level)] action)) ()
   in
     (result, String.concat (rev (!chunks)))
   end
@@ -760,9 +764,9 @@ val _ = test "quiet suppresses all output" (fn () =>
   end)
 
 val _ = test "quiet restores the output state after an exception" (fn () =>
-  Feedback.with_traces [("Refute", 4)] (fn () =>
+  HOLFlags.with_traces [("Refute.trace", 4)] (fn () =>
     ((ignore (refute (exhaustive |> upd_expect ExpectNone) arith); false)
-     handle HOL_ERR _ => Feedback.current_trace "Refute" = 4)) ())
+     handle HOL_ERR _ => HOLFlags.current_trace "Refute.trace" = 4)) ())
 
 val _ = test "polymorphic goals never get a QC-only NoCounterexample"
   (fn () =>
@@ -2081,10 +2085,10 @@ val _ = test "a theory bracket leaves the global message flags alone"
   (fn () =>
     let
       val saved_info = !Feedback.emit_INFO
-      val saved_tyvar = !Globals.notify_on_tyvar_guess
+      val saved_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
       fun restore () =
         (Feedback.emit_INFO := saved_info;
-         Globals.notify_on_tyvar_guess := saved_tyvar)
+         HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, saved_tyvar))
     in
       (* Compare against a baseline this test sets, never the ambient one.
          Every Refute call above has already used a quiet window, so a
@@ -2094,16 +2098,16 @@ val _ = test "a theory bracket leaves the global message flags alone"
       Portable.finally restore (fn () =>
         let
           val _ = Feedback.emit_INFO := true
-          val _ = Globals.notify_on_tyvar_guess := true
+          val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true)
           val held = Refute_EvalEnum.held_bracket (fn () => ())
           val _ = Refute_EvalEnum.start_held_bracket held (fn () => ())
           val held_info = !Feedback.emit_INFO
-          val held_tyvar = !Globals.notify_on_tyvar_guess
+          val held_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
           val _ = Refute_EvalEnum.close_held_bracket held
           val quiet =
             Refute_EvalEnum.quiet_theory_work (fn () => !Feedback.emit_INFO)
           val after_info = !Feedback.emit_INFO
-          val after_tyvar = !Globals.notify_on_tyvar_guess
+          val after_tyvar = HOLFlags.get_bflag Parse.notify_on_tyvar_guess
           val restored_after_raise =
             (Refute_EvalEnum.quiet_theory_work
                (fn () => raise Fail "quiet_theory_work"); false)
@@ -2551,6 +2555,120 @@ val _ = mf_test "kodkod refutes and certifies a numeric goal" (fn () =>
   refute mf_num2 ``(x : num) = 0`` |> cex_where (fn c =>
     kodkod_genuine c andalso #substrate c = "kodkod" andalso
     Option.isSome (#cert c)))
+
+(* A four-column relation cannot fit a 256-atom universe. Both sound
+   and liberal assembly reject it. *)
+val arity_goal = ``(r : 'a -> 'a -> 'a -> 'a -> bool) a b c d``
+val arity_config = mf |> upd_mono [(NONE, SOME false)]
+
+val _ = mf_test "exhausted arity rejections retain one counted reason"
+  (fn () =>
+    case refute (arity_config |> upd_card [(NONE, [256])]) arity_goal of
+        Unknown reasons =>
+          (case List.filter (String.isSubstring "problems rejected:") reasons of
+               [reason] => String.isSubstring "2 problems rejected:" reason
+                 andalso String.isSubstring "arity 4" reason
+                 andalso String.isSubstring "universe of size 256" reason
+             | _ => false)
+      | _ => false)
+
+(* A removed working directory makes overlord-mode solver setup fail
+   after problem assembly, independently of directory permissions. *)
+val _ = mf_test "assembly rejections survive solver setup exceptions"
+  (fn () =>
+    let
+      val original = OS.FileSys.getDir ()
+      val directory = OS.FileSys.tmpName ()
+      val _ = OS.FileSys.remove directory
+      val _ = OS.FileSys.mkDir directory
+      val cfg = arity_config |> upd_card [(NONE, [2, 256])]
+        |> upd_overlord true
+      fun run () =
+        let
+          val _ = OS.FileSys.chDir directory
+          val _ = OS.FileSys.rmDir directory
+          val result = refute cfg arity_goal
+        in
+          unknown_with "SysErr" result andalso
+          unknown_with "2 problems rejected:" result andalso
+          unknown_with "arity 4" result
+        end
+    in
+      Portable.finally (fn () => OS.FileSys.chDir original) run ()
+    end)
+
+(* The first adaptive batch includes scopes too large to assemble. Block
+   its first model display so the body cannot race its deadline. *)
+val _ = mf_test "adaptive arity rejections survive interrupted display"
+  (fn () => registration_context (fn () =>
+    let
+      val entered = ref false
+      val never = Synchronized.var "rejection deadline test" ()
+      fun display tm =
+        (entered := true;
+         Synchronized.guarded_access never (fn _ => NONE);
+         tm)
+      val _ = register_term_postprocessor ``:'a`` display
+      val result = refute
+        (arity_config |> upd_iterative_card [(NONE, [1])]
+          |> upd_batch_size 256 |> upd_timeout 30.0)
+        arity_goal
+    in
+      !entered andalso unknown_with "timed out" result andalso
+      unknown_with "2 problems rejected:" result andalso
+      unknown_with "arity 4" result andalso
+      unknown_with "universe of size 256" result
+    end))
+
+val _ = mf_test "rejected scopes do not hide a genuine counterexample"
+  (fn () =>
+    let
+      val (result, text) = capture 2 (fn () =>
+        refute (arity_config |> upd_card [(NONE, [2, 256])]
+          |> upd_quiet false) arity_goal)
+    in
+      result |> cex_where (fn c => kodkod_genuine c andalso
+        List.exists (fn (key, value) =>
+          key = "problems_rejected" andalso value = 2) (#stats c))
+      andalso String.isSubstring "2 problems rejected:" text
+      andalso String.isSubstring "arity 4" text
+    end)
+
+val _ = mf_test "published counterexamples retain rejection stats on timeout"
+  (fn () => registration_context (fn () =>
+    let
+      val calls = ref 0
+      val block_at = ref (NONE : int option)
+      val blocked = ref false
+      val never = Synchronized.var "published counterexample timeout" ()
+      fun display term =
+        (calls := !calls + 1;
+         if SOME (!calls) = !block_at then
+           (blocked := true;
+            Synchronized.guarded_access never (fn _ => NONE))
+         else ();
+         term)
+      val _ = register_term_postprocessor ``:refute$rf3`` display
+      val cfg = arity_config |> upd_timeout 10.0
+        |> upd_card [(SOME ``:refute$rf3``, [3]), (NONE, [1, 256])]
+        |> upd_max_genuine 2 |> upd_max_potential 0
+      val goal = ``(x : refute$rf3) = rf3_1 \/
+        (r : 'a -> 'a -> 'a -> 'a -> bool) a b c d``
+      fun witnesses (Counterexample cs) = cs | witnesses _ = []
+      fun counted (c : counterexample) =
+        List.exists (fn (key, value) =>
+          key = "problems_rejected" andalso value = 2) (#stats c)
+      val normal = witnesses (refute cfg goal)
+      (* Block the final display callback of the second model, after the
+         first witness is published. Only the outer timer can end this run. *)
+      val _ = block_at := SOME (!calls)
+      val _ = calls := 0
+      val recovered = witnesses (refute cfg goal)
+    in
+      length normal = 2 andalso !blocked andalso length recovered = 1
+      andalso List.all counted (normal @ recovered)
+    end))
+
 
 (* [zoo_simp_neg]'s negated [refute_simp] clause restates it, replacing the
    DefnBase equations, so [zoo_simp_neg 0] is unconstrained and models of
@@ -4465,6 +4583,21 @@ val _ = sound_group "real soundness" frac_bounds (List.map (fn (n, g) =>
 
 (* Named model-finder behaviours. *)
 
+val _ = mf_test "polymorphic box patterns box concrete function arguments"
+  (fn () =>
+    let
+      val goal = ``(f : (num -> bool) -> bool) p``
+      fun check configure expected =
+        refute (mf |> cards [1, 2] |> configure) goal
+        |> cex_where (fn c =>
+          Option.isSome (scope_of c ``:(num, bool) refute$funbox``)
+          = expected)
+    in
+      check I false andalso
+      check (upd_box [(SOME ``:num -> bool``, SOME true)]) true andalso
+      check (upd_box [(SOME ``:'a -> bool``, SOME true)]) true
+    end)
+
 val clean_certificate = certifies
 
 val _ = mf_level2 "polymorphic goals are certified at small scopes" (fn () =>
@@ -4490,6 +4623,26 @@ val _ = mf_level2 "type variables share a scope" (fn () =>
         (((\y : 'b. \z : 'b. y = z) O (\x : 'a. \y : 'b. y = f x)) u v)``
   |> cex_where (fn c => is_genuine c andalso scope_of c ``:'a`` = SOME 1
                         andalso scope_of c ``:'b`` = SOME 2))
+
+(* Adaptive refill must reach the solver before materializing the rest
+   of a finite frontier. With batch size one the
+   witness needs a later refill, so one batch cannot become a search cap. *)
+val _ = mf_test "adaptive scopes are materialized one solver batch at a time"
+  (fn () =>
+    let
+      val cfg = mf |> upd_iterative_card [(NONE, [1, 2, 3])]
+        |> upd_batch_size 1 |> upd_quiet false
+      val (result, text) = capture 2 (fn () =>
+        refute cfg ``(x : refute$rf3) = y``)
+      val frontiers = List.filter
+        (String.isSubstring "Refute model scope frontier: ")
+        (String.tokens (fn c => c = #"\n") text)
+    in
+      (case frontiers of
+           first :: _ => String.isSuffix " = 1" first
+         | [] => false) andalso
+      length frontiers >= 2 andalso genuine result
+    end)
 
 val _ = mf_level2 "monotonicity is reported" (fn () =>
   let
@@ -4760,6 +4913,31 @@ val _ = mf_level2 "certificates replay at large and structured scopes"
                                     ``ZooNode (ZooLeaf 0) (ZooLeaf 0)``]))
         ``(?t : zoo_tree. t = ZooLeaf 0) ==> !u : zoo_tree. u = ZooLeaf 0``
     end)
+
+(* ------------------------------------------------------------------- *)
+(* Leaf simplification.                                                 *)
+(* ------------------------------------------------------------------- *)
+
+val _ = section "leaf simplification"
+
+val _ = test "a looping srw_ss conversion stops at the step limit" (fn () =>
+  let
+    val name = "refute_selftest_loop"
+    val loop = simpLib.name_ss name (simpLib.conv_ss
+      {name = name, key = NONE, trace = 2, conv = K (K Thm.REFL)})
+    fun step _ input conversion =
+      SOME (conversion input)
+      handle Interrupt => raise Interrupt | _ => NONE
+    val tm = ``(p : bool) /\ q``
+    val _ = BasicProvers.augment_srw_ss [loop]
+    val result = Exn.capture (Timeout.apply (Time.fromSeconds 30)
+      (Refute_Cert.equality_portfolio 2 step)) tm
+    val _ = BasicProvers.diminish_srw_ss [name]
+  in
+    case Exn.release result of
+        SOME theorem => Term.aconv (Refute_Cert.rhs_of theorem) tm
+      | NONE => false
+  end)
 
 (* ------------------------------------------------------------------- *)
 (* Potential counterexamples and retries.  Registers a restricted       *)

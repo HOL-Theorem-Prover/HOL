@@ -13,6 +13,8 @@ FNET_UI = $(protect $(SIGOBJ)/FinalNet-sig.ui)
 FNET_UID = $(dprot $(SIGOBJ)/FinalNet-sig.ui)
 FCTXT_UI = $(protect $(SIGOBJ)/FinalContext-sig.ui)
 FCTXT_UID = $(dprot $(SIGOBJ)/FinalContext-sig.ui)
+FFLAGS_UI = $(protect $(SIGOBJ)/FinalHOLFlags-sig.ui)
+FFLAGS_UID = $(dprot $(SIGOBJ)/FinalHOLFlags-sig.ui)
 
 TAG_UOD = $(dprot $(SIGOBJ)/Tag.uo)
 TYPE_UID = $(dprot $(SIGOBJ)/Type.ui)
@@ -52,10 +54,10 @@ endif
 Thm-sig.uo: Thm-sig.sml $(FTHM_UID) $(TERM_UID) $(TAG_UOD)
 	$(HOLMOSMLC) -c -toplevel $(FTHM_UI) $<
 
-Overlay.uo: Overlay.sml $(TYPE_UID) $(NET_UOD) $(TERM_UOD) $(FTAG_UID) Thm.uo Thm-sig.uo $(FNET_UID) $(FCTXT_UID)
+Overlay.uo: Overlay.sml $(TYPE_UID) $(NET_UOD) $(TERM_UOD) $(FTAG_UID) Thm.uo Thm-sig.uo $(FNET_UID) $(FCTXT_UID) $(FFLAGS_UID)
 	$(HOLMOSMLC) -c -toplevel \
               $(FTAG_UI) $(FTYPE_UI) $(FTERM_UI) $(FNET_UI) $(FTHM_UI) \
-              $(TYPE_UID) $(FCTXT_UI) \
+              $(TYPE_UID) $(FCTXT_UI) $(FFLAGS_UI) \
 	      Thm-sig.ui Overlay.sml
 
 

@@ -37,6 +37,7 @@ DIRNAMES = \
   projfile_undeclared_parent \
   projfile_synthetic \
   pathsquash \
+  progresslines \
   patrule_parse \
   patrule_match \
   patrule_e2e \

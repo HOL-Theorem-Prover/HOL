@@ -1,0 +1,18 @@
+INCLUDES = $(HOLDIR)/src/algebra \
+           $(HOLDIR)/src/num/extra_theories \
+           $(HOLDIR)/src/num/theories/cv_compute/automation
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo primeCertificateLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: primality-selftest.log
+
+primality-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+EXTRA_CLEANS = selftest.exe primality-selftest.log

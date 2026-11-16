@@ -126,6 +126,17 @@ unfolding, typedef/quotient/codatatype registries, ersatz table), `_Names`,
 `upd_tac_timeout` (0.5 s; `0` skips), `upd_format`, `upd_max_potential`,
 `upd_max_genuine`, `upd_merge_type_vars`; `NONE` keys are row fallbacks.
 
+Adaptive scope enumeration materializes one solver batch at a time,
+using `batch_size` (one scope under `debug`). The same cursor resumes
+until exhaustion or the search deadline; the batch size does not cap the
+search. Fixed-bound enumeration retains its 5000-candidate limit.
+
+Problems rejected during assembly for excessive relation arity, table
+size, or insufficient integer bits retain their reasons. Inconclusive
+and deadline results include each distinct reason with its rejection
+count. Successful searches print these summaries at verbosity 2;
+counterexample statistics include `problems_rejected`.
+
 Native carriers: a word of concrete width `w` has exactly `2^w` atoms
 (refused above 1024), `:char` 256; both are exact, never scope-searched,
 and turn smart binarization off (forcing it refuses by name).  Every word

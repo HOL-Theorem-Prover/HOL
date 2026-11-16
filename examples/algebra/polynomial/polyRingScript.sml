@@ -1638,7 +1638,7 @@ QED
 (* val _ = export_rewrites ["poly_neg_def"]; *)
 
 (* One way:
-- show_assums := true;
+- HOLFlags.set_bflag (Parse.show_assums, true);
 > val it = () : unit
 - weak_neg_of_zero;
 > val it =  [] |- !r. neg |0| = |0| : thm
@@ -1656,13 +1656,13 @@ QED
 > val it =  [Ring r] |- -|0| = |0| : thm
 - poly_neg_def |> SPEC_ALL |> UNDISCH |> SPEC ``|0|`` |> REWRITE_RULE [zero_poly_poly] |> REWRITE_RULE [weak_neg_of_zero] |> DISCH_ALL |> GEN_ALL;
 > val it =  [] |- !r. Ring r ==> (-|0| = |0|) : thm
-- show_assums := false;
+- HOLFlags.set_bflag (Parse.show_assums, false);
 > val it = () : unit
 *)
 
 (* Better way:
 > val it = () : unit
-- show_assums := true;
+- HOLFlags.set_bflag (Parse.show_assums, true);
 > val it = () : unit
 - group_inv_id;
 > val it =  [] |- !g. Group g ==> ( |/ #e = #e) : thm
@@ -1678,7 +1678,7 @@ QED
 > val it =  [Ring r] |- -|0| = |0| : thm
 - group_inv_id |> ISPEC ``(PolyRing r).sum`` |> REWRITE_RULE [poly_ring_property] |> UNDISCH |> PROVE_HYP (poly_add_group |> SPEC_ALL |> UNDISCH) |> DISCH_ALL |> GEN_ALL;
 > val it =  [] |- !r. Ring r ==> (-|0| = |0|) : thm
-- show_assums := false;
+- HOLFlags.set_bflag (Parse.show_assums, false);
 > val it = () : unit
 *)
 
@@ -1737,7 +1737,7 @@ val poly_neg_clauses = save_thm("poly_neg_clauses",
 (* > val poly_neg_clauses = |- !r. Ring r ==> (-|0| = |0|) /\ !h t. poly (h::t) ==> (-(h::t) = -h::-t) : thm *)
 
 (*
-- show_assums := true;
+- HOLFlags.set_bflag (Parse.show_assums, true);
 > val it = () : unit
 - group_inv_element;
 > val it =  [] |- !g. Group g ==> !x. x IN G ==> |/ x IN G : thm
@@ -1756,7 +1756,7 @@ val poly_neg_clauses = save_thm("poly_neg_clauses",
 - group_inv_element |> ISPEC ``(PolyRing r).sum`` |> UNDISCH |> PROVE_HYP (poly_add_group |> SPEC_ALL |> UNDISCH) |> SPEC_ALL |> REWRITE_RULE [poly_ring_element |> SPEC_ALL |> CONJUNCT2 |> CONJUNCT1 |> SPEC ``x:'a poly`` |> #1 o EQ_IMP_RULE |> UNDISCH];
 > val it = [Ring r] |- x IN (PolyRing r).sum.carrier ==> -x IN (PolyRing r).sum.carrier : thm
 
-- show_assums := false;
+- HOLFlags.set_bflag (Parse.show_assums, false);
 > val it = () : unit
 *)
 
