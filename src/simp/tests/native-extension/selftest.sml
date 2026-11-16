@@ -1842,6 +1842,24 @@ fun pp ss = PP.pp_to_string 200 simpLib.pp_simpset ss
      ``(surface_solver_f : bool -> 'b) surface_solver_x``,
      ``surface_solver_y:'b``)
 
+  (* The solver's tactic runs in the context given to the simplifier
+     tactic, not in the ambient one. *)
+  val marker_slot : bool Context.Data.slot =
+    Context.Data.new {name = "native-extension.tactic-solver-context",
+                      empty = false, pp = Bool.toString}
+  val marked = Context.Data.put marker_slot true (Context.snapshot ())
+  val marked_goal = ``surface_marked_p \/ ~surface_marked_p``
+  fun marked_tac g ctxt =
+    if Context.Data.get marker_slot ctxt then
+      ACCEPT_TAC (SPEC ``surface_marked_p:bool`` EXCLUDED_MIDDLE) g ctxt
+    else NO_TAC g ctxt
+  val marked_ss =
+    add_safe_solver (mk_tactic_solver ("marked solver",marked_tac))
+      pureSimps.pure_ss
+  val _ = check "mk_tactic_solver uses the simplifier tactic's context"
+    (fn () => null (#1 (GEN_SIMP_TAC {safe=true} marked_ss []
+                          ([],marked_goal) marked)))
+
   val _ = shouldfail
     {testfn=SIMP_CONV tactic_solver_ss
        [Excl "surface tactic reducer"],

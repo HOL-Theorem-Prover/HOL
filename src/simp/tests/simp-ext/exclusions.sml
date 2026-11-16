@@ -25,7 +25,8 @@ fun failure name predicate f =
   check name (case Exn.capture f () of
     Exn.Exn e => predicate e | _ => false)
 fun error text (HOL_ERR e) =
-      Feedback.top_structure_of e = "simpLib" andalso
+      (* simpCommon, shared with simpLib, reports as simpLib *)
+      mem (Feedback.top_structure_of e) ["simpExtLib","simpLib"] andalso
       String.isSubstring text (Feedback.message_of e)
   | error _ _ = false
 fun scoped f = let val saved = Context.snapshot ()

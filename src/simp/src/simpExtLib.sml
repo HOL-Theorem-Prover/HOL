@@ -52,8 +52,8 @@ fun same_rewrite_source
 
 local open markerTheory in end;
 
-fun ERR x      = STRUCT_ERR "simpLib" x ;
-fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
+fun ERR x      = STRUCT_ERR "simpExtLib" x ;
+fun WRAP_ERR x = STRUCT_WRAP "simpExtLib" x;
 
 val option_cases = simpCommon.option_cases
 val op oo = simpCommon.oo
@@ -874,7 +874,7 @@ fun del_looper_quiet name = del_looper_id_quiet (OrdinaryLooper,name)
 
 fun del_looper name ss =
   if has_looper_id (OrdinaryLooper,name) ss then del_looper_quiet name ss
-  else (HOL_WARNING "simpLib" "del_looper" ("No looper called " ^ name); ss)
+  else (HOL_WARNING "simpExtLib" "del_looper" ("No looper called " ^ name); ss)
 
 fun remove_solver name ss =
   if has_solver name ss then strategy_op (REMOVE_SOLVER_EVENT name) ss else ss
@@ -1131,11 +1131,37 @@ fun apply_exclusions ss requests =
     flush (List.foldl step (ss,[]) requests)
   end
 
+(* A tactic solver runs a tactic, which needs a context, but is called from
+   conversions, which have none.  The simplifier tactics below record the
+   context they are given, on their thread, for the length of the call.
+   Outside one, a tactic solver proves against the ambient context. *)
+local
+  val current : Context.t option ThreadLocal.t = ThreadLocal.new ()
+  fun get () = Option.join (ThreadLocal.get current)
+in
+  fun tactic_context () = get ()
+  fun with_tactic_context (tac : tactic) : tactic = fn g => fn ctxt =>
+    let
+      val old = get ()
+      fun reset () = ThreadLocal.set (current, old)
+      val () = ThreadLocal.set (current, SOME ctxt)
+      val result = tac g ctxt handle e => (reset (); raise e)
+    in
+      reset (); result
+    end
+end
+
 fun mk_tactic_solver (name,tac) =
   let
     fun solve ({context_thms,...} : TraverseExt.simp_prover_ctxt) c =
-      TAC_PROOF ((map concl context_thms,c),tac)
-      |> Lib.itlist PROVE_HYP context_thms
+      let
+        val g = (map concl context_thms,c)
+        val th = case tactic_context () of
+                     SOME ctxt => Tactical.TAC_PROOF_in ctxt (g,tac)
+                   | NONE => TAC_PROOF (g,tac)
+      in
+        Lib.itlist PROVE_HYP context_thms th
+      end
   in
     {name=name,solve=solve}
   end
@@ -1961,7 +1987,7 @@ fun add_split_marker report split ss =
     add_split split ss
     handle HOL_ERR e =>
       (if report then
-         HOL_WARNING "simpLib" "process_tags"
+         HOL_WARNING "simpExtLib" "process_tags"
                      ("Ignoring unusable Split rule: " ^ message_of e)
        else ();
        ss)
@@ -2313,7 +2339,7 @@ fun bounded_looper rounds tac g =
 (* [xdata_of] extracts traversal data from a marker-adjusted tracked set. *)
 fun gen_simp_tac_with_rounds rounds traversal
       xdata_of solver_context (mode : simp_mode) ss ths =
-  fn g =>
+  with_tactic_context (fn g =>
     let
       fun start supplied recur =
         let
@@ -2349,7 +2375,7 @@ fun gen_simp_tac_with_rounds rounds traversal
         end
     in
       simpMarkerLib.process_taclist_then_bind {arg=ths} start g
-    end
+    end)
 
 fun gen_simp_tac_with_xdata traversal xdata solver_context mode ss ths g =
   gen_simp_tac_with_rounds (ref (getlimit ss)) traversal
@@ -2401,10 +2427,16 @@ val simp_tac = SIMP_TAC
 type simptac_config = simpCommon.simptac_config
 val BF_ASSUME_TAC = simpCommon.BF_ASSUME_TAC
 
-val {FULL_SIMP_TAC, REV_FULL_SIMP_TAC, NO_STRIP_FULL_SIMP_TAC,
-     NO_STRIP_REV_FULL_SIMP_TAC} =
-    simpCommon.full_simp_tacs {simp_rule = SIMP_RULE,
-                               asm_simp_tac = ASM_SIMP_TAC}
+local
+  val tacs = simpCommon.full_simp_tacs {simp_rule = SIMP_RULE,
+                                        asm_simp_tac = ASM_SIMP_TAC}
+  fun wrap tac ss ths = with_tactic_context (tac ss ths)
+in
+  val FULL_SIMP_TAC = wrap (#FULL_SIMP_TAC tacs)
+  val REV_FULL_SIMP_TAC = wrap (#REV_FULL_SIMP_TAC tacs)
+  val NO_STRIP_FULL_SIMP_TAC = wrap (#NO_STRIP_FULL_SIMP_TAC tacs)
+  val NO_STRIP_REV_FULL_SIMP_TAC = wrap (#NO_STRIP_REV_FULL_SIMP_TAC tacs)
+end
 val full_simp_tac = FULL_SIMP_TAC
 val rev_full_simp_tac = REV_FULL_SIMP_TAC
 
@@ -2416,8 +2448,9 @@ fun popper_of (cfg : simptac_config) =
 fun psr (cfg : simptac_config) ss =
     let val popper = if #oldestfirst cfg then pop_last_assum else pop_assum
     in
-      popper (fn th =>
-                 ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th)))
+      with_tactic_context
+        (popper (fn th =>
+                    ASSUM_LIST (fn asms => stdcon cfg (SIMP_RULE ss asms th))))
     end
 
 fun allasms cfg ss (g as (asl,_)) = ntac (length asl) (psr cfg ss) g
@@ -2552,7 +2585,7 @@ fun gen_global_simp_tac_with_bound traversal bound mode
        In particular the already installed bundle must not be reconstructed
        as supplied arguments, or repaired by a second history replay. *)
   in
-    markerLib.mk_require_tac (
+    with_tactic_context o markerLib.mk_require_tac (
       markerLib.ABBRS_THEN (
         markerLib.LLABEL_RES_THEN (
           fn thl =>
