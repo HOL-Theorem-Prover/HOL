@@ -106,7 +106,7 @@ fun is_pointer_eq s1 s2 =
 
 fun thm_of_sml s =
   if is_thm s then
-    let val b = quse_string ("smlExecute.sml_thm_glob := " ^ s) in
+    let val b = quse_string ("val _ = smlExecute.sml_thm_glob := " ^ s) in
       if b then SOME (s, !sml_thm_glob) else NONE
     end
   else NONE
@@ -114,7 +114,7 @@ fun thm_of_sml s =
 fun thml_of_sml sl =
   let
     val s = "[" ^ String.concatWith " , " sl ^ "]"
-    val b = quse_string ("smlExecute.sml_thml_glob := " ^ s)
+    val b = quse_string ("val _ = smlExecute.sml_thml_glob := " ^ s)
   in
     if b then SOME (!sml_thml_glob) else NONE
   end
@@ -125,7 +125,8 @@ fun tactic_of_sml tim s =
   let
     val tactic = mk_valid s
     val program =
-      "let fun f () = smlExecute.sml_tactic_glob := (" ^ tactic ^ ") in " ^
+      "val _ = let fun f () = smlExecute.sml_tactic_glob := (" ^
+      tactic ^ ") in " ^
       "smlTimeout.timeout " ^ rts tim ^ " f () end"
     val b = quse_string program
   in
@@ -140,7 +141,7 @@ fun tactic_of_sml_no_timeout s =
   let
     val tactic = mk_valid s
     val b = quse_string
-      ("smlExecute.sml_tactic_glob := (" ^ tactic ^ ")")
+      ("val _ = smlExecute.sml_tactic_glob := (" ^ tactic ^ ")")
   in
     if b then !sml_tactic_glob
     else raise ERR "tactic_of_sml_no_timeout" s

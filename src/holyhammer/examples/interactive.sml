@@ -50,7 +50,8 @@ hhConfig.print_params ();
     ...
     cache = false (default) -- enable the result cache
     ...
-    debug_dir =  (default) -- directory for retained prover output     *)
+    debug_dir =  (default) -- directory for retained prover output
+    verbose = false (default) -- report every prover slice ...         *)
 
 (* -------------------------------------------------------------------------
    3. A first call
@@ -58,26 +59,12 @@ hhConfig.print_params ();
 
 val th1 = holyhammer ``MEM x l /\ EVERY P l ==> P x``;
 
-(*    starting vampire slice (96 facts)
-      starting e slice (128 facts)
-      starting zipperposition slice (128 facts)
-      starting vampire slice (512 facts)
-      ...                                    (one line per core)
-      vampire slice: Theorem (0.252441 s)
-      proof found by vampire:
-        metis_tac [listTheory.EVERY_MEM]
-      verified proof (replays in 0.00 s):
-        metis_tac [listTheory.EVERY_MEM]
-      zipperposition slice: Timeout (0.17836 s)
-      e slice: Timeout (0.286808 s)
-      ...                                    (the other slices stopping)
-
-    Prove the statement in a script with:
+(*  Prove the statement in a script with:
       metis_tac [listTheory.EVERY_MEM]
     val th1 = ⊢ MEM x l ∧ EVERY P l ⇒ P x: thm
 
-   The last message is the one to act on: it comes after every slice
-   has reported.                                                        *)
+   The call prints only the tactic, which Metis has already replayed.
+   Section 5 shows how to see every prover slice as it runs.            *)
 
 (* -------------------------------------------------------------------------
    4. Inside a goalstack proof
@@ -87,11 +74,7 @@ g `!l1 l2. ALL_DISTINCT (l1 ++ l2) ==> DISJOINT (set l1) (set l2)`;
 e (rpt strip_tac);
 e hh;
 
-(*      verified proof (replays in 0.00 s):
-          metis_tac [listTheory.ALL_DISTINCT_APPEND']
-      ...
-
-    Replace `hh` with:
+(*  Replace `hh` with:
       metis_tac [listTheory.ALL_DISTINCT_APPEND']
     Goal proved.
      [.] ⊢ DISJOINT (set l1) (set l2)                                     *)
@@ -106,13 +89,18 @@ e hh;
 hhConfig.hh_set ("timeout", "10");
 hhConfig.hh_get "timeout";                 (* val it = "10": string *)
 
+(* verbose reports every slice as it starts and ends, the ATP's lemmas
+   and the reconstructed proof.  It stays on for the rest of this file. *)
+
 hhConfig.hh_set ("provers", "vampire");
+hhConfig.hh_set ("verbose", "true");
 val th2 =
   holyhammer ``REVERSE (l1 ++ [x] ++ l2) = REVERSE l2 ++ x :: REVERSE l1``;
 
 (*      starting vampire slice (96 facts)
         starting vampire slice (512 facts)
         ...                                  (only Vampire slices now)
+        vampire slice: Theorem (0.06 s)
         proof found by vampire:
           metis_tac [listTheory.REVERSE_REVERSE, listTheory.REVERSE_DEF,
                      listTheory.REVERSE_APPEND, listTheory.APPEND]
@@ -272,3 +260,4 @@ val th12 =
     lemmas names with Theorem so that later hammer calls can find them. *)
 
 hhConfig.hh_unset "timeout";
+hhConfig.hh_unset "verbose";

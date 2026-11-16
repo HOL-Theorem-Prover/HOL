@@ -41,7 +41,11 @@ prover output.
 The options are `timeout`, `max_proofs`, `provers`, `slices`, `cores`,
 `filter`, `max_facts`, `format`, `type_enc`, `lam_trans`, `mono_iters`,
 `mono_instances`, `minimize`, `preplay_timeout`, `minimize_timeout`, `cache`,
-`cache_dir`, `cache_max_entries`, and `debug_dir`.  The `filter` values are:
+`cache_dir`, `cache_max_entries`, `debug_dir`, and `verbose`.  By default a
+call prints only its outcome: the verified tactic or why it failed.  With
+`verbose` set it also reports every slice as it starts and ends.
+
+The `filter` values are:
 
 * `knn`, the existing dependency-aware nearest-neighbour selector;
 * `mepo`, a relevance filter based on the goal's constants and types;

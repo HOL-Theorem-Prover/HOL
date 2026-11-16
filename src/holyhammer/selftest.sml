@@ -213,7 +213,11 @@ fun test_child root =
     val _ = hhConfig.hh_set ("minimize", "off")
     val _ = hhConfig.hh_set ("cache", "yes")
     val _ = hhConfig.hh_set ("debug_dir", join root "debug")
+    val quiet = not (#verbose (hhConfig.snapshot ()))
+    val _ = hhConfig.hh_set ("verbose", "on")
     val options : hhConfig.hh_options = hhConfig.snapshot ()
+    val _ = expect "verbose is off by default and parsed as a Boolean"
+      (quiet andalso #verbose options)
     val _ = expect "snapshot parses values and computes slices"
       (#timeout options = 23 andalso #max_proofs options = 4 andalso
        #provers options = ["e", "vampire", "zipperposition"] andalso
@@ -258,7 +262,8 @@ fun test_child root =
       (#provers (hhConfig.snapshot ()) = ["e", "vampire"])
     val _ = hhConfig.hh_unset "provers"
     val _ = List.app hhConfig.hh_unset
-      ["format", "type_enc", "lam_trans", "mono_iters", "mono_instances"]
+      ["format", "type_enc", "lam_trans", "mono_iters", "mono_instances",
+       "verbose"]
     val default_options : hhConfig.hh_options = hhConfig.snapshot ()
     val _ = expect "new option defaults preserve per-slice values"
       (#filter default_options = "none" andalso
@@ -1620,7 +1625,8 @@ fun slice_options provers slices cores timeout filter max_facts
    format = "", type_enc = "", lam_trans = "", mono_iters = 3,
    mono_instances = NONE, minimize = true,
    preplay_timeout = 1.0, minimize_timeout = 1.0, cache = false,
-   cache_dir = "", cache_max_entries = 100000, debug_dir = NONE}
+   cache_dir = "", cache_max_entries = 100000, debug_dir = NONE,
+   verbose = false}
 
 fun slice_summary (slice : hhProver.slice) =
   (#prover slice, #format slice, #type_enc slice, #lam_trans slice,
@@ -1818,7 +1824,8 @@ fun test_hhSlice () =
        type_enc = "mono_native", lam_trans = "lifting", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100000, debug_dir = NONE}
+       cache_max_entries = 100000, debug_dir = NONE,
+       verbose = false}
     val triple_schedule = hhSlice.mk_schedule triple_options
     val _ = expect "slice construction accepts a supported full triple"
       (case triple_schedule of
@@ -1841,7 +1848,8 @@ fun test_hhSlice () =
            type_enc = type_enc, lam_trans = lam_trans, mono_iters = 3,
            mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
            minimize_timeout = 1.0, cache = false, cache_dir = "",
-           cache_max_entries = 100000, debug_dir = NONE}
+           cache_max_entries = 100000, debug_dir = NONE,
+           verbose = false}
       in
         ((ignore (hhSlice.mk_schedule options); false) handle Fail _ => true)
       end
@@ -1884,7 +1892,8 @@ fun cache_options directory maximum enabled : hhConfig.hh_options =
    format = "", type_enc = "", lam_trans = "", mono_iters = 3,
    mono_instances = NONE, minimize = true,
    preplay_timeout = 1.0, minimize_timeout = 1.0, cache = enabled,
-   cache_dir = directory, cache_max_entries = maximum, debug_dir = NONE}
+   cache_dir = directory, cache_max_entries = maximum, debug_dir = NONE,
+   verbose = false}
 
 fun test_hhCache () =
   let
@@ -3189,7 +3198,8 @@ fun fixture_options provers slices cores timeout max_proofs cache cache_dir
    mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
    minimize_timeout = 1.0,
    cache = cache, cache_dir = cache_dir, cache_max_entries = 100,
-   debug_dir = debug_dir}
+   debug_dir = debug_dir,
+   verbose = false}
 
 fun without_minimization (options : hhConfig.hh_options)
     : hhConfig.hh_options =
@@ -3203,7 +3213,8 @@ fun without_minimization (options : hhConfig.hh_options)
    minimize_timeout = #minimize_timeout options, cache = #cache options,
    cache_dir = #cache_dir options,
    cache_max_entries = #cache_max_entries options,
-   debug_dir = #debug_dir options}
+   debug_dir = #debug_dir options,
+   verbose = #verbose options}
 
 fun slice_event_tag (slice : hhProver.slice) =
   #prover slice ^ ":" ^ String.concatWith "," (#extra_opts slice)
@@ -3661,7 +3672,8 @@ fun test_schedule_filter_rankings parser =
        type_enc = "", lam_trans = "", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100, debug_dir = NONE}
+       cache_max_entries = 100, debug_dir = NONE,
+       verbose = false}
     val knn_path = hhSchedule.problem_path root knn
     val mepo_path = hhSchedule.problem_path root mepo
     fun clean () = List.app (remove_tree o OS.Path.dir)
@@ -3718,7 +3730,8 @@ fun test_schedule_knn_anchor_export () =
        type_enc = "", lam_trans = "", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100, debug_dir = NONE}
+       cache_max_entries = 100, debug_dir = NONE,
+       verbose = false}
     val expected_one = OS.FileSys.tmpName ()
     val expected_two = OS.FileSys.tmpName ()
     val _ = List.app (fn path => OS.FileSys.remove path handle _ => ())
@@ -3776,7 +3789,8 @@ fun test_schedule_mono_cap_export () =
        type_enc = "", lam_trans = "", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100, debug_dir = NONE}
+       cache_max_entries = 100, debug_dir = NONE,
+       verbose = false}
     val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = LENGTH (REVERSE [1; 2n])``)
     val _ = smlRedirect.hidef (hhSchedule.export_problems root options goal
       [("knn", map (fn fact => "listTheory." ^ fact) facts)])
@@ -3864,7 +3878,8 @@ fun test_schedule_export_wiring () =
        lam_trans = "", mono_iters = 3, mono_instances = mono_instances,
        minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
        cache = false, cache_dir = "", cache_max_entries = 100,
-       debug_dir = NONE}
+       debug_dir = NONE,
+       verbose = false}
     fun slice type_enc lam_trans : hhProver.slice =
       {prover = "e", format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",
@@ -5224,7 +5239,8 @@ fun test_hypothesis_premises () =
        lam_trans = "", mono_iters = 3, mono_instances = NONE,
        minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
        cache = false, cache_dir = "", cache_max_entries = 100,
-       debug_dir = NONE}
+       debug_dir = NONE,
+       verbose = false}
     fun slice type_enc lam_trans : hhProver.slice =
       {prover = "e", format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",

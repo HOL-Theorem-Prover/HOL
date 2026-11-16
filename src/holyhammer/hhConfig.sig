@@ -19,7 +19,8 @@ sig
      cache : bool,
      cache_dir : string,
      cache_max_entries : int,
-     debug_dir : string option}
+     debug_dir : string option,
+     verbose : bool}
 
   (* Small filesystem and string helpers, shared with hhProver and hhEval. *)
   val is_dir : string -> bool

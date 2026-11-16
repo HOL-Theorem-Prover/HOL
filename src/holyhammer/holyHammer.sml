@@ -64,12 +64,13 @@ fun interactive_options provers =
 
 type unverified = hhProver.slice * string list
 
-(* The schedule's own reporting, plus a record of the proofs it announced. *)
-fun progress found event =
+(* A record of the proofs the schedule announced, plus, with the verbose
+   option, its own reporting.  Otherwise a call prints only its outcome. *)
+fun progress (options : hhConfig.hh_options) found event =
   (case event of
        hhSchedule.ProofFound pair => found := pair :: !found
      | _ => ();
-   hhSchedule.default_progress event)
+   if #verbose options then hhSchedule.default_progress event else ())
 
 val problem_path = hhSchedule.problem_path
 
@@ -124,7 +125,7 @@ fun run_schedule caller parent options rankings goal =
       val found = ref ([] : unverified list)
       val result = hhSchedule.run_in root
         {options = options, goal = goal, rankings = rankings,
-         progress = SOME (progress found)}
+         progress = SOME (progress options found)}
     in
       case #suggestions result of
           suggestion :: _ => suggestion

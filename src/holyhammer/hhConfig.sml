@@ -25,7 +25,8 @@ type hh_options =
    cache : bool,
    cache_dir : string,
    cache_max_entries : int,
-   debug_dir : string option}
+   debug_dir : string option,
+   verbose : bool}
 
 val ERR = Feedback.mk_HOL_ERR "hhConfig"
 
@@ -344,7 +345,11 @@ val option_specs : option_spec list =
    {name = "debug_dir", default = fn () => "",
     expected = "a path or empty",
     doc = "directory for retained problems and prover output",
-    valid = fn _ => true}]
+    valid = fn _ => true},
+   {name = "verbose", default = fn () => "false",
+    expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",
+    doc = "report every prover slice as it starts and ends",
+    valid = Option.isSome o bool_value}]
 
 val defaults =
   ("eval.dir", default_eval_dir) ::
@@ -573,6 +578,7 @@ fun snapshot_with overrides =
     val cache_dir = required "cache_dir" SOME
     val cache_max_entries = required "cache_max_entries" int_value
     val debug_dir = required "debug_dir" (SOME o optional_string)
+    val verbose = required "verbose" bool_value
   in
     {timeout = timeout, max_proofs = max_proofs, provers = provers,
      slices = slices, cores = cores, filter = filter,
@@ -582,7 +588,7 @@ fun snapshot_with overrides =
      preplay_timeout = preplay_timeout,
      minimize_timeout = minimize_timeout, cache = cache,
      cache_dir = cache_dir, cache_max_entries = cache_max_entries,
-     debug_dir = debug_dir}
+     debug_dir = debug_dir, verbose = verbose}
   end
 
 fun snapshot () = snapshot_with []

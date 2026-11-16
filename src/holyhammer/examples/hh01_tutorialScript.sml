@@ -21,10 +21,7 @@ Libs
      load "holyHammer"; open holyHammer;
      holyhammer ``MEM x l /\ EVERY P l ==> P x``;
 
-   The hammer prints a progress line for every prover slice it starts
-   ("starting vampire slice (96 facts)", ...), a line for every slice
-   that finishes ("vampire slice: Theorem (0.25 s)").  Its last message
-   is the verified proof:
+   The hammer prints the verified proof:
 
      Prove the statement in a script with:
        metis_tac [EVERY_MEM]
