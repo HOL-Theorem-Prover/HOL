@@ -3,7 +3,7 @@
     and removes the ancestors' theory files keep. *)
 
 Theory suspCompact[bare]
-Ancestors suspNone suspCrossB suspCrossThm suspSibD
+Ancestors suspNone suspCrossB suspCrossThm suspSibD suspReuse
 
 Libs HolKernel Parse boolLib markerLib
 
@@ -46,6 +46,11 @@ val _ = check "suspCrossB" "resumptions" (SOME (0, 1))
 (* suspended, resumed and finalised in one theory *)
 val _ = check "suspCrossThm" "theorems" (SOME (0, 2))
 val _ = check "suspCrossThm" "resumptions" (SOME (0, 2))
+
+(* finalised, then suspended and resumed again under the same name
+   and label: only the second statement's adds stay *)
+val _ = check "suspReuse" "theorems" (SOME (1, 1))
+val _ = check "suspReuse" "resumptions" (SOME (1, 1))
 
 (* resumptions in sibling theories, finalised in suspSibD *)
 val _ = check "suspSibA" "theorems" (SOME (1, 0))

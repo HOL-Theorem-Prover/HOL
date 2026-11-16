@@ -1050,13 +1050,22 @@ val (susp_enc, susp_dec) = bij_ed (
     ) (tagged_sum ("add", pair_ed (pair_ed (string_ed, string_ed), thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
-(* An add is out of date once a remove has taken its key out of the
-   global table; AncestryData then drops it from the current theory's
-   data, so descendants don't load theorems no lookup can reach.  The
-   table only exists once fullmake returns, hence the reference. *)
+(* An add is out of date once the global table no longer holds its
+   theorem under its key: a remove took it out, and the key may since
+   have been added again with another theorem.  AncestryData then drops
+   it from the current theory's data, so descendants don't load
+   theorems no lookup can reach.  Scanning decodes the data afresh, so
+   theorems are compared by statement.  The table only exists once
+   fullmake returns, hence the reference. *)
+fun same_statement th1 th2 =
+    aconv (concl th1) (concl th2) andalso
+    HOLset.equal (hypset th1, hypset th2)
+
 val susp_global = ref (fn () => empty_susp_table)
-fun susp_uptodate (AddSuspended (k, _)) =
-      isSome (KNametab.lookup (!susp_global ()) k)
+fun susp_uptodate (AddSuspended (k, th)) =
+      (case KNametab.lookup (!susp_global ()) k of
+           SOME th' => same_statement th th'
+         | NONE => false)
   | susp_uptodate (RemoveSuspended _) = true
 
 val {record_delta = record_suspension_delta_raw,
@@ -1138,11 +1147,13 @@ val (res_enc, res_dec) = bij_ed (
     ) (tagged_sum ("add", pair_ed (reskey_ed, thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
-(* As for suspensions: an add is out of date once a remove has taken
-   its key out of the global table. *)
+(* As for suspensions: an add is out of date once the global table no
+   longer holds its theorem under its key. *)
 val res_global = ref (fn () => empty_res_dict)
-fun res_uptodate (AddResumption (k, _)) =
-      isSome (ResTab.lookup (!res_global ()) k)
+fun res_uptodate (AddResumption (k, th)) =
+      (case ResTab.lookup (!res_global ()) k of
+           SOME ths => List.exists (same_statement th) ths
+         | NONE => false)
   | res_uptodate (RemoveResumptions _) = true
 
 val {record_delta = record_resumption_delta_raw,
