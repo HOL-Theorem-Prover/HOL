@@ -3142,6 +3142,32 @@ fun test_hhReconstruct () =
                 "MULT_ASSOC"] andalso
              replays_in_kernel goal result
          | NONE => false)
+    (* A theorem of the current theory has no Theory structure.  The
+       proof names it by the top-level ML value bound to it, as Theorem
+       binds it in a script, and else fetches it from DB. *)
+    val thy = Theory.current_theory ()
+    fun save name = ignore
+      (Feedback.quiet_messages Theory.save_thm (name, arithmeticTheory.ADD_0))
+    val _ = app save ["hh_bound_add0", "hh_int_add0", "hh_other_add0"]
+    val _ = smlExecute.quse_string
+      ("val hh_bound_add0 = DB.fetch " ^ Lib.quote thy ^
+       " \"hh_bound_add0\"; val hh_int_add0 = 0; " ^
+       "val hh_other_add0 = arithmeticTheory.ADD_COMM;")
+    val add0_goal = ([], ``x + 0 = x``)
+    fun stac_of name =
+      case #1 (reconstruct_timed true 1.0 NONE [thy ^ "Theory." ^ name]
+                  add0_goal) of
+          SOME (result as {stac, ...}) =>
+            if replays_in_kernel add0_goal result then stac else ""
+        | NONE => ""
+    fun fetched name =
+      String.isSubstring
+        ("fetch " ^ Lib.quote thy ^ " " ^ Lib.quote name ^ "]")
+        (stac_of name)
+    val _ = expect "a current-theory lemma is named by its ML value"
+      (String.isSuffix " [hh_bound_add0]" (stac_of "hh_bound_add0"))
+    val _ = expect "a lemma whose name is not bound to it is fetched"
+      (fetched "hh_int_add0" andalso fetched "hh_other_add0")
   in
     ()
   end
