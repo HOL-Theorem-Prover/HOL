@@ -78,7 +78,7 @@ end
              with structure aliases for each [alias=...] entry, and
              optional HOL_Interactive open-bracketing
       EndTheory  ~>  Theory.export_theory () (with optional
-                     Feedback.set_trace "TheoryPP.include_docs" 0
+                     HOLFlags.set_trace "TheoryPP.include_html_docs" 0
                      before, when [no_sig_docs] was set on Theory)
       Resume label[smlname=x, attrs]: tac QED
           ~> val x = markerLib.resume {label_name, suspension_name} tac

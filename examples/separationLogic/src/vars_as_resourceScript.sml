@@ -14,7 +14,7 @@ open vars_as_resourceTheory
 map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
    "rich_listTheory", "generalHelpersTheory", "latticeTheory", "separationLogicTheory",
    "bagSimps", "ConseqConv", "quantHeuristicsLib"];
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 (*

@@ -15,6 +15,11 @@ fun listDir s =
    end
 
 fun pointer_eq (x: 'a, y: 'a) = PolyML.pointerEq (x, y)
+
+(* Tags for values saved in Poly/ML modules: a tag made while building a
+   saved state is the same object in every process loading that state. *)
+type 'a persistent_tag = 'a Universal.tag
+val new_persistent_tag : unit -> 'a persistent_tag = Universal.tag
 fun ref_to_int (x: 'a ref) = 0 (* needs fixing *)
 
 fun catch_SIGINT () = ()

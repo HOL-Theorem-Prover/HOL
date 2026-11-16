@@ -189,11 +189,13 @@ fun dest_string_lit tm =
 
 val is_string_lit = can dest_string_lit
 
-val paranoid_stringlitpp = ref false
-val _ = Feedback.register_btrace
-            ("paranoid string literal printing", paranoid_stringlitpp)
+val {get = paranoid_stringlitpp, flag = paranoid_string_literals, ...} =
+    HOLFlags.create_btrace(
+      {group = "PP", name = "paranoid_string_literals"},
+      false
+    )
 fun string_literalpp {ldelim,rdelim} s =
-    if not (!paranoid_stringlitpp) then
+    if not (paranoid_stringlitpp()) then
       ldelim ^ String.toString s ^ rdelim
     else let
         val limit = size s

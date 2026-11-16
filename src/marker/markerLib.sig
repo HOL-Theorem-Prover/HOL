@@ -153,6 +153,8 @@ sig
   val extract_suspended_goal : thm list -> string -> (int * term) list
   val RESUME_TAC : tactic
 
+  val PAT_ABBREV_TAC_match_var_const : HOLFlags.bflag
+
 end (* sig *)
 
 (*

@@ -2,7 +2,7 @@ open HolKernel Parse boolLib testutils markerLib
 
 val _ = new_theory "scratch"
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 (* Every directive constructor must be recognised with the identity and
    payload its consumer needs, and nothing else may be. *)
@@ -112,6 +112,8 @@ val _ = new_type ("tyop", 0);
 val _ = new_constant("c1", “:tyop”)
 val _ = new_constant("c2", “:tyop”)
 val _ = overload_on ("hide", “marker$hide”);
+val typed_goals_print =
+    HOLFlags.with_bflags [(Parse.show_types, true)] goals_print
 val asl0 = [“hide foo (P c1 /\ T /\ P x)”,
             “R c1 /\ T /\ R x”]
 val _ = tprint "RULE_ASSUM_TAC doesn't hit hide"
@@ -119,7 +121,7 @@ val _ = require_msg
           (check_result (goals_eq [([“hide foo (P c1 /\ T /\ P x)”,
                                      “R c1 /\ R x”],
                                     “Q c1 c2:bool”)]))
-          (trace ("types", 1) goals_print)
+          typed_goals_print
           (testtac (RULE_ASSUM_TAC (REWRITE_RULE[])))
           (asl0, “Q c1 c2:bool”)
 
@@ -129,7 +131,7 @@ val _ = require_msg
           (check_result (goals_eq [([“hide foo (P c1 /\ T /\ P x)”,
                                      “R c2 /\ T /\ R x”],
                                     “Q c2 c2:bool”)]))
-          (trace ("types", 1) goals_print)
+          typed_goals_print
           (testtac (SUBST_ALL_TAC tyopEQ))
           (asl0, “Q c1 c2:bool”)
 
@@ -139,7 +141,7 @@ val _ = require_msg
                                    ([“hide foo (P c1 /\ T /\ P x)”,
                                      “R c1 /\ T /\ R c1”],
                                     “Q c1 c2:bool”)]))
-          (trace ("types", 1) goals_print)
+          typed_goals_print
           (testtac (CONJ_VALIDATE (SUBST_ALL_TAC (ASSUME “x = c1”))))
           (asl0, “Q c1 c2:bool”)
 
@@ -148,7 +150,7 @@ val _ = require_msg
           (check_result (goals_eq [([“hide foo (P c1 /\ P x)”,
                                      “R c1 /\ R x”],
                                     “Q c1 c2:bool”)]))
-          (trace ("types", 1) goals_print)
+          typed_goals_print
           (testtac $ unignoring_hide $ RULE_ASSUM_TAC $ REWRITE_RULE[])
           (asl0, “Q c1 c2:bool”)
 
@@ -158,7 +160,7 @@ val crwt = MATCH_MP condrwt (ASSUME “TEST y”)
 val _ = tprint "CONJ_VALIDATE(1)"
 val _ = require_msg
           (check_result (goals_eq[([], “TEST y /\ P c1”)]))
-          (trace ("types", 1) goals_print)
+          typed_goals_print
           (testtac (CONJ_VALIDATE (REWRITE_TAC[crwt])))
           ([], “P (y:tyop):bool”)
 
@@ -230,7 +232,7 @@ val _ = shouldfail {checkexn = is_struct_HOL_ERR "markerLib",
                     testfn = (fn th => resumption_to_goal (extract_suspended_goal [th] "pq"))}
                    pq_th1
 
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (show_assums,true)
 val _ = tprint "prim_resume (1a)"
 fun pp {subresult,updated_main} =
     let open HOLPP

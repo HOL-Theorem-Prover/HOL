@@ -566,7 +566,8 @@ fun rewrite_record_raw thy =
     val tttsml =
       tactictoe_scratch_dir_of () ^ "/scripts/" ^
       OS.Path.base scriptorg ^ "_ttt.sml"
-    val _ = smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml
+    val _ = with_tactictoe_cache (fn () =>
+      smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml)
   in
     tactictoe_dir_of () ^ "/log/scripts/" ^ thy
   end
@@ -574,6 +575,13 @@ fun rewrite_record_raw thy =
 val regression_script =
   (tprint "record rewriter regression tactic data";
    read_file (rewrite_record_raw "ttt_regression") before OK ())
+
+fun in_scratch dir sub = aiLib.exists_file (dir ^ "/sml_inspection/" ^ sub)
+val _ = check "rewriting and recording keep to the TacticToe scratch dir"
+  (List.all
+     (fn sub => not (in_scratch (!aiLib.scratch_dir) sub) andalso
+                in_scratch (tactictoe_scratch_dir_of ()) sub)
+     ["open", "buildheap/buildheap_ttt_regressionScript_ttt"])
 
 val regression_data = read_file (tacdata_file "ttt_regression")
 val regression_info =

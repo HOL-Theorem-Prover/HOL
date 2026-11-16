@@ -6,7 +6,7 @@
 (*
 app load ["simpLib", "combinTheory", "boolSimps", "numLib", "normalForms",
           "defCNFTheory"];
-guessing_tyvars := false;
+HOLFlags.set_bflag (Preterm.guess_tyvars, false);
 *)
 
 (*
@@ -165,8 +165,8 @@ val DEF_CNF_VECTOR_CONV =
 (* Quick testing
 val Term = Parse.Term;
 val Type = Parse.Type;
-show_assums := true;
-Globals.guessing_tyvars := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
+HOLFlags.set_bflag (Preterm.guess_tyvars, true);
 app load ["normalFormsTest", "numLib", "arithmeticTheory", "bossLib"];
 open normalFormsTest numLib arithmeticTheory bossLib;
 Parse.reveal "C";

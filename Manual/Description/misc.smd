@@ -487,6 +487,27 @@ component, and given up before the trailing components are.  In a
 narrow terminal the column ends up blank rather than pushing the
 time and verdict columns out of alignment.
 
+All of this is drawn rather than logged: the line showing the
+running jobs is rewritten in place, and the completion lines are
+what survives it.  That needs a standard output which will act on
+the carriage returns and clear-to-end-of-line codes the display is
+made of, so `Holmake` draws it only when it has one.  A file or a
+pipe will not; neither will an Emacs compilation or `comint`
+buffer, which Emacs runs on a pty -- so an `isatty` test by itself
+is fooled -- but which never moves back over a line it has
+printed.  `Holmake` reads Emacs's `INSIDE_EMACS` variable to tell
+those apart from `M-x term`, `ansi-term` and `vterm`, which are
+terminals and do get the display.
+
+Without a terminal, each job is announced as it starts and
+reported as it finishes on lines of its own, and the `Scanning`
+frames of the opening directory walk -- which mean something only
+while each is overwriting the last -- give way to the single
+`Scanned `*n*` directories` line that ends them.  The width that
+the columns are laid out in comes from `stty size`, or, where that
+cannot answer -- as it cannot for the pty of an Emacs compilation
+buffer -- from `COLUMNS`.
+
 ### Project files: `holproject.toml`
 
 \index{Holmake@\holmake!holproject.toml@\texttt{holproject.toml}}
@@ -638,16 +659,33 @@ file still apply.
 
 ```
 [h4pedant]
-linelen = 80           # max line length; 0 disables the check
-unicode_ok = false     # if true, do not flag non-ASCII characters
-include = ["src"]      # subtrees that are in scope of the scan
-exclude = ["scratch"]  # subtrees to skip entirely
+linelen = 80             # max line length; 0 disables the check
+unicode_ok = false       # if true, do not flag non-ASCII characters
+default_goal_ok = false  # if true, do not check the default goal
+include = ["src"]        # subtrees that are in scope of the scan
+exclude = ["scratch"]    # subtrees to skip entirely
 
 [[h4pedant.dir]]
 path = "src"
 unicode_ok = true
 linelen = 0
 ```
+
+Most of what `h4pedant` looks at is a line of a `.sml` or `.sig`
+file, but `default_goal_ok` governs a check on `Holmakefile`s
+instead.  `Holmake` builds the *first* explicit non-`.PHONY` target
+of a `Holmakefile` when given no target on the command line (see
+Section \ref{sec:holmake-cline}), so a rule written above `all`
+silently demotes it, and the directory thereafter builds that one
+rule's target in place of everything `all` collects.  Nothing fails
+when this happens — the directory simply builds less than it owes,
+and what gets dropped is whatever no other directory depends on,
+typically the self-test.  `h4pedant` therefore flags any
+`Holmakefile` that declares an `all` rule without leaving `all` as
+the default goal.  A `Holmakefile` with no `all` rule has nothing to
+demote and is not flagged, and neither is a directory with no
+`Holmakefile`.  Setting `default_goal_ok = true` turns the check off
+for a subtree.
 
 `include` and `exclude` are lists of paths (relative to the
 project root, or absolute).  When `include` is non-empty and no
@@ -669,8 +707,9 @@ settings they declare and the deeper match leaves untouched.
 
 CLI flags continue to take precedence over the project file:
 `--nolinelen` disables the line-length check everywhere even in
-directories whose override sets a positive `linelen`, and
-`--unicodeok` similarly suppresses the Unicode check globally.
+directories whose override sets a positive `linelen`,
+`--unicodeok` similarly suppresses the Unicode check globally, and
+`--nodefaultgoal` suppresses the default-goal check.
 The project file can never re-enable a check that the CLI has
 turned off.
 
@@ -914,6 +953,8 @@ mode needs to be compared.
 
 ### `Holmake`'s command-line arguments
 
+\label{sec:holmake-cline}
+
 \index{Holmake@\holmake!command-line arguments}
 Like `make`, `Holmake` takes command-line arguments corresponding
 to the targets that the user desires to build.  As a special case
@@ -1117,9 +1158,18 @@ otherwise.  This overrides the `--no_prereqs` option.  When
 performing a “clean” action (prompted by `clean`, `cleanAll` or
 `cleanDeps` arguments), this cleaning is done recursively through
 all “includes” directories (which is not done otherwise).  When
-building normally, all targets in “includes” directories are
+building normally, each “includes” directory's own default goal is
 built; normally only dependencies of targets in the current
 directory are built.
+
+Note that “its default goal” is not the same as “everything in it”.
+As described in Section \ref{sec:holmake-cline}, a directory whose
+`Holmakefile` declares no rules has every target it can detect
+built, but one that declares a rule has only that first rule's
+target built.  So a `Holmakefile` that writes a rule above its
+`all` target restricts what `-r` builds there, and it does so
+silently — this is what `tools/h4pedant` checks for (see
+`[h4pedant]` above).
 
 Inside a project (see *Project files* above) `-r` means the whole
 project: the targets of every one of its directories, and of every
@@ -1357,10 +1407,21 @@ should be called.
 
 #### Rules
 
-Make-file rules are interpreted in the same way as by traditional
-`make`.  The files specified after the colon (if any) are those
-files that each target (the files before the colon) is said to
-“depend” on.  If any of these are newer than a target, then
+The order rules are written in matters in one respect: as with
+traditional `make`, the first explicit target in the file — the
+first that is not `.PHONY`, and not the target of a pattern rule —
+is the directory's *default goal*, which is what gets built when
+`Holmake` is given no target on the command line (Section
+\ref{sec:holmake-cline}) and what a parent building recursively
+with `-r` asks of this directory.  A directory that means to offer
+an `all` target should therefore write that rule first; writing any
+other rule above it silently reduces the directory to building that
+rule's target alone.  `tools/h4pedant` checks for this.
+
+Otherwise, make-file rules are interpreted in the same way as by
+traditional `make`.  The files specified after the colon (if any)
+are those files that each target (the files before the colon) is
+said to “depend” on.  If any of these are newer than a target, then
 `Holmake` rebuilds that target according to the commands.  If
 there are no dependencies, then the commands are executed iff the
 target doesn't exist.  If there are no commands, and the target

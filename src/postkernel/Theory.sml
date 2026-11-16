@@ -53,10 +53,12 @@ open Feedback Lib Type Term Thm ;
 
 open TheoryPP
 
+val {get = get_debug, flag = debug, ...} = HOLFlags.create_btrace(
+      {name = "debug", group = "Theory"},
+      false
+    )
 
-val debug = ref false
-fun DPRINT f = if !debug then print ("Theory.DEBUG: " ^ f ()) else ()
-val _ = register_btrace("Theory.debug", debug)
+fun DPRINT f = if get_debug() then print ("Theory.DEBUG: " ^ f ()) else ()
 
 structure PP = HOLPP
 type num = Arbnum.num
@@ -353,8 +355,11 @@ fun empty_segment ({facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
-val allow_rebinds = ref false
-val _ = Feedback.register_btrace("Theory.allow_rebinds", allow_rebinds)
+val {get = get_allow_rebinds, flag = allow_rebinds, ...} =
+    HOLFlags.create_btrace(
+      {group = "Theory", name = "allow_rebinds"},
+      false
+    )
 
 fun add_type {name,theory,arity} thy =
     (Type.prim_new_type {Thy = theory, Tyop = name} arity; thy)
@@ -364,7 +369,7 @@ fun add_term {name,theory,htype} thy =
 
 fun add_fact th (seg : segment) =
     let val updator =
-            if !Globals.interactive orelse !allow_rebinds orelse
+            if !Globals.interactive orelse get_allow_rebinds() orelse
                is_temp_binding (#1 th)
             then
               Symtab.update
@@ -621,6 +626,11 @@ fun oracle_string_of th  =
       else SOME "ORACLE thm"
   end
 
+val {get = get_save_thm_reporting, flag = save_thm_reporting, ...} =
+    HOLFlags.create_trace(
+      {group = "Theory", name = "save_thm_reporting"},
+      {max = 2, initial = 1}
+    )
 local
   fun check_name tempok (fname,s) =
     if Lexis.ok_sml_identifier s andalso
@@ -630,21 +640,19 @@ local
     else raise ERR fname ("Can't use name " ^ Lib.mlquote s ^
                           " as a theory-binding")
   fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
-  val save_thm_reporting = ref 1
-  val _ = Feedback.register_trace ("Theory.save_thm_reporting",
-                                   save_thm_reporting, 2)
   fun mesg_str th =
     case oracle_string_of th
      of NONE => "theorem"
       | SOME str => str
   val msgOut = with_flag(MESG_to_string,Lib.I) HOL_MESG
   fun save_mesg s name =
-    if !save_thm_reporting = 0 orelse
-       !Globals.interactive andalso !save_thm_reporting < 2
-      then ()
-    else if !Globals.interactive then
-      msgOut ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
-    else msgOut (format_name_message{pfx = "Saved " ^ s, name = name})
+      let val str = get_save_thm_reporting()
+      in
+        if str = 0 orelse !Globals.interactive andalso str < 2 then ()
+        else if !Globals.interactive then
+          msgOut ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
+        else msgOut (format_name_message{pfx = "Saved " ^ s, name = name})
+      end
 in
   fun save_thm0 fnm fmsg (i as {private, loc}) (name, th) =
     let
@@ -722,13 +730,18 @@ fun link_parents thy plist =
     end
  end;
 
+(* Theories loaded from disk get sealed kernel entries (see
+   KernelSig.insert_sealed_type/_const); the result says whether every
+   entry got its canonical epoch. *)
 fun incorporate_types thy tys =
-  let fun itype (s,a) = (install_type(s,a,thy);())
-  in List.app itype tys
-  end;
+    List.foldl (fn ((s,a), ok) =>
+                   Type.prim_load_type {Thy = thy, Tyop = s} a andalso ok)
+               true tys
 
 fun incorporate_consts thy consts =
-    List.app (fn (s,ty) => ignore (install_const(s,ty,thy))) consts
+    List.foldl (fn ((s,ty), ok) =>
+                   Term.prim_load_const {Thy = thy, Name = s} ty andalso ok)
+               true consts
 
 (* ----------------------------------------------------------------------
     Theory data functions
@@ -952,8 +965,11 @@ fun theory_out p ostrm =
 fun total_cpu {usr,sys} = Time.+(usr,sys)
 val new_theory_time = ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock))
 
-val report_times = ref true
-val _ = Feedback.register_btrace ("report_thy_times", report_times)
+val {get = report_times, flag = report_thy_times, ...} =
+    HOLFlags.create_btrace(
+      {group = "Theory", name = "report_thy_times"},
+      true
+    )
 
 local
   val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
@@ -1031,6 +1047,12 @@ fun export_proof (name, th) = let
 in
   Tracing.export_proof {file = file, tag = Thm.SavedName name} th
 end
+
+val {get = inc_html, flag = include_html_docs, ...} =
+    HOLFlags.create_btrace (
+      {group = "TheoryPP", name = "include_html_docs"},
+      true
+    )
 
 fun export_proof_anon th = let
   val n = !export_proof_counter
@@ -1129,7 +1151,7 @@ fun export_theory_return_hash () = let
          in
            theory_out (TheoryPP.pp_sig sigthry) (#ostrm sigfile_t);
            theory_out (TheoryPP.pp_struct hash structthry) (#ostrm smlfile_t);
-           if Feedback.get_tracefn "TheoryPP.include_html_docs" () = 1 then
+           if inc_html() then
              let val docsdir = ".hol/docs"
                  val () = HOLFS_dtype.createDirIfNecessary docsdir
                  val sigdoc_strm =
@@ -1167,8 +1189,9 @@ fun export_theory_return_hash () = let
             | _ => ());
            List.app commit_temp temps;
            Thm.mark_sealed thyname;
+           Tracing.record_signature {theory=thyname, hash=hash};
            mesg "done.\n";
-           if !report_times then
+           if report_times() then
              (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^
                     " to build\n");
               maybe_log_time_to_disk thyname (Time.toString time_since))

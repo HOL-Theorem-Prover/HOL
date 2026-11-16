@@ -270,7 +270,7 @@ nn <buffer><silent> <LocalLeader>t :call HOLSelect('`\\|‘','`\\|’')<CR>
 nn <buffer><silent> <LocalLeader>T :call HOLSelect('``\\|“','``\\|”')<CR>
 nn <buffer><silent> <LocalLeader>a :call HOLSelect('^Triviality\\|^Theorem','^Proof$\\|^Proof\[\_.\{-}\]')<CR>Vo+
 nn <buffer><silent> <LocalLeader>y :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
-nn <buffer><silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
+nn <buffer><silent> <LocalLeader>n :call HOLCall(function("HOLF"),["HOLFlags.set_trace \"PP.avoid_unicode\" (1 - HOLFlags.current_trace \"PP.avoid_unicode\")"])<CR>
 no <buffer><LocalLeader>h h
 
 if (!has('terminal') && ! has('nvim'))

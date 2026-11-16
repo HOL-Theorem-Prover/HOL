@@ -15,6 +15,11 @@ structure Refute_Cert :> Refute_Cert = struct
 
   val default_leaf_rounds = 2
 
+  (* Leaf simplification runs whatever [srw_ss] holds; a looping rewrite
+     or conversion there stops after [leaf_simp_limit] steps rather than
+     spending the caller's whole replay deadline. *)
+  val leaf_simp_limit = 2000
+
   datatype instance_verdict =
       InstanceFalse of Thm.thm
     | InstanceTrue
@@ -117,7 +122,9 @@ structure Refute_Cert :> Refute_Cert = struct
               val theorem = advance "leaf CBV evaluation" eval_original
                 theorem
               val theorem = advance "leaf simplification"
-                (simpLib.SIMP_CONV (BasicProvers.srw_ss ()) []) theorem
+                (simpLib.SIMP_CONV
+                  (simpLib.limit leaf_simp_limit (BasicProvers.srw_ss ())) [])
+                theorem
               val theorem = advance "leaf CBV evaluation" eval_original
                 theorem
               val next = rhs_of theorem
@@ -199,11 +206,16 @@ structure Refute_Cert :> Refute_Cert = struct
     end
 
   (* Turn a generalized refutation of [body] into a refutation of the
-     corresponding existential formula. *)
+     corresponding existential formula.  Only the two beta-redexes that
+     instantiating [NOT_EXISTS_THM] creates are reduced: [body] may hold
+     redexes of its own, such as a lambda witness applied to an argument,
+     and [generalized] keeps them. *)
   fun refute_exists label variable body generalized =
     let
       val conversion = Conv.CONV_RULE
-        (Conv.DEPTH_CONV Thm.BETA_CONV)
+        (Conv.FORK_CONV
+           (Conv.RAND_CONV (Conv.RAND_CONV (Conv.ABS_CONV Thm.BETA_CONV)),
+            Conv.RAND_CONV (Conv.ABS_CONV (Conv.RAND_CONV Thm.BETA_CONV))))
         (Drule.ISPEC (Term.mk_abs (variable, body))
           boolTheory.NOT_EXISTS_THM)
       val target = rhs_of conversion

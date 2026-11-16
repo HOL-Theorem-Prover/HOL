@@ -46,7 +46,7 @@ segment, a warning will be issued, but an exception will not be raised.
 
 >> thm;
 
->> show_types := true;
+>> HOLFlags.set_bflag (Parse.show_types, true);
 
 >> thm;
 ```
@@ -64,4 +64,4 @@ It is not possible to delete constants from ancestor theories.
 [`Theory.uptodate_term`](#Theory.uptodate_term),
 [`Theory.uptodate_thm`](#Theory.uptodate_thm),
 [`Theory.scrub`](#Theory.scrub)
->>__ show_types := false;
+>>__ HOLFlags.set_bflag (Parse.show_types, false);

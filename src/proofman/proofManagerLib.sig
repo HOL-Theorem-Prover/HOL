@@ -5,7 +5,8 @@ sig
     type tacmodifier = Manager.tacmodifier
     type proofs = Manager.proofs
 
-    val chatting : bool ref
+    (* goalStack's, re-exported here *)
+    val chatting : HOLFlags.bflag
 
     (* Starting a proof *)
 

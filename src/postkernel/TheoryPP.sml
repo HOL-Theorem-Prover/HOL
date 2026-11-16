@@ -95,10 +95,6 @@ fun pp_type mvartype mtype ty =
           ]
  end
 
-val include_html_docs = ref true
-val _ = Feedback.register_btrace
-          ("TheoryPP.include_html_docs", include_html_docs)
-
 fun classify As Ds Ts [] = (As,Ds,Ts)
   | classify As Ds Ts ((r as (s,th,i:thminfo))::rest) =
     let open DB_dtype
@@ -164,8 +160,10 @@ fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
                (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
             then pp_thm th
             else
-              with_flag (Globals.show_tags, true)
-                        (with_flag (Globals.show_assums, true) pp_thm) th
+              HOLFlags.with_traces
+                [("PP.show_tags", 1), ("PP.show_assums", 1)]
+                pp_thm
+                th
       in
         PP.prettyPrint (out o html_escape, 75) pretty
       end

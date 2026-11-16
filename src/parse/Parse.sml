@@ -220,9 +220,9 @@ fun type_pp_with_delimiters ppfn ty =
     open Portable Globals smpp
   in
     mlower (
-      add_string (!type_pp_prefix) >>
-      block CONSISTENT (UTF8.size (!type_pp_prefix)) (lift ppfn ty) >>
-      add_string (!type_pp_suffix)
+      add_string (type_pp.type_pp_prefix()) >>
+      block CONSISTENT (UTF8.size (type_pp.type_pp_prefix())) (lift ppfn ty) >>
+      add_string (type_pp.type_pp_suffix())
     )
   end
 
@@ -317,7 +317,7 @@ fun overload_info_for s = let
                         (Overload.remove_overloaded_form s)
                         (term_grammar())
   val (_,ppfn0) = print_from_grammars (type_grammar(),g)
-  val ppfn = ppfn0 |> Feedback.trace ("types", 1)
+  val ppfn = ppfn0 |> HOLFlags.with_bflags [(HOLFlags.show_types, true)]
   val ppaction = let
     open smpp
   in
@@ -381,9 +381,9 @@ fun term_pp_with_delimiters ppfn tm =
     open Portable Globals smpp
   in
     mlower (
-      add_string (!term_pp_prefix) >>
-      block CONSISTENT (UTF8.size (!term_pp_prefix)) (lift ppfn tm) >>
-      add_string (!term_pp_suffix)
+      add_string (type_pp.term_pp_prefix()) >>
+      block CONSISTENT (UTF8.size (type_pp.term_pp_prefix())) (lift ppfn tm) >>
+      add_string (type_pp.term_pp_suffix())
     )
   end
 
@@ -404,17 +404,17 @@ fun pp_thm th =
           if !Globals.max_print_depth = 0 then add_string " ... "
           else
             let
-              open Globals
-              val (tg,asl,st,sa) = (tag th, hyp th, !show_tags, !show_assums)
+              open HOLFlags
+              val (tg,asl,st,sa) =
+                  (tag th, hyp th, get_bflag show_tags, get_bflag show_assums)
             in
               (if not st andalso not sa andalso null asl then nothing
                else
                  (if st then lift Tag.pp_tag tg else nothing) >>
                  add_break(1,0) >> pp_terms sa asl >> add_break(1,0)) >>
-              add_string (!Globals.thm_pp_prefix) >>
-              block CONSISTENT (UTF8.size (!Globals.thm_pp_prefix))
-                    (prt (concl th)) >>
-              add_string (!Globals.thm_pp_suffix)
+              add_string (type_pp.thm_pp_prefix()) >>
+              block CONSISTENT (UTF8.size (type_pp.thm_pp_prefix()))
+                    (prt (concl th))
             end
         )
   in
@@ -660,10 +660,6 @@ val els_include_unicode = let
 in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
-
-val unicode_off_but_unicode_act_complaint = ref true
-val _ = register_btrace("Parse.unicode_trace_off_complaints",
-                        unicode_off_but_unicode_act_complaint)
 
 fun make_add_rule gr =
   let
@@ -1110,7 +1106,7 @@ val _ = let
   val rawpp_thm =
       pp_thm
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-        |> trace ("paranoid string literal printing", 1)
+        |> HOLFlags.with_bflags [(Literal.paranoid_string_literals, true)]
   val rawpp_type =
       pp_type
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
@@ -1235,6 +1231,19 @@ val TOK = term_grammar.RE o term_grammar.TOK
   in
     put_term_grammar new_grammar
   end
+
+(* ----------------------------------------------------------------------
+    Common flags/traces
+   ---------------------------------------------------------------------- *)
+
+val avoid_unicode = type_pp.avoid_unicode
+val show_types = HOLFlags.show_types
+val show_assums = HOLFlags.show_assums
+
+val ambiguous_grammar_warning = parse_term.ambiguous_grammar_warning
+val notify_on_tyvar_guess = Preterm.notify_on_tyvar_guess
+val show_typecheck_errors = Preterm.show_typecheck_errors
+val show_syntax_errors = parse_term.show_syntax_errors
 
   val _ = Theory.register_hook
               ("Parse.clear_consts_from_grammar",

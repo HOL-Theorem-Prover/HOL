@@ -254,4 +254,7 @@ end
    val holfoot_prover_extras_2 : thm list ref;
    val holfoot_varlist_rwts    : thm list ref;
    val update_var_res_param    : unit -> unit;
+  val use_yices       : HOLFlags.flag
+  val print_file_flag : HOLFlags.bflag
+
 end

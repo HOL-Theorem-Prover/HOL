@@ -1,0 +1,42 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `create_trace`
+
+``` hol4
+HOLFlags.create_trace :
+  trace_name * {initial:int, max:int} ->
+  {get : unit -> int, set : int -> unit, flag : flag}
+```
+
+------------------------------------------------------------------------
+
+Creates a new integer-valued trace.
+
+A call to `create_trace({group,name}, {initial,max})` creates a trace
+under the given name, whose value starts at `initial` and may not
+exceed `max`. The `initial` value is also the trace's default, which a
+call to `reset_trace` or `reset_traces` restores.
+
+The returned record gives the three ways of reaching the new trace:
+`get` reads it, `set` writes it, and `flag` is a value naming it, for
+passing to `set_flag`, `with_flags` and their context-taking variants.
+Callers outside the creating module normally want `flag`, which the
+owning module exports; the trace's name remains available as a string
+for `set_trace` and the like.
+
+A trace's name is a group and a name within it, so that related traces
+cluster together: `{group = "PP", name = "types"}` is written
+`"PP.types"` where a string is wanted.
+
+### Failure
+
+Fails if either `initial` or `max` is less than zero. Creating a trace
+whose name is already in use replaces the existing one, with a warning.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.create_btrace`](#HOLFlags.create_btrace),
+[`HOLFlags.reset_trace`](#HOLFlags.reset_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

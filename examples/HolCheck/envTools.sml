@@ -20,10 +20,10 @@ in
 
 fun env_type state = stringLib.string_ty --> ((type_of state) --> bool)
 
-val _ = set_trace "notify type variable guesses" 0;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, false);
 val empty_env_tm = ``env$EMPTY_ENV``
 val env_tm = inst [alpha|->(env_type ``x``)]  ``e`` (* FIXME: get rid of the x *)
-val _ = set_trace "notify type variable guesses" 1;
+val _ = HOLFlags.set_bflag (Parse.notify_on_tyvar_guess, true);
 
 (* rvl: list of (rel var:string,corresponding boolean term for state set:bool) pairs
    state: term representing state vector (type is bool # bool # ... # bool)

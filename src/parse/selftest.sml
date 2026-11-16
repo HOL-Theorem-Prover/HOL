@@ -1185,7 +1185,7 @@ end
     A grammar carries the precedence matrix built from its rules and its
     specials, so the matrix has to be shared exactly as far as those two
     fields are --- and a matrix that is reused rather than built must
-    still be complained about as the "ambiguous grammar warning" trace
+    still be complained about as the "Parse.ambiguous_grammar" trace
     asks, and still count as an unambiguous use when it is one.
    ---------------------------------------------------------------------- *)
 
@@ -1207,7 +1207,7 @@ local
   fun ambiguous tok =
       g0 |> add_rule (infixrule (tok ^ "1") tok 500)
          |> add_rule (infixrule (tok ^ "2") tok 400)
-  fun at_level n = Feedback.set_trace "ambiguous grammar warning" n
+  fun at_level n = HOLFlags.set_trace "Parse.ambiguous_grammar" n
   fun raises g = (ignore (mx g); false) handle Feedback.HOL_ERR _ => true
   (* run f with Globals.interactive set to i, warnings silenced, and the
      trace put back to its default of 1 afterwards *)

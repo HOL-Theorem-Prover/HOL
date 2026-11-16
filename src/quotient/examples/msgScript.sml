@@ -271,7 +271,7 @@ val old_thms =
 (*   LIFT TYPES, CONSTANTS, AND THEOREMS BY QUOTIENTS   *)
 (* ==================================================== *)
 
-val _ = quotient.chatting := true;
+val _ = HOLFlags.set_bflag (quotient.chatting, true);
 fun mk_fn (nm,t) = {def_name=nm^"_def", fname = nm, func = t, fixity = NONE}
 
 val [msg_cases,

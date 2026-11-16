@@ -38,6 +38,8 @@ endif
 
 EXTRA_CLEANS = replay-test pft-replay-test
 
+all: PFTCandlePreamble.uo
+
 all: selftest.exe
 
 selftest.exe: selftest.uo
@@ -57,3 +59,5 @@ all: pft-regression.log
 pft-regression.log: selftest.exe
 	$(tee $(PFT_TEST) 2>&1, $@)
 endif
+
+all: PFTCandleComputePreamble.uo

@@ -49,12 +49,12 @@ sig
 
   (* Debug Traces:
 
-     QUANT_INSTANTIATE_HEURISTIC
+     quantHeuristics.debug
        0 - no debug
        1 - simple traces
        2 - full traces with theorems
 
-     QUANT_INSTANTIATE_HEURISTIC___print_term_length
+     quantHeuristics.print_term_length
        maximal length of term strings in debug (default 20)
    *)
 

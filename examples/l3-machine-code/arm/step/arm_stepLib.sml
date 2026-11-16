@@ -20,7 +20,7 @@ val _ = temp_set_grammars
 val ERR = Feedback.mk_HOL_ERR "arm_stepLib"
 val WARN = Feedback.HOL_WARNING "arm_stepLib"
 
-val () = show_assums := true
+val () = HOLFlags.set_bflag (Parse.show_assums, true)
 
 (* Load-time proves that used to fire Tactical.prove here now live in
    arm_stepLibSupportTheory (see arm_stepLibSupportScript.sml). *)

@@ -21,9 +21,9 @@ Never fails.
 ### Example
 
 ``` hol4
->> show_tags := true;
+>> HOLFlags.set_bflag (HOLFlags.show_tags, true);
 
 >> Portable.pprint Tag.pp_tag (Tag.read "fooble");
 ```
 
->>__ show_tags := false;
+>>__ HOLFlags.set_bflag (HOLFlags.show_tags, false);

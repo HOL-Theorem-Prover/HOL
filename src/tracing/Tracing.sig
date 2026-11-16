@@ -1,6 +1,9 @@
 signature Tracing =
 sig
 
+(* Record exact exported/imported identities outside restorable contexts. *)
+val record_signature : {theory: string, hash: string} -> unit
+
 val trace_theory : string ->
   { theory      : string,
     parents     : (string*string) list,
