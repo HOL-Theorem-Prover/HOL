@@ -7,6 +7,7 @@
 
 >>__ val refute_initial_grammars =
       (Parse.type_grammar(), Parse.term_grammar());
+>>__ load "Refute_Core";
 >>__ load "Refute"; open Refute;
 
 `HolRefute` searches for counterexamples to HOL goals by exhaustive
@@ -86,12 +87,12 @@ choices, the schedule, and each backend's counts:
 
 ```repl
 >>__ drop();
->> set_trace "Refute" 2;
+>> set_flag (Refute_Core.Private.trace, 2);
 
 >> g `!n : num. n * n = 7 ==> n < 3`;
 
 >> e (REFUTE_TAC_WITH [upd_search QuickcheckBackends, upd_size 3]);
->>__ set_trace "Refute" 1;
+>>__ set_flag (Refute_Core.Private.trace, 1);
 ```
 
 Counts accumulate over sizes: `exhaustive` tried 2, 3 and 4 values at

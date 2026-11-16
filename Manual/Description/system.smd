@@ -954,10 +954,10 @@ The tags in a theorem can be viewed by setting `HOLFlags.show_tags` to
 true.
 
 ```repl
->> HOLFlags.show_tags := true;
+>> HOLFlags.set_bflag (HOLFlags.show_tags, true);
 
 >> mk_thm([], Term `F`);
->>__ HOLFlags.show_tags := false;
+>>__ HOLFlags.set_bflag(HOLFlags.show_tags, false);
 ```
 
 There are three elements to the left of the turnstile in the fully printed

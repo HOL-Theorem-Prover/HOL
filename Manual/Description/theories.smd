@@ -2617,7 +2617,7 @@ lazy lists, paths, and finite strings.
 \index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|(}
 
 >>__ open listTheory
->>__ show_numeral_types := false
+>>__ set_bflag(show_numeral_types, false);
 
 \index{lists, the HOL theory of@lists, the \HOL{} theory of!constructors}
 HOL lists are inductively defined finite sequences where each
