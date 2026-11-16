@@ -1050,8 +1050,16 @@ val (susp_enc, susp_dec) = bij_ed (
     ) (tagged_sum ("add", pair_ed (pair_ed (string_ed, string_ed), thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
+(* An add is out of date once a remove has taken its key out of the
+   global table; AncestryData then drops it from the current theory's
+   data, so descendants don't load theorems no lookup can reach.  The
+   table only exists once fullmake returns, hence the reference. *)
+val susp_global = ref (fn () => empty_susp_table)
+fun susp_uptodate (AddSuspended (k, _)) =
+      isSome (KNametab.lookup (!susp_global ()) k)
+  | susp_uptodate (RemoveSuspended _) = true
+
 val {record_delta = record_suspension_delta_raw,
-     get_deltas = get_susp_deltas, set_deltas = set_susp_deltas,
      get_global_value = get_susp_global,
      update_global_value = update_susp_global,
      DB = susp_DB,
@@ -1061,12 +1069,14 @@ val {record_delta = record_suspension_delta_raw,
       adinfo = {tag = "suspension.theorems",
                 initial_values = [("min", empty_susp_table)],
                 apply_delta = apply_susp_delta},
-      uptodate_delta = K true,
+      uptodate_delta = susp_uptodate,
       sexps = {dec = susp_dec, enc = susp_enc},
       globinfo = {apply_to_global = apply_susp_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_susp_table}
     }
+
+val _ = susp_global := get_susp_global
 
 (* Wrapper that both persists the delta and updates the in-memory global *)
 fun record_suspension_delta d =
@@ -1128,8 +1138,14 @@ val (res_enc, res_dec) = bij_ed (
     ) (tagged_sum ("add", pair_ed (reskey_ed, thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
+(* As for suspensions: an add is out of date once a remove has taken
+   its key out of the global table. *)
+val res_global = ref (fn () => empty_res_dict)
+fun res_uptodate (AddResumption (k, _)) =
+      isSome (ResTab.lookup (!res_global ()) k)
+  | res_uptodate (RemoveResumptions _) = true
+
 val {record_delta = record_resumption_delta_raw,
-     get_deltas = get_res_deltas, set_deltas = set_res_deltas,
      get_global_value = get_res_global,
      update_global_value = update_res_global,
      DB = res_DB,
@@ -1139,56 +1155,19 @@ val {record_delta = record_resumption_delta_raw,
       adinfo = {tag = "suspension.resumptions",
                 initial_values = [("min", empty_res_dict)],
                 apply_delta = apply_res_delta},
-      uptodate_delta = K true,
+      uptodate_delta = res_uptodate,
       sexps = {dec = res_dec, enc = res_enc},
       globinfo = {apply_to_global = apply_res_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_res_dict}
     }
 
+val _ = res_global := get_res_global
+
 (* Wrapper that both persists the delta and updates the in-memory global *)
 fun record_resumption_delta d =
     (update_res_global (apply_res_delta d);
      record_resumption_delta_raw d)
-
-(* At export, drop each add that a later remove in the current
-   theory's own delta list cancels (finalise records the removes), so
-   descendants don't load theorems no lookup can reach.  Every remove
-   stays: it may cancel an ancestor's add.  The list is rewritten only
-   when an add was dropped, so theories without such adds keep their
-   data as it is.  key d is (true, k) when d removes k and (false, k)
-   when it adds under k. *)
-fun drop_cancelled_adds key ds =
-    let
-      fun step (d, (rms, kept)) =
-          case key d of
-              (true, k) => (k :: rms, d :: kept)
-            | (false, k) => if mem k rms then (rms, kept)
-                            else (rms, d :: kept)
-    in
-      #2 (List.foldr step ([], []) ds)
-    end
-
-fun compact_deltas get set key =
-    let
-      val ds = get {thyname = Theory.current_theory()}
-      val ds' = drop_cancelled_adds key ds
-    in
-      if length ds' < length ds then set ds' else ()
-    end
-
-fun susp_key (AddSuspended (k, _)) = (false, k)
-  | susp_key (RemoveSuspended k) = (true, k)
-
-fun res_key (AddResumption ((thy, nm, _), _)) = (false, (thy, nm))
-  | res_key (RemoveResumptions p) = (true, p)
-
-val _ = Theory.register_hook
-  ("markerLib.compact_suspension_deltas",
-   fn TheoryDelta.ExportTheory _ =>
-        (compact_deltas get_susp_deltas set_susp_deltas susp_key;
-         compact_deltas get_res_deltas set_res_deltas res_key)
-     | _ => ())
 
 (* Public lookup helpers. *)
 
