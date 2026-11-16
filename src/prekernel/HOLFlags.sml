@@ -326,7 +326,7 @@ val {get=linewidth,set=set_linewidth} =
 *)
 
 fun set_linewidth i = (Globals.linewidth := i)
-fun linewidth () = !Globals.linewidth
+fun get_linewidth () = !Globals.linewidth
 
 fun mkflag nm = {group = "PP", name = nm}
 
