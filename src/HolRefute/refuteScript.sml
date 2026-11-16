@@ -432,6 +432,16 @@ Proof
   simp [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST]
 QED
 
+(* The two-index form [Refute_Extract] meets in definition bodies: a
+   nested count. *)
+Theorem forall_lt_lt_count_list:
+  (∀i j. i < j ⇒ j < n ⇒ P i j) ⇔
+  EVERY (λj. EVERY (λi. P i j) (COUNT_LIST j)) (COUNT_LIST n)
+Proof
+  simp [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST] >>
+  metis_tac []
+QED
+
 Theorem bounded_exists_less:
   (∃n. n < e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)
 Proof

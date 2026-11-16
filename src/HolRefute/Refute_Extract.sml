@@ -1198,45 +1198,8 @@ structure Refute_Extract :> Refute_Extract = struct
      mention it, so that [!x y. MEM x l /\ MEM y (f x) ==> P] becomes
      [!x. MEM x l ==> !y. MEM y (f x) ==> P] before the bound of each
      binder is read.  The two-index shape [!i j. i < j ==> j < n ==> P i j]
-     is a nested count.  Patterns on the left side are untouched. *)
-  val forall_lt_lt_count_list =
-    let
-      val i = Term.mk_var ("i", numSyntax.num)
-      val j = Term.mk_var ("j", numSyntax.num)
-      val n = Term.mk_var ("n", numSyntax.num)
-      val P = Term.mk_var ("P",
-        Type.--> (numSyntax.num, Type.--> (numSyntax.num, Type.bool)))
-      val Pij = Term.list_mk_comb (P, [i, j])
-      (* [!i j. i < j ==> j < n ==> P i j] *)
-      val left = boolSyntax.list_mk_forall ([i, j],
-        boolSyntax.mk_imp (numSyntax.mk_less (i, j),
-          boolSyntax.mk_imp (numSyntax.mk_less (j, n), Pij)))
-      (* [EVERY (\j. EVERY (\i. P i j) (COUNT_LIST j)) (COUNT_LIST n)] *)
-      val right = listSyntax.mk_every
-        (Term.mk_abs (j, listSyntax.mk_every
-           (Term.mk_abs (i, Pij), rich_listSyntax.mk_count_list j)),
-         rich_listSyntax.mk_count_list n)
-      (* [a ==> b ==> c] to [b ==> a ==> c] *)
-      val swap_antecedents =
-        Conv.EVERY_CONV
-          [Conv.REWR_CONV boolTheory.AND_IMP_INTRO,
-           Conv.RATOR_CONV (Conv.RAND_CONV
-             (Conv.REWR_CONV boolTheory.CONJ_COMM)),
-           Conv.REWR_CONV (Conv.GSYM boolTheory.AND_IMP_INTRO)]
-      (* Both sides to [!j. j < n ==> !i. i < j ==> P i j]. *)
-      val from_left =
-        Conv.EVERY_CONV
-          [Conv.HO_REWR_CONV boolTheory.SWAP_FORALL_THM,
-           Conv.STRIP_QUANT_CONV swap_antecedents,
-           Conv.QUANT_CONV
-             (Conv.HO_REWR_CONV boolTheory.RIGHT_FORALL_IMP_THM)] left
-      val from_right =
-        Ho_Rewrite.REWRITE_CONV
-          [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST] right
-    in
-      Thm.TRANS from_left (Thm.SYM from_right)
-    end
-
+     is a nested count, [refuteTheory.forall_lt_lt_count_list].  Patterns
+     on the left side are untouched. *)
   fun definition_body_conv tm =
     let
       fun pass theorems = Ho_Rewrite.REWRITE_CONV theorems
@@ -1249,7 +1212,7 @@ structure Refute_Extract :> Refute_Extract = struct
          interval shapes are conjunctions. *)
       Conv.EVERY_CONV
         [pass [Conv.GSYM boolTheory.AND_IMP_INTRO],
-         pass [forall_lt_lt_count_list],
+         pass [refuteTheory.forall_lt_lt_count_list],
          pass [boolTheory.RIGHT_FORALL_IMP_THM,
                boolTheory.RIGHT_EXISTS_AND_THM],
          pass Refute_Core.bounded_rewrites,
