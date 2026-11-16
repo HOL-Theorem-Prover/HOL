@@ -19,7 +19,8 @@ reader and check script.
 [Candle PR #25]: https://github.com/CakeML/candle/pull/25
 
 Candle checks the exact sequents of the `candle` ruleset outputs, including
-`compute-binder`'s, by replaying them. Its `candle/pft/check.sh` converts
+`compute-binder`'s, by replaying them. First [build the driver](../pft-cli.md)
+in this checkout to produce `PFTCLI.uo`. Candle's `candle/pft/check.sh` converts
 their prerequisites with this checkout and the tracing HOL, then replays:
 
 ```sh
