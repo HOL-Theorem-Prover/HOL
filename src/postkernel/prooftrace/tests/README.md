@@ -13,6 +13,11 @@ Sources load from this checkout; fresh processes check HOL replay. Logs and
 outputs stay in the scratch dir. `compute-binder` needs `cv_computeLib`.
 Identity fixtures need a producer rebuilt with export/import hooks.
 
+Use a Candle checkout containing [Candle PR #25] for the PFT 0.1.0
+reader and check script.
+
+[Candle PR #25]: https://github.com/CakeML/candle/pull/25
+
 Candle checks the exact sequents of the `candle` ruleset outputs, including
 `compute-binder`'s, by replaying them. Its `candle/pft/check.sh` converts
 their prerequisites with this checkout and the tracing HOL, then replays:
