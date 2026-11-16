@@ -65,6 +65,10 @@ end;
 
 val trace_level = ref 1;
 
+(* Where tracing reads the level; HOL's metisTools reads its "metis.trace"
+   flag instead. *)
+val get_trace_level = ref (fn () => !trace_level);
+
 val traces : {module : string, alignment : int -> int} list ref = ref [];
 
 fun add_trace t = traces := t :: !traces
@@ -78,7 +82,7 @@ local
     end;
 in
   fun tracing {module = m, level = l} =
-    let val t = !trace_level
+    let val t = !get_trace_level ()
     in 0 < t andalso (MAX <= t orelse MAX <= l orelse query m l <= t)
     end;
 end;

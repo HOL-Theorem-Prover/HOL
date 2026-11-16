@@ -28,10 +28,12 @@ exception OutOfDateTerm of string
    4: Log of each step in proof translation
    5: Log of each inference during proof search *)
 
-val {flag = metis_trace, ...} = HOLFlags.create_trace(
+val {get = metis_trace_level, flag = metis_trace, ...} =
+    HOLFlags.create_trace(
       {group = "metis", name = "trace"},
       {max = 10, initial = if !Globals.interactive then 1 else 0}
     )
+val () = mlibUseful.get_trace_level := metis_trace_level
 
 local
   open mlibUseful;

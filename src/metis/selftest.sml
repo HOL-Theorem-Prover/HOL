@@ -115,4 +115,15 @@ val _ = shouldfail {
       testfn = runtac (METIS_TAC [])
     } ([], mk_imp(c, mk_var("p", bool)))
 
+(* The "metis.trace" flag is what mlibUseful's tracing consults. *)
+val _ = let
+  val q = {module = "metisTools", level = 1}
+  fun at n = HOLFlags.with_flags [(metisTools.metis_trace, n)]
+               mlibUseful.tracing q
+in
+  tprint "metis.trace flag controls mlibUseful.tracing";
+  if not (at 0) andalso at 1 then OK ()
+  else die "metis.trace flag ignored"
+end
+
 val _ = Process.exit Process.success;

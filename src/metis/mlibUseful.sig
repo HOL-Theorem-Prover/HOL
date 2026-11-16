@@ -18,6 +18,7 @@ val partial     : exn -> ('a -> 'b option) -> 'a -> 'b
 val timed       : ('a -> 'b) -> 'a -> real * 'b
 val timed_many  : ('a -> 'b) -> 'a -> real * 'b
 val trace_level : int ref
+val get_trace_level : (unit -> int) ref
 val add_trace   : {module : string, alignment : int -> int} -> unit
 val set_traces  : {module : string, alignment : int -> int} list -> unit
 val tracing     : {module : string, level : int} -> bool
