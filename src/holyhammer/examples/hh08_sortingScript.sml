@@ -2,13 +2,16 @@
 (* FILE          : hh08_sortingScript.sml                                    *)
 (* DESCRIPTION   : HolyHammer examples: case study, insertion sort           *)
 (*                                                                           *)
-(* Every proof below was found by calling the hammer at the point marked     *)
-(* (* hh *); the tactic that follows is the verified, minimised proof that   *)
-(* HolyHammer printed.  See README.md for how to replay the calls.           *)
+(* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
+(* theory is built, so building needs a prover (see README.md).  The         *)
+(* comment after each hh is the verified, minimised proof that               *)
+(* HolyHammer printed when the example was written.                          *)
 (* ========================================================================= *)
 Theory hh08_sorting
 Ancestors
   arithmetic list sorting
+Libs
+  holyHammer
 
 (* -------------------------------------------------------------------------
    A small verification project, done the way the CoqHammer authors
@@ -45,9 +48,9 @@ Theorem perm_ins:
   PERM (ins x l) (x::l)
 Proof
   Induct_on `l`
-  >- (* hh *) metis_tac [ins_def, PERM_REFL]
-  >- (* hh *) metis_tac [ins_def, PERM_REFL, PERM_FUN_SWAP_AT_FRONT, PERM_MONO,
-                         PERM_SYM]
+  >- hh (* metis_tac [ins_def, PERM_REFL] *)
+  >- hh (* metis_tac [ins_def, PERM_REFL, PERM_FUN_SWAP_AT_FRONT, PERM_MONO,
+                      PERM_SYM] *)
 QED
 
 (* The step case uses the lemma just proved. *)
@@ -55,8 +58,8 @@ Theorem perm_isort:
   PERM (isort l) l
 Proof
   Induct_on `l`
-  >- (* hh *) metis_tac [isort_def, PERM_REFL]
-  >- (* hh *) metis_tac [isort_def, perm_ins, PERM_TRANS, PERM_CONS_IFF]
+  >- hh (* metis_tac [isort_def, PERM_REFL] *)
+  >- hh (* metis_tac [isort_def, perm_ins, PERM_TRANS, PERM_CONS_IFF] *)
 QED
 
 (* Two corollaries.  No induction: the hammer combines perm_isort with
@@ -64,15 +67,15 @@ QED
 Theorem length_isort:
   LENGTH (isort l) = LENGTH l
 Proof
-  (* hh *)
-  metis_tac [perm_isort, PERM_LENGTH]
+  hh
+  (* metis_tac [perm_isort, PERM_LENGTH] *)
 QED
 
 Theorem mem_isort:
   MEM x (isort l) <=> MEM x l
 Proof
-  (* hh *)
-  metis_tac [perm_isort, PERM_LIST_TO_SET]
+  hh
+  (* metis_tac [perm_isort, PERM_LIST_TO_SET] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -95,8 +98,8 @@ QED
 Theorem mem_ins:
   MEM y (ins x l) <=> y = x \/ MEM y l
 Proof
-  (* hh *)
-  metis_tac [perm_ins, MEM, PERM_LIST_TO_SET]
+  hh
+  (* metis_tac [perm_ins, MEM, PERM_LIST_TO_SET] *)
 QED
 
 (* With mem_ins available, the same hammer call that failed before
@@ -107,16 +110,16 @@ Theorem sorted_ins:
   SORTED $<= l ==> SORTED $<= (ins x l)
 Proof
   Induct_on `l` >> rw [ins_def] >>
-  (* hh *)
-  metis_tac [mem_ins, NOT_LESS, SORTED_EQ, LESS_OR_EQ, transitive_LE]
+  hh
+  (* metis_tac [mem_ins, NOT_LESS, SORTED_EQ, LESS_OR_EQ, transitive_LE] *)
 QED
 
 Theorem sorted_isort:
   SORTED $<= (isort l)
 Proof
   Induct_on `l`
-  >- (* hh *) metis_tac [isort_def, SORTED_NIL]
-  >- (* hh *) metis_tac [sorted_ins, isort_def]
+  >- hh (* metis_tac [isort_def, SORTED_NIL] *)
+  >- hh (* metis_tac [sorted_ins, isort_def] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -131,17 +134,17 @@ QED
 Theorem isort_sorted_id:
   SORTED $<= l ==> isort l = l
 Proof
-  (* hh *)
-  metis_tac [sorted_isort, perm_isort, EQ_LESS_EQ, transitive_LE,
-             relationTheory.antisymmetric_def, SORTED_PERM_EQ]
+  hh
+  (* metis_tac [sorted_isort, perm_isort, EQ_LESS_EQ, transitive_LE,
+                relationTheory.antisymmetric_def, SORTED_PERM_EQ] *)
 QED
 
 Theorem isort_idem:
   isort (isort l) = isort l
 Proof
-  (* hh *)
-  metis_tac [perm_isort, sorted_isort, EQ_LESS_EQ, transitive_LE,
-             relationTheory.antisymmetric_def, SORTED_PERM_EQ]
+  hh
+  (* metis_tac [perm_isort, sorted_isort, EQ_LESS_EQ, transitive_LE,
+                relationTheory.antisymmetric_def, SORTED_PERM_EQ] *)
 QED
 
 (* Sorting respects permutations.  The hammer fails on
@@ -154,8 +157,8 @@ QED
 Theorem perm_isort_perm:
   PERM l1 l2 ==> PERM (isort l1) (isort l2)
 Proof
-  (* hh *)
-  metis_tac [perm_isort, PERM_CONG_2]
+  hh
+  (* metis_tac [perm_isort, PERM_CONG_2] *)
 QED
 
 (* The hammer still fails on the second step, even with

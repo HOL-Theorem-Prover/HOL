@@ -71,7 +71,13 @@ val th1 = holyhammer ``MEM x l /\ EVERY P l ==> P x``;
       zipperposition slice: Timeout (0.17836 s)
       e slice: Timeout (0.286808 s)
       ...                                    (the other slices stopping)
-    val th1 = ⊢ MEM x l ∧ EVERY P l ⇒ P x: thm                          *)
+
+    Prove the statement in a script with:
+      metis_tac [listTheory.EVERY_MEM]
+    val th1 = ⊢ MEM x l ∧ EVERY P l ⇒ P x: thm
+
+   The last message is the one to act on: it comes after every slice
+   has reported.                                                        *)
 
 (* -------------------------------------------------------------------------
    4. Inside a goalstack proof
@@ -84,11 +90,11 @@ e hh;
 (*      verified proof (replays in 0.00 s):
           metis_tac [listTheory.ALL_DISTINCT_APPEND']
       ...
-    Goal proved.
-     [.] ⊢ DISJOINT (set l1) (set l2)
 
-    Replace "e hh" in your script by
-      metis_tac [ALL_DISTINCT_APPEND']                                     *)
+    Replace `hh` with:
+      metis_tac [listTheory.ALL_DISTINCT_APPEND']
+    Goal proved.
+     [.] ⊢ DISJOINT (set l1) (set l2)                                     *)
 
 (* -------------------------------------------------------------------------
    5. Options: time limit and provers

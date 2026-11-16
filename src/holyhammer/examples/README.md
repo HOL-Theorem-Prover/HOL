@@ -58,30 +58,32 @@ order; `hh07`-`hh10` build on the lessons of the earlier files.
   * `interactive.sml`: an annotated interactive session.  Checking the
     provers, options, explicit premises with `hh_pb`, `debug_dir`.
 
-The theory files build without any external prover:
+The theory files call the hammer directly, so building them needs at
+least one prover (see "Setting up" below) and takes a while:
 
     cd src/holyhammer/examples
     ../../../bin/Holmake
 
-They contain the *output* of the hammer (the verified `metis_tac` calls),
-not the hammer calls themselves.  Each place where the hammer was called
-is marked with `(* hh *)`, for example:
+Every `hh` in them runs HolyHammer when the theory is built.  The
+comment after it is the verified proof the hammer printed when the
+example was written, for example:
 
     Theorem exp_sub_mul:
       a <= b ==> g ** (b - a) * g ** a = g ** b
     Proof
-      (* hh *)
-      metis_tac [SUB_ADD, EXP_ADD]
+      hh
+      (* metis_tac [SUB_ADD, EXP_ADD] *)
     QED
 
-This is the recommended way to use any hammer (it is also the advice
-of the Sledgehammer and CoqHammer manuals).  Call it interactively, then
-replace the call with the proof it prints.  Hammer runs depend on
-timeouts, on the machine's load, on the installed prover versions, and
-on the facts that happen to be loaded.  A script that calls `hh` is
-therefore slow and may stop building when any of these change.  The
-printed `metis_tac` call depends only on the named theorems.
-
+A rebuild can print a different proof: hammer runs depend on timeouts,
+on the machine's load, on the installed prover versions, and on the
+facts that happen to be loaded.  For the same reason, in your own
+developments the recommended way to use any hammer (it is also the
+advice of the Sledgehammer and CoqHammer manuals) is to call it
+interactively, then replace the call with the proof it prints.  A
+script that calls `hh` is slow and may stop building when any of these
+change; the printed `metis_tac` call depends only on the named
+theorems.
 
 Setting up
 ----------
@@ -117,9 +119,8 @@ For instance, for `hh03_list`:
     holyhammer ``MEM x (l1 ++ l2) /\ EVERY P l1 /\ EVERY P l2 ==> P x``;
 
 The theorems of `hh03_list` itself are then visible to the hammer too.
-To replay one of the theories from scratch, as the author did, step
-through the script in an interactive session and use `hh` (or
-`holyhammer`) wherever a proof is marked `(* hh *)`.
+To replay one of the theories from scratch, step through the script
+in an interactive session; each `hh` runs the hammer.
 
 
 The two entry points
@@ -137,6 +138,9 @@ The two entry points
       verified proof (replays in 0.00 s):
         metis_tac [EVERY_MEM]
       ...
+
+    Prove the statement in a script with:
+      metis_tac [EVERY_MEM]
     val th = ⊢ MEM x l ∧ EVERY P l ⇒ P x: thm
 
 `hh : tactic` is the same thing as a tactic.  It attacks the current
@@ -145,6 +149,11 @@ goal *including its assumptions*:
     > g `!l1 l2. ALL_DISTINCT (l1 ++ l2) ==> DISJOINT (set l1) (set l2)`;
     > e (rpt strip_tac);
     > e hh;
+
+When it succeeds, `hh` ends with the tactic to put in your script:
+
+    Replace `hh` with:
+      metis_tac [ALL_DISTINCT_APPEND']
 
 How to read the output:
 
@@ -159,7 +168,9 @@ How to read the output:
   * `proof found by <prover>:` lists *all* the facts the prover used.
   * `verified proof (replays in t s):` is the minimised tactic that
     actually re-proved the goal in HOL4; `t` is how long its Metis
-    replay took.  **This is the line to copy into your script.**
+    replay took.  It is repeated in the last message (`Replace `hh`
+    with:`), after every slice has reported: **that is the tactic to
+    copy into your script.**
     Facts from the current theory print as `fetch "thy" "name"`
     (`DB.fetch`).  In a script you can write plain `name` if the theorem
     is bound as an ML value (`Theorem name: ...` and `Definition

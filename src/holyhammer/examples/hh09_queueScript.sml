@@ -2,13 +2,16 @@
 (* FILE          : hh09_queueScript.sml                                      *)
 (* DESCRIPTION   : HolyHammer examples: case study, a functional queue       *)
 (*                                                                           *)
-(* Every proof below was found by calling the hammer at the point marked     *)
-(* (* hh *); the tactic that follows is the verified, minimised proof that   *)
-(* HolyHammer printed.  See README.md for how to replay the calls.           *)
+(* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
+(* theory is built, so building needs a prover (see README.md).  The         *)
+(* comment after each hh is the verified, minimised proof that               *)
+(* HolyHammer printed when the example was written.                          *)
 (* ========================================================================= *)
 Theory hh09_queue
 Ancestors
   arithmetic list
+Libs
+  holyHammer
 
 (* -------------------------------------------------------------------------
    The classic purely functional queue: a front list f and a reversed
@@ -55,8 +58,8 @@ End
 Theorem qlist_qempty:
   qlist qempty = []
 Proof
-  (* hh *)
-  metis_tac [qlist_def, qempty_def, APPEND, REVERSE_DEF]
+  hh
+  (* metis_tac [qlist_def, qempty_def, APPEND, REVERSE_DEF] *)
 QED
 
 (* The hammer can do a simple case split by itself: it found
@@ -65,9 +68,9 @@ QED
 Theorem qlist_qpush:
   qlist (qpush x q) = qlist q ++ [x]
 Proof
-  (* hh *)
-  metis_tac [qpush_def, qlist_def, fetch "hh09_queue" "queue_nchotomy",
-             APPEND_ASSOC, REVERSE_DEF]
+  hh
+  (* metis_tac [qpush_def, qlist_def, fetch "hh09_queue" "queue_nchotomy",
+                APPEND_ASSOC, REVERSE_DEF] *)
 QED
 
 (* qpop is harder: its definition has a nested pattern match and a case
@@ -83,8 +86,8 @@ Theorem qpop_none:
   qpop q = NONE <=> qlist q = []
 Proof
   Cases_on `q` >> Cases_on `l` >> rw [qpop_def, qlist_def] >> CASE_TAC
-  >- (* hh *) metis_tac [REVERSE_EQ_NIL]
-  >- (* hh *) metis_tac [REVERSE_DEF, NOT_NIL_CONS]
+  >- hh (* metis_tac [REVERSE_EQ_NIL] *)
+  >- hh (* metis_tac [REVERSE_DEF, NOT_NIL_CONS] *)
 QED
 
 (* The same recipe for the other direction.  Here the case expression
@@ -98,8 +101,8 @@ Theorem qpop_some:
   qpop q = SOME (x, q') ==> qlist q = x :: qlist q'
 Proof
   Cases_on `q` >> Cases_on `l` >> rw [qpop_def] >> gvs [AllCaseEqs ()]
-  >- (* hh *) metis_tac [qlist_def, APPEND, APPEND_NIL, REVERSE_DEF]
-  >- (* hh *) metis_tac [qlist_def, APPEND]
+  >- hh (* metis_tac [qlist_def, APPEND, APPEND_NIL, REVERSE_DEF] *)
+  >- hh (* metis_tac [qlist_def, APPEND] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -120,8 +123,8 @@ QED
 Theorem qpush_not_empty:
   qlist q = [] ==> qpop (qpush x q) <> NONE
 Proof
-  (* hh *)
-  metis_tac [qpop_none, qlist_qpush, APPEND, NOT_CONS_NIL]
+  hh
+  (* metis_tac [qpop_none, qlist_qpush, APPEND, NOT_CONS_NIL] *)
 QED
 
 (* An existential conclusion: the hammer found the theorems saying that
@@ -129,21 +132,22 @@ QED
 Theorem qpop_some_exists:
   qlist q <> [] ==> ?x q'. qpop q = SOME (x, q')
 Proof
-  (* hh *)
-  metis_tac [qpop_none, pairTheory.ABS_PAIR_THM, optionTheory.option_nchotomy]
+  hh
+  (* metis_tac [qpop_none, pairTheory.ABS_PAIR_THM,
+                optionTheory.option_nchotomy] *)
 QED
 
 Theorem qpop_qpush:
   qpop q = SOME (x, q') ==> qlist (qpush y q') = TL (qlist q) ++ [y]
 Proof
-  (* hh *)
-  metis_tac [qlist_qpush, qpop_some, TL_DEF]
+  hh
+  (* metis_tac [qlist_qpush, qpop_some, TL_DEF] *)
 QED
 
 Theorem qpop_shrinks:
   qpop q = SOME (x, q') ==> LENGTH (qlist q') < LENGTH (qlist q)
 Proof
-  (* hh *)
-  metis_tac [qpop_some, LENGTH, NOT_LEQ, prim_recTheory.LESS_REFL,
-             LESS_CASES]
+  hh
+  (* metis_tac [qpop_some, LENGTH, NOT_LEQ, prim_recTheory.LESS_REFL,
+                LESS_CASES] *)
 QED

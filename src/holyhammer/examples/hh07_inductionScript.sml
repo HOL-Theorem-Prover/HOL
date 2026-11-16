@@ -2,13 +2,16 @@
 (* FILE          : hh07_inductionScript.sml                                  *)
 (* DESCRIPTION   : HolyHammer examples: your own definitions, and induction  *)
 (*                                                                           *)
-(* Every proof below was found by calling the hammer at the point marked     *)
-(* (* hh *); the tactic that follows is the verified, minimised proof that   *)
-(* HolyHammer printed.  See README.md for how to replay the calls.           *)
+(* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
+(* theory is built, so building needs a prover (see README.md).  The         *)
+(* comment after each hh is the verified, minimised proof that               *)
+(* HolyHammer printed when the example was written.                          *)
 (* ========================================================================= *)
 Theory hh07_induction
 Ancestors
   arithmetic list rich_list
+Libs
+  holyHammer
 
 (* -------------------------------------------------------------------------
    Two lessons in this file.
@@ -62,17 +65,17 @@ Theorem size_mirror:
   size (mirror t) = size t
 Proof
   Induct_on `t`
-  >- (* hh *) metis_tac [mirror_def]
-  >- (* hh *) metis_tac [size_def, mirror_def, ADD_SYM, ADD_ASSOC,
-                         SUC_ONE_ADD]
+  >- hh (* metis_tac [mirror_def] *)
+  >- hh (* metis_tac [size_def, mirror_def, ADD_SYM, ADD_ASSOC,
+                      SUC_ONE_ADD] *)
 QED
 
 Theorem mirror_mirror:
   mirror (mirror t) = t
 Proof
   Induct_on `t`
-  >- (* hh *) metis_tac [mirror_def]
-  >- (* hh *) metis_tac [mirror_def]
+  >- hh (* metis_tac [mirror_def] *)
+  >- hh (* metis_tac [mirror_def] *)
 QED
 
 (* Here the step case needs list lemmas too: REVERSE distributes over ++
@@ -81,19 +84,19 @@ Theorem flatten_mirror:
   flatten (mirror t) = REVERSE (flatten t)
 Proof
   Induct_on `t`
-  >- (* hh *) metis_tac [flatten_def, mirror_def, REVERSE_DEF]
-  >- (* hh *) metis_tac [flatten_def, mirror_def, APPEND_ASSOC,
-                         REVERSE_APPEND, REVERSE_SING]
+  >- hh (* metis_tac [flatten_def, mirror_def, REVERSE_DEF] *)
+  >- hh (* metis_tac [flatten_def, mirror_def, APPEND_ASSOC,
+                      REVERSE_APPEND, REVERSE_SING] *)
 QED
 
 Theorem length_flatten:
   LENGTH (flatten t) = size t
 Proof
   Induct_on `t`
-  >- (* hh *) metis_tac [size_def, flatten_def, LENGTH]
-  >- (* hh *) metis_tac [size_def, flatten_def, LENGTH, NUMERAL_DEF,
-                         ALT_ZERO, ADD_CLAUSES, SUC_ONE_ADD, APPEND_ASSOC,
-                         LENGTH_APPEND]
+  >- hh (* metis_tac [size_def, flatten_def, LENGTH] *)
+  >- hh (* metis_tac [size_def, flatten_def, LENGTH, NUMERAL_DEF,
+                      ALT_ZERO, ADD_CLAUSES, SUC_ONE_ADD, APPEND_ASSOC,
+                      LENGTH_APPEND] *)
 QED
 
 (* Once the inductive lemmas are proved, corollaries need no induction:
@@ -102,15 +105,15 @@ QED
 Theorem length_flatten_mirror:
   LENGTH (flatten (mirror t)) = size t
 Proof
-  (* hh *)
-  metis_tac [flatten_mirror, length_flatten, LENGTH_REVERSE]
+  hh
+  (* metis_tac [flatten_mirror, length_flatten, LENGTH_REVERSE] *)
 QED
 
 Theorem mem_flatten_mirror:
   MEM x (flatten (mirror t)) <=> MEM x (flatten t)
 Proof
-  (* hh *)
-  metis_tac [flatten_mirror, MEM_REVERSE]
+  hh
+  (* metis_tac [flatten_mirror, MEM_REVERSE] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -139,19 +142,19 @@ Theorem gauss_sum:
   2 * sum_to n = n * (n + 1)
 Proof
   Induct_on `n`
-  >- (* hh *) metis_tac [fetch "hh07_induction" "sum_to_compute",
-                         MULT_CLAUSES]
-  >- (* hh *) metis_tac [sum_to_def, ADD_CLAUSES, ADD_SUC, SUC_ADD_SYM, MULT,
-                         MULT_SUC, MULT_LEFT_1, NUMERAL_DEF, BIT1, BIT2,
-                         RIGHT_ADD_DISTRIB, LEFT_ADD_DISTRIB]
+  >- hh (* metis_tac [fetch "hh07_induction" "sum_to_compute",
+                      MULT_CLAUSES] *)
+  >- hh (* metis_tac [sum_to_def, ADD_CLAUSES, ADD_SUC, SUC_ADD_SYM, MULT,
+                      MULT_SUC, MULT_LEFT_1, NUMERAL_DEF, BIT1, BIT2,
+                      RIGHT_ADD_DISTRIB, LEFT_ADD_DISTRIB] *)
 QED
 
 Theorem le_sum_to:
   n <= sum_to n
 Proof
   Induct_on `n`
-  >- (* hh *) metis_tac [ZERO_LESS_EQ]
-  >- (* hh *) metis_tac [sum_to_def, LE_EXISTS]
+  >- hh (* metis_tac [ZERO_LESS_EQ] *)
+  >- hh (* metis_tac [sum_to_def, LE_EXISTS] *)
 QED
 
 (* The same advice applies to library functions.  arithmeticTheory has
@@ -164,10 +167,10 @@ Theorem fact_mono:
   m <= n ==> FACT m <= FACT n
 Proof
   Induct_on `n`
-  >- (* hh *) metis_tac [LE, LESS_OR_EQ]
-  >- (* hh *) metis_tac [ADD_MONO_LESS_EQ, ZERO_LESS_EQ, ADD, MULT, ADD_SYM,
-                         FACT, LESS_EQ_TRANS, LESS_OR_EQ,
-                         LESS_EQ_IFF_LESS_SUC]
+  >- hh (* metis_tac [LE, LESS_OR_EQ] *)
+  >- hh (* metis_tac [ADD_MONO_LESS_EQ, ZERO_LESS_EQ, ADD, MULT, ADD_SYM,
+                      FACT, LESS_EQ_TRANS, LESS_OR_EQ,
+                      LESS_EQ_IFF_LESS_SUC] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -203,9 +206,9 @@ Theorem count_occ_append:
   count_occ x (l1 ++ l2) = count_occ x l1 + count_occ x l2
 Proof
   Induct_on `l1`
-  >- (* hh *) metis_tac [APPEND, count_occ_def, ADD_0, ADD_COMM]
-  >- (* hh *) metis_tac [count_occ_same, ADD_COMM, count_occ_other, APPEND,
-                         ADD, SUC_ONE_ADD]
+  >- hh (* metis_tac [APPEND, count_occ_def, ADD_0, ADD_COMM] *)
+  >- hh (* metis_tac [count_occ_same, ADD_COMM, count_occ_other, APPEND,
+                      ADD, SUC_ONE_ADD] *)
 QED
 
 (* Here the step case does its own case split on whether x = h, using
@@ -214,16 +217,16 @@ Theorem count_occ_le_length:
   count_occ x l <= LENGTH l
 Proof
   Induct_on `l`
-  >- (* hh *) metis_tac [count_occ_def, LESS_EQ_REFL, LENGTH]
-  >- (* hh *) metis_tac [count_occ_other, ADD_SYM, count_occ_same, LENGTH,
-                         LESS_EQ_MONO, ALT_ZERO, LESS_EQ, SUC_ONE_ADD,
-                         LESS_OR_EQ]
+  >- hh (* metis_tac [count_occ_def, LESS_EQ_REFL, LENGTH] *)
+  >- hh (* metis_tac [count_occ_other, ADD_SYM, count_occ_same, LENGTH,
+                      LESS_EQ_MONO, ALT_ZERO, LESS_EQ, SUC_ONE_ADD,
+                      LESS_OR_EQ] *)
 QED
 
 Theorem count_occ_not_mem:
   ~MEM x l ==> count_occ x l = 0
 Proof
   Induct_on `l`
-  >- (* hh *) metis_tac [count_occ_def]
-  >- (* hh *) metis_tac [count_occ_other, MEM]
+  >- hh (* metis_tac [count_occ_def] *)
+  >- hh (* metis_tac [count_occ_other, MEM] *)
 QED

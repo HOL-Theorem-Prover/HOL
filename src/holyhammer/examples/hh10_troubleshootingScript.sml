@@ -3,14 +3,15 @@
 (* DESCRIPTION   : HolyHammer examples: what to do when the hammer fails     *)
 (*                                                                           *)
 (* Each section starts from a goal on which a plain hammer call failed       *)
-(* and shows what worked instead.  The (* hh *) marks show where a later     *)
-(* hammer call succeeded.                                                    *)
+(* and shows what worked instead.  The hh calls are the later hammer         *)
+(* calls that succeeded; they run when the theory is built, and the          *)
+(* comment after each is the proof HolyHammer printed.                       *)
 (* ========================================================================= *)
 Theory hh10_troubleshooting
 Ancestors
   list rich_list pred_set real transc complex
 Libs
-  realLib
+  realLib holyHammer
 
 (* -------------------------------------------------------------------------
    Failure 1: "ATPs could not find a proof" on a goal that is false
@@ -104,8 +105,8 @@ Theorem biginter_image_inter:
   BIGINTER (IMAGE A C) INTER BIGINTER (IMAGE B C)
 Proof
   rw [EXTENSION, IN_BIGINTER_IMAGE] >>
-  (* hh *)
-  metis_tac []
+  hh
+  (* metis_tac [] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -128,15 +129,19 @@ QED
    minimisation, at the price of a longer lemma list.
    ------------------------------------------------------------------------- *)
 
+val _ = hhConfig.hh_set ("timeout", "60");
+
 Theorem exp_two_pi_i:
   exp (i * (2 * pi)) = 1
 Proof
-  (* hh *)
-  metis_tac [EXP_IMAGINARY, RE, IM, i, pairTheory.FST, pairTheory.SND,
-             REAL_MUL_LID, COS_PERIODIC, REAL_DOUBLE, SIN_PERIODIC_PI,
-             complex_of_real, complex_of_num, SIN_0, COS_0,
-             COMPLEX_SCALAR_MUL_COMM, COMPLEX_SCALAR_LMUL_NEG1,
-             COMPLEX_SCALAR_RMUL_NEG, complex_scalar_lmul, complex_mul,
-             REAL_ADD_RID, REAL_SUB_RZERO, COMPLEX_SCALAR_LMUL_ENTIRE,
-             COMPLEX_MUL_ARG]
+  hh
+  (* metis_tac [EXP_IMAGINARY, RE, IM, i, pairTheory.FST, pairTheory.SND,
+                REAL_MUL_LID, COS_PERIODIC, REAL_DOUBLE, SIN_PERIODIC_PI,
+                complex_of_real, complex_of_num, SIN_0, COS_0,
+                COMPLEX_SCALAR_MUL_COMM, COMPLEX_SCALAR_LMUL_NEG1,
+                COMPLEX_SCALAR_RMUL_NEG, complex_scalar_lmul, complex_mul,
+                REAL_ADD_RID, REAL_SUB_RZERO, COMPLEX_SCALAR_LMUL_ENTIRE,
+                COMPLEX_MUL_ARG] *)
 QED
+
+val _ = hhConfig.hh_unset "timeout";

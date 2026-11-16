@@ -2,13 +2,16 @@
 (* FILE          : hh01_tutorialScript.sml                                   *)
 (* DESCRIPTION   : HolyHammer examples: first steps                          *)
 (*                                                                           *)
-(* Every proof below was found by calling the hammer at the point marked     *)
-(* (* hh *); the tactic that follows is the verified, minimised proof that   *)
-(* HolyHammer printed.  See README.md for how to replay the calls.           *)
+(* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
+(* theory is built, so building needs a prover (see README.md).  The         *)
+(* comment after each hh is the verified, minimised proof that               *)
+(* HolyHammer printed when the example was written.                          *)
 (* ========================================================================= *)
 Theory hh01_tutorial
 Ancestors
   list rich_list pred_set
+Libs
+  holyHammer
 
 (* -------------------------------------------------------------------------
    Lesson 1: calling the hammer on a statement
@@ -20,28 +23,32 @@ Ancestors
 
    The hammer prints a progress line for every prover slice it starts
    ("starting vampire slice (96 facts)", ...), a line for every slice
-   that finishes ("vampire slice: Theorem (0.25 s)"), and finally
+   that finishes ("vampire slice: Theorem (0.25 s)").  Its last message
+   is the verified proof:
 
-     verified proof (replays in 0.00 s):
-       metis_tac [listTheory.EVERY_MEM]
+     Prove the statement in a script with:
+       metis_tac [EVERY_MEM]
 
-   and returns the theorem.  The whole call takes a few seconds, even
+   and it returns the theorem.  The whole call takes a few seconds, even
    when a prover answers in a fraction of a second: preparing and
    ranking all the loaded theorems takes time too.  The provers found
    that the goal follows from one library fact, EVERY_MEM:
 
      EVERY P l <=> !e. MEM e l ==> P e
 
-   Copy the verified proof into the script.  Theory names can be dropped
-   when the theory is opened (listed under Ancestors), so the final
-   script reads:
+   In your own scripts, paste the verified proof in place of the hammer
+   call, so that building the theory does not need the provers.  Theory
+   names can be dropped when the theory is opened (listed under
+   Ancestors).  These examples keep the hammer call instead, so that
+   building them runs the hammer, and give the printed proof in a
+   comment:
    ------------------------------------------------------------------------- *)
 
 Theorem mem_every:
   MEM x l /\ EVERY P l ==> P x
 Proof
-  (* hh *)
-  metis_tac [EVERY_MEM]
+  hh
+  (* metis_tac [EVERY_MEM] *)
 QED
 
 (* The same thing happens for goals that look harder only because you do
@@ -50,8 +57,8 @@ QED
 Theorem card_of_distinct_list:
   ALL_DISTINCT l ==> CARD (set l) = LENGTH l
 Proof
-  (* hh *)
-  metis_tac [ALL_DISTINCT_CARD_LIST_TO_SET]
+  hh
+  (* metis_tac [ALL_DISTINCT_CARD_LIST_TO_SET] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -69,8 +76,13 @@ QED
 
      e hh;
 
-   The result is again a verified metis_tac call.  It replaces the
-   hh in the script; the tactics before it stay.  Here the library had a
+   The last message is again a verified metis_tac call:
+
+     Replace `hh` with:
+       metis_tac [ALL_DISTINCT_APPEND']
+
+   In your own script it would replace the hh; the tactics before it
+   stay.  Here the library had a
    variant of the right lemma, ALL_DISTINCT_APPEND', stated with
    DISJOINT, and metis_tac uses the assumption on its own.
    ------------------------------------------------------------------------- *)
@@ -79,8 +91,8 @@ Theorem distinct_append_disjoint:
   !l1 l2. ALL_DISTINCT (l1 ++ l2) ==> DISJOINT (set l1) (set l2)
 Proof
   rpt strip_tac >>
-  (* hh *)
-  metis_tac [ALL_DISTINCT_APPEND']
+  hh
+  (* metis_tac [ALL_DISTINCT_APPEND'] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -95,8 +107,8 @@ QED
 Theorem map_inj_distinct:
   INJ f (set l) UNIV /\ ALL_DISTINCT l ==> ALL_DISTINCT (MAP f l)
 Proof
-  (* hh *)
-  metis_tac [nub_MAP_INJ, all_distinct_nub_id, all_distinct_nub]
+  hh
+  (* metis_tac [nub_MAP_INJ, all_distinct_nub_id, all_distinct_nub] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -114,15 +126,15 @@ End
 Theorem palindrome_sing:
   palindrome [x]
 Proof
-  (* hh *)
-  metis_tac [palindrome_def, REVERSE_SING]
+  hh
+  (* metis_tac [palindrome_def, REVERSE_SING] *)
 QED
 
 Theorem palindrome_map:
   palindrome l ==> palindrome (MAP f l)
 Proof
-  (* hh *)
-  metis_tac [palindrome_def, MAP_REVERSE]
+  hh
+  (* metis_tac [palindrome_def, MAP_REVERSE] *)
 QED
 
 (* Unfolding the definition, then REVERSE (l ++ l') = REVERSE l' ++
@@ -130,17 +142,17 @@ QED
 Theorem palindrome_append_reverse:
   palindrome (l ++ REVERSE l)
 Proof
-  (* hh *)
-  metis_tac [palindrome_def, REVERSE_REVERSE, REVERSE_APPEND]
+  hh
+  (* metis_tac [palindrome_def, REVERSE_REVERSE, REVERSE_APPEND] *)
 QED
 
 (* The hammer went through SNOC (x :: l ++ [x] is x :: SNOC x l). *)
 Theorem palindrome_wrap:
   palindrome l ==> palindrome (x :: l ++ [x])
 Proof
-  (* hh *)
-  metis_tac [palindrome_def, SNOC, SNOC_APPEND, REVERSE_SNOC,
-             REVERSE_SNOC_DEF]
+  hh
+  (* metis_tac [palindrome_def, SNOC, SNOC_APPEND, REVERSE_SNOC,
+                REVERSE_SNOC_DEF] *)
 QED
 
 (* Here the palindrome assumption is irrelevant: every list of length one
@@ -150,8 +162,8 @@ QED
 Theorem palindrome_length_one:
   palindrome l /\ LENGTH l = 1 ==> l = [HD l]
 Proof
-  (* hh *)
-  metis_tac [quantHeuristicsTheory.HD_TL_EQ_NIL_1_bothways]
+  hh
+  (* metis_tac [quantHeuristicsTheory.HD_TL_EQ_NIL_1_bothways] *)
 QED
 
 (* -------------------------------------------------------------------------
@@ -171,8 +183,8 @@ QED
 Theorem mem_every_two:
   EVERY P l /\ EVERY Q l /\ MEM x l ==> P x /\ Q x
 Proof
-  (* hh *)
-  metis_tac [mem_every]
+  hh
+  (* metis_tac [mem_every] *)
 QED
 
 (* -------------------------------------------------------------------------
