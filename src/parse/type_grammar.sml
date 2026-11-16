@@ -311,7 +311,7 @@ fun new_abbreviation {knm,print,ty} tyg = let
                       "type_grammar"
                       "new_abbreviation"
                       ("Replacing old mapping from " ^ s ^ " to "^
-                       PP.pp_to_string (HOLFlags.linewidth())
+                       PP.pp_to_string (HOLFlags.get_linewidth())
                                        (pp_type tyg')
                                        (structure_to_type st'));
                     tyg'
@@ -347,7 +347,7 @@ fun merge_abbrevs G (d1, d2) = let
                                 ("Conflicting entries for op/abbrev "^
                                  KernelSig.name_toString k ^
                                  "; arbitrarily keeping map to "^
-                                 PP.pp_to_string (HOLFlags.linewidth())
+                                 PP.pp_to_string (HOLFlags.get_linewidth())
                                                  (pp_type G)
                                                  (structure_to_type v0));
            newdict)

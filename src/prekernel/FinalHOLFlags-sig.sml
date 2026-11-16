@@ -51,7 +51,7 @@ sig
     val with_flags        : (flag * int) list -> ('a -> 'b) -> 'a -> 'b
 
     val show_tags         : bflag
-    val linewidth         : unit -> int
+    val get_linewidth     : unit -> int
     val set_linewidth     : int -> unit
     val show_axioms       : bflag
     val show_assums       : bflag

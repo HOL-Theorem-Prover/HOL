@@ -2624,10 +2624,10 @@ step that occurs after the application of `Parse.Term`.  This
 is demonstrated below.
 
 ```repl
->> wordsLib.guessing_word_lengths:=true;
+>> set_bflag(wordsLib.guessing_word_lengths,true);
 
 >> ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
->>__ wordsLib.guessing_word_lengths:=false;
+>>__ set_bflag(wordsLib.guessing_word_lengths, false);
 ```
 
 In the example above, word length guessing is turned on.  Two
