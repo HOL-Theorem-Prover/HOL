@@ -3411,6 +3411,59 @@ val _ = mf_test "coinductive predicates are unrolled" (fn () =>
          ``zoo_mutual_gfp F \/ zoo_mutual_other_gfp F``
   |> cex_where model_genuine)
 
+(* A theory may rebind a predicate's theorems: a name only proposes the
+   theorems an encoding rests on. *)
+val _ = mf_test "a rebound p <=> p cases theorem: the true goal"
+  (fn () => not (refute mf_num3 ``zoo_rb_yes 1`` |> cex_where is_genuine))
+
+val _ = mf_test "a rebound cases theorem recursing in an argument equation"
+  (fn () => not (refute mf_num3 ``zoo_rb_sub T`` |> cex_where is_genuine))
+
+val _ = mf_test "a rebound cases theorem recursing in a call's argument"
+  (fn () => not (refute mf_num3 ``zoo_rb_nest 2`` |> cex_where is_genuine))
+
+val _ = mf_test "a rebound well-founded cases theorem is the definition"
+  (fn () =>
+    refute mf_num3 ``zoo_rb_down 1`` |> cex_where is_genuine andalso
+    not (refute mf_num3 ``~zoo_rb_down 1`` |> cex_where is_genuine))
+
+val _ = mf_test "a rebound rules theorem is not trusted"
+  (fn () =>
+    refute mf_num3 ``zoo_rb_ev 1`` |> cex_where is_genuine andalso
+    not (refute mf_num3 ``zoo_rb_ev 0`` |> cex_where is_genuine))
+
+(* An honest predicate that is not well-founded: its leastness
+   (greatestness) is proved, so a counterexample through its bound, its
+   starred form or its coinductive bound stays Genuine. *)
+val _ = mf_test "a bound of a proved least fixpoint keeps Genuine"
+  (fn () => refute (mf_num3 |> upd_star_linear_preds false)
+              ``zoo_nonwf_lfp n`` |> cex_where model_genuine)
+
+(* The starred form encodes only an occurrence the model needs true; no
+   iterator shows that it, not the unrolling, was used. *)
+val _ = mf_test "a starred proved least fixpoint keeps Genuine"
+  (fn () => refute (mf_num3 |> upd_star_linear_preds true
+                      |> upd_binary_ints (SOME false))
+              ``~zoo_unroll_lfp 2``
+            |> cex_where (fn c => model_genuine c andalso
+                                  iterator_card c = NONE))
+
+val _ = mf_test "a bound of a proved greatest fixpoint keeps Genuine"
+  (fn () => refute mf_num3 ``~zoo_guarded_gfp b`` |> cex_where model_genuine
+            andalso
+            refute mf_num3 ``~zoo_manual_nats n`` |> cex_where model_genuine)
+
+(* A cases theorem rebound to reach its predicate through a later
+   definition hides recursion: the predicate has no cases theorem. *)
+val _ = mf_test "a cases theorem hiding recursion behind a definition"
+  (fn () => List.all (fn tm => not (refute mf_num3 tm |> cex_where is_genuine))
+              [``zoo_hid 0``, ``zoo_hid2 0``, ``~zoo_hidnw 0``])
+
+val _ = mf_test "an unrolling of non-monotone cases is not Genuine"
+  (fn () =>
+    refute mf_num3 ``~zoo_rb_nm 1``
+    |> cex_where (fn c => is_quasi c andalso uncertified c))
+
 val _ = mf_test "relation operators are encoded" (fn () =>
   let val cfg = mf_num2 |> upd_binary_ints (SOME false) in
     refute cfg ``~RTC (\x : num. \y : num. x = 0 /\ y = 1) 0 1``
