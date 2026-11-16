@@ -15,6 +15,9 @@ tactic adds `th` as a split looper for that call, as
 `simpExtLib.add_split th` does. A rule that is not a split rule is ignored
 with a warning.
 
+`simpExtLib.Split` is [`markerLib.Split`](#markerLib.Split). The ordinary
+simplifier (`simpLib`) cannot honour it, and fails if given it.
+
 ### Failure
 
 Never fails.
@@ -31,6 +34,7 @@ Never fails.
 
 ### See also
 
+[`markerLib.Split`](#markerLib.Split),
 [`simpExtLib.add_split`](#simpExtLib.add_split),
 [`splitLib.SPLIT_TAC`](#splitLib.SPLIT_TAC),
 [`simpExtLib.ExclX`](#simpExtLib.ExclX).

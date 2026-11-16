@@ -30,25 +30,25 @@ val _ = check "opt-in after import preserves registration and data"
 (* Disable TypeBase so persistent controls cannot pass through that route.
    All imported aliases must be excluded, not just an equal theorem. *)
 val goal : goal = ([], “P (if b then x:'a else y) : bool”);
-val ss = (bool_ss ++ split_ss) && [simpMarkerLib.ExclX "case:bool"];
+val ss = (bool_ss ++ split_ss) && [markerLib.ExclX "case:bool"];
 fun unchanged ss = case #1 (runtac (VALID (SIMP_TAC ss [])) goal) of
     [([],tm)] => aconv tm (#2 goal)
   | _ => false;
 val _ = check "imported persistent rules really split"
   (not (unchanged ss));
 val excluded = ss &&
-  map (fn key => simpMarkerLib.ExclX ("split:" ^ key)) expected;
+  map (fn key => markerLib.ExclX ("split:" ^ key)) expected;
 val _ = check "named retractions suppress all imported aliases"
   (unchanged excluded);
 val one_left = ss &&
-  [simpMarkerLib.ExclX ("split:" ^ hd expected)];
+  [markerLib.ExclX ("split:" ^ hd expected)];
 val _ = check "one named retraction does not remove an equal alias"
   (not (unchanged one_left));
 val _ = check "local exclusions leave persistent store unchanged"
   (map #1 (named_split_thms ()) = expected);
 
-val _ = check "exported markers record simpMarker theory dependency"
-  (List.exists (equal "simpMarker") (Theory.ancestry "splitParent") andalso
-   same_const (rator (concl (DB.fetch "splitParent" "split_marker")))
-              (prim_mk_const {Thy="simpMarker",Name="Split"}) andalso
-   simpMarkerLib.destExclX (DB.fetch "splitParent" "exclusion_marker") = SOME "case:bool");
+val _ = check "exported markers keep their marker constants"
+  (same_const (rator (concl (DB.fetch "splitParent" "split_marker")))
+              (prim_mk_const {Thy="marker",Name="Split"}) andalso
+   markerLib.destExclX (DB.fetch "splitParent" "exclusion_marker") =
+     SOME "case:bool");

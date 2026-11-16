@@ -10,7 +10,7 @@ val _ = List.app (fn (key,th) =>
       [thy,name] => check ("persistent DB identity: " ^ key)
         (Portable.pointer_eq (th,DB.fetch thy name))
     | _ => die "bad persisted key") (named_split_thms ());
-val ss = (bool_ss ++ split_ss) && [simpMarkerLib.ExclX "case:bool"];
+val ss = (bool_ss ++ split_ss) && [markerLib.ExclX "case:bool"];
 val goal : goal = ([“P (x:'a):bool”,“P (y:'a):bool”],
                   “P (if b then x:'a else y):bool”);
 fun unchanged ss =
@@ -19,9 +19,9 @@ fun unchanged ss =
     | _ => false;
 val _ = check "persistent rules split with TypeBase disabled"
   (not (unchanged ss));
-val single = ss && [simpMarkerLib.ExclX ("split:" ^ hd expected)];
+val single = ss && [markerLib.ExclX ("split:" ^ hd expected)];
 val excluded = ss && map (fn key =>
-  simpMarkerLib.ExclX ("split:" ^ key)) expected;
+  markerLib.ExclX ("split:" ^ key)) expected;
 val _ = check "one retraction retains the equal alias" (not (unchanged single));
 val _ = check "all retractions disable persistent splitting"
   (unchanged excluded);

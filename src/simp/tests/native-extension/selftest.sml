@@ -5564,7 +5564,7 @@ end;
 local
   val missing = markerSyntax.L "r7_branch_missing_label"
   val goal = ([],mk_var ("r7_branch_goal",bool))
-  val split = simpMarkerLib.Split TRUTH
+  val split = markerLib.Split TRUTH
   fun bound name th = ADD_ASSUM
     (mk_comb (boolSyntax.bounded_tm,mk_var (name,bool))) th
   fun counted f = let
@@ -5572,7 +5572,7 @@ local
     val result = Exn.capture f ()
   in (result,#prims (Count.read meter)) end
   fun stage_count (name,th) = let
-    val (_,expected) = counted (fn () => simpMarkerLib.dest_directive th)
+    val (_,expected) = counted (fn () => markerLib.dest_directive th)
     val (result,actual) = counted
       (fn () => runtac (SIMP_TAC empty_ss [th,missing]) goal)
     val correct = case result of

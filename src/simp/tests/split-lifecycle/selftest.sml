@@ -13,8 +13,7 @@ fun absent names = List.app (fn name =>
   check ("not loaded: " ^ name) (not (loaded name))) names
 val extensions =
   ["TraverseExt","Cond_rewrExt",
-   "simpExtLib","congExtLib","simpMarkerTheory",
-   "simpMarkerLib","splitLib","SplitData","splitPersistLib"]
+   "simpExtLib","congExtLib","splitLib","SplitData","splitPersistLib"]
 val mode = env "SPLIT_LIFECYCLE_MODE"
 val _ = print ("OBS mode=" ^ mode ^ "\n")
 val _ = boolTheory.TRUTH
@@ -177,7 +176,7 @@ val _ = check "extension loads preserve registry records"
 val _ = check "extension loads never opt into persistence"
   (not (loaded "splitPersistLib") andalso no_private ())
 val _ = List.app (fn name => check ("explicitly reachable: " ^ name)
-  (loaded name)) ["simpMarkerLib","splitLib","SplitData","congExtLib"]
+  (loaded name)) ["splitLib","SplitData","congExtLib"]
 val _ = if timing <> "after" then verify_owner () else ()
 val _ = at "after"
 val _ = quiet "extension use and initialization" (fn () => use "extension.ML")

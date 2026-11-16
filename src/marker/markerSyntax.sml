@@ -8,6 +8,7 @@ val ERR = mk_HOL_ERR "markerSyntax";
 val stmarker_tm = prim_mk_const{Name="stmarker", Thy="marker"};
 val AC_tm       = prim_mk_const{Name="AC",       Thy="marker"};
 val Cong_tm     = prim_mk_const{Name="Cong",     Thy="marker"};
+val Split_tm    = prim_mk_const{Name="Split",    Thy="marker"};
 val abbrev_tm   = prim_mk_const{Name="Abbrev",   Thy="marker"};
 val label_tm    = prim_mk_const{Name=":-",       Thy="marker"};
 val Case_tm     = prim_mk_const{Name="Case",     Thy="marker"};

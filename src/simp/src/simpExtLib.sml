@@ -1954,15 +1954,15 @@ fun rewrite_context_changes (SS old,SS current) =
      | _ => TraverseExt.XTRAVERSE (xtraversedata_for_ss ss);
 
 val Cong   = markerLib.Cong
-val Split  = simpMarkerLib.Split
+val Split  = markerLib.Split
 val AC     = markerLib.AC;
 val Excl   = markerLib.Excl
-val ExclX  = simpMarkerLib.ExclX
+val ExclX  = markerLib.ExclX
 val ExclSF = markerLib.ExclSF
 val Req0   = markerLib.mk_Req0
 val ReqD   = markerLib.mk_ReqD
 
-local open markerLib simpMarkerLib
+local open markerLib
 in
 val frag_of = simpCommon.frag_of lookup_named_frag
 
@@ -2011,7 +2011,7 @@ fun process_tags0 {report,preserve} ss thl =
          DEST_BOUNDED selects the same allowance as before preparation. *)
       fun bounds_on_directive th =
         case dest_directive th of
-            SOME (Legacy (DBounded (plain,_))) => bounds_on_directive plain
+            SOME (DBounded (plain,_)) => bounds_on_directive plain
           | NONE => false
           | _ => true
       fun sort (th, acc as (congs, splits, acs, excls, exclfrags, frags,
@@ -2019,39 +2019,39 @@ fun process_tags0 {report,preserve} ss thl =
           case dest_directive th of
               NONE =>
                 (congs, splits, acs, excls, exclfrags, frags, th :: rest)
-            | SOME (Legacy (DCong c)) =>
+            | SOME (DCong c) =>
                 (normCong c :: congs, splits, acs, excls, exclfrags, frags,
                  rest)
             | SOME (DSplit sp) =>
                 (congs, sp :: splits, acs, excls, exclfrags, frags, rest)
-            | SOME (Legacy (DAC p)) =>
+            | SOME (DAC p) =>
                 (congs, splits, p :: acs, excls, exclfrags, frags, rest)
-            | SOME (Legacy (DExcl nm)) =>
+            | SOME (DExcl nm) =>
                 (congs, splits, acs, LiteralExclusion nm :: excls,
                  exclfrags, frags, rest)
             | SOME (DExclX nm) =>
                 (congs, splits, acs, ExtendedExclusion nm :: excls,
                  exclfrags, frags, rest)
-            | SOME (Legacy (DExclSF nm)) =>
+            | SOME (DExclSF nm) =>
                 (congs, splits, acs, excls, nm :: exclfrags, frags, rest)
-            | SOME (Legacy (DFRAG nm)) =>
+            | SOME (DFRAG nm) =>
                 (congs, splits, acs, excls, exclfrags, frag_of nm :: frags,
                  rest)
-            | SOME (Legacy (DBounded (plain,_))) =>
+            | SOME (DBounded (plain,_)) =>
                 (* Bounds on directives do not turn them into rewrite
                    facts. Genuine rewrite bounds retain their controls. *)
                 if bounds_on_directive plain then sort (plain,acc)
                 else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
-            | SOME (Legacy (DReq0 _)) =>
+            | SOME (DReq0 _) =>
                 if report then tactic_only "Req0"
                 else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
-            | SOME (Legacy (DReqD _)) =>
+            | SOME (DReqD _) =>
                 if report then tactic_only "ReqD"
                 else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
-            | SOME (Legacy DNoAsms) => acc
-            | SOME (Legacy (DIgnAsm _)) => acc
-            | SOME (Legacy (DAbbr _)) => acc
-            | SOME (Legacy (DLabel _)) => acc
+            | SOME DNoAsms => acc
+            | SOME (DIgnAsm _) => acc
+            | SOME (DAbbr _) => acc
+            | SOME (DLabel _) => acc
       val (congs, splits, acs, excludes, exclfrags, frags, rst) =
           List.foldr sort ([], [], [], [], [], [], []) thl
     in
@@ -2111,7 +2111,7 @@ fun rewrite_sources (SS data) thl =
       let
         val plain = #1 (BoundedRewrites.DEST_BOUNDED th)
                     handle HOL_ERR _ => th
-        val _ = case simpMarkerLib.dest_directive plain of
+        val _ = case markerLib.dest_directive plain of
                     NONE => ()
                   | SOME _ => raise ERR ("rewrite_sources",
                       "prepare directives with prepare_rewrite_arguments")
@@ -2374,7 +2374,7 @@ fun gen_simp_tac_with_rounds rounds traversal
           main
         end
     in
-      simpMarkerLib.process_taclist_then_bind {arg=ths} start g
+      markerLib.process_taclist_then_bind {arg=ths} start g
     end)
 
 fun gen_simp_tac_with_xdata traversal xdata solver_context mode ss ths g =
@@ -2399,7 +2399,7 @@ fun strategy_free ss ths =
        bound falls through to that same head. Do not build proofs or run
        monitor hooks here, nor inspect payloads underneath AC or Cong. *)
     fun arg_free th =
-      if (same_const simpMarkerLib.Split_tm
+      if (same_const markerSyntax.Split_tm
             (#1 (strip_comb (concl th))) handle HOL_ERR _ => false) then
         false
       else
@@ -2594,13 +2594,13 @@ fun gen_global_simp_tac_with_bound traversal bound mode
                   Retain them for every changing proof context. *)
                val assumption_controls = List.filter
                      (fn th => case markerLib.dest_directive
-                                      (simpMarkerLib.strip_wrappers th) of
+                                      (markerLib.strip_wrappers th) of
                          SOME markerLib.DNoAsms => true
                        | SOME (markerLib.DIgnAsm _) => true
                        | _ => false) thl
                val assumptions =
                  if null assumption_controls then ASSUM_LIST
-                 else fn next => simpMarkerLib.process_taclist_then_bind
+                 else fn next => markerLib.process_taclist_then_bind
                    {arg=assumption_controls} (fn _ => fn _ => next)
                fun selected_context context target ctxt =
                  if null assumption_controls then context
