@@ -344,6 +344,17 @@ val _ = if OS.Process.isSuccess rx3 then
         else OK ()
 val _ = rm_rf root6
 
+(* A directory that isn't there must say so rather than exiting with
+   a bare failure status, which reads as a style violation. *)
+val _ = tprint "a nonexistent scan directory is reported"
+val root7 = fresh_dir ()
+val rx4 = run_h4pedant_in root7
+                          ["--ignore-project-file", root7 ++ "nosuchdir"]
+val _ = if OS.Process.isSuccess rx4 then
+          die "FAILED: a missing directory should fail"
+        else OK ()
+val _ = rm_rf root7
+
 (* --- Holmakefile default-goal check ------------------------------- *)
 
 (* Given no target on the command line, Holmake builds the first

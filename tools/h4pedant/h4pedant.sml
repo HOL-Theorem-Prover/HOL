@@ -446,7 +446,12 @@ and do_dirs (opts:t) sofar wlist =
         [] => sofar
       | d::res =>
         let
+          (* A directory named on the command line that isn't there
+             would otherwise surface as a bare exit status, which
+             reads exactly like a style violation. *)
           val ds = OS.FileSys.openDir d
+                   handle OS.SysErr (msg, _) =>
+                          die ("Can't scan " ^ d ^ ": " ^ msg)
           val _ = if #chattiness opts > 1 then warn ("Checking "^d) else ()
           val (sofar, wlist) = do_dirstream opts d ds sofar res
         in
