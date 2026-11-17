@@ -26,7 +26,6 @@ val {get = get_show_typecheck_errors,flag = show_typecheck_errors,...} =
     )
 fun tcheck_say s = if get_show_typecheck_errors() then Lib.say s else ()
 
-val last_tcerror : error option ref = ref NONE
 
 type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
 type 'a seqM = (Pretype.Env.t,'a) seqmonad.seqmonad
