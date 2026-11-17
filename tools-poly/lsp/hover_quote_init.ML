@@ -71,12 +71,15 @@ local
        `MEM x l' is `x IN set l'.  There is no constant to name, so the
        name comes from the source and the type from the body. *)
     | HLPattern of {Ptm: Preterm.preterm, Locn: locn.locn}
+    (* A numeral, which is one token but a whole tree of constants. *)
+    | HLNumeral of {Ptm: Preterm.preterm, Locn: locn.locn}
 
   fun leaf_locn (HLConst {Locn, ...}) = Locn
     | leaf_locn (HLBound {Locn, ...}) = Locn
     | leaf_locn (HLFree  {Locn, ...}) = Locn
     | leaf_locn (HLOverload {Locn, ...}) = Locn
     | leaf_locn (HLPattern {Locn, ...}) = Locn
+    | leaf_locn (HLNumeral {Locn, ...}) = Locn
 
   (* Byte-length of a Locn's file range (LocA start ↔ LocA end).
      Non-LocA Locns are treated as huge so they're never preferred. *)
@@ -116,6 +119,15 @@ local
       | Const {Name, Thy, Ty, Locn} =>
           if cov Locn
           then SOME (HLConst {Name = Name, Thy = Thy, Ty = Ty, Locn = Locn})
+          else NONE
+      (* A numeral is one token but a tree: `3' is `NUMERAL (BIT1 (BIT1
+         ZERO))', and every node of it carries that one token's Locn.
+         The innermost leaf wins the size comparison above, so hovering
+         `3' answered `ZERO'.  None of those constants was written; the
+         numeral was, so report it and do not descend. *)
+      | Comb {Rator = Const {Name = "NUMERAL", Thy = "arithmetic", ...},
+              Locn = numLocn, ...} =>
+          if cov numLocn then SOME (HLNumeral {Ptm = pt, Locn = numLocn})
           else NONE
       | Comb {Rator, Rand, Locn = combLocn} => let
           (* Descend into both children first.  If neither leaf covers
@@ -237,24 +249,34 @@ local
      own. *)
   fun format_leaf nameOf env leaf =
     let
-      val (name, tystr, tail) = case leaf of
+      (* What the leaf *is* goes on the same line as its name and type,
+         and in front of them.  Emacs shows a hover in the echo area,
+         where eglot cuts it at the first newline: everything below
+         that line -- which is where the theory and the free/bound
+         distinction used to live -- never reaches the reader, and a
+         bare `s :string' does not say whether `s' is a constant.  In
+         front rather than behind because a long type pushes a trailing
+         note off the end of the line. *)
+      val (kind, name, tystr, tail) = case leaf of
           HLConst {Name, Thy, Ty, ...} =>
-            (Name, render_type env Ty, "Theory `" ^ Thy ^ "`")
+            (* `thy$name' is HOL's own way of writing a constant with
+               its home, so the theory needs no words of its own. *)
+            ("constant ", Thy ^ "$" ^ Name, render_type env Ty, "")
         | HLBound {Name, Ty, ...} =>
-            (Name, render_type env Ty, "*bound variable*")
+            ("bound variable ", Name, render_type env Ty, "")
         | HLFree  {Name, Ty, ...} =>
-            (Name, render_type env Ty, "*free variable*")
+            ("free variable ", Name, render_type env Ty, "")
         | HLOverload {Name, Ty, Ops, ...} => let
             fun describe tm = let
               val {Name = n, Thy = thy, ...} = Term.dest_thy_const tm
               in "`" ^ n ^ "` (theory `" ^ thy ^ "`)" end
               handle _ => "`" ^ Parse.term_to_string tm ^ "`"
             val tail = case Ops of
-                [] => "*overloaded*"
+                [] => ""
               | [tm] => "Overloads " ^ describe tm
               | ops => "Overloaded, one of: " ^
                        String.concatWith ", " (map describe ops)
-            in (Name, render_type env Ty, tail) end
+            in ("overloaded ", Name, render_type env Ty, tail) end
         | HLPattern {Ptm, Locn} => let
             val tystr = case Preterm.ptype_of Ptm env of
                 Some (_, ty) => render_type env ty
@@ -272,14 +294,20 @@ local
                 handle _ => NONE
             val tail =
                 case expansion of
-                    NONE => "*overloaded*"
+                    NONE => ""
                   | SOME tm =>
                     "Overloads `" ^ expansion_string tm ^ "`"
-            in (nameOf Locn, tystr, tail) end
+            in ("overloaded ", nameOf Locn, tystr, tail) end
+        | HLNumeral {Ptm, Locn} => let
+            val tystr = case Preterm.ptype_of Ptm env of
+                Some (_, ty) => render_type env ty
+              | Error _ => "?"
+            in ("numeral ", nameOf Locn, tystr, "") end
     in
       (* Parse.type_to_string already prefixes ``:`` (HOL type-
          annotation convention), so we don't add another one. *)
-      "```\n" ^ name ^ " " ^ tystr ^ "\n```\n\n" ^ tail
+      "```\n" ^ kind ^ name ^ " " ^ tystr ^ "\n```" ^
+      (if tail = "" then "" else "\n\n" ^ tail)
     end
 in
 

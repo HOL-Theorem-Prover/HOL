@@ -298,9 +298,11 @@ coverage:
   - **A missing prerequisite is a `SKIP`,** counted and named, never a
     pass — and `--requires <tag>` that selects nothing exits 2, since
     that means the wiring is broken rather than the tests are fine.
-  - **Holmake keeps objects under `.hol/objs/`** and presents them as
-    if they sat in the directory.  A prerequisite check that looks only
-    at the plain path reports every built directory as unbuilt, which
+  - **Use `HOLFileSys` to check for Holmake products.**  Objects live
+    under `.hol/objs/`, or `<objroot>/objs/<rel>/` with an artifact
+    root, but are accessed through their source-relative names.
+    A prerequisite check that looks only at the plain path reports
+    every built directory as unbuilt, which
     shows up as a whole group quietly skipping.
 
 `sortingTheory` is built by `src/sort`'s own Holmake run and stays
@@ -537,6 +539,46 @@ first documented hover, and a tree that has none is remembered as
 having none -- a hover is not a place to rediscover the same missing
 file.  `tools-poly/poly/Help.sml` reads the same index for the REPL's
 `help` command and knows nothing about any of the above.
+
+### Inside a quotation
+
+A hover inside a HOL quotation -- a `Theorem`'s goal, a `Definition`
+or `Inductive` body, an explicit `‘…’` -- is answered by
+`hover_quote_init.ML`, which re-parses the quotation and walks the
+resolved `Preterm` for the innermost leaf whose `locn` covers the
+cursor.  What comes back names the leaf, says what kind of thing it
+is, and gives its type, all on one line:
+
+```
+constant arithmetic$SUC :num -> num
+bound variable n :num
+free variable m :num
+overloaded MEM :α -> α list -> bool
+```
+
+An overloaded name adds a second paragraph saying what it overloads
+to, because that does not fit.  Nothing else does.
+
+Everything on one line is deliberate.  Emacs shows a hover in the echo
+area, and eglot cuts the rendered markdown at its first newline --
+`eglot-hover-eldoc-function` hands that index to eldoc as `:echo` --
+so a second paragraph is text an Emacs reader never sees, and `SUC
+:num -> num` on its own does not say whether `SUC` is a constant or a
+variable.  The kind leads rather than trails for the same reason: a
+long type would push a trailing note off the end of the line.  A
+constant's home theory rides along in the name as `thy$name`, which is
+HOL's own way of writing a constant with its theory.
+
+Syntax that spells no constant in the source still answers.  `d⟨s⟩`
+and `l❲i❳` are list forms whose application `combinpp`'s absyn
+postprocessor builds, and it used to build it with `locn.Loc_None` on
+the generated identifier -- so no leaf covered the brackets, and the
+hover fell out to whatever enclosed the form: in `(d⟨s⟩,d)`, the
+pair comma.  The identifier now carries the bracket pair's own span,
+so hovering either bracket, or the `↦` of an update, names the
+constant the brackets stand for.  The keys and values inside keep
+their own spans, which are shorter, so they still win where the two
+overlap.
 
 ### Positions
 
