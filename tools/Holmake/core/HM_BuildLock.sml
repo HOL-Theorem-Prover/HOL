@@ -19,11 +19,6 @@ fun release (RealLock {fd, lockpath, diag}) =
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 
-fun ensure_dir d =
-    if OS.FileSys.access(d, []) then ()
-    else OS.FileSys.mkDir d
-         handle OS.SysErr _ => () (* may race with another process *)
-
 fun sanitize_key key =
     String.translate
       (fn c => if Char.isAlphaNum c orelse c = #"_" orelse c = #"."
@@ -33,12 +28,18 @@ fun sanitize_key key =
       key
 
 fun acquire {dir, key, warn, diag} =
+  let
+    fun no_lock e =
+      (warn ("Failed to acquire build lock for " ^ key ^ " in " ^
+             dir ^ ": " ^ General.exnMessage e ^
+             " (proceeding without lock)");
+       DummyLock)
+  in
     if not Systeml.isUnix then DummyLock
     else
       let
-        val _ = ensure_dir (dir ++ ".hol")
-        val lockdir = dir ++ ".hol" ++ "locks"
-        val _ = ensure_dir lockdir
+        val lockdir = HFS_NameMunge.lockdir_for dir
+        val _ = HOLFS_dtype.createDirIfNecessary lockdir
         val lockpath = lockdir ++ (sanitize_key key ^ ".lock")
         val _ = diag ("blocking on lock " ^ lockpath)
         open Posix.FileSys
@@ -63,9 +64,8 @@ fun acquire {dir, key, warn, diag} =
          end handle _ => ());
         RealLock {fd = fd, lockpath = lockpath, diag = diag}
       end
-      handle OS.SysErr (msg, _) =>
-             (warn ("Failed to acquire build lock for " ^ key ^ " in " ^
-                    dir ^ ": " ^ msg ^ " (proceeding without lock)");
-              DummyLock)
+      handle e as OS.SysErr _ => no_lock e
+           | e as Fail _ => no_lock e
+  end
 
 end

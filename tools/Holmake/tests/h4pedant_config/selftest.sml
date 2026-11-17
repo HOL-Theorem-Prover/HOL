@@ -232,6 +232,129 @@ val _ = tprint "[[h4pedant.dir]] deeper override wins (mirror direction)"
 val _ = deeper_wins_case
           { parent_ok = false, child_ok = true, expect_success = true }
 
+(* --- CLI precedence over the project file -------------------------- *)
+
+(* Each case builds a project whose settings would silence a
+   violation, then checks that naming the check on the command line
+   brings it back: a flag written there is the user's last word, in
+   every directory visited. *)
+fun cli_wins_case { toml, file, args, expect_success, msg } =
+    let
+      val root = fresh_dir ()
+      val sub = root ++ "sub"
+      val _ = OS.FileSys.mkDir sub
+      val _ = write_file (sub ++ "a.sml") file
+      val _ = write_file (root ++ "holproject.toml") toml
+      val r = run_h4pedant_in root args
+    in
+      (if OS.Process.isSuccess r = expect_success then OK ()
+       else die ("FAILED: " ^ msg));
+      rm_rf root
+    end
+
+val loose_toml =
+    "holmake = false\n\n\
+    \[h4pedant]\n\
+    \linelen = 80\n\n\
+    \[[h4pedant.dir]]\n\
+    \path = \"sub\"\n\
+    \linelen = 0\n\
+    \unicode_ok = true\n"
+
+val plain_toml = "holmake = false\n\n[h4pedant]\nlinelen = 80\n"
+
+val _ = tprint "per-dir linelen = 0 silences a long line"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml, args = [], expect_success = true,
+      msg = "linelen = 0 override should have silenced the long line" }
+
+val _ = tprint "--linelen=80 overrides a per-dir linelen = 0"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml, args = ["--linelen=80"],
+      expect_success = false,
+      msg = "--linelen should have won over the per-dir override" }
+
+val _ = tprint "--linelen=200 raises the limit the project file set"
+val _ = cli_wins_case {
+      toml = plain_toml, file = long_sml, args = ["--linelen=200"],
+      expect_success = true,
+      msg = "--linelen=200 should have accepted a 95-character line" }
+
+val _ = tprint "--linelen=0 disables the check"
+val _ = cli_wins_case {
+      toml = plain_toml, file = long_sml, args = ["--linelen=0"],
+      expect_success = true,
+      msg = "--linelen=0 should have disabled the check" }
+
+val _ = tprint "--linelen with a non-numeric argument is fatal"
+val _ = cli_wins_case {
+      toml = "holmake = false\n\n[h4pedant]\nlinelen = 0\n",
+      file = "val _ = 0\n", args = ["--linelen=eighty"],
+      expect_success = false,
+      msg = "--linelen=eighty should have been rejected" }
+
+val _ = tprint "--unicode overrides a per-dir unicode_ok = true"
+val _ = cli_wins_case {
+      toml = loose_toml, file = unicode_sml, args = ["--unicode"],
+      expect_success = false,
+      msg = "--unicode should have won over unicode_ok = true" }
+
+(* --- --ignore-project-file ----------------------------------------- *)
+
+(* The flag takes the project file out of the picture entirely:
+   per-directory settings, `exclude` and `include` all stop applying,
+   and what is checked is what the command line says. *)
+val _ = tprint "--ignore-project-file: per-dir settings stop applying"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml, args = ["--ignore-project-file"],
+      expect_success = false,
+      msg = "--ignore-project-file should have ignored linelen = 0" }
+
+val _ = tprint "--ignore-project-file: CLI options still apply"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml,
+      args = ["--ignore-project-file", "--nolinelen"], expect_success = true,
+      msg = "--nolinelen should still have silenced the long line" }
+
+val _ = tprint "--ignore-project-file: an excluded dir is visited"
+val root6 = fresh_dir ()
+val excluded = root6 ++ "excludedsub"
+val _ = OS.FileSys.mkDir excluded
+val _ = write_file (excluded ++ "e.sml") long_sml
+val _ = write_file (root6 ++ "holproject.toml")
+  ("holmake = false\n\n\
+   \[h4pedant]\n\
+   \linelen = 80\n\
+   \exclude = [\"excludedsub\"]\n")
+val rx1 = run_h4pedant_in root6 []
+val _ = if OS.Process.isSuccess rx1 then OK ()
+        else die "FAILED: exclude should have hidden the violation"
+
+val _ = tprint "--ignore-project-file: the exclusion is gone"
+val rx2 = run_h4pedant_in root6 ["--ignore-project-file"]
+val _ = if OS.Process.isSuccess rx2 then
+          die "FAILED: excluded dir should have been scanned"
+        else OK ()
+
+val _ = tprint "--ignore-project-file: named dirs are scanned from anywhere"
+val rx3 = run_h4pedant_in (OS.FileSys.getDir())
+                          ["--ignore-project-file", excluded]
+val _ = if OS.Process.isSuccess rx3 then
+          die "FAILED: the named directory should have been scanned"
+        else OK ()
+val _ = rm_rf root6
+
+(* A directory that isn't there must say so rather than exiting with
+   a bare failure status, which reads as a style violation. *)
+val _ = tprint "a nonexistent scan directory is reported"
+val root7 = fresh_dir ()
+val rx4 = run_h4pedant_in root7
+                          ["--ignore-project-file", root7 ++ "nosuchdir"]
+val _ = if OS.Process.isSuccess rx4 then
+          die "FAILED: a missing directory should fail"
+        else OK ()
+val _ = rm_rf root7
+
 (* --- Holmakefile default-goal check ------------------------------- *)
 
 (* Given no target on the command line, Holmake builds the first

@@ -1792,16 +1792,29 @@ in
   List.exists TypeBase.is_constructor possible_ops
 end
 
-fun unify_error pv1 pv2 = let
+(* Two clauses disagree about the type of a name they share -- all but
+   always the function being defined, which is why the clash surfaces
+   here rather than inside either clause.  `Pretype.unify' can say only
+   which two type operators would not match; this says whose type they
+   are, where each clause is, and what each clause made of it.
+
+   `earlier' is the occurrence already in the table, `later' the one
+   being merged into it.  Types are resolved against the environment as
+   it stands at the failure: unresolved pieces are printed as they are
+   rather than being allowed to raise out of an error handler. *)
+fun unify_error {earlier, later, reason} env = let
   open Preterm
-  val (nm,ty1,l1) = dest_ptvar pv1
-  val (_,ty2,l2) = dest_ptvar pv2
+  val (nm,lty,llocn) = dest_ptvar later
+  val (_, ety,elocn) = dest_ptvar earlier
+  fun tystr ty =
+      type_to_string (Pretype.toType (Pretype.apply_subst env ty))
+      handle _ => "<unresolved>"
 in
-  "Couldn't unify types of head symbol " ^
-  Lib.quote nm ^ " at positions " ^ locn.toShortString l1 ^ " and " ^
-  locn.toShortString l2 ^ " with types " ^
-  type_to_string (Pretype.toType ty1) ^ " and " ^
-  type_to_string (Pretype.toType ty2)
+  String.concat
+    ["\nClauses give ", Lib.quote nm, " different types.\n",
+     "  ", locn.toShortString elocn, ": ", tystr ety, "\n",
+     "  ", locn.toShortString llocn, ": ", tystr lty, "\n",
+     "  Reason: ", reason, "\n"]
 end
 
 fun ptdefn_freevars pt = let
@@ -1824,6 +1837,7 @@ end
 fun defn_absyn_to_term a = let
   val alist = Absyn.strip_conj a
   open errormonad
+  infix ++?
   val tycheck = Preterm.typecheck_phase1 (SOME (term_to_string, type_to_string))
   val ptsM =
       mmap
@@ -1835,7 +1849,19 @@ fun defn_absyn_to_term a = let
       (case Symtab.lookup env Name of
            NONE => return (Symtab.update (Name,pv) env)
          | SOME pv' =>
-             Preterm.ptype_of pv' >- (fn pty' => Pretype.unify Ty pty') >>
+             (Preterm.ptype_of pv' >- (fn pty' => Pretype.unify Ty pty')) ++?
+             (* The position the unification carries is where the
+                offending type was forced on a variable, which is a
+                subterm of one of the clauses; keep it.  Only the
+                message needs improving -- unaided it is a bare
+                "couldn't unify these two type operators", with no hint
+                that two clauses are being reconciled at all. *)
+             (fn (tc, l) => fn e =>
+                 errormonad.Error
+                   (typecheck_error.Misc
+                      (unify_error {earlier = pv', later = pv,
+                                    reason = typecheck_error.errorMsg tc} e),
+                    l)) >>
              return env)
     | foldthis (_, env) = raise Fail "defn_absyn_to_term: can't happen"
   open Preterm
@@ -1886,39 +1912,53 @@ end;
 (* list is a separate mutually recursive clique.                             *)
 (*---------------------------------------------------------------------------*)
 
-fun parse_quote q =
-  sort_eqns (fst (parse_absyn (Parse.Absyn q)))
-  handle e => raise wrap_exn "Defn" "parse_quote" e;
+fun parse_quote_absyn a =
+  sort_eqns (fst (parse_absyn a))
+  handle e => raise wrap_exn "Defn" "parse_quote" e
+
+fun parse_quote q = parse_quote_absyn (Parse.Absyn q);
 
 local
   val mkstems =
     List.map (fst o dest_var o fst o strip_comb o lhs o snd o strip_forall o
               hd o strip_conj)
 in
-fun Hol_defn stem q =
- (case parse_quote q
+(* Parse the quotation ONCE.  The span these wrap an exception in is
+   the whole quotation's, which means parsing it -- and doing that
+   inside the handler, as this used to, re-runs a parse that is already
+   known to be in trouble.  If the second parse raises, the caller sees
+   *that* exception and the one being wrapped is lost. *)
+fun Hol_defn stem q = let
+  val a = Parse.Absyn q
+in
+ (case parse_quote_absyn a
    of [] => raise ERR "Hol_defn" "no definitions"
     | [eqns] => mk_defn stem eqns
     | eqnsl => raise ERR "Hol_defn"
                          ("multiple definitions: "^
                           String.concatWith ", " (mkstems eqnsl)))
   handle e =>
-  raise wrap_exn_loc "Defn" "Hol_defn"
-           (Absyn.locn_of_absyn (Parse.Absyn q)) e;
+  raise wrap_exn_loc "Defn" "Hol_defn" (Absyn.locn_of_absyn a) e
+end
 
-fun Hol_defns stems q =
- (case parse_quote q
+fun Hol_defns stems q = let
+  val a = Parse.Absyn q
+in
+ (case parse_quote_absyn a
    of [] => raise ERR "Hol_defns" "no definition"
     | eqnl => mk_defns stems eqnl)
-  handle e => raise wrap_exn_loc "Defn" "Hol_defns"
-                 (Absyn.locn_of_absyn (Parse.Absyn q)) e;
+  handle e => raise wrap_exn_loc "Defn" "Hol_defns" (Absyn.locn_of_absyn a) e
+end
 
-  fun Hol_multi_defns q =
-    (case parse_quote q of
+  fun Hol_multi_defns q = let
+    val a = Parse.Absyn q
+  in
+    (case parse_quote_absyn a of
        [] => raise ERR "Hol_multi_defns" "no definition"
       | eqnsl => mk_defns (mkstems eqnsl) eqnsl)
-    handle e => raise wrap_exn_loc "Defn" "Hol_multi_defns"
-                   (Absyn.locn_of_absyn (Parse.Absyn q)) e
+    handle e =>
+      raise wrap_exn_loc "Defn" "Hol_multi_defns" (Absyn.locn_of_absyn a) e
+  end
 end
 
 fun Hol_Rdefn stem Rquote eqs_quote =

@@ -79,6 +79,7 @@ New features
     The `name` key also registers the project's directory in `holpathdb`, replacing the old `.holpath` marker file (whose only content was a single line naming the directory); any in-tree or downstream `.holpath` files must be migrated to a `holproject.toml` containing `name = "<the-old-content>"`.
     An optional top-level `holmake = false` key turns project mode off for that file while keeping `holpathdb` registration and `external_includes` inheritance live (used in the HOL repository itself).
     An optional `[h4pedant]` section configures the style-check tool with a global line-length limit, a `unicode_ok` toggle, an `exclude` list of skipped subdirectories, and a `[[h4pedant.dir]]` array of per-subdirectory overrides; `h4pedant` with no positional arguments walks up to find the project root and scans the whole tree.
+    A flag on `h4pedant`'s command line settles the check it names wherever that check is applied, so `--linelen=`*n*, `--unicode`/`--unicodeok` and `--defaultgoal`/`--nodefaultgoal` all override whatever the project file says for a directory; `--ignore-project-file` sets the file aside altogether, scanning the directories named on the command line under the command line's options alone.
 
     Projects nest: a sub-directory carrying its own `holproject.toml` heads a separate project, governed by its own file rather than the enclosing one's, and `Holmake -r` and `--dirs` account for that.
     Two diagnostics guard the nesting: a project that points into an enclosing project it has not declared with `[projects.<id>]` is warned about, and any key `holproject.toml` does not recognise is reported rather than quietly discarded — a `[project.<id>]` typo for `[projects.<id>]` otherwise reads as correct and behaves as absent.
@@ -133,6 +134,25 @@ New features
 
 -   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
     list by a strict upper bound on its sum.
+
+-   Under Poly/ML, `Holmake` can keep a project's standard build
+    products in a separate *artifact root*.  Set `objroot` in
+    `holproject.toml`, pass `--objroot`, or set `HOLOBJROOT`:
+
+           name = "myproj"
+           objroot = "/scratch/myproj-build"
+
+    The source directory structure is preserved: `src/sub/fooTheory.dat`
+    is stored at `<objroot>/objs/src/sub/fooTheory.dat`.  Dependency
+    files, logs, locks and HTML documentation also use the artifact
+    root.  Building, loading in `hol` and cleaning share this layout.
+    Custom rules and named heaps retain their existing output paths.
+
+    The command line takes precedence over `holproject.toml`, which
+    takes precedence over the environment.  The source root defaults
+    to the project root; use `--srcroot` to set it explicitly.
+    The default artifact layout is unchanged.
+    See *Artifact layout* in the Description manual.
 
 Bugs fixed
 ----------
