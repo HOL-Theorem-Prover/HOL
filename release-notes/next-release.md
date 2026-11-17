@@ -156,6 +156,7 @@ Bugs fixed
 -   Rules added to a compset could reach the compset it was built from.
     `computeLib.new_compset` added to a compset shared with `bool_compset`, and adding to a sealed compset such as `reduceLib.num_compset` changed it once the additions reached a constant it lacked.
     Each new or extended compset now has its own entries, so evaluations with `bool_compset` and the compsets built on it no longer use rules that other code added elsewhere.
+    `computeLib.copy` now also makes the copied rules refer to the copy's entries, so rules added to a copy are used when evaluating inside the rules it started with.
 
 -   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
     Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.

@@ -244,6 +244,18 @@ val _ = computeLib.add_thms [mk_thm ([], “T <=> F”)] computeLib.bool_compset
 val _ = if unchanged_by computeLib.bool_compset “T” then OK()
         else die "a first rule for T added to bool_compset reached it"
 
+val _ = tprint "Checking rules added to a copy are used inside its old rules"
+val _ = new_constant("g5", “:ind -> bool”)
+val _ = let
+  val cs0 = computeLib.new_compset [mk_thm ([], “g5 x = (x = result2)”)]
+  val cs = computeLib.add_thms [mk_thm ([], “(result1 = result2) <=> F”)]
+                               (computeLib.copy cs0)
+  val th = computeLib.CBV_CONV cs “g5 result1”
+in
+  if aconv (rhs (concl th)) F then OK()
+  else die ("got " ^ thm_to_string th)
+end
+
 (* Registered conversions: a conversion that makes no progress must fall
    through to the constant's remaining rules rather than be retried on
    its own (reflexive) result, or escape CBV_CONV (UNCHANGED). *)
