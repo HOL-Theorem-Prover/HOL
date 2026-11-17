@@ -375,6 +375,20 @@ val _ = assert (no_pending "nested_def")
 val _ = assert (rejects (fn () => complete_definition "nowhere_def" TRUTH))
 val _ = OK ()
 
+val _ = tprint "deferred completion keeps the flags of its preparation"
+val ambient_goal = valOf (HOLFlags.with_bflags
+  [(computeLib.auto_import_definitions, false)]
+  (prepare_qDefine "ambient_def")
+  ‘ambient n = if n = 0 then 0n else ambient (n - 1) + 1’)
+val _ = assert (rejects (fn () => in_repl_mode (prepare_qDefine "ambient_def")
+  ‘ambient2 n = if n = 0 then 0n else ambient2 (n - 1) + 1’))
+val _ = assert (auto_import ())
+val _ = complete_definition "ambient_def"
+          (TAC_PROOF (ambient_goal, WF_REL_TAC ‘$<’))
+val _ = OK ()
+val _ = convtest ("ambient nocompute stays out of EVAL", EVAL,
+                 “ambient 2”, “ambient 2”)
+
 val _ = tprint "a suspended termination proof completes at finalisation"
 val suspend_loc = DB_dtype.mkloc ("staged-test", 77, true)
 val suspended_eqns = located_qDefine suspend_loc

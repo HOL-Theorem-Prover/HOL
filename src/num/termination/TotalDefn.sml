@@ -53,7 +53,7 @@ val {get = get_auto_tgoal, flag = auto_tgoal, ...} =
     HOLFlags.create_btrace ({group = "Definition",
                              name = "auto_tgoal"}, true)
 
-val {get = deleting_support, ...} =
+val {get = deleting_support, flag = delete_support_defs, ...} =
     HOLFlags.create_btrace ({group = "Definition",
                              name = "delete_support_defs"}, true)
 
@@ -927,7 +927,8 @@ end
 (* heap saved part-way through carries them.                                 *)
 (*---------------------------------------------------------------------------*)
 
-(* The settings a definition is made and stored under *)
+(* The settings a definition is made and stored under: their values when
+   it is prepared *)
 type scope = {def_suffix : string, ind_suffix : string,
               bflags : (HOLFlags.bflag * bool) list}
 
@@ -938,7 +939,9 @@ fun in_scope ({def_suffix, ind_suffix, bflags} : scope) f =
 
 fun current_scope () : scope =
     {def_suffix = !Defn.def_suffix, ind_suffix = !Defn.ind_suffix,
-     bflags = []}
+     bflags = map (fn f => (f, HOLFlags.get_bflag f))
+                  [computeLib.auto_import_definitions, allow_schema_definition,
+                   Theory.allow_rebinds, delete_support_defs]}
 
 datatype pending
   = Unproved of {loc : DB.thm_src_location, goal : goal,
@@ -975,12 +978,15 @@ datatype prepared = Made of thm * thm option
 (* Makes the definition, in scope; post runs after it is stored, outside *)
 fun prepare loc stem q scope post =
   let open Defn
+      val bind = stem ^ !Defn.def_suffix
+      val _ = not (Option.isSome (pending_definition "prepare" bind)) orelse
+              raise ERR "prepare" ("Definition " ^ Lib.quote bind ^
+                                   " is already pending")
       val snap1 = thy_consts (current_theory())
       val defn = Hol_defn stem q
       val ps = params_of defn
       val _ = null ps orelse get_allow_schema_definition() orelse
               complain_about_rhsfvs "tDefine" ps
-      val bind = stem ^ !Defn.def_suffix
   in
     if triv_defn defn then
       let val def = fetch_eqns defn
@@ -1122,16 +1128,17 @@ fun definition_options stem =
               raise ERR "Definition"
                     ("Unknown attributes: " ^
                      String.concatWith ", " (map #1 unknown))
+      val flag = HOLFlags.get_bflag
+      val auto_import = computeLib.auto_import_definitions
       val scope =
           {def_suffix = "",
            ind_suffix = case indopt of NONE => "" | SOME s => " " ^ s,
-           bflags = (if nocomp then
-                       [(computeLib.auto_import_definitions, false)]
-                     else []) @
-                    (if svarsok then [(allow_schema_definition, true)]
-                     else []) @
-                    (if rebindok then [(Theory.allow_rebinds, true)]
-                     else [])}
+           bflags = [(auto_import, not nocomp andalso flag auto_import),
+                     (allow_schema_definition,
+                      svarsok orelse flag allow_schema_definition),
+                     (Theory.allow_rebinds,
+                      rebindok orelse flag Theory.allow_rebinds),
+                     (delete_support_defs, flag delete_support_defs)]}
       fun post (thm, indopt) =
         let
           fun proc_attr (k,vs) =
