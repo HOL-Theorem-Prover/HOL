@@ -35,8 +35,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibClauseset";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+fun chatting l = tracing l;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -276,7 +275,7 @@ local
       val cls = spl cl [] comps
       val _ = chatting 5 andalso chat
         ("\nsplit: components of clause " ^ clause_to_string cl ^ ":\n"
-         ^ PP.pp_to_string (!LINE_LENGTH) (pp_list pp_clause) cls ^ "\n")
+         ^ PP.pp_to_string LINE_LENGTH (pp_list pp_clause) cls ^ "\n")
     in
       cls
     end;
@@ -343,7 +342,7 @@ fun add cl set =
              equalities = e, subterms = p, ...} = set
     val _ = chatting 7 andalso
             chat ("\nlargest_lits cl:\n" ^
-                  (PP.pp_to_string (!LINE_LENGTH)
+                  (PP.pp_to_string LINE_LENGTH
                    (pp_list (pp_maplet (pp_pair pp_clause pp_int) pp_formula))
                    (largest_lits cl)) ^ "\n")
     val _ = chatting 6 andalso

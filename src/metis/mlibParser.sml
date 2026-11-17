@@ -250,7 +250,7 @@ val punct = Char.contains "()[]{}.,;";
 type 'a quotation = 'a frag list;
 
 fun quotation_parser parser pp_a =
-  let val f = PP.pp_to_string (!LINE_LENGTH) pp_a
+  let val f = PP.pp_to_string LINE_LENGTH pp_a
   in parser o foldl (fn (QUOTE q, s) => s ^ q | (ANTIQUOTE a, s) => s ^ f a) ""
   end;
 
