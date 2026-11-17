@@ -231,17 +231,17 @@ fun copy (Compset {dict, ...}) =
   Compset { sealed = false,
             dict = SSPairTab.map (fn _ => fn r => ref (!r)) dict }
 
+(* An unsealed compset with the entries of the given one. A sealed compset's
+   refs may be shared with other compsets, so it gets fresh ones, as `copy`
+   gives; otherwise a later change to an entry would leak into them. *)
+fun unseal (cs as Compset {sealed, ...}) = if sealed then copy cs else cs
+
 (*
    Look up the per-constant database of `cst` in the given compset. If it does
    not exist, create an empty database for this constant. The constant is given
    as a pair `(const_name, theory_name)`. Returns the (possibly updated) compset
    and the ref to the per-constant database.
 *)
-(* An unsealed compset with the entries of the given one. A sealed compset's
-   refs may be shared with other compsets, so it gets fresh ones, as `copy`
-   gives; otherwise a later change to an entry would leak into them. *)
-fun unseal (cs as Compset {sealed, ...}) = if sealed then copy cs else cs
-
 fun assoc_clause (cs as Compset {dict, ...}) cst =
   case SSPairTab.lookup dict cst
    of SOME rl => (cs, rl)
