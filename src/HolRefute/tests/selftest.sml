@@ -2421,25 +2421,8 @@ val _ = test "native char-list primitives" (fn () =>
 (* Finite maps are FEMPTY/FUPDATE chains in the generated code, read
    through their entries, so an operation sees the map and not the chain.
    Narrowing refines a map through the same constructors. *)
-val native_fmap = native |> upd_size 3
-val narrowing_fmap = nar |> upd_timeout 3.0
-
-fun fmap_refuted goal =
-  let
-    fun certified c = native_genuine c andalso Option.isSome (#cert c)
-  in
-    both_strategies native_fmap goal certified andalso
-    refute narrowing_fmap goal |> cex_where certified
-  end
-
-fun fmap_not_refuted goal =
-  not_refuted (refute (native_fmap |> only [Exhaustive]) goal) andalso
-  not_refuted (refute (native_fmap |> only [Random] |> upd_seed (SOME 1))
-                 goal) andalso
-  not_refuted (refute narrowing_fmap goal)
-
 val _ = test "native finite-map primitives refute false properties" (fn () =>
-  List.all fmap_refuted
+  List.all native_refuted
     [``FLOOKUP ((f : num |-> num) |+ (k, v)) k = FLOOKUP f k``,
      ``k IN FDOM (f : num |-> num) ==> k IN FDOM (f \\ k')``,
      ``((f : num |-> num) |+ (k, v)) ' k' = f ' k'``,
@@ -2451,7 +2434,7 @@ val _ = test "native finite-map primitives refute false properties" (fn () =>
 
 val _ = test "native finite-map primitives leave true properties alone"
   (fn () =>
-    List.all fmap_not_refuted
+    List.all native_not_refuted
       [``FLOOKUP ((f : num |-> num) |+ (k, v)) k = SOME v``,
        ``k IN FDOM ((f : num |-> num) \\ k') ==> k IN FDOM f``,
        ``FLOOKUP (FUNION (f : num |-> num) g) k =
@@ -2461,8 +2444,8 @@ val _ = test "native finite-map primitives leave true properties alone"
        ``FCARD ((f : num |-> num) \\ k) <= FCARD f``])
 
 val _ = test "native SUBMAP" (fn () =>
-  fmap_refuted ``(f : num |-> num) |+ (k, v) SUBMAP f`` andalso
-  fmap_not_refuted ``((f : num |-> num) \\ k) SUBMAP f``)
+  native_refuted ``(f : num |-> num) |+ (k, v) SUBMAP f`` andalso
+  native_not_refuted ``((f : num |-> num) \\ k) SUBMAP f``)
 
 (* Certification would discard a structural "counterexample" to a true
    equality (Compute decides the instance true) and the search would just
@@ -2478,12 +2461,12 @@ fun fmap_searched goal =
       not (unknown_with "substrate" outcome) andalso
       not (unknown_with "executable" outcome) andalso
       not (unknown_with "HOL_ERR" outcome)
-    val uncertified = native_fmap |> upd_certify false
+    val uncertified = native_small |> upd_certify false
   in
     searched (refute (uncertified |> only [Exhaustive]) goal) andalso
     searched (refute (uncertified |> only [Random] |> upd_seed (SOME 1))
                 goal) andalso
-    searched (refute (narrowing_fmap |> upd_certify false) goal)
+    searched (refute (narrowing_small |> upd_certify false) goal)
   end
 
 val _ = test "native finite-map equality is extensional" (fn () =>
@@ -2491,8 +2474,8 @@ val _ = test "native finite-map equality is extensional" (fn () =>
     ``(f : num |-> num) |+ (1, 2) |+ (3, 4) = f |+ (3, 4) |+ (1, 2)`` andalso
   fmap_searched ``(f : num |-> num) |+ (k, 1) |+ (k, 2) = f |+ (k, 2)``
   andalso
-  fmap_refuted ``(f : num |-> num) |+ (k, 1) = f |+ (k, 2)`` andalso
-  fmap_refuted ``FLOOKUP (f : bool |-> bool) T = FLOOKUP f' T ==> f = f'``)
+  native_refuted ``(f : num |-> num) |+ (k, 1) = f |+ (k, 2)`` andalso
+  native_refuted ``FLOOKUP (f : bool |-> bool) T = FLOOKUP f' T ==> f = f'``)
 
 (* Sets are membership predicates: [EMPTY], [INSERT] and a comprehension
    [{ x | P x }] compile to functions, and [DRESTRICT] keeps the entries
@@ -2506,14 +2489,14 @@ fun set_refuted goal =
     fun certified c = native_genuine c andalso Option.isSome (#cert c)
   in
     both_strategies set_native goal certified andalso
-    refute narrowing_fmap goal |> cex_where certified
+    refute narrowing_small goal |> cex_where certified
   end
 
 fun set_not_refuted goal =
   not_refuted (refute (set_native |> only [Exhaustive]) goal) andalso
   not_refuted (refute (set_native |> only [Random] |> upd_seed (SOME 1))
                  goal) andalso
-  not_refuted (refute narrowing_fmap goal)
+  not_refuted (refute narrowing_small goal)
 
 val _ = test "sets and DRESTRICT are extracted" (fn () =>
   List.all set_refuted
@@ -2532,7 +2515,7 @@ val _ = test "sets and DRESTRICT are extracted" (fn () =>
 val _ = test "a comprehension that is not a membership predicate is refused"
   (fn () =>
     unknown_with "not a membership predicate"
-      (refute (native_fmap |> only [Exhaustive])
+      (refute (native_small |> only [Exhaustive])
          ``zoo_in_shifted x ==> x < 2``))
 
 val _ = test "finite sets and SUBMAP pass the executable gate" (fn () =>
@@ -2754,34 +2737,6 @@ val _ = test "a mutual family from an ancestor theory gets generators"
       orig ``:api_mval`` andalso orig ``:api_marr`` andalso
       genuine (refute (exhaustive |> upd_timeout 5.0) goal) andalso
       genuine (refute (nar |> upd_timeout 5.0) goal)
-    end)
-
-(* The same shape in the current theory: a theory may install its own
-   mutual induction principle on each type of a group, leaving two [ORIG]
-   entries and no [COPY] link between them. *)
-val _ = Datatype.Datatype
-  `fam_expr = FELit num | FEAt fam_target ;
-   fam_target = FTName num | FTSub fam_target fam_expr`
-
-val _ =
-  let
-    val induction = TypeBase.induction_of ``:fam_expr``
-    fun reinstall ty =
-      TypeBasePure.put_induction (TypeBasePure.ORIG induction)
-        (valOf (TypeBase.fetch ty))
-  in
-    TypeBase.write [reinstall ``:fam_expr``, reinstall ``:fam_target``]
-  end
-
-val _ = test "a group with one ORIG induction per type is one family"
-  (fn () =>
-    let
-      val cfg = qc |> upd_timeout 30.0 |> upd_sequential true
-        |> upd_seed (SOME 42) |> only [Exhaustive] |> upd_size 8
-    in
-      genuine (refute cfg ``!t : fam_target. t <> FTName 2``) andalso
-      genuine (refute cfg
-        ``!e : fam_expr. e <> FEAt (FTSub (FTName 0) (FELit 0))``)
     end)
 
 (* ------------------------------------------------------------------- *)

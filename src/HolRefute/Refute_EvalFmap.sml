@@ -140,16 +140,14 @@ structure Refute_EvalFmap :> Refute_EvalFmap = struct
       boolSyntax.equality
 
   (* FUNION, FEVERY, FCARD, DRESTRICT and SUBMAP by recursion on the
-     chain, as the finite_map compset has FLOOKUP, FDOM and DOMSUB.
-     FEVERY_FUPDATE restricts the rest of the map with DRESTRICT over a
-     complement, which its chain rule cannot decide; DOMSUB is the same
-     map by its definition. *)
+     chain, as the finite_map compset has FLOOKUP, FDOM, FAPPLY and
+     DOMSUB. *)
   val chain_rules =
     let open finite_mapTheory in
       [FUNION_FEMPTY_1, FUNION_FUPDATE_1, FEVERY_FEMPTY,
-       REWRITE_RULE [GSYM fmap_domsub] FEVERY_FUPDATE,
+       refuteTheory.fevery_fupdate_domsub,
        FCARD_FEMPTY, FCARD_FUPDATE, DRESTRICT_FEMPTY, DRESTRICT_FUPDATE,
-       refuteTheory.submap_compute]
+       SUBMAP_FEMPTY, SUBMAP_FUPDATE]
     end
 
   fun register () =

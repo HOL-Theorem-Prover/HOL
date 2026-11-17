@@ -341,9 +341,11 @@ structure Refute_Extract :> Refute_Extract = struct
     let
       val ops = context_operations context
       val wrap_type = #wrap_type ops
+      (* [strict] builds the component types; a lazy pair, list or option
+         becomes a generated datatype, registered before its components *)
       fun algebraic strict =
         choose (context_mode context)
-          (fn () => SOME strict) (fn () => NONE)
+          (fn () => SOME (strict ())) (fn () => NONE)
     in
       if Type.is_vartype ty then
         (* [MLVar] prints as an SML type variable, so its leading quote must
@@ -354,7 +356,7 @@ structure Refute_Extract :> Refute_Extract = struct
       else if Util.same_type ty intSyntax.int_ty then SOME (wrap_type MLIntInf)
       else if Util.same_type ty stringSyntax.char_ty then
         SOME (wrap_type MLChar)
-      else if is_char_list ty then algebraic MLString
+      else if is_char_list ty then algebraic (fn () => MLString)
       else if Util.same_type ty oneSyntax.one_ty then SOME (wrap_type MLUnit)
       else if wordsSyntax.is_word_type ty then
         SOME (wrap_type (MLWord (word_width ty)))
@@ -366,16 +368,18 @@ structure Refute_Extract :> Refute_Extract = struct
         | NONE =>
             (case Lib.total pairSyntax.dest_prod ty of
                SOME (left, right) =>
-                 algebraic (MLTuple
+                 algebraic (fn () => MLTuple
                    [ensure_type context left, ensure_type context right])
              | NONE =>
                  (case Lib.total listSyntax.dest_list_type ty of
                     SOME element =>
-                      algebraic (MLList (ensure_type context element))
+                      algebraic (fn () =>
+                        MLList (ensure_type context element))
                   | NONE =>
                       (case Lib.total optionSyntax.dest_option ty of
                          SOME element =>
-                           algebraic (MLOption (ensure_type context element))
+                           algebraic (fn () =>
+                             MLOption (ensure_type context element))
                        | NONE => NONE)))
     end
 
@@ -388,15 +392,6 @@ structure Refute_Extract :> Refute_Extract = struct
           val equality = "eq_refute_" ^ Int.toString number
           val primitive = classify_primitive context ty
         in
-          (* [classify_primitive] registers the components first, even for a
-             lazy pair or list that ends up a generated datatype, and a
-             component's datatype can mention [ty] again ([v = A ((num # v)
-             list)]).  That inner call has registered [ty] by now; registering
-             it a second time would give it two ML types, one for the
-             constructors that met it inside and one for everything after. *)
-          case lookup_type context ty of
-            SOME (mlty, _) => mlty
-          | NONE =>
           case primitive of
             SOME mlty =>
               (#types context := (ty, mlty, equality) :: !(#types context);
@@ -2269,11 +2264,9 @@ structure Refute_Extract :> Refute_Extract = struct
            returns suspensions; only the count is forced. *)
         | ("arithmetic", "FUNPOW") =>
             SOME (with3 (fn (f, n, x) =>
-              defer ("let fun refute_funpow refute_n refute_x = " ^
-                "if refute_n <= 0 then refute_x else refute_funpow " ^
-                "(refute_n - 1) " ^ parens (apply f "refute_x") ^
-                " in refute_funpow " ^ parens (force n) ^ " " ^ parens x ^
-                " end")))
+              defer ("refute_funpow " ^
+                parens ("fn refute_x => " ^ apply f "refute_x") ^ " " ^
+                parens (force n) ^ " " ^ parens x)))
         | ("rich_list", "COUNT_LIST") =>
             let
               val ty = #2 (boolSyntax.strip_fun (Term.type_of head))

@@ -829,14 +829,13 @@ structure Refute_Core :> Refute_Core = struct
       boolTheory.NOT_FORALL_THM,
       boolTheory.AND_IMP_INTRO,
       boolTheory.FUN_EQ_THM,
-      (* A deterministic existential, [?x. e = C x /\ P x], is a shape test on
-         [e], not a search: unwound here, so that the binder gate below does
-         not reject it *)
+      (* A deterministic existential, [?x. x = e /\ P x], is not a
+         search: unwound here, so that the binder gate below does not
+         reject it *)
       boolTheory.UNWIND_THM1,
       boolTheory.UNWIND_THM2,
       pairTheory.PAIR_EQ,
-      optionTheory.SOME_11,
-      refuteTheory.exists_some_unwind ] @
+      optionTheory.SOME_11 ] @
     Drule.CONJUNCTS boolTheory.PULL_EXISTS @
     Drule.CONJUNCTS boolTheory.PULL_FORALL
 
@@ -947,61 +946,11 @@ structure Refute_Core :> Refute_Core = struct
      nested tuple, under a negation), which single rewrite rules cannot.  They
      run under the goal's leading universals, whose variables a counterexample
      binds: at the top, the universal half would turn [!c. c <> #"z"] into [F]
-     and leave no variable to bind; for the same reason [forall_some_unwind]
-     is not among the rewrites, which do reach the top.  A goal that is
-     itself a deterministic existential, [?n. n = 4], becomes [T].  The two
-     passes alternate until nothing changes, since unwinding a pair
-     component can expose an option equation, and vice versa; each
-     unwinding removes a binder, but the alternation is bounded anyway so
-     that normalization can never spin. *)
-  (* An option equation [e = SOME x], either way round, anywhere among
-     the conjuncts under [?x], or under [!x] in a negated conjunction or
-     an antecedent, is moved to the front, where [exists_some_unwind] and
-     [forall_some_unwind] match it. *)
-  local
-    fun some_equation x conj =
-      case Lib.total boolSyntax.dest_eq conj of
-          SOME (left, right) =>
-            (optionSyntax.is_some right andalso
-             Term.aconv (optionSyntax.dest_some right) x andalso
-             not (Term.free_in x left)) orelse
-            (optionSyntax.is_some left andalso
-             Term.aconv (optionSyntax.dest_some left) x andalso
-             not (Term.free_in x right))
-        | NONE => false
-    fun front x conj =
-      let
-        val conjs = boolSyntax.strip_conj conj
-        val (equations, rest) = List.partition (some_equation x) conjs
-      in
-        case equations of
-            [] => raise Conv.UNCHANGED
-          | equation :: more =>
-              let
-                val fronted =
-                  boolSyntax.list_mk_conj (equation :: (more @ rest))
-              in
-                if Term.aconv fronted conj then raise Conv.UNCHANGED
-                else tautLib.TAUT_PROVE (boolSyntax.mk_eq (conj, fronted))
-              end
-      end
-    fun body_conv x body =
-      if boolSyntax.is_conj body then front x body
-      else if boolSyntax.is_neg body then Conv.RAND_CONV (front x) body
-      else if boolSyntax.is_imp_only body then
-        Conv.RATOR_CONV (Conv.RAND_CONV (front x)) body
-      else raise Conv.UNCHANGED
-  in
-    fun some_front_conv tm =
-      let
-        val (x, _) =
-          boolSyntax.dest_exists tm
-          handle Feedback.HOL_ERR _ => boolSyntax.dest_forall tm
-      in
-        Conv.QUANT_CONV (body_conv x) tm
-      end
-  end
-
+     and leave no variable to bind, which is why they are not among the
+     rewrites, which do reach the top.  A goal that is itself a
+     deterministic existential, [?n. n = 4], becomes [T].  The passes
+     repeat until nothing changes, since unwinding a pair component can
+     expose an option equation, and vice versa. *)
   (* A constructor equation under a binder prefix,
      [?x y. e = C x y /\ P x y], is a shape test on [e], not a search, for
      any TypeBase constructor [C] (SOME, INL, a pair, a user datatype's
@@ -1211,20 +1160,18 @@ structure Refute_Core :> Refute_Core = struct
       [entry name conv (boolSyntax.mk_exists (x, P)),
        entry name conv (boolSyntax.mk_forall (x, P))]
   in
-    val some_unwind_ss =
+    val constructor_unwind_ss =
       simpLib.SSFRAG
-        {name = SOME "SOME_UNWIND",
-         convs = both "some_front_conv" some_front_conv @
-                 both "constructor_unwind_conv" constructor_unwind_conv,
+        {name = SOME "CONSTRUCTOR_UNWIND",
+         convs = both "constructor_unwind_conv" constructor_unwind_conv,
          rewrs = [], filter = NONE, ac = [], dprocs = [], congs = []}
   end
 
   val unwind_conv =
     simpLib.SIMP_CONV
       (simpLib.++ (simpLib.++ (pureSimps.pure_ss, boolSimps.UNWIND_ss),
-                   some_unwind_ss))
-      [refuteTheory.exists_some_unwind, refuteTheory.forall_some_unwind,
-       pairTheory.PAIR_EQ, optionTheory.SOME_11]
+                   constructor_unwind_ss))
+      [pairTheory.PAIR_EQ, optionTheory.SOME_11]
 
   (* The quantifiers are pulled into the prefix first, so that none is
      left inside a case split the unwinding makes; one under a
@@ -1240,13 +1187,7 @@ structure Refute_Core :> Refute_Core = struct
           after this module loaded count *)
        Ho_Rewrite.REWRITE_CONV normal_rewrites] tm
 
-  fun until_fixed 0 conv = Conv.ALL_CONV
-    | until_fixed rounds conv =
-        Conv.ORELSEC
-          (Conv.THENC (Conv.CHANGED_CONV conv, until_fixed (rounds - 1) conv),
-           Conv.ALL_CONV)
-
-  val normal_conv = Conv.QCONV (until_fixed 8 normal_pass)
+  val normal_conv = Conv.QCONV (Conv.REPEATC (Conv.CHANGED_CONV normal_pass))
 
   fun normalize tm =
     #2 (boolSyntax.dest_eq (Thm.concl (normal_conv tm)))
