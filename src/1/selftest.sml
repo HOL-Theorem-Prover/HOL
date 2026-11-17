@@ -1772,9 +1772,6 @@ in
           (Lib.subst_keep_last aconv) [a |-> b, a |-> c]
 end
 
-(* SUBST_CONV renames its template variables to genvars before SUBST;
-   a variable given twice in its theta made that subst raise.  As with
-   SUBS, the later theorem wins. *)
 val _ = let
   val x = mk_var("x", Type.alpha)
   val a = mk_var("a", Type.alpha)

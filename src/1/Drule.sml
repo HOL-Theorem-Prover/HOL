@@ -203,8 +203,6 @@ fun SUBST_CONV theta template tm =
       fun retheta {redex, residue} = (redex |-> genvar (type_of redex))
       val theta0 = map retheta theta
       val theta1 = map (op |-> o (#residue ## #residue)) (zip theta0 theta)
-      (* a template variable given twice used to give a repeated redex,
-         resolved by letting the later one win; preserve that *)
       val w = subst (subst_keep_last aconv theta0) template
    in
       SUBST theta1 (mk_eq (tm, w)) (REFL tm)
