@@ -425,6 +425,31 @@ val _ = OK ()
 val _ = convtest ("finalised definition enters EVAL", EVAL,
                  “susp 3”, “3”)
 
+val _ = tprint "a failed finalisation can be retried"
+val fail_next = ref true
+fun fail_once {name,attrname,args,thm} =
+  if !fail_next then (fail_next := false; raise mk_HOL_ERR "" "" "once")
+  else ()
+val _ = ThmAttribute.register_attribute
+          ("fail_once", {localf = fail_once, storedf = fail_once})
+val _ = located_qDefine DB.Unknown "retry_def[allow_rebind,fail_once]"
+  ‘retry n = if n = 0 then 0n else retry (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
+  (Context.snapshot ())
+val _ = markerLib.resume {suspension_name = "retry_def", label_name = "tc"}
+          (markerLib.RESUME_TAC THEN CONJ_TAC THENL
+             [WF_TAC, REPEAT STRIP_TAC THEN MATCH_MP_TAC susp_helper THEN
+                      FIRST_ASSUM ACCEPT_TAC])
+          (Context.snapshot ())
+val _ = assert (rejects (fn () =>
+  located_finalise_definition DB.Unknown "retry_def"))
+val retry_def = located_finalise_definition DB.Unknown "retry_def"
+val _ = assert (aconv (concl retry_def) (concl (DB.fetch "-" "retry_def")))
+val _ = assert (not (is_conj (concl retry_def)) andalso
+                Option.isSome (DefnBase.lookup_userdef “retry”) andalso
+                no_pending "retry_def")
+val _ = OK ()
+
 val _ = tprint "mutual definitions complete through prepare_qDefine"
 val mutual_goal = valOf (prepare_qDefine "mev_def[induction=mev_steps]"
   ‘(mev n = if n = 0 then T else mod (n - 1)) /\

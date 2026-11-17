@@ -1048,7 +1048,8 @@ fun define_with_tactic loc stem q tac scope post =
             Made r => (post r; r)
           | Goal {bind, name, goal} =>
             complete "tDefine" bind
-              (in_scope scope (boolLib.prove_named (Context.snapshot ()))
+              (in_scope scope
+                 (fn g => boolLib.prove_named (Context.snapshot ()) g)
                  {name = name, goal = goal, tac = tac})
             handle e => (set_pending bind NONE; raise e)
   in
@@ -1077,7 +1078,7 @@ fun located_finalise_definition loc nm =
         | SOME (Suspended finish) =>
           if null attrs andalso null reserved andalso null unknown then
             markerLib.finalise_suspension name
-              (fn th => (set_pending name NONE; #1 (finish th)))
+              (fn th => #1 (finish th) before set_pending name NONE)
           else
             raise ERR "finalise_definition"
                   ("Give the attributes of " ^ Lib.quote name ^
