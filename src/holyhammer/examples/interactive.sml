@@ -162,7 +162,7 @@ val pb_goal =
   ([] : term list,
    ``SURJ f s t <=> IMAGE f s = t /\ (!x. x IN s ==> f x IN t)``);
 val th6 = TAC_PROOF (pb_goal,
-  hh_pb (hhConfig.state_dir ()) ["e", "vampire"]
+  hh_pb (hhConfig.state_dir ()) [Eprover, Vampire]
     ["pred_setTheory.IMAGE_SURJ", "pred_setTheory.IN_IMAGE"] pb_goal)
   handle HOL_ERR _ => TRUTH;
 

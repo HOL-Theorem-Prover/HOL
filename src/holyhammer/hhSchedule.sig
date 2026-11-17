@@ -13,7 +13,7 @@ sig
      t_replay is the time the replay of stac took. *)
   withtype suggestion =
     {stac : string, tac : tactic, lemmas : string list,
-     prover : string, slice : hhProver.slice,
+     prover : hhProver.prover, slice : hhProver.slice,
      t_prover : real, t_recon : real, t_replay : real}
 
   type result =

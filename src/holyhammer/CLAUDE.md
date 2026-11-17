@@ -37,22 +37,26 @@ rely on its contents being present or committed.
 
 ## Module map (pipeline order)
 
-- **`hhConfig`** — the option system (`hh_set`/`hh_get`/`snapshot` →
-  `hh_options`), config-file + env discovery, executable discovery,
-  and the state dir.  Central; nearly everything depends on it.  It
-  breaks dependency cycles via `register_*` hooks that later modules
-  install at load time — respect that indirection rather than adding a
-  direct back-edge.
+- **`hhConfig`** — the `prover` datatype (`Eprover | Vampire |
+  Zipperposition | Z3`) and its name codec, the option system
+  (`hh_set`/`hh_get`/`snapshot` → `hh_options`), config-file + env
+  discovery, executable discovery, and the state dir.  Central; nearly
+  everything depends on it, so it must not depend back on later modules.
+  Provers are identified by constructor throughout; `prover_name`
+  strings appear only at text boundaries (option values, config keys,
+  install dirs, journals).
 - **`hhTranslate`, `hhTptpProblem`, `hhExportLib`, and the `hhExport*`
   dialect writers** (Fof, Tf0/Tf1, Th0/Th1, Sexpr) — HOL term/goal →
   TPTP dialects (FOF / TFF / THF, mono & poly).
   `hhExportLib` also drives the bushy/chainy dependency-export machinery
   shared with dataset generation.
-- **`hhProver`** — declarative prover registry.  A `prover_config`
-  bundles executable discovery, version probing, per-slice command
-  construction, output/SZS parsing, and slice definitions; `run` /
-  `run_async` execute one problem.  Add or adjust a prover by editing
-  its registry entry, not by scripting a binary.
+- **`hhProver`** — declarative prover table: `config_of` maps each
+  `prover` constructor to its `prover_config`, which bundles executable
+  discovery, version probing, per-slice command construction,
+  output/SZS parsing, and slice definitions; `run` / `run_async` execute
+  one problem.  Add a prover by adding a constructor and its config, not
+  by scripting a binary.  Tests substitute fixture configs with
+  `with_override`.
 - **`hhSlice`** — turns `hh_options` into the concrete
   `(prover, slice)` schedule and each slice's time budget.
 - **`hhCache`** — memoizes prover runs keyed by prover+version+argv+

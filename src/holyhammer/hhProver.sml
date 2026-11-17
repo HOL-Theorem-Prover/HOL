@@ -1,12 +1,14 @@
 (* ========================================================================= *)
 (* FILE          : hhProver.sml                                              *)
-(* DESCRIPTION   : HolyHammer prover registry and output parsers             *)
+(* DESCRIPTION   : HolyHammer prover configurations and output parsers       *)
 (* ========================================================================= *)
 
 structure hhProver :> hhProver =
 struct
 
 open aiLib
+
+datatype prover = datatype hhConfig.prover
 
 datatype szs =
     SzsTheorem
@@ -20,7 +22,7 @@ datatype szs =
   | RunFailure of string
 
 type slice =
-  {prover : string, format : string, type_enc : string,
+  {prover : prover, format : string, type_enc : string,
    lam_trans : string, nfacts : int, filter : string,
    extra_opts : string list, slice_size : int}
 
@@ -351,49 +353,50 @@ val legacy_fof = ("fof", "", "")
    unfiltered slices, and the final eight the filtered ensemble slices.
    Each built-in prover's slice table is its subsequence of this list. *)
 val portfolio =
-  [mk_slice "vampire" legacy_fof "knn" 96,
-   mk_slice "e" legacy_fof "knn" 128,
-   mk_slice "zipperposition" legacy_fof "knn" 128,
-   mk_slice "vampire" legacy_fof "knn" 512,
-   mk_slice "e" legacy_fof "knn" 512,
-   mk_slice "vampire" legacy_fof "knn" 32,
-   mk_slice "zipperposition" legacy_fof "knn" 512,
-   mk_slice "vampire" legacy_fof "knn" 1024,
+  [mk_slice Vampire legacy_fof "knn" 96,
+   mk_slice Eprover legacy_fof "knn" 128,
+   mk_slice Zipperposition legacy_fof "knn" 128,
+   mk_slice Vampire legacy_fof "knn" 512,
+   mk_slice Eprover legacy_fof "knn" 512,
+   mk_slice Vampire legacy_fof "knn" 32,
+   mk_slice Zipperposition legacy_fof "knn" 512,
+   mk_slice Vampire legacy_fof "knn" 1024,
 
-   mk_slice "vampire" ("tx0", "mono_native_fool", "lifting") "knn" 96,
-   mk_slice "e" ("tx0-", "mono_native_fool", "lifting") "knn" 128,
-   mk_slice "zipperposition" ("th1", "mono_native_higher_fool", "keep_lams")
+   mk_slice Vampire ("tx0", "mono_native_fool", "lifting") "knn" 96,
+   mk_slice Eprover ("tx0-", "mono_native_fool", "lifting") "knn" 128,
+   mk_slice Zipperposition ("th1", "mono_native_higher_fool", "keep_lams")
      "knn" 128,
-   mk_slice "e" ("th0", "mono_native_higher", "keep_lams") "knn" 512,
+   mk_slice Eprover ("th0", "mono_native_higher", "keep_lams") "knn" 512,
    (* Substitution: Vampire 5.0.1 rejects TF1 rank-1 type quantifiers (!>)
       as higher-order types.  TH0 is its next tested table candidate; this
       is a parser-equivalence correction, not a tuning change.  The pinned
       build runs its generic FOF schedule on THF and superposes into
       lambda bodies with loose bound variables, refuting consistent
       axioms, so its TH0 problems are lambda-lifted. *)
-   mk_slice "vampire" ("th0", "mono_native_higher", "lifting") "knn" 512,
+   mk_slice Vampire ("th0", "mono_native_higher", "lifting") "knn" 512,
    (* Substitution: E 3.2.5-ho rejects the generated TF0 polymorphic proxy
       declaration used by combs_and_lifting.  TX0- preserves that lambda
       mode and is its parser-supported candidate. *)
-   mk_slice "e" ("tx0-", "mono_native_fool", "combs_and_lifting") "knn" 1024,
-   mk_slice "vampire" ("tx0", "mono_native_fool", "combs") "knn" 512,
+   mk_slice Eprover ("tx0-", "mono_native_fool", "combs_and_lifting") "knn"
+     1024,
+   mk_slice Vampire ("tx0", "mono_native_fool", "combs") "knn" 512,
    (* Substitution: Zipperposition 2.1 rejects FOF guard proxy helpers as
       a prop/individual type clash.  Its legacy FOF/32 candidate parses;
       this is a parser-equivalence correction. *)
-   mk_slice "zipperposition" legacy_fof "knn" 32,
+   mk_slice Zipperposition legacy_fof "knn" 32,
 
-   mk_slice "vampire" legacy_fof "mesh" 96,
-   mk_slice "e" legacy_fof "mesh" 128,
-   mk_slice "zipperposition" ("th1", "mono_native_higher_fool", "keep_lams")
+   mk_slice Vampire legacy_fof "mesh" 96,
+   mk_slice Eprover legacy_fof "mesh" 128,
+   mk_slice Zipperposition ("th1", "mono_native_higher_fool", "keep_lams")
      "mesh" 128,
-   mk_slice "vampire" ("tx0", "mono_native_fool", "lifting") "mesh" 512,
-   mk_slice "e" legacy_fof "mepo" 512,
-   mk_slice "vampire" legacy_fof "mepo" 1024,
-   mk_slice "e" ("tx0-", "mono_native_fool", "lifting") "mash" 128,
-   mk_slice "vampire" legacy_fof "mash" 256]
+   mk_slice Vampire ("tx0", "mono_native_fool", "lifting") "mesh" 512,
+   mk_slice Eprover legacy_fof "mepo" 512,
+   mk_slice Vampire legacy_fof "mepo" 1024,
+   mk_slice Eprover ("tx0-", "mono_native_fool", "lifting") "mash" 128,
+   mk_slice Vampire legacy_fof "mash" 256]
 
-fun portfolio_slices name () =
-  List.filter (fn slice => #prover slice = name) portfolio
+fun portfolio_slices prover () =
+  List.filter (fn slice => #prover slice = prover) portfolio
 
 (* Pinned E 3.2.5-ho, Vampire 5.0.1, and Zipperposition 2.1 smoke
    recordings validate these TPTP-3 dialect choices for every typed slice.
@@ -429,34 +432,34 @@ fun z3_command executable {timeout, problem, extra, ...} =
      extra @ [problem])
 
 val e_config : prover_config =
-  {name = "e", exec_names = ["eprover-ho", "eprover"],
+  {name = hhConfig.prover_name Eprover, exec_names = ["eprover-ho", "eprover"],
    env_var = "HOL4_EPROVER_EXECUTABLE", version_args = ["--version"],
    parse_version = e_version, tested_versions = ["3.2.5"],
    supported_formats = ["fof", "tf0", "tx0-", "th0"],
    mk_command = e_command,
    parse_output = parse_tstp, mono_instances = 128,
-   slices = portfolio_slices "e", legacy = false}
+   slices = portfolio_slices Eprover, legacy = false}
 
 val vampire_config : prover_config =
-  {name = "vampire", exec_names = ["vampire"],
+  {name = hhConfig.prover_name Vampire, exec_names = ["vampire"],
    env_var = "HOL4_VAMPIRE_EXECUTABLE", version_args = ["--version"],
    parse_version = vampire_version, tested_versions = ["5.0.1"],
    supported_formats = ["fof", "tf0", "tf1", "tx0", "th0", "th1"],
    mk_command = vampire_command,
    parse_output = parse_vampire, mono_instances = 256,
-   slices = portfolio_slices "vampire", legacy = false}
+   slices = portfolio_slices Vampire, legacy = false}
 
 val zipperposition_config : prover_config =
-  {name = "zipperposition", exec_names = ["zipperposition"],
+  {name = hhConfig.prover_name Zipperposition, exec_names = ["zipperposition"],
    env_var = "HOL4_ZIPPERPOSITION_EXECUTABLE", version_args = ["--version"],
    parse_version = zipperposition_version, tested_versions = ["2.1"],
    supported_formats = ["fof", "th1"],
    mk_command = zipperposition_command, parse_output = parse_tstp,
    mono_instances = 100,
-   slices = portfolio_slices "zipperposition", legacy = false}
+   slices = portfolio_slices Zipperposition, legacy = false}
 
 val z3_config : prover_config =
-  {name = "z3", exec_names = ["z3_tptp", "z3"],
+  {name = hhConfig.prover_name Z3, exec_names = ["z3_tptp", "z3"],
    env_var = "HOL4_Z3_EXECUTABLE",
    version_args = ["--version"], parse_version = z3_version,
    tested_versions = ["4.11.2"], supported_formats = ["fof"],
@@ -464,22 +467,27 @@ val z3_config : prover_config =
    parse_output = parse_z3, mono_instances = 100,
    slices = fn () => [], legacy = true}
 
-val registry = ref
-  [e_config, vampire_config, zipperposition_config, z3_config]
+fun builtin_config Eprover = e_config
+  | builtin_config Vampire = vampire_config
+  | builtin_config Zipperposition = zipperposition_config
+  | builtin_config Z3 = z3_config
 
-fun all () = !registry
+val overrides = Portable.syncref ([] : (prover * prover_config) list)
 
-fun lookup name =
-  List.find (fn ({name = other, ...} : prover_config) => name = other)
-    (!registry)
+fun config_of prover =
+  case List.find (fn (other, _) => other = prover) (#get overrides ()) of
+      SOME (_, config) => config
+    | NONE => builtin_config prover
 
-val _ = hhConfig.register_prover_validator (Option.isSome o lookup)
+fun all () = map config_of hhConfig.all_provers
 
-fun register (config : prover_config) =
-  let val name = #name config in
-    case lookup name of
-        SOME _ => raise Fail ("duplicate HolyHammer prover: " ^ name)
-      | NONE => registry := !registry @ [config]
+fun with_override prover config f =
+  let
+    fun set value = #upd overrides (fn _ => ((), value))
+    val saved = #get overrides ()
+  in
+    set ((prover, config) :: saved);
+    Portable.finally (fn () => set saved) f ()
   end
 
 fun find_exec ({name, exec_names, env_var, ...} : prover_config) =
@@ -488,8 +496,10 @@ fun find_exec ({name, exec_names, env_var, ...} : prover_config) =
 fun is_found config = Option.isSome (find_exec config)
 
 fun default_provers () =
-  map #name (List.filter (fn config =>
-    not (#legacy config) andalso is_found config) (!registry))
+  List.filter (fn prover =>
+    let val config = config_of prover
+    in not (#legacy config) andalso is_found config end)
+    hhConfig.all_provers
 
 fun elapsed started = Time.toReal (Time.- (Time.now (), started))
 

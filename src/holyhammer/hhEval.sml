@@ -13,6 +13,8 @@ struct
 
 open HolKernel boolLib aiLib
 
+datatype prover = datatype hhProver.prover
+
 datatype regime = Bushy | Chainy
 datatype selector =
     Deps
@@ -22,8 +24,8 @@ datatype selector =
   | Mesh of int
   | PerSlice
 datatype engine =
-    Prover of string
-  | Sched of {provers : string list, slices : int,
+    Prover of hhProver.prover
+  | Sched of {provers : hhProver.prover list, slices : int,
               cores : int, max_proofs : int}
 
 type condition =
@@ -44,7 +46,8 @@ type journal_slice =
 type journal_entry =
   {run : string, thy : string, thm : string, goal_id : string,
    cond : string, regime : regime, selector : selector,
-   engine : engine, ho : bool, fresh : bool, prover : string,
+   engine : engine option, ho : bool, fresh : bool,
+   prover : hhProver.prover option,
    prover_version : string option, nfacts : int,
    timeout : int, szs : cell_status, t_prover : real,
    axioms_used : string list option, recon_ok : bool option,
@@ -63,7 +66,7 @@ type corpus_entry =
   {thy : string, theorem_count : int, dep_stamp : string}
 
 type prover_identity =
-  {name : string, path : string option, version : string option,
+  {prover : hhProver.prover, path : string option, version : string option,
    sha256 : string option}
 
 type run_header =
@@ -240,8 +243,10 @@ fun validate_condition (condition : condition) =
 
 fun json_int number = JSON.INT (IntInf.fromInt number)
 
+fun json_prover_name prover = JSON.STRING (hhConfig.prover_name prover)
+
 fun engine_param_fields {provers, slices, cores, max_proofs} =
-  [("provers", JSON.ARRAY (map JSON.STRING provers)),
+  [("provers", JSON.ARRAY (map json_prover_name provers)),
    ("slices", json_int slices), ("cores", json_int cores),
    ("max_proofs", json_int max_proofs)]
 
@@ -256,7 +261,7 @@ fun json_condition condition =
       case #engine condition of
           Prover prover =>
             [("engine", JSON.STRING "prover"),
-             ("prover", JSON.STRING prover)]
+             ("prover", json_prover_name prover)]
         | Sched parameters =>
             ("engine", JSON.STRING "sched") :: engine_param_fields parameters
   in
@@ -288,17 +293,26 @@ fun option_field decoder name value =
 
 fun string_list value = JSONUtil.arrayMap JSONUtil.asString value
 
+fun prover_of_name name =
+  case hhConfig.prover_of_name name of
+      SOME prover => prover
+    | NONE => raise Fail ("unknown HolyHammer prover: " ^ name)
+
+fun prover_value value = prover_of_name (JSONUtil.asString value)
+
+fun prover_field name value = prover_value (field name value)
+
 fun parse_engine_params value =
-  {provers = string_list (field "provers" value),
+  {provers = JSONUtil.arrayMap prover_value (field "provers" value),
    slices = int_field "slices" value, cores = int_field "cores" value,
    max_proofs = int_field "max_proofs" value}
 
 fun parse_engine value =
   case optional_field "engine" value of
-      NONE => Prover (string_field "prover" value)
+      NONE => Prover (prover_field "prover" value)
     | SOME engine_value =>
         (case JSONUtil.asString engine_value of
-             "prover" => Prover (string_field "prover" value)
+             "prover" => Prover (prover_field "prover" value)
            | "sched" => Sched (parse_engine_params value)
            | name => raise Fail ("unknown evaluation engine: " ^ name))
 
@@ -418,7 +432,7 @@ fun json_slice
     {prover, format, type_enc, lam_trans, nfacts, filter, extra_opts,
      slice_size} =
   JSON.OBJECT
-    [("prover", JSON.STRING prover), ("format", JSON.STRING format),
+    [("prover", json_prover_name prover), ("format", JSON.STRING format),
      ("type_enc", JSON.STRING type_enc),
      ("lam_trans", JSON.STRING lam_trans),
      ("nfacts", json_int nfacts),
@@ -449,6 +463,15 @@ fun json_journal_slice {slice, szs, time, cached} =
     [("slice", json_slice slice), ("szs", JSON.STRING (szs_name szs)),
      ("time", JSON.FLOAT time), ("cached", JSON.BOOL cached)]
 
+(* A journal entry's prover is spelled "" when there is none: no slice ran
+   in a Sched cell, or the entry records a theory that failed to load.
+   The latter has no engine either and is written as a Prover entry. *)
+fun journal_prover_text NONE = ""
+  | journal_prover_text (SOME prover) = hhConfig.prover_name prover
+
+fun journal_prover_of_text "" = NONE
+  | journal_prover_of_text name = SOME (prover_of_name name)
+
 fun journal_json
     {run, thy, thm, goal_id, cond, regime, selector, engine, ho, fresh, prover,
      prover_version, nfacts, timeout, szs, t_prover, axioms_used,
@@ -463,7 +486,7 @@ fun journal_json
        ("selector", JSON.STRING (string_of_selector selector)),
        ("ho", JSON.BOOL ho), ("fresh", JSON.BOOL fresh)]
     val winning =
-      [("prover", JSON.STRING prover),
+      [("prover", JSON.STRING (journal_prover_text prover)),
        ("prover_version", json_string_option prover_version),
        ("nfacts", json_int nfacts),
        ("timeout", json_int timeout),
@@ -477,11 +500,16 @@ fun journal_json
        ("error", json_string_option error)]
     val engine_fields =
       case engine of
-          Prover name =>
-            if name = prover then [("engine", JSON.STRING "prover")]
+          NONE =>
+            if prover = NONE then [("engine", JSON.STRING "prover")]
+            else raise Fail
+              "invalid hhEval journal entry: prover without an engine"
+        | SOME (Prover engine_prover) =>
+            if prover = SOME engine_prover then
+              [("engine", JSON.STRING "prover")]
             else raise Fail
               "invalid hhEval Prover journal entry: engine/prover mismatch"
-        | Sched parameters =>
+        | SOME (Sched parameters) =>
             (case (stop, t_total) of
                  (SOME reason, SOME total) =>
                    [("engine", JSON.STRING "sched"),
@@ -499,12 +527,12 @@ fun journal_json
                     "t_total are required"))
   in
     case engine of
-        Prover _ => JSON.OBJECT (common @ engine_fields @ winning)
-      | Sched _ => JSON.OBJECT (common @ engine_fields)
+        SOME (Sched _) => JSON.OBJECT (common @ engine_fields)
+      | _ => JSON.OBJECT (common @ engine_fields @ winning)
   end
 
 fun parse_slice value : hhProver.slice =
-  {prover = string_field "prover" value,
+  {prover = prover_field "prover" value,
    format = string_field "format" value,
    type_enc = string_field "type_enc" value,
    lam_trans = string_field "lam_trans" value,
@@ -521,24 +549,25 @@ fun parse_journal_slice value : journal_slice =
 
 fun parse_journal_engine value prover =
   case string_field "engine" value of
-      "prover" => Prover prover
-    | "sched" => Sched (parse_engine_params (field "engine_params" value))
+      "prover" => Option.map Prover prover
+    | "sched" =>
+        SOME (Sched (parse_engine_params (field "engine_params" value)))
     | name => raise Fail ("unknown journal engine: " ^ name)
 
 (* Only the format written by journal_json is accepted.  The schedule
    fields are present exactly on Sched entries. *)
 fun parse_journal_value value : journal_entry =
   let
-    val prover = string_field "prover" value
+    val prover = journal_prover_of_text (string_field "prover" value)
     val engine = parse_journal_engine value prover
     val (stop, t_total, winner, slices) =
       case engine of
-          Prover _ => (NONE, NONE, NONE, [])
-        | Sched _ =>
+          SOME (Sched _) =>
             (SOME (string_field "stop" value),
              SOME (real_field "t_total" value),
              option_field parse_slice "winner" value,
              JSONUtil.arrayMap parse_journal_slice (field "slices" value))
+        | _ => (NONE, NONE, NONE, [])
   in
     {run = string_field "run" value, thy = string_field "thy" value,
      thm = string_field "thm" value, goal_id = string_field "goal_id" value,
@@ -654,24 +683,22 @@ fun sha256 path =
   end
   handle OS.SysErr _ => NONE
 
-val distinct_names = mk_sameorder_set String.compare
+val distinct_provers = mk_sameorder_set hhConfig.prover_compare
 
-fun prover_identity name =
-  case hhProver.lookup name of
-      NONE => {name = name, path = NONE, version = NONE, sha256 = NONE}
-    | SOME config =>
-        (case hhProver.probe config of
-             NONE => {name = name, path = NONE, version = NONE, sha256 = NONE}
-           | SOME {path, version, ...} =>
-               {name = name, path = SOME path, version = version,
-                sha256 = sha256 path})
+fun prover_identity prover =
+  case hhProver.probe (hhProver.config_of prover) of
+      NONE => {prover = prover, path = NONE, version = NONE, sha256 = NONE}
+    | SOME {path, version, ...} =>
+        {prover = prover, path = SOME path, version = version,
+         sha256 = sha256 path}
 
-fun engine_provers (Prover name) = [name]
+fun engine_provers (Prover prover) = [prover]
   | engine_provers (Sched {provers, ...}) = provers
 
 fun current_prover_identities (conditions : condition list) =
   map prover_identity
-    (distinct_names (List.concat (map (engine_provers o #engine) conditions)))
+    (distinct_provers
+      (List.concat (map (engine_provers o #engine) conditions)))
 
 fun host_name () =
   case List.find (fn (name, _) => name = "nodename")
@@ -696,9 +723,9 @@ fun new_run_header
    provers = current_prover_identities conditions, corpus = corpus,
    added_from_dat = added_from_dat, conditions = conditions, sample = sample}
 
-fun json_prover {name, path, version, sha256} =
+fun json_prover {prover, path, version, sha256} =
   JSON.OBJECT
-    [("name", JSON.STRING name), ("path", json_string_option path),
+    [("name", json_prover_name prover), ("path", json_string_option path),
      ("version", json_string_option version),
      ("sha256", json_string_option sha256)]
 
@@ -807,7 +834,7 @@ fun regular_cell entry =
   #cond entry <> "__load__" andalso #thm entry <> "__load__"
 
 fun prover_cell entry =
-  case #engine entry of Prover _ => true | Sched _ => false
+  case #engine entry of SOME (Prover _) => true | _ => false
 
 fun sched_cell entry = not (prover_cell entry)
 
@@ -845,11 +872,11 @@ fun make_metrics entries : metrics =
     val reconstructed = length (goal_ids entries reconstructed_cell)
     fun cell_time entry =
       case #engine entry of
-          Prover _ => #t_prover entry
-        | Sched _ =>
+          SOME (Sched _) =>
             (case #t_total entry of
                  SOME total => total
                | NONE => #t_prover entry)
+        | _ => #t_prover entry
     val times = map cell_time (List.filter proven_cell entries)
     val (p50, p90, maximum) = quantiles times
   in
@@ -889,12 +916,13 @@ type condition_report =
    ho : metrics, non_ho : metrics, seen : metrics, fresh : metrics}
 
 type slice_contribution =
-  {format : string, type_enc : string, lam_trans : string, prover : string,
-   filter : string, nfacts : int, wins : int, reconstructed : int}
+  {format : string, type_enc : string, lam_trans : string,
+   prover : hhProver.prover, filter : string, nfacts : int, wins : int,
+   reconstructed : int}
 
 type portfolio_report =
   {key : string, cells : journal_entry list, metrics : metrics,
-   unique : (string * int * int) list}
+   unique : (hhProver.prover * int * int) list}
 
 type schedule_report =
   {name : string, slices_run : (int * int) list,
@@ -929,18 +957,20 @@ fun winning_row entry : slice_contribution option =
        reconstructed = reconstructed}
   in
     case #engine entry of
-        Prover _ => SOME (row ("fof", "", "", #prover entry,
+        SOME (Prover prover) => SOME (row ("fof", "", "", prover,
           filter_of_selector (#selector entry), #nfacts entry))
-      | Sched _ =>
+      | SOME (Sched _) =>
           Option.map (fn slice =>
             row (#format slice, #type_enc slice, #lam_trans slice,
               #prover slice, #filter slice, #nfacts slice))
             (#winner entry)
+      | NONE => NONE
   end
 
 fun contribution_key (row : slice_contribution) =
   String.concatWith "\000"
-    [#format row, #type_enc row, #lam_trans row, #prover row, #filter row,
+    [#format row, #type_enc row, #lam_trans row,
+     hhConfig.prover_name (#prover row), #filter row,
      Int.toString (#nfacts row)]
 
 fun slice_contributions entries : slice_contribution list =
@@ -965,7 +995,7 @@ fun portfolio_key entry =
 fun unique_count prover predicate entries =
   let
     fun ids keep =
-      goal_ids (List.filter (fn entry => keep (#prover entry = prover))
+      goal_ids (List.filter (fn entry => keep (#prover entry = SOME prover))
         entries) predicate
     val others = Binaryset.addList (Binaryset.empty String.compare,
       ids not)
@@ -979,7 +1009,8 @@ fun portfolio_report (key, cells) : portfolio_report =
    unique = map (fn prover =>
      (prover, unique_count prover proven_cell cells,
       unique_count prover reconstructed_cell cells))
-     (sorted_unique (map #prover cells))}
+     (mk_fast_set hhConfig.prover_compare
+        (List.mapPartial #prover cells))}
 
 fun schedule_report (name, cells) : schedule_report =
   {name = name,
@@ -1034,19 +1065,19 @@ fun condition_json ({name, cells, metrics, ho, non_ho, seen, fresh}
     val first = hd cells
     val schedule_fields =
       case #engine first of
-          Prover _ => []
-        | Sched {provers, slices, cores, max_proofs} =>
+          SOME (Sched {provers, slices, cores, max_proofs}) =>
             [("engine", JSON.STRING "sched"),
-             ("provers", JSON.ARRAY (map JSON.STRING provers)),
+             ("provers", JSON.ARRAY (map json_prover_name provers)),
              ("requested_slices", json_int slices),
              ("cores", json_int cores), ("max_proofs", json_int max_proofs)]
+        | _ => []
   in
     JSON.OBJECT
       ([("cond", JSON.STRING name),
         ("regime", JSON.STRING (string_of_regime (#regime first))),
         ("selector", JSON.STRING (string_of_selector (#selector first))),
         ("filter", JSON.STRING (filter_of_selector (#selector first))),
-        ("prover", JSON.STRING (#prover first)),
+        ("prover", JSON.STRING (journal_prover_text (#prover first))),
         ("timeout", json_int (#timeout first)),
         ("metrics", json_metrics metrics),
         ("subsets", JSON.ARRAY
@@ -1061,7 +1092,8 @@ fun contribution_json (row : slice_contribution) =
     [("format", JSON.STRING (#format row)),
      ("type_enc", JSON.STRING (#type_enc row)),
      ("lam_trans", JSON.STRING (#lam_trans row)),
-     ("prover", JSON.STRING (#prover row)), ("nfacts", json_int (#nfacts row)),
+     ("prover", json_prover_name (#prover row)),
+     ("nfacts", json_int (#nfacts row)),
      ("filter", JSON.STRING (#filter row)),
      ("wins", json_int (#wins row)),
      ("reconstructed", json_int (#reconstructed row))]
@@ -1078,7 +1110,7 @@ fun portfolio_json ({key, cells, metrics, unique} : portfolio_report) =
      ("metrics", json_metrics metrics),
      ("provers", JSON.ARRAY (map (fn (prover, proved, reconstructed) =>
        JSON.OBJECT
-         [("prover", JSON.STRING prover),
+         [("prover", json_prover_name prover),
           ("unique_proved", json_int proved),
           ("unique_reconstructed", json_int reconstructed)]) unique))]
 
@@ -1168,8 +1200,8 @@ fun report_markdown (data : report_data) =
       filter_of_selector (#selector (hd (#cells condition)))
     fun engine_text (condition : condition_report) =
       case #engine (hd (#cells condition)) of
-          Prover _ => #prover (hd (#cells condition))
-        | Sched _ => "schedule"
+          SOME (Sched _) => "schedule"
+        | _ => journal_prover_text (#prover (hd (#cells condition)))
     val tables =
       [metrics_table "Conditions" ["condition", "prover", "filter"]
          (map (fn condition =>
@@ -1190,7 +1222,8 @@ fun report_markdown (data : report_data) =
          ["facts", "wins", "reconstructed"]
          (map (fn (row : slice_contribution) => markdown_row
            [#format row, encoding_text (#type_enc row),
-            encoding_text (#lam_trans row), #prover row, #filter row,
+            encoding_text (#lam_trans row),
+            hhConfig.prover_name (#prover row), #filter row,
             Int.toString (#nfacts row), Int.toString (#wins row),
             Int.toString (#reconstructed row)]) (#contributions data)),
        metrics_table "Portfolio unions" ["portfolio"]
@@ -1200,7 +1233,8 @@ fun report_markdown (data : report_data) =
          ["proved", "reconstructed"]
          (List.concat (map (fn (portfolio : portfolio_report) =>
            map (fn (prover, proved, reconstructed) => markdown_row
-             [#key portfolio, prover, Int.toString proved,
+             [#key portfolio, hhConfig.prover_name prover,
+              Int.toString proved,
               Int.toString reconstructed]) (#unique portfolio))
            (#portfolios data)))] @
       (if null (#schedules data) then []
@@ -1294,36 +1328,38 @@ fun failed message : outcome =
   {recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
    error = SOME message}
 
-fun base_entry expdir thy name condition ho fresh nfacts szs t_prover axioms
-    version (outcome : outcome) =
+(* engine is NONE only for the entry of a theory that failed to load,
+   which belongs to no condition. *)
+fun base_entry_for expdir thy name {cond_id, regime, selector, timeout}
+    engine ho fresh nfacts szs t_prover axioms version (outcome : outcome) =
   {run = run_name expdir, thy = thy, thm = name, goal_id = goal_id thy name,
-   cond = #cond_id condition, regime = #regime condition,
-   selector = #selector condition, engine = #engine condition, ho = ho,
-   fresh = fresh,
-   prover = (case #engine condition of Prover name => name | Sched _ => ""),
-   prover_version = version, nfacts = nfacts, timeout = #timeout condition,
+   cond = cond_id, regime = regime, selector = selector, engine = engine,
+   ho = ho, fresh = fresh,
+   prover = (case engine of SOME (Prover prover) => SOME prover | _ => NONE),
+   prover_version = version, nfacts = nfacts, timeout = timeout,
    szs = szs, t_prover = t_prover, axioms_used = axioms,
    recon_ok = #recon_ok outcome, recon_method = #recon_method outcome,
    t_recon = #t_recon outcome, stac = #stac outcome,
    error = #error outcome,
-   stop = (case #engine condition of
-                Prover _ => NONE
-              | Sched _ => SOME "Unavailable"),
-   t_total = (case #engine condition of
-                  Prover _ => NONE
-                | Sched _ => SOME 0.0),
+   stop = (case engine of
+                SOME (Sched _) => SOME "Unavailable"
+              | _ => NONE),
+   t_total = (case engine of
+                  SOME (Sched _) => SOME 0.0
+                | _ => NONE),
    winner = NONE, slices = []} : journal_entry
 
+fun base_entry expdir thy name (condition : condition) =
+  base_entry_for expdir thy name
+    {cond_id = #cond_id condition, regime = #regime condition,
+     selector = #selector condition, timeout = #timeout condition}
+    (SOME (#engine condition))
+
 fun append_theory_error path expdir thy message =
-  let
-    val condition : condition =
-      {cond_id = "__load__", regime = Bushy, selector = Deps,
-       engine = Prover "", timeout = 0, reconstruct = false}
-  in
-    append_journal path
-      (base_entry expdir thy "__load__" condition false false 0 LoadFailure
-         0.0 NONE NONE (failed message))
-  end
+  append_journal path
+    (base_entry_for expdir thy "__load__"
+       {cond_id = "__load__", regime = Bushy, selector = Deps, timeout = 0}
+       NONE false false 0 LoadFailure 0.0 NONE NONE (failed message))
 
 fun journal_theory_error expdir thy message =
   append_theory_error (journal_path expdir thy) expdir thy message
@@ -1438,7 +1474,8 @@ fun schedule_options condition {provers, slices, cores, max_proofs} =
   hhConfig.snapshot_with
     [("timeout", Int.toString (#timeout condition)),
      ("max_proofs", Int.toString max_proofs),
-     ("provers", String.concatWith " " provers),
+     ("provers",
+      String.concatWith " " (map hhConfig.prover_name provers)),
      ("slices", Int.toString slices), ("cores", Int.toString cores),
      ("cache", "true"), ("debug_dir", "")]
 
@@ -1459,13 +1496,10 @@ fun per_slice_rankings thy schedule pool goal =
     map rank (hhSlice.filter_maxima schedule)
   end
 
-fun version_of_prover name =
-  case hhProver.lookup name of
+fun version_of_prover prover =
+  case hhProver.probe (hhProver.config_of prover) of
       NONE => NONE
-    | SOME config =>
-        (case hhProver.probe config of
-             NONE => NONE
-           | SOME {version, ...} => version)
+    | SOME {version, ...} => version
 
 fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
   let
@@ -1504,10 +1538,11 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
       {run = run_name expdir, thy = thy, thm = name,
        goal_id = goal_id thy name, cond = #cond_id condition,
        regime = #regime condition, selector = #selector condition,
-       engine = #engine condition,
+       engine = SOME (#engine condition),
        ho = is_higher_order_goal (list_mk_imp goal),
        fresh = is_fresh_goal thy (list_mk_imp goal),
-       prover = prover, prover_version = version_of_prover prover,
+       prover = prover,
+       prover_version = Option.mapPartial version_of_prover prover,
        nfacts = nfacts,
        timeout = #timeout condition, szs = szs, t_prover = t_prover,
        axioms_used = axioms, recon_ok = recon_ok,
@@ -1518,7 +1553,7 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
   in
     case #suggestions result of
         suggestion :: _ =>
-          finish (SOME (#slice suggestion)) (#prover suggestion)
+          finish (SOME (#slice suggestion)) (SOME (#prover suggestion))
             (#nfacts (#slice suggestion)) (Szs hhProver.SzsTheorem)
             (#t_prover suggestion)
             (SOME (#lemmas suggestion)) (SOME true) (SOME "metis")
@@ -1532,7 +1567,7 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
                          SOME (_, _, time, _) => time
                        | NONE => 0.0
                  in
-                   finish (SOME slice) (#prover slice) (#nfacts slice)
+                   finish (SOME slice) (SOME (#prover slice)) (#nfacts slice)
                      (Szs hhProver.SzsTheorem) elapsed (SOME lemmas)
                      (SOME false) (SOME "metis") NONE NONE
                      (SOME "ATP proof found but reconstruction failed")
@@ -1540,16 +1575,16 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
              | [] =>
                  (case #slices_run result of
                       (slice, status, elapsed, _) :: _ =>
-                        finish NONE (#prover slice) (#nfacts slice)
+                        finish NONE (SOME (#prover slice)) (#nfacts slice)
                           (Szs status) elapsed NONE NONE NONE NONE NONE
                           (run_failure_error status)
-                    | [] => finish NONE "" maximum
+                    | [] => finish NONE NONE maximum
                         (Szs (hhProver.RunFailure "")) 0.0 NONE
                         NONE NONE NONE NONE
                         (SOME "schedule contained no runnable slices")))
   end
 
-fun prover_cell_entry expdir thy (name, thm) pool condition prover_name =
+fun prover_cell_entry expdir thy (name, thm) pool condition prover =
   let
     val goal = dest_thm thm
     val premises = selected_premises thy condition pool thm goal
@@ -1560,38 +1595,28 @@ fun prover_cell_entry expdir thy (name, thm) pool condition prover_name =
     val _ = ensure_dir directory
     val _ = hhExportFof.fof_export_pb directory
       (list_mk_imp goal, named_premises)
+    val result = hhProver.run (hhProver.config_of prover)
+      {timeout = #timeout condition, format = "fof",
+       problem = join directory "atp_in", extra = [],
+       debug_dir = SOME (join expdir "out")}
+    val (recon_ok, recon_method, t_recon, stac_or_error) =
+      reconstruct condition result goal
+    val (stac, recon_error) =
+      case recon_ok of
+          SOME false => (NONE, stac_or_error)
+        | _ => (stac_or_error, NONE)
+    val outcome : outcome =
+      {recon_ok = recon_ok, recon_method = recon_method,
+       t_recon = t_recon, stac = stac,
+       error = case recon_error of
+                   SOME message => SOME message
+                 | NONE => run_failure_error (#szs result)}
   in
-    case hhProver.lookup prover_name of
-        NONE => base_entry expdir thy name condition
-          (is_higher_order_goal (list_mk_imp goal))
-          (is_fresh_goal thy (list_mk_imp goal)) nfacts
-          (Szs (hhProver.RunFailure "")) 0.0 NONE
-          NONE (failed ("unknown HolyHammer prover: " ^ prover_name))
-      | SOME prover =>
-          let
-            val result = hhProver.run prover
-              {timeout = #timeout condition, format = "fof",
-               problem = join directory "atp_in", extra = [],
-               debug_dir = SOME (join expdir "out")}
-            val (recon_ok, recon_method, t_recon, stac_or_error) =
-              reconstruct condition result goal
-            val (stac, recon_error) =
-              case recon_ok of
-                  SOME false => (NONE, stac_or_error)
-                | _ => (stac_or_error, NONE)
-            val outcome : outcome =
-              {recon_ok = recon_ok, recon_method = recon_method,
-               t_recon = t_recon, stac = stac,
-               error = case recon_error of
-                           SOME message => SOME message
-                         | NONE => run_failure_error (#szs result)}
-          in
-            base_entry expdir thy name condition
-              (is_higher_order_goal (list_mk_imp goal))
-              (is_fresh_goal thy (list_mk_imp goal)) nfacts
-              (Szs (#szs result)) (#time result)
-              (#used_axioms result) (#version result) outcome
-          end
+    base_entry expdir thy name condition
+      (is_higher_order_goal (list_mk_imp goal))
+      (is_fresh_goal thy (list_mk_imp goal)) nfacts
+      (Szs (#szs result)) (#time result)
+      (#used_axioms result) (#version result) outcome
   end
 
 fun run_cell expdir thy theorem pool condition =
@@ -1600,8 +1625,8 @@ fun run_cell expdir thy theorem pool condition =
       case #engine condition of
           Sched parameters =>
             schedule_cell_entry expdir thy theorem pool condition parameters
-        | Prover prover_name =>
-            prover_cell_entry expdir thy theorem pool condition prover_name
+        | Prover prover =>
+            prover_cell_entry expdir thy theorem pool condition prover
   in
     append_journal (journal_path expdir thy) entry
   end
@@ -1853,43 +1878,55 @@ fun run_eval {expname, ncore, thyl, conditions} =
    Fixed end-to-end smoke suite
    ------------------------------------------------------------------------- *)
 
-val smoke_goals =
-  [("pair", "FST_SWAP", "e"),
-   ("pair", "SND_SWAP", "vampire"),
-   ("pair", "PAIR_FST_SND_EQ", "zipperposition"),
-   ("option", "NOT_SOME_NONE", "e"),
-   ("option", "OPTION_MAP_id", "vampire"),
-   ("option", "OPTION_MAP_EQ_NONE_both_ways", "zipperposition"),
-   ("arithmetic", "ADD_COMM", "e"),
-   ("arithmetic", "SUC_ONE_ADD", "vampire"),
-   ("arithmetic", "MULT_COMM", "zipperposition"),
-   ("pair", "CLOSED_PAIR_EQ", "e"),
-   ("arithmetic", "SUC_NOT_ZERO", "vampire"),
-   ("arithmetic", "SUC_ADD_SYM", "zipperposition"),
-   ("arithmetic", "ADD1", "sched"),
-   ("bool", "TRUTH", "mepo"),
-   ("bool", "EQ_REFL", "mash"),
-   ("bool", "IMP_CLAUSES", "mesh")]
+datatype smoke_kind =
+    SmokeProver of hhProver.prover
+  | SmokeSched
+  | SmokeMepo
+  | SmokeMash
+  | SmokeMesh
 
-fun smoke_condition timeout "sched" : condition =
+val smoke_kinds =
+  [SmokeProver Eprover, SmokeProver Vampire, SmokeProver Zipperposition,
+   SmokeSched, SmokeMepo, SmokeMash, SmokeMesh]
+
+val smoke_goals =
+  [("pair", "FST_SWAP", SmokeProver Eprover),
+   ("pair", "SND_SWAP", SmokeProver Vampire),
+   ("pair", "PAIR_FST_SND_EQ", SmokeProver Zipperposition),
+   ("option", "NOT_SOME_NONE", SmokeProver Eprover),
+   ("option", "OPTION_MAP_id", SmokeProver Vampire),
+   ("option", "OPTION_MAP_EQ_NONE_both_ways", SmokeProver Zipperposition),
+   ("arithmetic", "ADD_COMM", SmokeProver Eprover),
+   ("arithmetic", "SUC_ONE_ADD", SmokeProver Vampire),
+   ("arithmetic", "MULT_COMM", SmokeProver Zipperposition),
+   ("pair", "CLOSED_PAIR_EQ", SmokeProver Eprover),
+   ("arithmetic", "SUC_NOT_ZERO", SmokeProver Vampire),
+   ("arithmetic", "SUC_ADD_SYM", SmokeProver Zipperposition),
+   ("arithmetic", "ADD1", SmokeSched),
+   ("bool", "TRUTH", SmokeMepo),
+   ("bool", "EQ_REFL", SmokeMash),
+   ("bool", "IMP_CLAUSES", SmokeMesh)]
+
+fun smoke_condition timeout SmokeSched : condition =
       {cond_id = "smoke-sched", regime = Bushy, selector = Deps,
        engine = Sched
-         {provers = ["e", "vampire", "zipperposition"], slices = 3,
+         {provers = [Eprover, Vampire, Zipperposition], slices = 3,
           cores = 3, max_proofs = 1},
        timeout = timeout, reconstruct = true}
-  | smoke_condition timeout "mepo" =
+  | smoke_condition timeout SmokeMepo =
       {cond_id = "smoke-mepo", regime = Chainy, selector = Mepo 96,
-       engine = Prover "e", timeout = timeout, reconstruct = true}
-  | smoke_condition timeout "mash" =
+       engine = Prover Eprover, timeout = timeout, reconstruct = true}
+  | smoke_condition timeout SmokeMash =
       {cond_id = "smoke-mash", regime = Chainy, selector = Mash 96,
-       engine = Prover "vampire", timeout = timeout, reconstruct = true}
-  | smoke_condition timeout "mesh" =
+       engine = Prover Vampire, timeout = timeout, reconstruct = true}
+  | smoke_condition timeout SmokeMesh =
       {cond_id = "smoke-mesh", regime = Chainy, selector = Mesh 128,
-       engine = Prover "zipperposition", timeout = timeout,
+       engine = Prover Zipperposition, timeout = timeout,
        reconstruct = true}
-  | smoke_condition timeout prover =
-      {cond_id = "smoke-" ^ prover, regime = Bushy, selector = Deps,
-       engine = Prover prover, timeout = timeout, reconstruct = true}
+  | smoke_condition timeout (SmokeProver prover) =
+      {cond_id = "smoke-" ^ hhConfig.prover_name prover, regime = Bushy,
+       selector = Deps, engine = Prover prover, timeout = timeout,
+       reconstruct = true}
 
 fun smoke_goal_id (thy, name, _) = goal_id thy name
 
@@ -1922,7 +1959,8 @@ fun run_format_smoke expdir timeout options (config, slice) =
     val goal = ([], Thm.concl theorem)
     val premises = ["arithmeticTheory.ADD1"]
     val condition : condition =
-      {cond_id = "smoke-format-" ^ #prover slice, regime = Bushy,
+      {cond_id = "smoke-format-" ^ hhConfig.prover_name (#prover slice),
+       regime = Bushy,
        selector = Deps, engine = Prover (#prover slice), timeout = timeout,
        reconstruct = true}
     val result =
@@ -1943,7 +1981,8 @@ fun run_format_smoke expdir timeout options (config, slice) =
     if #szs result = hhProver.SzsTheorem andalso parsed_axioms andalso
        recon_ok = SOME true then ()
     else raise Fail
-      ("HolyHammer format smoke failed for " ^ #prover slice ^ "/" ^
+      ("HolyHammer format smoke failed for " ^
+       hhConfig.prover_name (#prover slice) ^ "/" ^
        #format slice ^ "/" ^ #type_enc slice ^ "/" ^ #lam_trans slice ^
        ": status=" ^ szs_name (#szs result) ^ ", axioms=" ^
        (case #used_axioms result of
@@ -1987,30 +2026,25 @@ fun soundness_slice prover format type_enc lam_trans nfacts : hhProver.slice =
    lam_trans = lam_trans, nfacts = nfacts, filter = "none", extra_opts = [],
    slice_size = 1}
 
-fun soundness_config name =
-  case hhProver.lookup name of
-      SOME config => config
-    | NONE => raise Fail ("soundness smoke has no prover " ^ name)
-
 val soundness_cases =
-  [(soundness_config "vampire",
-    soundness_slice "vampire" "tx0" "mono_native_fool" "lifting" 96),
-   (soundness_config "zipperposition",
-    soundness_slice "zipperposition" "th1" "mono_native_higher_fool"
+  [(hhProver.config_of Vampire,
+    soundness_slice Vampire "tx0" "mono_native_fool" "lifting" 96),
+   (hhProver.config_of Zipperposition,
+    soundness_slice Zipperposition "th1" "mono_native_higher_fool"
       "keep_lams" 128),
-   (soundness_config "e",
-    soundness_slice "e" "th0" "mono_native_higher" "keep_lams" 512),
-   (soundness_config "e",
-    soundness_slice "e" "tx0-" "mono_native_fool" "combs_and_lifting"
+   (hhProver.config_of Eprover,
+    soundness_slice Eprover "th0" "mono_native_higher" "keep_lams" 512),
+   (hhProver.config_of Eprover,
+    soundness_slice Eprover "tx0-" "mono_native_fool" "combs_and_lifting"
       1024),
-   (soundness_config "vampire",
-    soundness_slice "vampire" "tf1" "poly_native" "lifting" 512),
-   (soundness_config "e",
-    soundness_slice "e" "tf0" "mono_native" "combs_and_lifting" 1024),
-   (soundness_config "vampire",
-    soundness_slice "vampire" "tx0" "mono_native_fool" "combs" 512),
-   (soundness_config "zipperposition",
-    soundness_slice "zipperposition" "fof" "mono_guards??" "lifting" 32)]
+   (hhProver.config_of Vampire,
+    soundness_slice Vampire "tf1" "poly_native" "lifting" 512),
+   (hhProver.config_of Eprover,
+    soundness_slice Eprover "tf0" "mono_native" "combs_and_lifting" 1024),
+   (hhProver.config_of Vampire,
+    soundness_slice Vampire "tx0" "mono_native_fool" "combs" 512),
+   (hhProver.config_of Zipperposition,
+    soundness_slice Zipperposition "fof" "mono_guards??" "lifting" 32)]
 
 fun soundness_case options timeout goal (config, slice) =
   let
@@ -2074,9 +2108,7 @@ fun run_smoke {expdir, timeout} =
   else
     let
       val theories = sorted_unique (map #1 smoke_goals)
-      val conditions = map (smoke_condition timeout)
-        ["e", "vampire", "zipperposition", "sched", "mepo", "mash",
-         "mesh"]
+      val conditions = map (smoke_condition timeout) smoke_kinds
       val journals = map (journal_path expdir) theories
       val _ =
         if List.exists exists_file journals then
@@ -2094,12 +2126,12 @@ fun run_smoke {expdir, timeout} =
       val _ = write_run_header expdir
         (new_run_header {expname = OS.Path.file expdir, corpus = corpus,
           added_from_dat = [], conditions = conditions, sample = 1})
-      fun run_one (thy, name, prover) =
+      fun run_one (thy, name, kind) =
         let
           val thm = DB.fetch thy name
           val (dependencies_ok, dependencies) =
             mlThmData.intactdep_of_thm thm
-          val condition = smoke_condition timeout prover
+          val condition = smoke_condition timeout kind
         in
           if dependencies_ok then
             run_cell expdir thy (name, thm) dependencies condition
@@ -2108,12 +2140,12 @@ fun run_smoke {expdir, timeout} =
         end
       val _ = app run_one smoke_goals
       val (sched_thy, sched_name, _) =
-        case List.find (fn (_, _, engine) => engine = "sched") smoke_goals of
+        case List.find (fn (_, _, kind) => kind = SmokeSched) smoke_goals of
             SOME item => item
           | NONE => raise Fail "smoke suite has no schedule cell"
       val sched_thm = DB.fetch sched_thy sched_name
       val (_, sched_dependencies) = mlThmData.intactdep_of_thm sched_thm
-      val sched_condition = smoke_condition timeout "sched"
+      val sched_condition = smoke_condition timeout SmokeSched
       val sched_parameters =
         case #engine sched_condition of
             Sched parameters => parameters
@@ -2156,9 +2188,10 @@ fun run_smoke {expdir, timeout} =
         #recon_ok entry = SOME true andalso
         #error entry = NONE andalso
         (case #engine entry of
-             Prover _ => true
-           | Sched _ => #stop entry = SOME "MaxProofs" andalso
-               not (null (#slices entry)))
+             SOME (Prover _) => true
+           | SOME (Sched _) => #stop entry = SOME "MaxProofs" andalso
+               not (null (#slices entry))
+           | NONE => false)
       val failed = List.filter (not o succeeded) results
       val _ =
         if length results = length smoke_goals andalso null failed then ()

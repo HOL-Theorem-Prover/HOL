@@ -13,19 +13,9 @@ open HolKernel boolLib Thread aiLib smlRedirect mlFeature mlThmData
 
 val ERR = mk_HOL_ERR "holyHammer"
 
+datatype prover = datatype hhConfig.prover
+
 fun set_timeout n = hhConfig.hh_set ("timeout", Int.toString n)
-
-fun known_atps () = map #name (hhProver.all ())
-
-fun config_of caller name =
-  case hhProver.lookup name of
-      SOME config => config
-    | NONE =>
-        raise ERR caller
-          ("unknown HolyHammer prover '" ^ name ^ "'; known provers: " ^
-           String.concatWith ", " (known_atps ()))
-
-fun configs_of caller names = map (config_of caller) names
 
 fun no_prover caller =
   let
@@ -37,14 +27,16 @@ fun no_prover caller =
     raise ERR caller message
   end
 
-fun available_configs caller configs =
+fun available_provers caller provers =
   let
-    fun available (config : hhProver.prover_config) =
-      case hhProver.find_exec config of
-          SOME _ => true
-        | NONE =>
-            (print_endline ("no binary for " ^ #name config); false)
-    val available = filter available configs
+    fun available prover =
+      let val config = hhProver.config_of prover in
+        case hhProver.find_exec config of
+            SOME _ => true
+          | NONE =>
+              (print_endline ("no binary for " ^ #name config); false)
+      end
+    val available = filter available provers
   in
     if null available then no_prover caller else available
   end
@@ -60,7 +52,8 @@ val attrib =
 
 fun interactive_options provers =
   hhConfig.snapshot_with
-    [("max_proofs", "1"), ("provers", String.concatWith " " provers)]
+    [("max_proofs", "1"),
+     ("provers", String.concatWith " " (map hhConfig.prover_name provers))]
 
 type unverified = hhProver.slice * string list
 
@@ -76,7 +69,7 @@ val problem_path = hhSchedule.problem_path
 
 fun output_paths directory prover =
   let
-    val prefix = prover ^ "-"
+    val prefix = #name (hhProver.config_of prover) ^ "-"
     fun is_output name =
       String.isPrefix prefix name andalso String.isSuffix ".out" name
   in
@@ -84,10 +77,11 @@ fun output_paths directory prover =
       (List.filter is_output (hhConfig.directory_names directory))
   end
 
-fun unverified_line root debug_dir (slice, lemmas) =
+fun unverified_line root debug_dir (slice : hhProver.slice, lemmas) =
   let
+    val name = #name (hhProver.config_of (#prover slice))
     val heading =
-      "  " ^ #prover slice ^ ": [" ^ String.concatWith ", " lemmas ^ "]"
+      "  " ^ name ^ ": [" ^ String.concatWith ", " lemmas ^ "]"
   in
     case debug_dir of
         NONE => heading
@@ -95,8 +89,8 @@ fun unverified_line root debug_dir (slice, lemmas) =
           let
             val outputs = output_paths directory (#prover slice)
             val output_text =
-              if null outputs then OS.Path.concat (directory, #prover slice ^
-                "-*.out")
+              if null outputs then
+                OS.Path.concat (directory, name ^ "-*.out")
               else String.concatWith ", " outputs
           in
             heading ^ "\n    problem: " ^ problem_path root slice ^
@@ -136,21 +130,17 @@ fun explicit_rankings schedule premises =
   map (fn (filter, _) => (filter, premises))
     (hhSlice.filter_maxima schedule)
 
-fun options_for caller wanted_atps =
-  let
-    val configs = available_configs caller (configs_of caller wanted_atps)
-  in
-    interactive_options (map #name configs)
-  end
+fun options_for caller provers =
+  interactive_options (available_provers caller provers)
 
 (* The last thing a successful interactive call prints: the verified
    tactic, with what to do with it, after every slice has reported. *)
 fun announce instruction (suggestion : hhSchedule.suggestion) =
   print_endline ("\n" ^ instruction ^ "\n  " ^ #stac suggestion)
 
-fun hh_pb directory wanted_atps premises goal =
+fun hh_pb directory provers premises goal =
   let
-    val options = options_for "hh_pb" wanted_atps
+    val options = options_for "hh_pb" provers
     val schedule = hhSlice.mk_schedule options
     val suggestion = run_schedule "hh_pb" directory options
       (explicit_rankings schedule premises) goal

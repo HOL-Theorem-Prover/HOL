@@ -6,10 +6,25 @@
 structure hhConfig :> hhConfig =
 struct
 
+datatype prover = Eprover | Vampire | Zipperposition | Z3
+
+val all_provers = [Eprover, Vampire, Zipperposition, Z3]
+
+fun prover_name Eprover = "e"
+  | prover_name Vampire = "vampire"
+  | prover_name Zipperposition = "zipperposition"
+  | prover_name Z3 = "z3"
+
+fun prover_of_name name =
+  List.find (fn prover => prover_name prover = name) all_provers
+
+fun prover_compare (left, right) =
+  String.compare (prover_name left, prover_name right)
+
 type hh_options =
   {timeout : int,
    max_proofs : int,
-   provers : string list,
+   provers : prover list,
    slices : int,
    cores : int,
    filter : string,
@@ -266,16 +281,15 @@ fun one_of choices value =
 fun valid_filter value =
   one_of ["", "knn", "mepo", "mash", "mesh", "none"] value
 
-(* hhProver installs the registry lookup when it loads. *)
-val prover_validator = ref (fn _ : string => true)
+fun parse_provers value =
+  case String.tokens Char.isSpace (trim value) of
+      [] => NONE
+    | names =>
+        let val provers = List.mapPartial prover_of_name names in
+          if length provers = length names then SOME provers else NONE
+        end
 
-fun register_prover_validator validator = prover_validator := validator
-
-fun prover_names value = String.tokens Char.isSpace (trim value)
-
-fun valid_provers value =
-  let val names = prover_names value
-  in not (null names) andalso List.all (!prover_validator) names end
+val valid_provers = Option.isSome o parse_provers
 
 val option_specs : option_spec list =
   [{name = "timeout", default = fn () => "30",
@@ -285,7 +299,8 @@ val option_specs : option_spec list =
     expected = "a positive integer",
     doc = "maximum number of reconstructed proofs", valid = positive_int},
    {name = "provers", default = fn () => "e vampire zipperposition",
-    expected = "a nonempty space-separated list of registered prover names",
+    expected = "a nonempty space-separated list of prover names: " ^
+      String.concatWith ", " (map prover_name all_provers),
     doc = "provers eligible for scheduling", valid = valid_provers},
    {name = "slices", default = fn () => "0",
     expected = "a non-negative integer",
@@ -556,7 +571,7 @@ fun snapshot_with overrides =
       overrides
     val timeout = required "timeout" int_value
     val max_proofs = required "max_proofs" int_value
-    val provers = required "provers" (SOME o prover_names)
+    val provers = required "provers" parse_provers
     val configured_slices = required "slices" int_value
     val configured_cores = required "cores" int_value
     val cores = if configured_cores = 0 then detected_cores ()

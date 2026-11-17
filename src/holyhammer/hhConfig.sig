@@ -1,9 +1,17 @@
 signature hhConfig =
 sig
+  (* The provers HolyHammer can call.  prover_name is the spelling in
+     option values, configuration keys and installation directories. *)
+  datatype prover = Eprover | Vampire | Zipperposition | Z3
+  val all_provers : prover list
+  val prover_name : prover -> string
+  val prover_of_name : string -> prover option
+  val prover_compare : prover * prover -> order
+
   type hh_options =
     {timeout : int,
      max_proofs : int,
-     provers : string list,
+     provers : prover list,
      slices : int,
      cores : int,
      filter : string,
@@ -46,9 +54,6 @@ sig
   val print_params : unit -> unit
   val snapshot : unit -> hh_options
   val snapshot_with : (string * string) list -> hh_options
-
-  (* Initialisation hooks break dependency cycles with these later modules. *)
-  val register_prover_validator : (string -> bool) -> unit
 
   val platform : unit -> string
   (* find_exec prover env_var names: the config file's

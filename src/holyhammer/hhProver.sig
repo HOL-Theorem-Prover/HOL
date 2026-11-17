@@ -1,5 +1,7 @@
 signature hhProver =
 sig
+  datatype prover = datatype hhConfig.prover
+
   datatype szs =
       SzsTheorem
     | SzsCounterSat
@@ -12,7 +14,7 @@ sig
     | RunFailure of string
 
   type slice =
-    {prover : string, format : string, type_enc : string,
+    {prover : prover, format : string, type_enc : string,
      lam_trans : string, nfacts : int, filter : string,
      extra_opts : string list, slice_size : int}
 
@@ -28,6 +30,8 @@ sig
     {kill : unit -> unit,
      wait : unit -> run_result}
 
+  (* name is the prover's spelling in configuration keys, installation
+     directories and output files: prover_name for the built-in configs. *)
   type prover_config =
     {name : string,
      exec_names : string list,
@@ -51,10 +55,13 @@ sig
      slice table is its subsequence of this list. *)
   val portfolio : slice list
 
+  (* The configs of all_provers, in that order. *)
   val all : unit -> prover_config list
-  val lookup : string -> prover_config option
-  val register : prover_config -> unit
-  val default_provers : unit -> string list
+  val config_of : prover -> prover_config
+  val default_provers : unit -> prover list
+  (* Test hook: with_override prover config f runs f with config in place
+     of prover's. *)
+  val with_override : prover -> prover_config -> (unit -> 'a) -> 'a
 
   (* Human-readable rendering, for progress output.  Not a wire format:
      szs_to_string/szs_of_string are the round-trippable encoding.

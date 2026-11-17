@@ -6,12 +6,12 @@
 structure hhSlice :> hhSlice =
 struct
 
-(* Each name consumes the next unused entry of that prover's slice table.
+(* Each entry consumes the next unused entry of that prover's slice table.
    The built-in tables are subsequences of hhProver.portfolio, so walking
-   its prover names reproduces the portfolio order. *)
+   its provers reproduces the portfolio order. *)
 val rotation = map #prover hhProver.portfolio
 
-val distinct = aiLib.mk_sameorder_set String.compare
+val distinct = aiLib.mk_sameorder_set hhConfig.prover_compare
 
 fun round_robin count items =
   let
@@ -28,7 +28,8 @@ fun schedule_of_provers requested count =
   else
     let
       val requested' = distinct requested
-      val initial = List.filter (fn name => Lib.mem name requested') rotation
+      val initial =
+        List.filter (fn prover => Lib.mem prover requested') rotation
       val initial_count = length initial
     in
       if count <= initial_count then aiLib.first_n count initial
@@ -100,27 +101,28 @@ val same_slice = hhProver.same_slice
 fun mk_schedule (options : hhConfig.hh_options) =
   let
     val requested = distinct (#provers options)
-    val configs = List.mapPartial hhProver.lookup requested
-    val tables = map (fn config => (#name config, config, #slices config ()))
-      configs
-    val names = schedule_of_provers requested (#slices options)
+    val tables =
+      map (fn prover =>
+        let val config = hhProver.config_of prover
+        in (prover, config, #slices config ()) end) requested
+    val order = schedule_of_provers requested (#slices options)
 
     fun consume _ [] = NONE
-      | consume name ((entry as (other, config, slices)) :: rest) =
-          if name = other then
+      | consume prover ((entry as (other, config, slices)) :: rest) =
+          if prover = other then
             (case slices of
                  [] => NONE
                | slice :: tail =>
                    SOME (config, slice, (other, config, tail) :: rest))
           else
-            case consume name rest of
+            case consume prover rest of
                 NONE => NONE
               | SOME (config', slice, rest') =>
                   SOME (config', slice, entry :: rest')
 
     fun walk _ _ [] result = List.rev result
-      | walk tables seen (name :: rest) result =
-          case consume name tables of
+      | walk tables seen (prover :: rest) result =
+          case consume prover tables of
               NONE => walk tables seen rest result
             | SOME (config, slice, tables') =>
                 let
@@ -134,7 +136,7 @@ fun mk_schedule (options : hhConfig.hh_options) =
                       ((config, adjusted) :: result)
                 end
   in
-    walk tables [] names []
+    walk tables [] order []
   end
 
 (* Each distinct filter in first-use order, with its largest fact count. *)

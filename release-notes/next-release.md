@@ -339,15 +339,13 @@ New examples
 Incompatibilities
 -----------------
 
--   The `holyHammer.prover` datatype has been removed.  Provers are now
-    identified by registry strings such as `"e"`, `"vampire"`,
-    `"zipperposition"`, and `"z3"`.  Accordingly, `holyHammer.hh_pb` now
-    takes a `string list` of prover names.  The evaluation helpers
-    `holyHammer.hh_pb_eval_thm` and `hh_pb_eval_thy` have been removed in
-    favor of `hhEval`.  The file-based `hhReconstruct.get_lemmas` API and
-    its status/output-file protocol have also been removed.  The types of
-    `hh`, `holyhammer`, `hh_fork`, `main_hh`, and `main_hh_lemmas` are
-    unchanged.
+-   The `holyHammer.prover` datatype has gained a `Zipperposition`
+    constructor, so exhaustive matches on it need a new case.  The
+    evaluation helpers `holyHammer.hh_pb_eval_thm` and `hh_pb_eval_thy`
+    have been removed in favor of `hhEval`.  The file-based
+    `hhReconstruct.get_lemmas` API and its status/output-file protocol have
+    also been removed.  The types of `hh`, `holyhammer`, `hh_fork`, `hh_pb`,
+    `main_hh`, and `main_hh_lemmas` are unchanged.
 
 -   The `holyHammer.premise_selection_flag` reference has been removed.
     Execution is controlled by the `timeout`, `provers`, and `filter`

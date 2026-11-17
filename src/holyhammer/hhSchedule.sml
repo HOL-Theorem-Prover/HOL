@@ -17,7 +17,7 @@ datatype event =
 and stop_reason = MaxProofs | Timeout | Exhausted | Interrupted
 withtype suggestion =
   {stac : string, tac : tactic, lemmas : string list,
-   prover : string, slice : hhProver.slice,
+   prover : hhProver.prover, slice : hhProver.slice,
    t_prover : real, t_recon : real, t_replay : real}
 
 type result =
@@ -38,16 +38,19 @@ fun time_min left right = if time_before left right then left else right
 
 val szs_name = hhProver.szs_name
 
+fun prover_of (slice : hhProver.slice) =
+  hhConfig.prover_name (#prover slice)
+
 fun default_progress (SliceStarted slice) =
       print_endline
-        ("  starting " ^ #prover slice ^ " slice (" ^
+        ("  starting " ^ prover_of slice ^ " slice (" ^
          Int.toString (#nfacts slice) ^ " facts)")
   | default_progress (SliceDone (slice, szs, time)) =
       print_endline
-        ("  " ^ #prover slice ^ " slice: " ^ szs_name szs ^ " (" ^
+        ("  " ^ prover_of slice ^ " slice: " ^ szs_name szs ^ " (" ^
          Real.toString time ^ " s)")
   | default_progress (ProofFound (slice, lemmas)) =
-      (print_endline ("  proof found by " ^ #prover slice ^ ":");
+      (print_endline ("  proof found by " ^ prover_of slice ^ ":");
        print_endline
          ("    metis_tac [" ^
           String.concatWith ", " (map mlThmData.dbfetch_of_thmid lemmas) ^
@@ -61,7 +64,7 @@ fun default_progress (SliceStarted slice) =
 
 fun problem_key (slice : hhProver.slice) =
   String.concatWith "."
-    (map aiLib.escape [#prover slice, #filter slice, #format slice,
+    (map aiLib.escape [prover_of slice, #filter slice, #format slice,
                        #type_enc slice, #lam_trans slice,
                        Int.toString (#nfacts slice)])
 

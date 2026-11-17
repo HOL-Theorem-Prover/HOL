@@ -1,5 +1,7 @@
 open testutils
 
+datatype prover = datatype hhProver.prover
+
 (* This quotation is deliberately compiled after hhLamTrans is linked.  A
    compile-time combin-theory dependency used to install its surface grammar
    in HolyHammer sessions (b7fca5c48); this ordinary source fixture must
@@ -176,8 +178,8 @@ fun test_child root =
         (fn () => hhConfig.hh_set ("timeout", "not-an-integer")))
     val _ = expect "failed validation preserves the runtime value"
       (hhConfig.hh_get "timeout" = "23")
-    val _ = expect "provers are registry-validated at set time"
-      (option_error ["provers", "registered prover names"]
+    val _ = expect "provers are validated at set time"
+      (option_error ["provers", "prover names: e, vampire, zipperposition, z3"]
         (fn () => hhConfig.hh_set
           ("provers", "not-a-holyhammer-prover")))
     val _ = expect "unknown unset option is a HOL_ERR"
@@ -220,7 +222,7 @@ fun test_child root =
       (quiet andalso #verbose options)
     val _ = expect "snapshot parses values and computes slices"
       (#timeout options = 23 andalso #max_proofs options = 4 andalso
-       #provers options = ["e", "vampire", "zipperposition"] andalso
+       #provers options = [Eprover, Vampire, Zipperposition] andalso
        #cores options = 3 andalso #slices options = 72 andalso
        #filter options = "none" andalso #max_facts options = SOME 17 andalso
        #format options = "tf0" andalso #type_enc options = "mono_native" andalso
@@ -253,13 +255,13 @@ fun test_child root =
       (hhConfig.hh_get "timeout" = "21")
     val _ = write_file config
       ("provers = not-a-holyhammer-prover\n" ^ config_contents)
-    val _ = expect "provers are registry-validated at snapshot time"
-      (option_error ["provers", "registered prover names"]
+    val _ = expect "provers are validated at snapshot time"
+      (option_error ["provers", "prover names: e, vampire"]
         (fn () => ignore (hhConfig.snapshot ())))
     val _ = write_file config config_contents
     val _ = hhConfig.hh_set ("provers", "e vampire")
-    val _ = expect "registered prover lists round-trip"
-      (#provers (hhConfig.snapshot ()) = ["e", "vampire"])
+    val _ = expect "prover lists parse to provers"
+      (#provers (hhConfig.snapshot ()) = [Eprover, Vampire])
     val _ = hhConfig.hh_unset "provers"
     val _ = List.app hhConfig.hh_unset
       ["format", "type_enc", "lam_trans", "mono_iters", "mono_instances",
@@ -1475,10 +1477,7 @@ fun test_hhProblemGen_mono_extensionality () =
 
 val _ = test_hhProblemGen_mono_extensionality ()
 
-fun prover name =
-  case hhProver.lookup name of
-      SOME config => config
-    | NONE => raise Fail ("missing prover " ^ name)
+val prover = hhProver.config_of
 
 val sample_request : hhProver.run_request =
   {timeout = 7, format = "fof", problem = "problem.p", extra = ["--extra"],
@@ -1514,18 +1513,26 @@ fun test_szs_status_words () =
 
 fun test_hhProver () =
   let
-    val e = prover "e"
-    val vampire = prover "vampire"
-    val zipperposition = prover "zipperposition"
-    val z3 = prover "z3"
+    val e = prover Eprover
+    val vampire = prover Vampire
+    val zipperposition = prover Zipperposition
+    val z3 = prover Z3
     val names = map #name (hhProver.all ())
     val _ = expect "all built-in provers"
       (names = ["e", "vampire", "zipperposition", "z3"])
+    val _ = expect "built-in configs are named by prover_name"
+      (names = map hhConfig.prover_name hhConfig.all_provers)
+    val _ = expect "prover names parse back to their provers"
+      (List.all (fn p =>
+         hhConfig.prover_of_name (hhConfig.prover_name p) = SOME p)
+         hhConfig.all_provers andalso
+       hhConfig.prover_of_name "eprover" = NONE)
     val _ = expect "default provers are found and non-legacy"
-      (List.all (fn name => not (#legacy (prover name)))
+      (List.all (fn p => not (#legacy (prover p)))
        (hhProver.default_provers ()))
-    val _ = expect "duplicate prover names are rejected"
-      ((hhProver.register e; false) handle Fail _ => true)
+    val _ = expect "with_override replaces a config only while it runs"
+      (hhProver.with_override Z3 e (fn () => #name (prover Z3) = "e")
+       andalso #name (prover Z3) = "z3")
     val _ = test_recording "e-theorem-chatter.out" (#parse_output e)
       hhProver.SzsTheorem (SOME ["keep_name"])
     val _ = test_recording "e-counter-sat.out" (#parse_output e)
@@ -1645,42 +1652,42 @@ fun test_hhSlice () =
     fun expected prover format type_enc lam_trans nfacts =
       expected_filter prover format type_enc lam_trans "knn" nfacts
     val phase1 =
-      [expected "vampire" "fof" "" "" 96,
-       expected "e" "fof" "" "" 128,
-       expected "zipperposition" "fof" "" "" 128,
-       expected "vampire" "fof" "" "" 512,
-       expected "e" "fof" "" "" 512,
-       expected "vampire" "fof" "" "" 32,
-       expected "zipperposition" "fof" "" "" 512,
-       expected "vampire" "fof" "" "" 1024]
+      [expected Vampire "fof" "" "" 96,
+       expected Eprover "fof" "" "" 128,
+       expected Zipperposition "fof" "" "" 128,
+       expected Vampire "fof" "" "" 512,
+       expected Eprover "fof" "" "" 512,
+       expected Vampire "fof" "" "" 32,
+       expected Zipperposition "fof" "" "" 512,
+       expected Vampire "fof" "" "" 1024]
     val phase2 =
-      [expected "vampire" "tx0" "mono_native_fool" "lifting" 96,
-       expected "e" "tx0-" "mono_native_fool" "lifting" 128,
-       expected "zipperposition" "th1" "mono_native_higher_fool"
+      [expected Vampire "tx0" "mono_native_fool" "lifting" 96,
+       expected Eprover "tx0-" "mono_native_fool" "lifting" 128,
+       expected Zipperposition "th1" "mono_native_higher_fool"
          "keep_lams" 128,
-       expected "e" "th0" "mono_native_higher" "keep_lams" 512,
-       expected "vampire" "th0" "mono_native_higher" "lifting" 512,
-       expected "e" "tx0-" "mono_native_fool" "combs_and_lifting" 1024,
-       expected "vampire" "tx0" "mono_native_fool" "combs" 512,
-       expected "zipperposition" "fof" "" "" 32]
+       expected Eprover "th0" "mono_native_higher" "keep_lams" 512,
+       expected Vampire "th0" "mono_native_higher" "lifting" 512,
+       expected Eprover "tx0-" "mono_native_fool" "combs_and_lifting" 1024,
+       expected Vampire "tx0" "mono_native_fool" "combs" 512,
+       expected Zipperposition "fof" "" "" 32]
     val ensemble =
-      [expected_filter "vampire" "fof" "" "" "mesh" 96,
-       expected_filter "e" "fof" "" "" "mesh" 128,
-       expected_filter "zipperposition" "th1"
+      [expected_filter Vampire "fof" "" "" "mesh" 96,
+       expected_filter Eprover "fof" "" "" "mesh" 128,
+       expected_filter Zipperposition "th1"
          "mono_native_higher_fool" "keep_lams" "mesh" 128,
-       expected_filter "vampire" "tx0" "mono_native_fool" "lifting"
+       expected_filter Vampire "tx0" "mono_native_fool" "lifting"
          "mesh" 512,
-       expected_filter "e" "fof" "" "" "mepo" 512,
-       expected_filter "vampire" "fof" "" "" "mepo" 1024,
-       expected_filter "e" "tx0-" "mono_native_fool" "lifting"
+       expected_filter Eprover "fof" "" "" "mepo" 512,
+       expected_filter Vampire "fof" "" "" "mepo" 1024,
+       expected_filter Eprover "tx0-" "mono_native_fool" "lifting"
          "mash" 128,
-       expected_filter "vampire" "fof" "" "" "mash" 256]
+       expected_filter Vampire "fof" "" "" "mash" 256]
     val phase2_golden = phase1 @ phase2
     val expected_default = phase2_golden @ ensemble
-    val e_slices = map slice_summary (#slices (prover "e") ())
-    val vampire_slices = map slice_summary (#slices (prover "vampire") ())
+    val e_slices = map slice_summary (#slices (prover Eprover) ())
+    val vampire_slices = map slice_summary (#slices (prover Vampire) ())
     val zipperposition_slices =
-      map slice_summary (#slices (prover "zipperposition") ())
+      map slice_summary (#slices (prover Zipperposition) ())
     val _ = expect_equal "E slice table"
       [List.nth (phase1, 1), List.nth (phase1, 4),
        List.nth (phase2, 1), List.nth (phase2, 3),
@@ -1699,24 +1706,24 @@ fun test_hhSlice () =
        List.nth (ensemble, 2)] zipperposition_slices
     val _ = expect "Z3 stays callable without scheduler slices"
       (List.all (null o (fn config => #slices config ()))
-       (map prover ["z3"]))
+       (map prover [Z3]))
     val _ = expect_equal "rotation truncates to requested slice count"
-      ["vampire", "e", "zipperposition", "vampire", "e"]
+      [Vampire, Eprover, Zipperposition, Vampire, Eprover]
       (hhSlice.schedule_of_provers
-        ["e", "vampire", "zipperposition"] 5)
+        [Eprover, Vampire, Zipperposition] 5)
     val _ = expect_equal "golden 24-slice rotation"
-      ["vampire", "e", "zipperposition", "vampire", "e", "vampire",
-       "zipperposition", "vampire", "vampire", "e", "zipperposition",
-       "e", "vampire", "e", "vampire", "zipperposition", "vampire",
-       "e", "zipperposition", "vampire", "e", "vampire", "e",
-       "vampire"]
+      [Vampire, Eprover, Zipperposition, Vampire, Eprover, Vampire,
+       Zipperposition, Vampire, Vampire, Eprover, Zipperposition,
+       Eprover, Vampire, Eprover, Vampire, Zipperposition, Vampire,
+       Eprover, Zipperposition, Vampire, Eprover, Vampire, Eprover,
+       Vampire]
       (hhSlice.schedule_of_provers
-        ["e", "vampire", "zipperposition"] 24)
+        [Eprover, Vampire, Zipperposition] 24)
     val _ = expect_equal "rotation filters and extends in requested order"
-      ["e", "zipperposition", "e", "zipperposition", "e",
-       "zipperposition", "e"]
-      (hhSlice.schedule_of_provers ["zipperposition", "e"] 7)
-    val defaults = slice_options ["e", "vampire", "zipperposition"]
+      [Eprover, Zipperposition, Eprover, Zipperposition, Eprover,
+       Zipperposition, Eprover]
+      (hhSlice.schedule_of_provers [Zipperposition, Eprover] 7)
+    val defaults = slice_options [Eprover, Vampire, Zipperposition]
       (24 * 32) 32 30 "" NONE
     val default_schedule = hhSlice.mk_schedule defaults
     val _ = expect_equal "golden 24-slice Phase 3 schedule"
@@ -1726,9 +1733,9 @@ fun test_hhSlice () =
       (List.take (map (slice_summary o #2) default_schedule, 16))
     val _ = expect_equal "Phase 1 eight-slice prefix is frozen verbatim"
       phase1 (List.take (map (slice_summary o #2) default_schedule, 8))
-    val gate30 = slice_options ["e", "vampire", "zipperposition"]
+    val gate30 = slice_options [Eprover, Vampire, Zipperposition]
       8 8 30 "knn" NONE
-    val gate10 = slice_options ["e", "vampire", "zipperposition"]
+    val gate10 = slice_options [Eprover, Vampire, Zipperposition]
       8 8 10 "knn" NONE
     val gate30_schedule = hhSlice.mk_schedule gate30
     val gate10_schedule = hhSlice.mk_schedule gate10
@@ -1760,13 +1767,13 @@ fun test_hhSlice () =
     val _ = expect "gate anchors are command-equivalent to one-shot B"
       (List.all anchor_command_equal anchors)
     val small = hhSlice.mk_schedule
-      (slice_options ["e", "vampire", "zipperposition"] 5 2 30 "knn"
+      (slice_options [Eprover, Vampire, Zipperposition] 5 2 30 "knn"
         NONE)
     val _ = expect_equal "small schedule follows the golden rotation"
       (List.take (schedule_summary default_schedule, 5))
       (schedule_summary small)
     val subset = hhSlice.mk_schedule
-      (slice_options ["zipperposition", "e"] 7 4 30 "knn" NONE)
+      (slice_options [Zipperposition, Eprover] 7 4 30 "knn" NONE)
     val _ = expect_equal "prover subset consumes each table head-first"
       [("e", 128, "knn", []),
        ("zipperposition", 128, "knn", []),
@@ -1777,7 +1784,7 @@ fun test_hhSlice () =
        ("e", 512, "knn", [])]
       (schedule_summary subset)
     val overridden = hhSlice.mk_schedule
-      (slice_options ["e"] 20 2 30 "none" (SOME 40))
+      (slice_options [Eprover] 20 2 30 "none" (SOME 40))
     val _ = expect_equal "fact and filter overrides precede deduplication"
       [("e", 40, "none", []),
        ("e", 40, "none", []),
@@ -1785,19 +1792,19 @@ fun test_hhSlice () =
        ("e", 40, "none", [])]
       (schedule_summary overridden)
     val filter_override = hhSlice.mk_schedule
-      (slice_options ["e", "vampire", "zipperposition"] 24 24 30
+      (slice_options [Eprover, Vampire, Zipperposition] 24 24 30
         "none" NONE)
     val _ = expect "set filter overrides every per-slice table value"
       (not (null filter_override) andalso
        List.all (fn (_, slice) => #filter slice = "none") filter_override)
     val exhausted = hhSlice.mk_schedule
-      (slice_options ["e", "vampire", "zipperposition"] 100 8 30 ""
+      (slice_options [Eprover, Vampire, Zipperposition] 100 8 30 ""
         NONE)
     val _ = expect "rotation exhaustion stops at twenty-four slices"
       (length exhausted = 24)
     val _ = expect "Z3 remains outside the slice scheduler"
       (null (hhSlice.mk_schedule
-        (slice_options ["z3"] 100 8 30 "knn" NONE)))
+        (slice_options [Z3] 100 8 30 "knn" NONE)))
     val first_slice = #2 (hd default_schedule)
     val large_slice : hhProver.slice =
       {prover = #prover first_slice, format = #format first_slice,
@@ -1807,7 +1814,7 @@ fun test_hhSlice () =
     val _ = expect "budget uses full timeout when slices fit on cores"
       (close 30.0 (hhSlice.slice_budget (length default_schedule) defaults
         first_slice))
-    val budget_options = slice_options ["e"] 999 32 30 "knn" NONE
+    val budget_options = slice_options [Eprover] 999 32 30 "knn" NONE
     val _ = expect "budget arithmetic uses ceiling batches"
       (close 15.0 (hhSlice.slice_budget 33 budget_options first_slice) andalso
        close 15.0 (hhSlice.slice_budget 64 budget_options first_slice) andalso
@@ -1815,11 +1822,11 @@ fun test_hhSlice () =
        close 30.0 (hhSlice.slice_budget 65 budget_options large_slice) andalso
        close 0.0 (hhSlice.slice_budget 0 budget_options first_slice))
     fun slice_of format type_enc lam_trans : hhProver.slice =
-      {prover = "e", format = format, type_enc = type_enc,
+      {prover = Eprover, format = format, type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none", extra_opts = [],
        slice_size = 1}
     val triple_options : hhConfig.hh_options =
-      {timeout = 30, max_proofs = 4, provers = ["e"], slices = 1, cores = 1,
+      {timeout = 30, max_proofs = 4, provers = [Eprover], slices = 1, cores = 1,
        filter = "knn", max_facts = NONE, format = "tf0",
        type_enc = "mono_native", lam_trans = "lifting", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
@@ -1843,7 +1850,7 @@ fun test_hhSlice () =
     fun invalid_triple format type_enc lam_trans =
       let
         val options : hhConfig.hh_options =
-          {timeout = 30, max_proofs = 4, provers = ["e"], slices = 1,
+          {timeout = 30, max_proofs = 4, provers = [Eprover], slices = 1,
            cores = 1, filter = "knn", max_facts = NONE, format = format,
            type_enc = type_enc, lam_trans = lam_trans, mono_iters = 3,
            mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
@@ -1857,37 +1864,32 @@ fun test_hhSlice () =
       (invalid_triple "tf0" "" "lifting" andalso
        invalid_triple "th1" "mono_native_higher" "keep_lams" andalso
        invalid_triple "tf0" "mono_native" "")
-    fun filter_test_config name filter : hhProver.prover_config =
+    fun filter_test_config filter : hhProver.prover_config =
       let
         val slice : hhProver.slice =
-          {prover = name, format = "fof", type_enc = "", lam_trans = "",
+          {prover = Z3, format = "fof", type_enc = "", lam_trans = "",
            nfacts = 1, filter = filter, extra_opts = [], slice_size = 1}
       in
-        {name = name, exec_names = [], env_var = "", version_args = [],
-         parse_version = fn _ => NONE, tested_versions = [],
-         supported_formats = ["fof"],
+        {name = "selftest-filter", exec_names = [], env_var = "",
+         version_args = [], parse_version = fn _ => NONE,
+         tested_versions = [], supported_formats = ["fof"],
          mk_command = fn executable => fn _ => (executable, []),
          parse_output = fn _ => (hhProver.SzsUnknown "selftest", NONE),
          mono_instances = 100, slices = fn () => [slice], legacy = true}
       end
-    val invalid_filters =
-      [("selftest-empty-filter", ""),
-       ("selftest-unknown-filter", "not-a-filter")]
-    val _ = List.app
-      (hhProver.register o (fn (name, filter) =>
-        filter_test_config name filter)) invalid_filters
-    fun rejects_filter (name, _) =
-      (ignore (hhSlice.mk_schedule
-        (slice_options [name] 1 1 30 "" NONE)); false)
-      handle Fail _ => true
+    fun rejects_filter filter =
+      hhProver.with_override Z3 (filter_test_config filter) (fn () =>
+        (ignore (hhSlice.mk_schedule
+          (slice_options [Z3] 1 1 30 "" NONE)); false)
+        handle Fail _ => true)
     val _ = expect "slice construction validates the filter vocabulary"
-      (List.all rejects_filter invalid_filters)
+      (List.all rejects_filter ["", "not-a-filter"])
   in
     ()
   end
 
 fun cache_options directory maximum enabled : hhConfig.hh_options =
-  {timeout = 30, max_proofs = 4, provers = ["e"], slices = 1,
+  {timeout = 30, max_proofs = 4, provers = [Eprover], slices = 1,
    cores = 1, filter = "knn", max_facts = NONE,
    format = "", type_enc = "", lam_trans = "", mono_iters = 3,
    mono_instances = NONE, minimize = true,
@@ -2035,8 +2037,8 @@ fun hh_error call =
 fun test_holyHammer_validation () =
   let
     val unknown = "not-a-holyhammer-prover"
-    val _ = expect "prover option rejects unknown registry names"
-      (option_error [unknown, "registered prover names"]
+    val _ = expect "prover option rejects unknown prover names"
+      (option_error [unknown, "prover names: e, vampire"]
         (fn () => hhConfig.hh_set ("provers", unknown)))
   in
     case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
@@ -2046,7 +2048,7 @@ fun test_holyHammer_validation () =
             val output = OS.FileSys.tmpName ()
             val message = smlRedirect.hide_in_file output
               (fn () => hh_error (fn () =>
-                ignore (holyHammer.hh_pb "" ["zipperposition"] []
+                ignore (holyHammer.hh_pb "" [Zipperposition] []
                   ([], boolSyntax.T)))) ()
             val printed = String.concat (read_lines output)
             val _ = OS.FileSys.remove output
@@ -2148,7 +2150,7 @@ fun test_runner () =
       SOME _ => ()
     | NONE =>
   let
-    val e = prover "e"
+    val e = prover Eprover
     val good = fake_config "runner-good" "/bin/echo"
       ["% SZS status Theorem"] (#parse_output e)
     val debug_dir = OS.FileSys.tmpName ()
@@ -2282,7 +2284,7 @@ fun test_installed_provers () =
         let
           val problem = write_tiny_problem ()
           val _ = List.app (test_installed_prover problem)
-            (map prover ["e", "vampire", "zipperposition", "z3"])
+            (map prover [Eprover, Vampire, Zipperposition, Z3])
           val _ = OS.FileSys.remove problem handle OS.SysErr _ => ()
         in
           ()
@@ -2293,16 +2295,6 @@ fun same_real left right = Real.== (left, right)
 fun same_real_option NONE NONE = true
   | same_real_option (SOME left) (SOME right) = same_real left right
   | same_real_option _ _ = false
-
-fun same_engine (hhEval.Prover left) (hhEval.Prover right) = left = right
-  | same_engine
-      (hhEval.Sched {provers = left_provers, slices = left_slices,
-                     cores = left_cores, max_proofs = left_max_proofs})
-      (hhEval.Sched {provers = right_provers, slices = right_slices,
-                     cores = right_cores, max_proofs = right_max_proofs}) =
-      left_provers = right_provers andalso left_slices = right_slices andalso
-      left_cores = right_cores andalso left_max_proofs = right_max_proofs
-  | same_engine _ _ = false
 
 val same_slice = hhProver.same_slice
 
@@ -2323,7 +2315,7 @@ fun same_journal_entry (expected : hhEval.journal_entry)
     hhEval.string_of_regime (#regime actual) andalso
   hhEval.string_of_selector (#selector expected) =
     hhEval.string_of_selector (#selector actual) andalso
-  same_engine (#engine expected) (#engine actual) andalso
+  #engine expected = #engine actual andalso
   #ho expected = #ho actual andalso #fresh expected = #fresh actual andalso
   #prover expected = #prover actual andalso
   #prover_version expected = #prover_version actual andalso
@@ -2410,8 +2402,8 @@ fun test_hhEval root =
     val null_entry : hhEval.journal_entry =
       {run = "fixture", thy = "list", thm = "nil", goal_id = "list.nil",
        cond = "deps-e", regime = hhEval.Bushy, selector = hhEval.Deps,
-       engine = hhEval.Prover "e", ho = false, fresh = false,
-       prover = "e",
+       engine = SOME (hhEval.Prover Eprover), ho = false, fresh = false,
+       prover = SOME Eprover,
        prover_version = NONE,
        nfacts = 0, timeout = 5,
        szs = hhEval.BrokenDeps, t_prover = 0.0, axioms_used = NONE,
@@ -2420,8 +2412,8 @@ fun test_hhEval root =
     val full_entry : hhEval.journal_entry =
       {run = "fixture", thy = "list", thm = "cons", goal_id = "list.cons",
        cond = "knn-e", regime = hhEval.Chainy, selector = hhEval.Knn 128,
-       engine = hhEval.Prover "e", ho = true, fresh = true,
-       prover = "e",
+       engine = SOME (hhEval.Prover Eprover), ho = true, fresh = true,
+       prover = SOME Eprover,
        prover_version = SOME "3.2.5", nfacts = 128,
        timeout = 10, szs = hhEval.Szs hhProver.SzsTheorem,
        t_prover = 1.25,
@@ -2435,6 +2427,20 @@ fun test_hhEval root =
     val _ = expect "journal populated-field round trip"
       (same_journal_entry full_entry
        (hhEval.parse_journal_line (hhEval.encode_journal_line full_entry)))
+    val load_entry : hhEval.journal_entry =
+      {run = "fixture", thy = "list", thm = "__load__",
+       goal_id = "list.__load__", cond = "__load__", regime = hhEval.Bushy,
+       selector = hhEval.Deps, engine = NONE, ho = false, fresh = false,
+       prover = NONE, prover_version = NONE, nfacts = 0, timeout = 0,
+       szs = hhEval.LoadFailure, t_prover = 0.0, axioms_used = NONE,
+       recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
+       error = SOME "fixture", stop = NONE, t_total = NONE, winner = NONE,
+       slices = []}
+    val load_line = hhEval.encode_journal_line load_entry
+    val _ = expect "theory-load entries round-trip without an engine"
+      (same_journal_entry load_entry (hhEval.parse_journal_line load_line)
+       andalso String.isSubstring "\"engine\":\"prover\"" load_line
+       andalso String.isSubstring "\"prover\":\"\"" load_line)
     val _ = hhEval.append_journal journal null_entry
     val _ = hhEval.append_journal journal full_entry
     val entries = hhEval.read_journal journal
@@ -2460,8 +2466,8 @@ fun test_hhEval root =
     val retry_entry : hhEval.journal_entry =
       {run = "fixture", thy = "list", thm = "nil", goal_id = "list.nil",
        cond = "deps-e", regime = hhEval.Bushy, selector = hhEval.Deps,
-       engine = hhEval.Prover "e", ho = false, fresh = false,
-       prover = "e",
+       engine = SOME (hhEval.Prover Eprover), ho = false, fresh = false,
+       prover = SOME Eprover,
        prover_version = NONE, nfacts = 0, timeout = 5,
        szs = hhEval.EvalError, t_prover = 0.0, axioms_used = NONE,
        recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
@@ -2501,14 +2507,14 @@ fun test_hhEval root =
        length (hhEval.read_journal torn) = 2)
     val condition : hhEval.condition =
       {cond_id = "knn-e", regime = hhEval.Chainy, selector = hhEval.Knn 128,
-       engine = hhEval.Prover "e", timeout = 10, reconstruct = true}
+       engine = hhEval.Prover Eprover, timeout = 10, reconstruct = true}
     val parsed_condition =
       hhEval.parse_condition (hhEval.encode_condition condition)
     val _ = expect "condition serialization"
       (#cond_id parsed_condition = #cond_id condition andalso
        hhEval.string_of_regime (#regime parsed_condition) = "chainy" andalso
        hhEval.string_of_selector (#selector parsed_condition) = "knn128" andalso
-       same_engine (#engine parsed_condition) (hhEval.Prover "e") andalso
+       #engine parsed_condition = hhEval.Prover Eprover andalso
        #timeout parsed_condition = 10 andalso #reconstruct parsed_condition)
     val selectors =
       [(hhEval.Deps, "deps"), (hhEval.Knn 96, "knn96"),
@@ -2518,7 +2524,7 @@ fun test_hhEval root =
       let
         val item : hhEval.condition =
           {cond_id = spelling, regime = hhEval.Chainy,
-           selector = selector, engine = hhEval.Prover "e", timeout = 30,
+           selector = selector, engine = hhEval.Prover Eprover, timeout = 30,
            reconstruct = true}
         val parsed = hhEval.parse_condition (hhEval.encode_condition item)
       in
@@ -2537,15 +2543,14 @@ fun test_hhEval root =
       {cond_id = "sched", regime = hhEval.Chainy,
        selector = hhEval.Knn 256,
        engine = hhEval.Sched
-         {provers = ["e", "vampire"], slices = 6, cores = 2,
+         {provers = [Eprover, Vampire], slices = 6, cores = 2,
           max_proofs = 3},
        timeout = 30, reconstruct = true}
     val parsed_sched_condition =
       hhEval.parse_condition (hhEval.encode_condition sched_condition)
     val _ = expect "Sched condition serialization"
       (#cond_id parsed_sched_condition = "sched" andalso
-       same_engine (#engine parsed_sched_condition)
-         (#engine sched_condition) andalso
+       #engine parsed_sched_condition = #engine sched_condition andalso
        #timeout parsed_sched_condition = 30 andalso
        #reconstruct parsed_sched_condition)
     val perslice_condition : hhEval.condition =
@@ -2557,10 +2562,10 @@ fun test_hhEval root =
     val _ = expect "PerSlice Sched condition serialization"
       (hhEval.string_of_selector (#selector parsed_perslice) =
          "perslice" andalso
-       same_engine (#engine parsed_perslice) (#engine sched_condition))
+       #engine parsed_perslice = #engine sched_condition)
     val invalid_perslice : hhEval.condition =
       {cond_id = "invalid-perslice", regime = hhEval.Chainy,
-       selector = hhEval.PerSlice, engine = hhEval.Prover "e", timeout = 30,
+       selector = hhEval.PerSlice, engine = hhEval.Prover Eprover, timeout = 30,
        reconstruct = true}
     val _ = expect "PerSlice is rejected for non-Sched engines"
       ((hhEval.validate_condition invalid_perslice; false)
@@ -2569,7 +2574,7 @@ fun test_hhEval root =
       {cond_id = "invalid-sched", regime = hhEval.Bushy,
        selector = hhEval.Deps,
        engine = hhEval.Sched
-         {provers = ["e"], slices = 1, cores = 1, max_proofs = 1},
+         {provers = [Eprover], slices = 1, cores = 1, max_proofs = 1},
        timeout = 5, reconstruct = false}
     val _ = expect "Sched condition requires reconstruction"
       ((hhEval.validate_condition invalid_sched; false)
@@ -2578,13 +2583,13 @@ fun test_hhEval root =
          String.isSubstring "reconstruct must be true" message)
     val schedule_slice : hhEval.journal_slice =
       {slice =
-         {prover = "e", format = "fof", type_enc = "",
+         {prover = Eprover, format = "fof", type_enc = "",
           lam_trans = "", nfacts = 256, filter = "mepo",
           extra_opts = ["--auto"], slice_size = 15},
        szs = hhProver.SzsTheorem, time = 1.75, cached = true}
     val competing_schedule_slice : hhEval.journal_slice =
       {slice =
-         {prover = "e", format = "tx0-", type_enc = "mono_native_fool",
+         {prover = Eprover, format = "tx0-", type_enc = "mono_native_fool",
           lam_trans = "lifting", nfacts = 256, filter = "mepo",
           extra_opts = ["--auto"], slice_size = 15},
        szs = hhProver.SzsTheorem, time = 1.5, cached = false}
@@ -2592,8 +2597,8 @@ fun test_hhEval root =
       {run = "fixture", thy = "list", thm = "scheduled",
        goal_id = "list.scheduled", cond = "sched",
        regime = hhEval.Chainy, selector = hhEval.Knn 256,
-       engine = #engine sched_condition, ho = true, fresh = true,
-       prover = "e",
+       engine = SOME (#engine sched_condition), ho = true, fresh = true,
+       prover = SOME Eprover,
        prover_version = SOME "3.2.5", nfacts = 256, timeout = 30,
        szs = hhEval.Szs hhProver.SzsTheorem, t_prover = 1.75,
        axioms_used = SOME ["list.one"], recon_ok = SOME true,
@@ -2646,7 +2651,7 @@ fun test_hhEval root =
           String.isSubstring "unsupported hhEval journal entry" message))
     val header : hhEval.run_header =
       {expname = "fixture", date = "today", host = "host", hol_commit = "abc",
-       provers = [{name = "e", path = SOME "/e", version = SOME "3.2.5",
+       provers = [{prover = Eprover, path = SOME "/e", version = SOME "3.2.5",
                    sha256 = SOME "123"}],
        corpus = [{thy = "list", theorem_count = 2, dep_stamp = "stamp"}],
        added_from_dat = ["missing"], conditions = [condition], sample = 1}
@@ -2675,7 +2680,7 @@ fun test_hhEval root =
          (#timeout condition + 1) (#reconstruct condition),
        changed_condition hhEval.Deps (#engine condition)
          (#timeout condition) (#reconstruct condition),
-       changed_condition (#selector condition) (hhEval.Prover "vampire")
+       changed_condition (#selector condition) (hhEval.Prover Vampire)
          (#timeout condition) (#reconstruct condition),
        changed_condition (#selector condition) (#engine condition)
          (#timeout condition) (not (#reconstruct condition))]
@@ -2757,8 +2762,8 @@ fun test_hhEval root =
       {run = #run full_entry, thy = "subset", thm = thm,
        goal_id = "subset." ^ thm, cond = "subset-fixture",
        regime = hhEval.Bushy, selector = hhEval.Deps,
-       engine = hhEval.Prover "e", ho = ho, fresh = fresh,
-       prover = "e",
+       engine = SOME (hhEval.Prover Eprover), ho = ho, fresh = fresh,
+       prover = SOME Eprover,
        prover_version = #prover_version full_entry, nfacts = 3, timeout = 6,
        szs = hhEval.Szs hhProver.SzsTheorem, t_prover = 0.1,
        axioms_used = NONE,
@@ -2773,8 +2778,8 @@ fun test_hhEval root =
       {run = "fixture", thy = "ensemble", thm = thm,
        goal_id = "ensemble." ^ thm, cond = cond,
        regime = hhEval.Chainy, selector = selector,
-       engine = hhEval.Prover "e", ho = false, fresh = false,
-       prover = "e", prover_version = SOME "3.2.5", nfacts = 96,
+       engine = SOME (hhEval.Prover Eprover), ho = false, fresh = false,
+       prover = SOME Eprover, prover_version = SOME "3.2.5", nfacts = 96,
        timeout = 17, szs = hhEval.Szs hhProver.SzsTheorem,
        t_prover = 0.2,
        axioms_used = NONE, recon_ok = SOME true,
@@ -2789,9 +2794,9 @@ fun test_hhEval root =
     val _ = hhEval.append_journal ensemble_journal
       (one_shot_entry "report-mesh" "mesh" (hhEval.Mesh 96))
     val collision_engine = hhEval.Sched
-      {provers = ["collision"], slices = 1, cores = 1, max_proofs = 1}
+      {provers = [Z3], slices = 1, cores = 1, max_proofs = 1}
     fun collision_slice filter : hhProver.slice =
-      {prover = "collision", format = "fof", type_enc = "",
+      {prover = Z3, format = "fof", type_enc = "",
        lam_trans = "", nfacts = 77, filter = filter,
        extra_opts = [], slice_size = 1}
     fun collision_entry thm filter recon : hhEval.journal_entry =
@@ -2804,8 +2809,8 @@ fun test_hhEval root =
         {run = "fixture", thy = "collision", thm = thm,
          goal_id = "collision." ^ thm, cond = "filter-collision",
          regime = hhEval.Chainy, selector = hhEval.PerSlice,
-         engine = collision_engine, ho = false, fresh = false,
-         prover = "collision", prover_version = SOME "fixture",
+         engine = SOME collision_engine, ho = false, fresh = false,
+         prover = SOME Z3, prover_version = SOME "fixture",
          nfacts = 77, timeout = 19, szs = hhEval.Szs hhProver.SzsTheorem,
          t_prover = 0.3,
          axioms_used = NONE, recon_ok = SOME recon,
@@ -2922,8 +2927,8 @@ fun test_hhEval root =
         JSONUtil.asString (JSONUtil.lookupField row "format") = "fof" andalso
         JSONUtil.asString (JSONUtil.lookupField row "type_enc") = "" andalso
         JSONUtil.asString (JSONUtil.lookupField row "lam_trans") = "" andalso
-        JSONUtil.asString (JSONUtil.lookupField row "prover") =
-          "collision" andalso
+        JSONUtil.asString (JSONUtil.lookupField row "prover") = "z3"
+        andalso
         JSONUtil.asInt (JSONUtil.lookupField row "nfacts") = 77 andalso
         JSONUtil.asString (JSONUtil.lookupField row "filter") = filter)
         contributions
@@ -3020,7 +3025,7 @@ fun test_holyHammer_e () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       SOME _ => ()
     | NONE =>
-        case hhProver.probe (prover "e") of
+        case hhProver.probe (prover Eprover) of
             NONE =>
               (tprint "holyHammer end-to-end e (skipped: absent)"; OK ())
           | SOME _ =>
@@ -3031,7 +3036,7 @@ fun test_holyHammer_e () =
                 val add1 = DB.fetch "arithmetic" "ADD1"
                 val output = OS.Path.concat (root, "stdout")
                 fun call () =
-                  (ignore (holyHammer.hh_pb root ["e"]
+                  (ignore (holyHammer.hh_pb root [Eprover]
                      ["arithmeticTheory.ADD1"] (Thm.dest_thm add1));
                    TextIO.flushOut TextIO.stdOut)
                 val success =
@@ -3194,12 +3199,12 @@ val schedule_printer = join schedule_fixture_dir "runner-print-e.sh"
 val schedule_sleeper =
   join schedule_fixture_dir "runner-forking-sleeper.sh"
 
-fun fixture_slice name extra size : hhProver.slice =
-  {prover = name, format = "fof", type_enc = "", lam_trans = "",
+fun fixture_slice prover extra size : hhProver.slice =
+  {prover = prover, format = "fof", type_enc = "", lam_trans = "",
    nfacts = 0, filter = "none", extra_opts = extra, slice_size = size}
 
-fun ranking_fixture_slice name filter nfacts : hhProver.slice =
-  {prover = name, format = "fof", type_enc = "", lam_trans = "",
+fun ranking_fixture_slice prover filter nfacts : hhProver.slice =
+  {prover = prover, format = "fof", type_enc = "", lam_trans = "",
    nfacts = nfacts, filter = filter,
    extra_opts = ["0", "e-gave-up.out"], slice_size = 1}
 
@@ -3212,8 +3217,8 @@ fun printer_config name slices note parser : hhProver.prover_config =
    parse_output = parser, mono_instances = 100,
    slices = fn () => slices, legacy = false}
 
-fun sleeper_config name parser : hhProver.prover_config =
-  let val slice = fixture_slice name [] 1 in
+fun sleeper_config prover name parser : hhProver.prover_config =
+  let val slice = fixture_slice prover [] 1 in
     {name = name, exec_names = [schedule_sleeper], env_var = "",
      version_args = ["--version"], parse_version = fn _ => SOME "test",
      tested_versions = ["test"], supported_formats = ["fof"],
@@ -3233,6 +3238,13 @@ fun fixture_options provers slices cores timeout max_proofs cache cache_dir
    debug_dir = debug_dir,
    verbose = false}
 
+(* A fixture prover_config stands in for a built-in prover while f runs.
+   Its name stays its own, so its output files and probe results are not
+   mistaken for the built-in prover's. *)
+fun with_fixtures [] f = f ()
+  | with_fixtures ((prover, config) :: rest) f =
+      hhProver.with_override prover config (fn () => with_fixtures rest f)
+
 fun without_minimization (options : hhConfig.hh_options)
     : hhConfig.hh_options =
   {timeout = #timeout options, max_proofs = #max_proofs options,
@@ -3249,7 +3261,8 @@ fun without_minimization (options : hhConfig.hh_options)
    verbose = #verbose options}
 
 fun slice_event_tag (slice : hhProver.slice) =
-  #prover slice ^ ":" ^ String.concatWith "," (#extra_opts slice)
+  hhConfig.prover_name (#prover slice) ^ ":" ^
+  String.concatWith "," (#extra_opts slice)
 
 fun stop_event_name hhSchedule.MaxProofs = "max-proofs"
   | stop_event_name hhSchedule.Timeout = "timeout"
@@ -3344,8 +3357,8 @@ fun test_schedule_max_proofs parser =
   let
     val name = "hh-schedule-max-proofs"
     val slices =
-      [fixture_slice name ["0", "schedule-truth.out"] 1,
-       fixture_slice name ["0", "schedule-t-def.out"] 1]
+      [fixture_slice Z3 ["0", "schedule-truth.out"] 1,
+       fixture_slice Z3 ["0", "schedule-t-def.out"] 1]
     (* The problem files are deleted after the run, so check them while
        the prover runs. *)
     val paths = ref ([] : (string * bool) list)
@@ -3354,11 +3367,11 @@ fun test_schedule_max_proofs parser =
       (fn request =>
          paths := (#problem request, readable (#problem request)) :: !paths)
       parser
-    val _ = hhProver.register config
-    val options1 = fixture_options [name] 2 2 5 1 false "" NONE
-    val options2 = fixture_options [name] 2 2 5 2 false "" NONE
-    val (result1, _) = run_schedule options1
-    val (result2, events2) = run_schedule options2
+    val options1 = fixture_options [Z3] 2 2 5 1 false "" NONE
+    val options2 = fixture_options [Z3] 2 2 5 2 false "" NONE
+    val ((result1, _), (result2, events2)) =
+      with_fixtures [(Z3, config)] (fn () =>
+        (run_schedule options1, run_schedule options2))
     val lemma_sets = map (#lemmas : hhSchedule.suggestion -> string list)
       (#suggestions result2)
     val _ = expect "scheduler max_proofs one stops after one verification"
@@ -3390,18 +3403,18 @@ fun test_schedule_reconstruction_failure parser =
     val name = "hh-schedule-reconstruction-failure"
     val bad_recording = "schedule-unreconstructable.out"
     val slices =
-      [fixture_slice name ["0", bad_recording] 1,
-       fixture_slice name ["0", "schedule-add1.out"] 1]
+      [fixture_slice Z3 ["0", bad_recording] 1,
+       fixture_slice Z3 ["0", "schedule-add1.out"] 1]
     val config = printer_config name slices (fn _ => ()) parser
     val (bad_status, bad_axioms) =
       parser (read_lines (join schedule_fixture_dir bad_recording))
     val (good_status, good_axioms) =
       parser
         (read_lines (join schedule_fixture_dir "schedule-add1.out"))
-    val _ = hhProver.register config
-    val options = fixture_options [name] 2 1 5 1 false "" NONE
+    val options = fixture_options [Z3] 2 1 5 1 false "" NONE
     val goal = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
-    val (result, events) = run_schedule_on goal options
+    val (result, events) =
+      with_fixtures [(Z3, config)] (fn () => run_schedule_on goal options)
     val found = List.filter (String.isPrefix "found|") events
     val verified = List.filter (String.isPrefix "verified|") events
     val _ = expect "unreconstructable scheduler recording parses as theorem"
@@ -3428,13 +3441,13 @@ fun test_schedule_without_minimization () =
   let
     val name = "hh-schedule-no-minimize"
     val lemmas = ["boolTheory.TRUTH", "boolTheory.T_DEF"]
-    val slice = fixture_slice name ["0", "schedule-truth.out"] 1
+    val slice = fixture_slice Z3 ["0", "schedule-truth.out"] 1
     val config = printer_config name [slice] (fn _ => ())
       (fn _ => (hhProver.SzsTheorem, SOME lemmas))
-    val _ = hhProver.register config
     val options = without_minimization
-      (fixture_options [name] 1 1 5 1 false "" NONE)
-    val (result, _) = run_schedule options
+      (fixture_options [Z3] 1 1 5 1 false "" NONE)
+    val (result, _) =
+      with_fixtures [(Z3, config)] (fn () => run_schedule options)
     val _ = expect "scheduler minimize=false preserves the ATP lemma list"
       (case #suggestions result of
            [suggestion] => #stac suggestion = mlThmData.mk_metis_call lemmas
@@ -3454,13 +3467,13 @@ fun test_schedule_failed_list_once () =
          "LEFT_ADD_DISTRIB", "ADD1"]
     val slices =
       List.tabulate (5, fn index =>
-        fixture_slice name ["0", "schedule-truth.out", Int.toString index]
+        fixture_slice Z3 ["0", "schedule-truth.out", Int.toString index]
           1)
     val config = printer_config name slices (fn _ => ())
       (fn _ => (hhProver.SzsTheorem, SOME lemmas))
-    val _ = hhProver.register config
-    val options = fixture_options [name] 5 5 20 1 false "" NONE
-    val (result, events) = run_schedule_on ([], ``!n. n + 1 = n``) options
+    val options = fixture_options [Z3] 5 5 20 1 false "" NONE
+    val (result, events) = with_fixtures [(Z3, config)] (fn () =>
+      run_schedule_on ([], ``!n. n + 1 = n``) options)
     val found = List.filter (String.isPrefix "found|") events
   in
     expect "scheduler replays a lemma list that failed only once"
@@ -3475,17 +3488,19 @@ fun test_schedule_early_stop parser =
     val fast = "hh-schedule-fast"
     val slow2 = "hh-schedule-slow-two"
     val fast_slices =
-      [fixture_slice fast ["2", "schedule-truth.out"] 1]
+      [fixture_slice Vampire ["2", "schedule-truth.out"] 1]
     val debug = OS.FileSys.tmpName ()
     val _ = remove_tree debug
-    val _ = hhProver.register (sleeper_config slow1 parser)
-    val _ = hhProver.register
-      (printer_config fast fast_slices (fn _ => ()) parser)
-    val _ = hhProver.register (sleeper_config slow2 parser)
+    val fixtures =
+      [(Eprover, sleeper_config Eprover slow1 parser),
+       (Vampire, printer_config fast fast_slices (fn _ => ()) parser),
+       (Zipperposition, sleeper_config Zipperposition slow2 parser)]
     val cache = join debug "cache"
-    val options = fixture_options [slow1, fast, slow2] 3 3 12 1 true cache
-      (SOME debug)
-    val (result, events) = run_schedule options
+    val options =
+      fixture_options [Eprover, Vampire, Zipperposition] 3 3 12 1 true cache
+        (SOME debug)
+    val (result, events) =
+      with_fixtures fixtures (fn () => run_schedule options)
     val children_gone =
       fixture_child_gone debug slow1 andalso fixture_child_gone debug slow2
     val early_stop_ok =
@@ -3520,15 +3535,15 @@ fun test_schedule_early_stop parser =
 fun test_schedule_budget_truncation parser =
   let
     val name = "hh-schedule-budget"
-    val first = fixture_slice name ["2", "e-gave-up.out"] 1
-    val second = fixture_slice name ["0", "e-gave-up.out"] 4
+    val first = fixture_slice Z3 ["2", "e-gave-up.out"] 1
+    val second = fixture_slice Z3 ["0", "e-gave-up.out"] 4
     val budgets = ref ([] : int list)
     fun note (request : hhProver.run_request) =
       budgets := !budgets @ [#timeout request]
     val config = printer_config name [first, second] note parser
-    val _ = hhProver.register config
-    val options = fixture_options [name] 2 1 4 1 false "" NONE
-    val (result, _) = run_schedule options
+    val options = fixture_options [Z3] 2 1 4 1 false "" NONE
+    val (result, _) =
+      with_fixtures [(Z3, config)] (fn () => run_schedule options)
     val wanted = Real.ceil (hhSlice.slice_budget 2 options second)
     val _ = expect "late scheduler slice receives a truncated budget"
       (#stopped result = hhSchedule.Exhausted andalso
@@ -3543,20 +3558,23 @@ fun test_schedule_budget_truncation parser =
 fun test_schedule_cache parser =
   let
     val name = "hh-schedule-cache"
-    val slice = fixture_slice name ["0", "schedule-truth.out"] 1
+    val slice = fixture_slice Z3 ["0", "schedule-truth.out"] 1
     val config = printer_config name [slice] (fn _ => ()) parser
     val root = OS.FileSys.tmpName ()
     val cache = join root "cache"
     val _ = remove_tree root
     val _ = mkdir root
-    val _ = hhProver.register config
-    val options = fixture_options [name] 1 1 5 1 true cache NONE
-    val _ = hhProver.reset_spawn_count ()
-    val (first, _) = run_schedule options
-    val first_spawns = hhProver.spawn_count ()
-    val _ = hhProver.reset_spawn_count ()
-    val (second, _) = run_schedule options
-    val second_spawns = hhProver.spawn_count ()
+    val options = fixture_options [Z3] 1 1 5 1 true cache NONE
+    fun spawns_of_run () =
+      let
+        val _ = hhProver.reset_spawn_count ()
+        val (result, _) = run_schedule options
+      in
+        (result, hhProver.spawn_count ())
+      end
+    val ((first, first_spawns), (second, second_spawns)) =
+      with_fixtures [(Z3, config)] (fn () =>
+        (spawns_of_run (), spawns_of_run ()))
     val first_cached = map #4 (#slices_run first)
     val second_cached = map #4 (#slices_run second)
     val _ = expect "scheduler cache hit spawns no processes"
@@ -3586,12 +3604,14 @@ fun await_schedule_test message ready =
 fun test_schedule_cancelled_cache parser =
   let
     val name = "hh-schedule-cancelled-cache"
-    val slice = fixture_slice name ["1", "e-gave-up.out"] 1
+    val slice = fixture_slice Z3 ["1", "e-gave-up.out"] 1
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val options = fixture_options [name] 1 1 5 1 true root NONE
-    val _ = hhProver.register
-      (printer_config name [slice] (fn _ => ()) parser)
-    val _ = ignore (hhProver.probe (valOf (hhProver.lookup name)))
+    val options = fixture_options [Z3] 1 1 5 1 true root NONE
+    val config = printer_config name [slice] (fn _ => ()) parser
+    val _ = ignore (hhProver.probe config)
+  in
+    with_fixtures [(Z3, config)] (fn () =>
+  let
     val result = ref NONE
     val _ = hhProver.reset_spawn_count ()
     val thread = Thread.fork
@@ -3615,17 +3635,18 @@ fun test_schedule_cancelled_cache parser =
          | _ => false)
     val _ = hhProver.reset_spawn_count ()
     val (cached, _) = run_schedule options
-    val _ = expect "completed retry remains cacheable"
+  in
+    expect "completed retry remains cacheable"
       (hhProver.spawn_count () = 0 andalso
        List.all #4 (#slices_run cached))
-  in
+  end);
     remove_tree root
   end
 
 fun test_schedule_isolation parser =
   let
     val name = "hh-schedule-isolation"
-    val slice = fixture_slice name ["0", "e-gave-up.out"] 1
+    val slice = fixture_slice Z3 ["0", "e-gave-up.out"] 1
     val mutex = Mutex.mutex ()
     fun locked action = hhProver.with_mutex mutex action
     val first_path = ref NONE
@@ -3649,17 +3670,24 @@ fun test_schedule_isolation parser =
            intact := !first_text = String.concat (read_lines path))
         else second_text := String.concat (read_lines path)
       end
-    val _ = hhProver.register (printer_config name [slice] note parser)
-    val options = fixture_options [name] 1 1 5 1 false "" NONE
+    val options = fixture_options [Z3] 1 1 5 1 false "" NONE
     val first_result = ref NONE
-    val thread = Thread.fork
-      (fn () => first_result := SOME (#1 (run_schedule options)), [])
-    val _ = await_schedule_test "first export did not reach the prover"
-      (fn () => locked (fn () => Option.isSome (!first_path)))
-    val (second_result, _) = run_schedule_on ([], boolSyntax.F) options
-    val _ = locked (fn () => release := true)
-    val _ = await_schedule_test "first scheduler did not finish"
-      (fn () => not (Thread.isActive thread))
+    fun overlapping_runs () =
+      let
+        val thread = Thread.fork
+          (fn () => first_result := SOME (#1 (run_schedule options)), [])
+        val _ = await_schedule_test "first export did not reach the prover"
+          (fn () => locked (fn () => Option.isSome (!first_path)))
+        val (second_result, _) = run_schedule_on ([], boolSyntax.F) options
+        val _ = locked (fn () => release := true)
+        val _ = await_schedule_test "first scheduler did not finish"
+          (fn () => not (Thread.isActive thread))
+      in
+        second_result
+      end
+    val second_result =
+      with_fixtures [(Z3, printer_config name [slice] note parser)]
+        overlapping_runs
     val _ = expect "overlapping schedulers preserve their own prover inputs"
       (!first_path <> !second_path andalso !intact andalso
        !second_text <> "" andalso !first_text <> !second_text
@@ -3677,9 +3705,10 @@ fun test_schedule_timeout parser =
     val name = "hh-schedule-timeout"
     val debug = OS.FileSys.tmpName ()
     val _ = remove_tree debug
-    val _ = hhProver.register (sleeper_config name parser)
-    val options = fixture_options [name] 1 1 1 1 false "" (SOME debug)
-    val (result, events) = run_schedule options
+    val options = fixture_options [Z3] 1 1 1 1 false "" (SOME debug)
+    val (result, events) =
+      with_fixtures [(Z3, sleeper_config Z3 name parser)] (fn () =>
+        run_schedule options)
     val child_gone = fixture_child_gone debug name
     val _ = expect "scheduler timeout stop reason is reachable"
       (#stopped result = hhSchedule.Timeout andalso
@@ -3694,12 +3723,12 @@ fun test_schedule_filter_rankings parser =
   let
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val name = "hh-schedule-filter-rankings"
-    val knn = ranking_fixture_slice name "knn" 1
-    val mepo = ranking_fixture_slice name "mepo" 1
+    val knn = ranking_fixture_slice Z3 "knn" 1
+    val mepo = ranking_fixture_slice Z3 "mepo" 1
     val slices = [knn, mepo]
     val config = printer_config name slices (fn _ => ()) parser
     val options : hhConfig.hh_options =
-      {timeout = 5, max_proofs = 1, provers = [name], slices = 2,
+      {timeout = 5, max_proofs = 1, provers = [Z3], slices = 2,
        cores = 1, filter = "", max_facts = NONE, format = "",
        type_enc = "", lam_trans = "", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
@@ -3711,12 +3740,12 @@ fun test_schedule_filter_rankings parser =
     fun clean () = List.app (remove_tree o OS.Path.dir)
       [knn_path, mepo_path]
     val _ = clean ()
-    val _ = hhProver.register config
+    fun run_with rankings = with_fixtures [(Z3, config)] (fn () =>
+      hhSchedule.run_in root
+        {options = options, goal = ([], boolSyntax.T), rankings = rankings,
+         progress = NONE})
     val missing =
-      ((ignore (hhSchedule.run_in root
-          {options = options, goal = ([], boolSyntax.T),
-           rankings = [("knn", ["boolTheory.TRUTH"])],
-           progress = NONE}); false)
+      ((ignore (run_with [("knn", ["boolTheory.TRUTH"])]); false)
        handle Fail message =>
          contains "missing premise ranking" message)
     val _ = expect "scheduler rejects a missing filter ranking before export"
@@ -3724,12 +3753,9 @@ fun test_schedule_filter_rankings parser =
        not (OS.FileSys.access (knn_path, [])) andalso
        not (OS.FileSys.access (mepo_path, [])))
       handle OS.SysErr _ => OK ()
-    val result = hhSchedule.run_in root
-      {options = options, goal = ([], boolSyntax.T),
-       rankings =
-         [("knn", ["boolTheory.TRUTH"]),
-          ("mepo", ["boolTheory.T_DEF"])],
-       progress = NONE}
+    val result =
+      run_with
+        [("knn", ["boolTheory.TRUTH"]), ("mepo", ["boolTheory.T_DEF"])]
     val knn_text = String.concat (read_lines knn_path)
     val mepo_text = String.concat (read_lines mepo_path)
     val _ = expect "filter-only problem keys and directories are distinct"
@@ -3747,17 +3773,16 @@ fun test_schedule_filter_rankings parser =
 fun test_schedule_knn_anchor_export () =
   let
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val e = prover "e"
-    val name = "e"
+    val e = prover Eprover
     fun slice nfacts : hhProver.slice =
-      {prover = name, format = "fof", type_enc = "", lam_trans = "",
+      {prover = Eprover, format = "fof", type_enc = "", lam_trans = "",
        nfacts = nfacts, filter = "knn", extra_opts = [], slice_size = 1}
     val one = slice 1
     val two = slice 2
     val schedule = [(e, one), (e, two)]
     val ranking = ["boolTheory.TRUTH", "boolTheory.T_DEF"]
     val options : hhConfig.hh_options =
-      {timeout = 5, max_proofs = 1, provers = [name], slices = 2,
+      {timeout = 5, max_proofs = 1, provers = [Eprover], slices = 2,
        cores = 1, filter = "knn", max_facts = NONE, format = "",
        type_enc = "", lam_trans = "", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
@@ -3801,7 +3826,7 @@ fun test_schedule_mono_cap_export () =
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val {name, exec_names, env_var, version_args, parse_version,
          tested_versions, supported_formats, mk_command, parse_output,
-         slices, legacy, ...} = prover "e"
+         slices, legacy, ...} = prover Eprover
     val small_cap : hhProver.prover_config =
       {name = name, exec_names = exec_names, env_var = env_var,
        version_args = version_args, parse_version = parse_version,
@@ -3812,11 +3837,11 @@ fun test_schedule_mono_cap_export () =
     val facts = ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND",
                  "REVERSE_APPEND"]
     val slice : hhProver.slice =
-      {prover = name, format = "tx0-", type_enc = "mono_native_fool",
+      {prover = Eprover, format = "tx0-", type_enc = "mono_native_fool",
        lam_trans = "lifting", nfacts = length facts, filter = "knn",
        extra_opts = [], slice_size = 1}
     val options : hhConfig.hh_options =
-      {timeout = 5, max_proofs = 1, provers = [name], slices = 1,
+      {timeout = 5, max_proofs = 1, provers = [Eprover], slices = 1,
        cores = 1, filter = "knn", max_facts = NONE, format = "",
        type_enc = "", lam_trans = "", mono_iters = 3,
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
@@ -3848,7 +3873,7 @@ fun test_with_problem_dir () =
     val kept_file = join outside "kept"
     val _ = write_file kept_file "kept"
     fun options debug_dir =
-      fixture_options ["e"] 1 1 5 1 false "" debug_dir
+      fixture_options [Eprover] 1 1 5 1 false "" debug_dir
     fun populate root =
       let
         val slice_dir = join root "e.knn.fof...32"
@@ -3902,10 +3927,11 @@ fun test_with_problem_dir () =
 fun test_schedule_export_wiring () =
   let
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val e = prover "e"
-    val vampire = prover "vampire"
+    val e = prover Eprover
+    val vampire = prover Vampire
     fun options mono_instances : hhConfig.hh_options =
-      {timeout = 30, max_proofs = 1, provers = ["e"], slices = 1, cores = 1,
+      {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+       cores = 1,
        filter = "none", max_facts = NONE, format = "", type_enc = "",
        lam_trans = "", mono_iters = 3, mono_instances = mono_instances,
        minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
@@ -3913,7 +3939,7 @@ fun test_schedule_export_wiring () =
        debug_dir = NONE,
        verbose = false}
     fun slice type_enc lam_trans : hhProver.slice =
-      {prover = "e", format = "fof", type_enc = type_enc,
+      {prover = Eprover, format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",
        extra_opts = [], slice_size = 1}
     val legacy = slice "" ""
@@ -3947,18 +3973,18 @@ fun test_schedule_export_wiring () =
        andalso OS.FileSys.access (combs_path, []))
     val _ = expect "nonlegacy triple dispatches to hhProblemGen"
       (contains "generated by hhProblemGen" lifting_text)
-    val _ = expect "registry mono-instance override wins over default"
+    val _ = expect "prover config mono-instance cap wins over default"
       (contains "mono_instances=128" lifting_text)
     val _ = hhSchedule.export_problems root
       (options (SOME 77)) goal [("none", [])] [(e, lifting)]
-    val _ = expect "explicit mono-instance option beats registry override"
+    val _ = expect "explicit mono-instance option beats the prover config cap"
       (contains "mono_instances=77" (String.concat (read_lines lifting_path)))
     fun mono_slice prover : hhProver.slice =
       {prover = prover, format = "th0", type_enc = "mono_native_higher",
        lam_trans = "keep_lams", nfacts = 0, filter = "none",
        extra_opts = [], slice_size = 1}
-    val e_mono = mono_slice "e"
-    val vampire_mono = mono_slice "vampire"
+    val e_mono = mono_slice Eprover
+    val vampire_mono = mono_slice Vampire
     val _ = hhSchedule.export_problems root (options NONE) goal [("none", [])]
       [(e, e_mono), (vampire, vampire_mono)]
     val e_mono_path = hhSchedule.problem_path root e_mono
@@ -3979,7 +4005,7 @@ fun test_hhSchedule () =
       SOME _ => ()
     | NONE =>
         let
-          val parser = #parse_output (prover "e")
+          val parser = #parse_output (prover Eprover)
           val started = Time.now ()
           val _ = test_schedule_max_proofs parser
           val _ = test_schedule_reconstruction_failure parser
@@ -4011,17 +4037,19 @@ fun test_main_hh_lemmas_hook parser =
     val name = "hh-main-lemmas-hook"
     val launches = ref 0
     val slices =
-      [fixture_slice name ["0", "schedule-truth.out"] 1,
-       fixture_slice name ["5", "schedule-t-def.out"] 1,
-       fixture_slice name ["0", "schedule-add1.out"] 1]
+      [fixture_slice Z3 ["0", "schedule-truth.out"] 1,
+       fixture_slice Z3 ["5", "schedule-t-def.out"] 1,
+       fixture_slice Z3 ["0", "schedule-add1.out"] 1]
     fun note _ = launches := !launches + 1
-    val _ = hhProver.register (printer_config name slices note parser)
     val settings =
-      [("provers", name), ("slices", "3"), ("cores", "1"),
-       ("timeout", "5"), ("filter", "none"), ("debug_dir", "")]
-    val lemmas = with_hh_options settings (fn () =>
-      hook (hhConfig.state_dir ()) mlThmData.empty_thmdata
-        ([], boolSyntax.T))
+      [("provers", hhConfig.prover_name Z3), ("slices", "3"),
+       ("cores", "1"), ("timeout", "5"), ("filter", "none"),
+       ("debug_dir", "")]
+    val lemmas =
+      with_fixtures [(Z3, printer_config name slices note parser)] (fn () =>
+        with_hh_options settings (fn () =>
+          hook (hhConfig.state_dir ()) mlThmData.empty_thmdata
+            ([], boolSyntax.T)))
     val _ = expect "main_hh_lemmas returns scheduler suggestion lemmas"
       (lemmas = SOME ["boolTheory.TRUTH"])
     val _ = expect "interactive HolyHammer stops after one verified proof"
@@ -4033,22 +4061,23 @@ fun test_main_hh_lemmas_hook parser =
 fun test_holyHammer_unverified_failure parser =
   let
     val name = "hh-main-unverified"
-    val slice = fixture_slice name
+    val slice = fixture_slice Z3
       ["0", "schedule-unreconstructable.out"] 1
     val debug = OS.FileSys.tmpName ()
     val _ = remove_tree debug
     val problem = ref ""
-    val _ = hhProver.register
-      (printer_config name [slice]
-        (fn request => problem := #problem request) parser)
+    val config = printer_config name [slice]
+      (fn request => problem := #problem request) parser
     val settings =
-      [("provers", name), ("slices", "1"), ("cores", "1"),
-       ("timeout", "5"), ("filter", "none"), ("debug_dir", debug)]
+      [("provers", hhConfig.prover_name Z3), ("slices", "1"),
+       ("cores", "1"), ("timeout", "5"), ("filter", "none"),
+       ("debug_dir", debug)]
     val goal = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
-    val message = with_hh_options settings (fn () =>
-      hh_error (fn () => ignore
-        (holyHammer.main_hh debug mlThmData.empty_thmdata
-          goal)))
+    val message =
+      with_fixtures [(Z3, config)] (fn () =>
+        with_hh_options settings (fn () =>
+          hh_error (fn () => ignore
+            (holyHammer.main_hh debug mlThmData.empty_thmdata goal))))
     val _ = expect "unverified ATP proofs are reported with diagnostics"
       (case message of
            SOME text =>
@@ -4069,7 +4098,7 @@ fun test_holyHammer_scheduler_api () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       SOME _ => ()
     | NONE =>
-        let val parser = #parse_output (prover "e") in
+        let val parser = #parse_output (prover Eprover) in
           test_main_hh_lemmas_hook parser;
           test_holyHammer_unverified_failure parser
         end
@@ -4089,12 +4118,13 @@ fun test_hhEval_integration () =
               | NONE => raise Fail "integration test has no evaluation dir"
           val condition : hhEval.condition =
             {cond_id = "bushy-deps-e", regime = hhEval.Bushy,
-             selector = hhEval.Deps, engine = hhEval.Prover "e", timeout = 1,
+             selector = hhEval.Deps, engine = hhEval.Prover Eprover,
+             timeout = 1,
              reconstruct = false}
           val scheduled : hhEval.condition =
             {cond_id = "runtime-options", regime = hhEval.Bushy,
              selector = hhEval.Deps,
-             engine = hhEval.Sched {provers = ["e"], slices = 1,
+             engine = hhEval.Sched {provers = [Eprover], slices = 1,
                cores = 1, max_proofs = 1},
              timeout = 1, reconstruct = true}
           fun run expname conditions = with_hh_options
@@ -4153,7 +4183,7 @@ fun test_hhEval_integration () =
           ()
         end
     | NONE =>
-        (case hhProver.probe (prover "e") of
+        (case hhProver.probe (prover Eprover) of
              NONE => (tprint "hhEval integration (skipped: e absent)"; OK ())
            | SOME _ =>
                (tprint
@@ -4165,19 +4195,20 @@ val _ = test_hhEval_integration ()
 val _ = expect
   "hhEval smoke retains twelve legacy prover goals and one schedule goal"
   (length hhEval.smoke_goals = 16 andalso
-   length (List.filter (fn (_, _, engine) => engine = "sched")
+   length (List.filter (fn (_, _, kind) => kind = hhEval.SmokeSched)
      hhEval.smoke_goals) = 1)
 
 val _ = expect "hhEval smoke covers every pinned prover four times"
   (List.all (fn prover =>
-     length (List.filter (fn (_, _, item) => item = prover)
+     length (List.filter (fn (_, _, kind) => kind = hhEval.SmokeProver prover)
        hhEval.smoke_goals) = 4)
-   ["e", "vampire", "zipperposition"])
+   [hhProver.Eprover, hhProver.Vampire, hhProver.Zipperposition])
 
 val _ = expect "hhEval smoke adds one goal for every ensemble filter"
-  (List.all (fn filter =>
-     length (List.filter (fn (_, _, item) => item = filter)
-       hhEval.smoke_goals) = 1) ["mepo", "mash", "mesh"])
+  (List.all (fn kind =>
+     length (List.filter (fn (_, _, item) => item = kind)
+       hhEval.smoke_goals) = 1)
+   [hhEval.SmokeMepo, hhEval.SmokeMash, hhEval.SmokeMesh])
 
 fun test_hhEval_pool_restriction () =
   let
@@ -5266,7 +5297,8 @@ fun test_hypothesis_premises () =
       {filter = "none", pool = NONE, goal = goal, n = 2}
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val options : hhConfig.hh_options =
-      {timeout = 30, max_proofs = 1, provers = ["e"], slices = 1, cores = 1,
+      {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+       cores = 1,
        filter = "none", max_facts = NONE, format = "", type_enc = "",
        lam_trans = "", mono_iters = 3, mono_instances = NONE,
        minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
@@ -5274,13 +5306,13 @@ fun test_hypothesis_premises () =
        debug_dir = NONE,
        verbose = false}
     fun slice type_enc lam_trans : hhProver.slice =
-      {prover = "e", format = "fof", type_enc = type_enc,
+      {prover = Eprover, format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",
        extra_opts = [], slice_size = 1}
     val slices = [slice "" "", slice "mono_guards" "lifting"]
     fun export ranking =
       (hhSchedule.export_problems root options goal [("none", ranking)]
-         (map (fn s => (prover "e", s)) slices);
+         (map (fn s => (prover Eprover, s)) slices);
        map (String.concat o read_lines o hhSchedule.problem_path root)
          slices)
     val with_fixture = export [truth, fixture]

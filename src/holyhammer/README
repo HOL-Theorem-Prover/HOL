@@ -85,10 +85,12 @@ Unsupported prover/format combinations are rejected.  `mono_iters` controls
 monomorphization rounds, while `mono_instances` caps new instances; empty,
 the default, uses each prover's own cap.
 
-The scheduled prover names are `e`, `vampire`, and `zipperposition`.  The
-`z3` registry entry remains callable through `hhProver`, but has no scheduler
-slices.  The temporary Phase 0 `e-legacy` and `vampire-legacy` registry
-entries have been removed.
+The provers are the constructors of `holyHammer.prover`: `Eprover`,
+`Vampire`, `Zipperposition`, and `Z3`.  The `provers` option names them `e`,
+`vampire`, `zipperposition`, and `z3`, and `hh_pb` takes a list of them.  Z3
+has no scheduler slices yet, so selecting it schedules nothing: a Z3 slice
+is added only once an `hhEval` measurement shows that it raises the
+portfolio's success rate rather than duplicating existing slices.
 
 Installing provers
 ------------------

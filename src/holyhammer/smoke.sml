@@ -16,8 +16,11 @@ fun status_name (hhEval.Szs szs) = hhProver.szs_name szs
   | status_name hhEval.BrokenDeps = "BrokenDeps"
   | status_name hhEval.LoadFailure = "LoadFailure"
 
+fun prover_text NONE = "no prover"
+  | prover_text (SOME prover) = hhConfig.prover_name prover
+
 fun show_result (entry : hhEval.journal_entry) =
-  print (#goal_id entry ^ " [" ^ #prover entry ^ "]: " ^
+  print (#goal_id entry ^ " [" ^ prover_text (#prover entry) ^ "]: " ^
     status_name (#szs entry) ^
     (case #recon_ok entry of
          SOME true => ", reconstructed\n"

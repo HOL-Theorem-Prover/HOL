@@ -9,8 +9,8 @@ sig
     | Mesh of int
     | PerSlice
   datatype engine =
-      Prover of string
-    | Sched of {provers : string list, slices : int,
+      Prover of hhProver.prover
+    | Sched of {provers : hhProver.prover list, slices : int,
                 cores : int, max_proofs : int}
 
   type condition =
@@ -27,10 +27,14 @@ sig
     {slice : hhProver.slice, szs : hhProver.szs, time : real,
      cached : bool}
 
+  (* engine and prover are NONE for the entry of a theory that failed to
+     load.  A Sched entry's prover is that of the slice it reports on, and
+     NONE if no slice ran. *)
   type journal_entry =
     {run : string, thy : string, thm : string, goal_id : string,
      cond : string, regime : regime, selector : selector,
-     engine : engine, ho : bool, fresh : bool, prover : string,
+     engine : engine option, ho : bool, fresh : bool,
+     prover : hhProver.prover option,
      prover_version : string option, nfacts : int,
      timeout : int, szs : cell_status, t_prover : real,
      axioms_used : string list option, recon_ok : bool option,
@@ -47,7 +51,7 @@ sig
     {thy : string, theorem_count : int, dep_stamp : string}
 
   type prover_identity =
-    {name : string, path : string option, version : string option,
+    {prover : hhProver.prover, path : string option, version : string option,
      sha256 : string option}
 
   type run_header =
@@ -103,6 +107,14 @@ sig
     {expname : string, ncore : int, thyl : string list,
      conditions : condition list} -> unit
 
-  val smoke_goals : (string * string * string) list
+  (* The kind of condition a smoke goal is run under: one prover alone,
+     the schedule, or one prover with a learned premise selector. *)
+  datatype smoke_kind =
+      SmokeProver of hhProver.prover
+    | SmokeSched
+    | SmokeMepo
+    | SmokeMash
+    | SmokeMesh
+  val smoke_goals : (string * string * smoke_kind) list
   val run_smoke : {expdir : string, timeout : int} -> journal_entry list
 end
