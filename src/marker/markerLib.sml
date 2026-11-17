@@ -1505,44 +1505,52 @@ fun assemble_finalised parent_thy parent_nm parent_th =
       aux parent_th susp_hyps
     end
 
+(* Assemble the suspended theorem nm from its resumption proofs and pass
+   it, with where it was found, to save; once save returns, drop nm and
+   its resumption proofs from the suspension stores. *)
+fun prim_finalise fname nm save =
+    case find_parent nm of
+        NONE => raise ERR fname ("No such suspended theorem: " ^ nm)
+      | SOME (src, parent_thy, parent_th) =>
+        let
+          val clean_th = assemble_finalised parent_thy nm parent_th
+          val remaining = boolLib.get_suspended_names clean_th
+          val _ = null remaining orelse
+                  raise ERR fname
+                     ("Theorem retains unproved subgoals: " ^
+                      String.concatWith ", " remaining)
+          val saved = save (src, clean_th)
+          (* Drop this name from the suspension store so it's no
+             longer considered pending.  (For FromDB there was no
+             entry to drop anyway; the delta is harmless.) *)
+          val _ = record_suspension_delta
+                    (RemoveSuspended {Thy = parent_thy, Name = nm})
+          (* Also clean up the resumption proofs for this theorem. *)
+          val _ = record_resumption_delta (RemoveResumptions (parent_thy, nm))
+        in
+          saved
+        end
+
 fun finalise_suspended_thm loc nm0 =
     let
       val attrblock = ThmAttribute.extract_attributes nm0
-      val name = #thmname attrblock
+      fun save_attrs th = boolLib.save_thm_attrs loc (attrblock, th)
+      (* Save under the user name.  For FromStore this is the first
+         time the name hits the DB; for FromDB (--fast or re-finalise)
+         it's already there and we need rebind. *)
+      fun save (FromStore, th) = save_attrs th
+        | save (FromDB, th) =
+          HOLFlags.with_bflags [(Theory.allow_rebinds, true)] save_attrs th
     in
-      case find_parent name of
-          NONE => raise ERR "finalise_suspended_thm"
-                    ("No such suspended theorem: " ^ name)
-        | SOME (src, parent_thy, parent_th) =>
-          let
-            val clean_th = assemble_finalised parent_thy name parent_th
-            val remaining = boolLib.get_suspended_names clean_th
-            val _ = null remaining orelse
-                    raise ERR "finalise_suspended_thm"
-                       ("Theorem retains unproved subgoals: " ^
-                        String.concatWith ", " remaining)
-            (* Save under the user name.  For FromStore this is the
-               first time the name hits the DB; for FromDB (--fast or
-               re-finalise) it's already there and we need rebind. *)
-            val saved =
-                case src of
-                    FromStore =>
-                      boolLib.save_thm_attrs loc (attrblock, clean_th)
-                  | FromDB =>
-                      HOLFlags.with_bflags [(Theory.allow_rebinds, true)]
-                        (fn () =>
-                            boolLib.save_thm_attrs loc (attrblock, clean_th)) ()
-            (* Drop this name from the suspension store so it's no
-               longer considered pending.  (For FromDB there was no
-               entry to drop anyway; the delta is harmless.) *)
-            val _ = record_suspension_delta
-                      (RemoveSuspended {Thy = parent_thy, Name = name})
-            (* Also clean up the resumption proofs for this theorem. *)
-            val _ = record_resumption_delta (RemoveResumptions (parent_thy, name))
-          in
-            saved
-          end
+      prim_finalise "finalise_suspended_thm" (#thmname attrblock) save
     end
+
+fun finalise_suspension nm f =
+    prim_finalise "finalise_suspension" nm
+      (fn (FromStore, th) => f th
+        | (FromDB, _) =>
+          raise ERR "finalise_suspension"
+                    ("No suspended theorem named " ^ nm ^ " is pending"))
 
 (* ----------------------------------------------------------------------
     Safety net at export_theory time: no theorem persisted to the

@@ -46,9 +46,24 @@ sig
    val qDefine     : string -> term quotation -> tactic option -> thm
    val located_qDefine : DB.thm_src_location -> string -> term quotation ->
                          tactic option -> Context.t -> thm
-   (* Available in a nontrivial explicit termination proof's context.
-      Completes the definition once from its termination theorem. *)
-   val current_termination_finisher : Context.t -> (thm -> thm) option
+
+   (* Definitions with an explicit termination proof, in stages.
+      prepare_qDefine makes the definition, as qDefine would, and returns
+      its termination goal; the definition is then pending under its
+      name.  complete_definition name th completes it from a proof th of
+      that goal: stores its equations and induction theorem, runs its
+      attributes and registrations, and returns the equations.  If th
+      has suspended goals (markerLib.suspend), the definition is
+      suspended under name instead: Resume its goals, then
+      finalise_definition name completes it.  NONE from prepare_qDefine
+      means the definition needed no termination proof and is complete.
+      A pending definition is part of the context, so a saved heap
+      carries it. *)
+   val prepare_qDefine : string -> term quotation -> goal option
+   val located_prepare_qDefine : DB.thm_src_location -> string ->
+                                 term quotation -> goal option
+   val complete_definition : string -> thm -> thm
+   val located_finalise_definition : DB.thm_src_location -> string -> thm
 
    datatype phase
         = PARSE of term quotation

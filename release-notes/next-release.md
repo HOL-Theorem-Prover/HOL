@@ -154,6 +154,14 @@ New features
     The default artifact layout is unchanged.
     See *Artifact layout* in the Description manual.
 
+-   A `Definition`'s `Termination` proof can `suspend` goals: `Resume`
+    them, then `Finalise` the definition to store its equations and
+    induction theorem.
+    `TotalDefn.prepare_qDefine` returns a definition's termination goal,
+    and `TotalDefn.complete_definition` completes the definition from a
+    proof of it, so the proof can be done elsewhere, such as after
+    saving a heap.
+
 Bugs fixed
 ----------
 

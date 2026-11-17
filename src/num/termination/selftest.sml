@@ -270,117 +270,6 @@ val user_goal : goal = ([], mk_var ("user_goal", Type.bool))
 fun top_is (g : goal) =
     aconv (snd (proofManagerLib.top_goal ())) (snd g) handle _ => false
 val _ = proofManagerLib.drop_all ()
-
-(* Completion is private to the proof context, and is consumed by both
-   native completion and failed direct completion. *)
-fun rejects f = (f (); false) handle HOL_ERR _ => true
-fun assert b = if b then () else die "termination finisher check failed"
-fun consumed finish th =
-  (finish th; false) handle HOL_ERR e =>
-    Feedback.top_function_of e = "termination_finisher" andalso
-    Feedback.message_of e = "Definition already completed or failed"
-val pending : (thm -> thm) option ref = ref NONE
-fun capture g ctxt =
-  (pending := current_termination_finisher ctxt; ALL_TAC g ctxt)
-val _ = assert (not (Option.isSome
-  (current_termination_finisher (Context.snapshot ()))))
-
-val attribute_calls = ref ([] : string list)
-fun finisher_attribute {name,attrname,args,thm} =
-  (assert (Feedback.current_trace "computeLib.auto_import_definitions" = 1);
-   attribute_calls := name :: !attribute_calls)
-val _ = ThmAttribute.register_attribute
-          ("finisher_test", {localf = finisher_attribute,
-                             storedf = finisher_attribute})
-
-val _ = tprint "native completion consumes its context finisher"
-val finisher_loc = DB_dtype.mkloc ("finisher-test", 42, true)
-val native_fac = located_qDefine finisher_loc
-  "native_fac_def[finisher_test,induction=native_fac_steps]"
-  ‘native_fac n = if n < 2 then 1 else n * native_fac (n - 1)’
-  (SOME (capture THEN WF_REL_TAC ‘$<’)) (Context.snapshot ())
-val _ = assert (Option.isSome (!pending))
-val _ = assert (consumed (valOf (!pending)) TRUTH)
-val _ = assert (!attribute_calls = ["native_fac_def"])
-val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="native_fac_def"})))
-                = finisher_loc)
-val _ = assert (Option.isSome (DefnBase.lookup_userdef “native_fac”))
-val _ = assert (Option.isSome (DefnBase.lookup_indn “native_fac”))
-val _ = assert (not (Option.isSome
-  (current_termination_finisher (Context.snapshot ()))))
-val _ = OK ()
-val _ = convtest ("native definition enters EVAL", EVAL,
-                 “native_fac 5”, “120”)
-
-val _ = tprint "tactic flag changes control native support cleanup"
-val support_before = length (thy_consts (current_theory ()))
-val support_count = ref 0
-fun keep_support_tac g =
-  (Feedback.set_trace "Definition.delete support defs" 0;
-   support_count := length (thy_consts (current_theory ()));
-   WF_REL_TAC ‘$<’ g)
-val _ = qDefine "native_keep_support_def"
-  ‘native_keep_support n = if n = 0 then 0n
-     else native_keep_support (native_keep_support (n - 1) MOD n)’
-  (SOME keep_support_tac)
-val _ = assert (!support_count > support_before + 1)
-val _ = assert (length (thy_consts (current_theory ())) = !support_count)
-val _ = assert (Feedback.current_trace "Definition.delete support defs" = 0)
-val _ = Feedback.set_trace "Definition.delete support defs" 1
-val saved_def_suffix = !Defn.def_suffix
-val (_,direct_ind) = tDefine "native_changed_suffix"
-  ‘native_changed_suffix n =
-     if n = 0 then 0n else native_changed_suffix (n - 1) + 1’
-  (capture THEN
-   (fn g => (Defn.def_suffix := "_from_tactic"; WF_REL_TAC ‘$<’ g)))
-val _ = assert (Option.isSome direct_ind)
-val _ = assert (consumed (valOf (!pending)) TRUTH)
-val _ = assert (Option.isSome
-  (DB.lookup {Thy="-",Name="native_changed_suffix_from_tactic"}))
-val _ = assert (!Defn.def_suffix = "_from_tactic")
-val _ = Defn.def_suffix := saved_def_suffix
-val _ = OK ()
-
-val _ = tprint "explicit flags surround tactics and exit before attributes"
-fun check_flags g =
-  (assert (Feedback.current_trace "computeLib.auto_import_definitions" = 0);
-   assert (Feedback.current_trace "Definition.allow_schema_definition" = 1);
-   assert (Feedback.current_trace "Theory.allow_rebinds" = 1);
-   assert (!Defn.def_suffix = "" andalso !Defn.ind_suffix = " flag_steps");
-   WF_REL_TAC ‘$<’ g)
-val _ = qDefine
-  "flag_def[nocompute,schematic,allow_rebind,induction=flag_steps,finisher_test]"
-  ‘flag_fun n = if n = 0 then y else flag_fun (n - 1) * 2’
-  (SOME check_flags)
-val _ = assert (Feedback.current_trace "computeLib.auto_import_definitions" = 1)
-val _ = OK ()
-val _ = convtest ("nocompute stays out of EVAL", EVAL,
-                 “flag_fun y 2”, “flag_fun y 2”)
-
-val _ = tprint "trivial definitions ignore explicit tactics"
-val ignored_calls = ref 0
-fun ignored_tac g = (ignored_calls := !ignored_calls + 1; ALL_TAC g)
-val _ = qDefine "finisher_abbrev_def" ‘finisher_abbrev = 7n’
-                (SOME ignored_tac)
-val _ = qDefine "finisher_prim_def"
-    ‘(finisher_prim 0 = 0n) /\
-     (finisher_prim (SUC n) = SUC (finisher_prim n))’ (SOME ignored_tac)
-val _ = assert (!ignored_calls = 0)
-val _ = OK ()
-
-val _ = tprint "invalid completion consumes finisher before registration"
-fun invalid_completion g ctxt =
-  let val finish = valOf (current_termination_finisher ctxt)
-      val _ = assert (rejects (fn () => ignore (finish TRUTH)))
-      val _ = assert (consumed finish TRUTH)
-  in raise mk_HOL_ERR "selftest" "invalid_completion" "expected failure" end
-val _ = assert (rejects (fn () => ignore
-  (in_repl_mode (qDefine "bad_finisher_def"
-    ‘bad_finisher n = if n = 0 then 0n else bad_finisher (n - 1) + 1’)
-    (SOME invalid_completion))))
-val _ = assert (not (Option.isSome
-  (DB.lookup {Thy="-",Name="bad_finisher_def"})))
-val _ = OK ()
 val _ = proofManagerLib.set_goal user_goal
 
 val _ = tprint "Define's failed termination goal reaches the goalstack"
@@ -394,24 +283,143 @@ val _ = if is_exists (snd (proofManagerLib.top_goal ())) andalso
         then OK () else die "wrong proof state"
 val _ = proofManagerLib.drop_all ()
 
+(* Definitions with an explicit termination proof, in stages *)
+fun rejects f = (f (); false) handle HOL_ERR _ => true
+fun assert b = if b then () else die "staged termination check failed"
+fun auto_import () = HOLFlags.get_bflag computeLib.auto_import_definitions
+fun stored nm = Option.isSome (DB.lookup {Thy = "-", Name = nm})
+fun no_pending nm = rejects (fn () => complete_definition nm TRUTH)
+
+val attribute_calls = ref ([] : string list)
+fun staged_attribute {name,attrname,args,thm} =
+  (assert (auto_import ());
+   attribute_calls := name :: !attribute_calls)
+val _ = ThmAttribute.register_attribute
+          ("staged_test", {localf = staged_attribute,
+                           storedf = staged_attribute})
+
+val _ = tprint "native completion stores, registers and runs attributes"
+val native_loc = DB_dtype.mkloc ("staged-test", 42, true)
+val native_fac = located_qDefine native_loc
+  "native_fac_def[staged_test,induction=native_fac_steps]"
+  ‘native_fac n = if n < 2 then 1 else n * native_fac (n - 1)’
+  (SOME (WF_REL_TAC ‘$<’)) (Context.snapshot ())
+val _ = assert (!attribute_calls = ["native_fac_def"])
+val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="native_fac_def"})))
+                = native_loc)
+val _ = assert (stored "native_fac_steps")
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “native_fac”))
+val _ = assert (Option.isSome (DefnBase.lookup_indn “native_fac”))
+val _ = assert (no_pending "native_fac_def")
+val _ = OK ()
+val _ = convtest ("native definition enters EVAL", EVAL,
+                 “native_fac 5”, “120”)
+
+val _ = tprint "flags surround the termination proof, not the attributes"
+fun check_flags g =
+  (assert (not (auto_import ()));
+   assert (HOLFlags.get_bflag allow_schema_definition);
+   assert (HOLFlags.get_bflag Theory.allow_rebinds);
+   assert (!Defn.def_suffix = "" andalso !Defn.ind_suffix = " flag_steps");
+   WF_REL_TAC ‘$<’ g)
+val _ = qDefine
+  "flag_def[nocompute,schematic,allow_rebind,induction=flag_steps,staged_test]"
+  ‘flag_fun n = if n = 0 then y else flag_fun (n - 1) * 2’
+  (SOME check_flags)
+val _ = assert (auto_import () andalso stored "flag_steps")
+val _ = assert (hd (!attribute_calls) = "flag_def")
+val _ = OK ()
+val _ = convtest ("nocompute stays out of EVAL", EVAL,
+                 “flag_fun y 2”, “flag_fun y 2”)
+
+val _ = tprint "trivial definitions ignore explicit tactics"
+val ignored_calls = ref 0
+fun ignored_tac g = (ignored_calls := !ignored_calls + 1; ALL_TAC g)
+val _ = qDefine "staged_abbrev_def" ‘staged_abbrev = 7n’ (SOME ignored_tac)
+val _ = qDefine "staged_prim_def"
+    ‘(staged_prim 0 = 0n) /\
+     (staged_prim (SUC n) = SUC (staged_prim n))’ (SOME ignored_tac)
+val _ = assert (!ignored_calls = 0)
+val _ = assert (not (Option.isSome
+  (prepare_qDefine "staged_abbrev2_def" ‘staged_abbrev2 = 8n’)))
+val _ = assert (stored "staged_abbrev2_def")
+val _ = OK ()
+
+val _ = tprint "a failed termination proof leaves nothing pending"
+val _ = assert (rejects (fn () => ignore
+  (in_repl_mode (qDefine "bad_staged_def"
+    ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’)
+    (SOME ALL_TAC))))
+val _ = assert (no_pending "bad_staged_def" andalso
+                not (stored "bad_staged_def"))
+val _ = OK ()
+
+val _ = tprint "prepare_qDefine keeps support constants until completion"
+val consts_before = length (thy_consts (current_theory ()))
+val nested_goal = valOf (prepare_qDefine
+  "nested_def[staged_test,induction=nested_steps]"
+  ‘nested n = if n = 0 then 0n else nested (nested (n - 1) MOD n)’)
+val consts_pending = length (thy_consts (current_theory ()))
+val _ = assert (consts_pending > consts_before + 1)
+val _ = assert (not (stored "nested_def") andalso not (stored "nested_steps"))
+val _ = assert (rejects (fn () => complete_definition "nested_def" TRUTH))
+val _ = assert (rejects (fn () =>
+  located_finalise_definition DB.Unknown "nested_def"))
+val nested_def =
+    complete_definition "nested_def" (TAC_PROOF (nested_goal, WF_REL_TAC ‘$<’))
+val _ = assert (length (thy_consts (current_theory ())) < consts_pending)
+val _ = assert (null (hyp nested_def) andalso stored "nested_steps")
+val _ = assert (hd (!attribute_calls) = "nested_def")
+val _ = assert (Option.isSome (DefnBase.lookup_indn “nested”))
+val _ = assert (no_pending "nested_def")
+val _ = assert (rejects (fn () => complete_definition "nowhere_def" TRUTH))
+val _ = OK ()
+
+val _ = tprint "a suspended termination proof completes at finalisation"
+val suspend_loc = DB_dtype.mkloc ("staged-test", 77, true)
+val suspended_eqns = located_qDefine suspend_loc
+  "susp_def[staged_test,induction=susp_steps]"
+  ‘susp n = if n = 0 then 0n else susp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
+  (Context.snapshot ())
+val _ = assert (not (null (hyp suspended_eqns)))
+val _ = assert (not (stored "susp_def") andalso not (stored "susp_steps"))
+val _ = assert (hd (!attribute_calls) <> "susp_def")
+val _ = assert (Option.isSome (markerLib.lookup_suspension "susp_def"))
+val _ = assert (rejects (fn () => complete_definition "susp_def" TRUTH))
+val susp_helper = store_thm ("susp_helper", “!n. n <> 0 ==> n - 1 < n”,
+                             DECIDE_TAC)
+val _ = markerLib.resume {suspension_name = "susp_def", label_name = "tc"}
+          (markerLib.RESUME_TAC THEN CONJ_TAC THENL
+             [WF_TAC, REPEAT STRIP_TAC THEN MATCH_MP_TAC susp_helper THEN
+                      FIRST_ASSUM ACCEPT_TAC])
+          (Context.snapshot ())
+val _ = assert (rejects (fn () =>
+  located_finalise_definition DB.Unknown "susp_def[simp]"))
+val susp_def = located_finalise_definition suspend_loc "susp_def"
+val _ = assert (null (hyp susp_def) andalso
+                aconv (concl susp_def) (concl suspended_eqns))
+val _ = assert (null (hyp (DB.fetch "-" "susp_steps")))
+val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="susp_def"})))
+                = suspend_loc)
+val _ = assert (hd (!attribute_calls) = "susp_def")
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “susp”))
+val _ = assert (Option.isSome (DefnBase.lookup_indn “susp”))
+val _ = assert (not (Option.isSome (markerLib.lookup_suspension "susp_def")))
+val _ = assert (no_pending "susp_def")
+val _ = OK ()
+val _ = convtest ("finalised definition enters EVAL", EVAL,
+                 “susp 3”, “3”)
+
 val _ = if Systeml.ML_SYSNAME <> "poly" then () else let
   val hol = OS.Path.concat (Systeml.HOLDIR, "bin/hol")
-  val heap = "staged-checkpoint.save"
-  val markers = "staged-checkpoint.markers"
+  val heap = "staged-termination.save"
   fun remove f = OS.FileSys.remove f handle OS.SysErr _ => ()
   fun run args = OS.Process.isSuccess (Systeml.systeml (hol :: args))
   val _ = remove heap
-  val _ = remove markers
-  val _ = tprint "termination finisher saves a prefix in an isolated process"
+  val _ = tprint "a heap saved mid-proof completes the definition once"
   val _ = assert (run ["run", "--holstate=numheap", "tests/staged-save.sml"])
-  val _ = assert (OS.FileSys.access (heap, []))
-  val _ = OK ()
-  val _ = tprint "a fresh process restores and completes without preparation"
-  val _ = assert (run ["run", "--holstate=" ^ heap, "tests/staged-restore.sml"])
-  val input = TextIO.openIn markers
-  val contents = TextIO.inputAll input
-  val _ = TextIO.closeIn input
-  val _ = assert (contents = "prepared\nprefix\nfinished\n")
+  val _ = assert (run ["run", "--holstate=" ^ heap,
+                       "tests/staged-restore.sml"])
   val _ = remove heap
-  val _ = remove markers
 in OK () end

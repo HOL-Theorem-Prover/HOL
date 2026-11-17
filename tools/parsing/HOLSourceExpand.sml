@@ -246,6 +246,12 @@ val srwShimOK = ref false
    Theory declaration, as srwShimOK is. *)
 val caseEqShimOK = ref false
 
+(* The definitions in this file with a Termination proof, each with the
+   name its induction theorem is bound to.  Finalise of one completes the
+   definition, if its proof was suspended, and binds both theorems.
+   Reset by the Theory declaration. *)
+val terminationInds = ref ([] : (string * (int * string)) list)
+
 (* wrapTac, plus a rebinding of srw_ss to the simpset carried by the
    context the tactic is run against:
 
@@ -707,6 +713,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     else process elems (lhs, acc)
     val _ = srwShimOK := (not (!bare) orelse !libBasicProvers)
     val _ = caseEqShimOK := (#2 id <> "bool")
+    val _ = terminationInds := []
     (* The `open`s above still stand when the name is missing: they are
        what the editor's completion and hovers read, and they already ran
        ahead of `new_theory` before this guard existed.  What is dropped
@@ -761,6 +768,9 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       else if String.isSuffix "_DEF" name then
         String.extract (name, 0, SOME (size name - 4)) ^ "_IND"
       else name ^ "_ind")
+    val _ = if Option.isSome termination then
+              terminationInds := (name, indThm) :: !terminationInds
+            else ()
     val fileline = fileline (#1 id)
     val e = mkLocString' (definition_, "TotalDefn.located_qDefine")
                          fileline
@@ -974,9 +984,16 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     in DecExpansion {orig = dec, result = [valPat resume_ subname e]} end
   | expandDec _ (dec as HOLFinalise {finalise_, id, attrs, ...}) = let
     val fileline = fileline (#1 id)
-    val e = mkLocString' (finalise_, "markerLib.finalise_suspended_thm") fileline
+    val indThm = Option.map (fn (_, (_, ind)) => (#1 id, ind))
+                   (List.find (fn (n, _) => n = #2 id) (!terminationInds))
+    val f = case indThm of
+        NONE => "markerLib.finalise_suspended_thm"
+      | SOME _ => "TotalDefn.located_finalise_definition"
+    val e = mkLocString' (finalise_, f) fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
-    in DecExpansion {orig = dec, result = [valPat finalise_ (mkIdent id) e]} end
+    val dec' = [valPat finalise_ (mkIdent id) e]
+    val dec' = case indThm of NONE => dec' | SOME ind => magicBind ind dec'
+    in DecExpansion {orig = dec, result = rev dec'} end
 
   | expandDec _ (dec as DecBad {start, ...}) =
     DecExpansion {orig = dec, result = [valWild start (mkFail (start, "malformed"))]}
