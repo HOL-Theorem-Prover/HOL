@@ -27,8 +27,7 @@ type distance = mlibSupport.distance;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibResolution";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+fun chatting l = tracing l;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -77,10 +76,10 @@ val thm_to_formula = list_mk_disj o mlibThm.clause;
 val clause_id = #id o mlibClause.dest_clause;
 
 fun clause_to_string cl =
-  PP.pp_to_string (!LINE_LENGTH) mlibClause.pp_clause cl;
+  PP.pp_to_string LINE_LENGTH mlibClause.pp_clause cl;
 
 fun clauses_to_string cls =
-  PP.pp_to_string (!LINE_LENGTH) (pp_list mlibClause.pp_clause) cls;
+  PP.pp_to_string LINE_LENGTH (pp_list mlibClause.pp_clause) cls;
 
 (* ------------------------------------------------------------------------- *)
 (* mlibResolution                                                                *)

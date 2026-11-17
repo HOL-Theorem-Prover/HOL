@@ -304,12 +304,12 @@ fun pp_thing ops (mlibTerm tm)    = pp_term'    ops tm
 
 fun pp_bracketed_thing ops th = pp_bracket "(" ")" (pp_thing ops) th
 
-(* Pretty-printing using !infixes and !LINE_LENGTH *)
+(* Pretty-printing using !infixes and LINE_LENGTH *)
 
 fun pp_term           tm = pp_term'           (!infixes)                tm;
 fun pp_formula        fm = pp_formula'        (!infixes)                fm;
-fun term_to_string    tm = term_to_string'    (!infixes) (!LINE_LENGTH) tm;
-fun formula_to_string fm = formula_to_string' (!infixes) (!LINE_LENGTH) fm;
+fun term_to_string    tm = term_to_string'    (!infixes) LINE_LENGTH tm;
+fun formula_to_string fm = formula_to_string' (!infixes) LINE_LENGTH fm;
 
 (* ------------------------------------------------------------------------- *)
 (* Parsing.                                                                  *)

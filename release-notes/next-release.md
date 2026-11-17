@@ -399,6 +399,10 @@ Incompatibilities
     The `"Unicode"` trace is gone.
     It was registered as the *inverse* of `"PP.avoid_unicode"`, and the new machinery has no inverting alias, so uses of it should be written in terms of `Parse.avoid_unicode` with the sense flipped: `set_trace "Unicode" 0` becomes `HOLFlags.set_bflag (Parse.avoid_unicode, true)`.
 
+-   `mlibUseful`, the utility module under metis, no longer holds any references.
+    Metis tracing is governed by the `"metis.trace"` flag alone (`metisTools.metis_trace`, also `mlibUseful.trace_flag`), so `mlibUseful.trace_level` is gone, as are `add_trace` and `set_traces`: each metis module now aligns its own levels, and `tracing` takes the aligned level.
+    `mlibUseful.LINE_LENGTH` is now a constant `int`, and the unused `mlibUseful.with_flag` has been removed.
+
 -   The printing and parsing flags that used to be references in `Globals` — `show_types`, `show_assums`, `show_tags`, `show_axioms`, `show_numeral_types`, `show_scrub`, `guessing_tyvars`, `guessing_overloads` and `notify_on_tyvar_guess` — are no longer references, so `:=`, `!` and `Lib.with_flag` do not apply to them.
     They are values of type `HOLFlags.bflag`, set with `HOLFlags.set_bflag` and bracketed with `HOLFlags.with_bflags`.
     `Parse` exports the common ones; `show_tags` and `show_axioms` come from `HOLFlags` itself.

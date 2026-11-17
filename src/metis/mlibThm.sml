@@ -24,8 +24,7 @@ val pp_subst      = mlibSubst.pp_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibThm";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+fun chatting _ = tracing trace_max;  (* silent below the maximum *)
 fun chat s = (trace s; true)
 
 fun chattrans n s a b pp =
@@ -182,11 +181,11 @@ fun thm_to_string'       len = PP.pp_to_string len pp_thm;
 fun inference_to_string' len = PP.pp_to_string len pp_inference';
 fun proof_to_string'     len = PP.pp_to_string len pp_proof;
 
-(* Pretty-printing using !LINE_LENGTH *)
+(* Pretty-printing using LINE_LENGTH *)
 
-fun thm_to_string       th  = thm_to_string'       (!LINE_LENGTH) th;
-fun inference_to_string inf = inference_to_string' (!LINE_LENGTH) inf;
-fun proof_to_string     p   = proof_to_string'     (!LINE_LENGTH) p;
+fun thm_to_string       th  = thm_to_string'       LINE_LENGTH th;
+fun inference_to_string inf = inference_to_string' LINE_LENGTH inf;
+fun proof_to_string     p   = proof_to_string'     LINE_LENGTH p;
 
 (* ------------------------------------------------------------------------- *)
 (* Theorem operations.                                                       *)

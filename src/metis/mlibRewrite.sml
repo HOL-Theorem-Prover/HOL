@@ -36,8 +36,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibRewrite";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+fun chatting _ = tracing trace_max;  (* silent below the maximum *)
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -118,7 +117,7 @@ in
   fun pp_rewrs pp = (if chatting 3 then complicated else simple) pp;
 end;
 
-fun rewrs_to_string rw = PP.pp_to_string (!LINE_LENGTH) pp_rewrs rw;
+fun rewrs_to_string rw = PP.pp_to_string LINE_LENGTH pp_rewrs rw;
 
 fun chatrewrs s rw =
   chat (module ^ "." ^ s ^ ":\n" ^ rewrs_to_string rw ^ "\n");
