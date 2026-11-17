@@ -151,10 +151,21 @@ local
 open TextIO
 in
 fun warn s = (output(stdErr, s ^ "\n"); flushOut stdErr)
+(* true when stdout and stderr are separate files, such as the two pipes
+   a parallel Holmake reads a job's output from *)
+fun separate_outputs () =
+  let
+    open Posix.FileSys
+    val out = fstat stdout and err = fstat stderr
+  in
+    ST.dev out <> ST.dev err orelse ST.ino out <> ST.ino err
+  end handle OS.SysErr _ => true
 fun die (s:string) : 'a =
   (flushOut stdOut;
-   (* try to give stdout a chance to clear so that dying message is last *)
-   OS.Process.sleep (Time.fromMilliseconds 300);
+   (* try to give stdout a chance to clear so that dying message is last;
+      if both go to the same file, the flush has already done that *)
+   if separate_outputs () then OS.Process.sleep (Time.fromMilliseconds 300)
+   else ();
    warn s; OS.Process.exit OS.Process.failure)
 end
 
