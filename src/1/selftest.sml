@@ -1771,3 +1771,16 @@ in
   require (check_result (Lib.subst_eq aconv aconv [a |-> c]))
           (Lib.subst_keep_last aconv) [a |-> b, a |-> c]
 end
+
+val _ = let
+  val x = mk_var("x", Type.alpha)
+  val a = mk_var("a", Type.alpha)
+  val b = mk_var("b", Type.alpha)
+  val c = mk_var("c", Type.alpha)
+  val th1 = ASSUME (mk_eq(a, b))
+  val th2 = ASSUME (mk_eq(a, c))
+in
+  tprint "SUBST_CONV: repeated template variable, later theorem wins";
+  require (check_result (aconv (mk_eq(a, c)) o concl))
+          (Drule.SUBST_CONV [x |-> th1, x |-> th2] x) a
+end
