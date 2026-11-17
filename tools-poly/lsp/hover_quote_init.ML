@@ -71,12 +71,15 @@ local
        `MEM x l' is `x IN set l'.  There is no constant to name, so the
        name comes from the source and the type from the body. *)
     | HLPattern of {Ptm: Preterm.preterm, Locn: locn.locn}
+    (* A numeral, which is one token but a whole tree of constants. *)
+    | HLNumeral of {Ptm: Preterm.preterm, Locn: locn.locn}
 
   fun leaf_locn (HLConst {Locn, ...}) = Locn
     | leaf_locn (HLBound {Locn, ...}) = Locn
     | leaf_locn (HLFree  {Locn, ...}) = Locn
     | leaf_locn (HLOverload {Locn, ...}) = Locn
     | leaf_locn (HLPattern {Locn, ...}) = Locn
+    | leaf_locn (HLNumeral {Locn, ...}) = Locn
 
   (* Byte-length of a Locn's file range (LocA start ↔ LocA end).
      Non-LocA Locns are treated as huge so they're never preferred. *)
@@ -116,6 +119,15 @@ local
       | Const {Name, Thy, Ty, Locn} =>
           if cov Locn
           then SOME (HLConst {Name = Name, Thy = Thy, Ty = Ty, Locn = Locn})
+          else NONE
+      (* A numeral is one token but a tree: `3' is `NUMERAL (BIT1 (BIT1
+         ZERO))', and every node of it carries that one token's Locn.
+         The innermost leaf wins the size comparison above, so hovering
+         `3' answered `ZERO'.  None of those constants was written; the
+         numeral was, so report it and do not descend. *)
+      | Comb {Rator = Const {Name = "NUMERAL", Thy = "arithmetic", ...},
+              Locn = numLocn, ...} =>
+          if cov numLocn then SOME (HLNumeral {Ptm = pt, Locn = numLocn})
           else NONE
       | Comb {Rator, Rand, Locn = combLocn} => let
           (* Descend into both children first.  If neither leaf covers
@@ -286,6 +298,11 @@ local
                   | SOME tm =>
                     "Overloads `" ^ expansion_string tm ^ "`"
             in ("overloaded ", nameOf Locn, tystr, tail) end
+        | HLNumeral {Ptm, Locn} => let
+            val tystr = case Preterm.ptype_of Ptm env of
+                Some (_, ty) => render_type env ty
+              | Error _ => "?"
+            in ("numeral ", nameOf Locn, tystr, "") end
     in
       (* Parse.type_to_string already prefixes ``:`` (HOL type-
          annotation convention), so we don't add another one. *)

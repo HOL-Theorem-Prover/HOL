@@ -10256,11 +10256,11 @@ def test_hover_first_line_says_what_the_leaf_is():
         _init(c, "/tmp")
         uri = "file:///tmp/hover_firstline.sml"
         #   byte columns of line 4: 2='!' 3='n' 10..12='SUC' 14='n'
-        #                           18='n' 20='+' 22='m'
+        #                           18='n' 20='+' 22='m' 26='3'
         src = ("Theory hover_firstline\n"
                "Ancestors arithmetic\n\n"
                "Theorem t:\n"
-               "  !n:num. SUC n = n + m\n"
+               "  !n:num. SUC n = n + m + 3\n"
                "Proof\n"
                "  cheat\n"
                "QED\n")
@@ -10292,6 +10292,12 @@ def test_hover_first_line_says_what_the_leaf_is():
         assert_true(line.startswith("free variable "),
                     f"a free variable says so first ({line!r})")
         assert_true("m :num" in line, f"with name and type ({line!r})")
+
+        # A numeral is one token but a tree of constants, each node
+        # carrying that token's Locn; the innermost used to win.
+        line = first_line(983, 26)
+        assert_true(line == "numeral 3 :num",
+                    f"a numeral hovers as itself ({line!r})")
     finally:
         c.close()
 
