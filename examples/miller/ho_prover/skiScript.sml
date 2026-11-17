@@ -20,7 +20,7 @@ val () = app load
    "gcdTheory",
    "prob_extraTools",
    "hoTools"];
-val () = show_assums := true;
+val () = HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ## |->;

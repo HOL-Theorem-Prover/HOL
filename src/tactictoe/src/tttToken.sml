@@ -191,15 +191,14 @@ fun pred_ssubterm (asl,w) stm =
       (valOf (String.fromString (aiLib.unquote_string stm)))]
       handle Interrupt => raise Interrupt | _ =>
         debug_err "error: pred_ssubterm" stm
-    val mem = !show_types
     val tmll = map (find_terms (fn _ => true)) (w :: asl)
     val tml1 = mk_term_set (List.concat tmll)
     val tmfea = map_assoc (fn x => ~ (length tml1) :: fea_of_term true x) tml1
     val symweight = learn_tfidf tmfea
     val tml2 = termknn (symweight,tmfea) 1 (fea_of_term true tm)
-    val r = (show_types := true; term_to_string (hd tml2))
   in
-    show_types := mem; r
+    HOLFlags.with_bflags [(Parse.show_types, true)]
+                         term_to_string (hd tml2)
   end
   handle Interrupt => raise Interrupt | _ =>
     debug_err "error: pred_ssubterm" "unexpected"

@@ -28,7 +28,7 @@ local
 
     val state = ``(paddr:bool,pwrite:bool,psel:bool,psel_3:bool,psel_2:bool,psel_1:bool,psel_0:bool,penable:bool,pdata:bool,mdata:bool,maddr:bool,sdata_0:bool,saddr_0:bool,sdata_1:bool,saddr_1:bool)``
     val T1rp = [(".",rhs (concl(Drule.SPEC_ALL R1rp)))]
-    val bvmp = List.map (with_flag (show_types,false) term_to_string) ((pairSyntax.strip_pair state)@(pairSyntax.strip_pair (mk_primed_state state)))
+    val bvmp = List.map (HOLFlags.with_bflags [(Parse.show_types, false)] term_to_string) ((pairSyntax.strip_pair state)@(pairSyntax.strip_pair (mk_primed_state state)))
 
     (* initial states *)
     infixr 5 C_AND infixr 5 C_OR infixr 2 C_IMP infix C_IFF

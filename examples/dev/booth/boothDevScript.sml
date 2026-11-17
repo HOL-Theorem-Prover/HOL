@@ -55,10 +55,10 @@ val _ = type_abbrev("word",``:word32``);
 (*---------------------------------------------------------------------------*)
 (* Converts the value of HB_def into a string                                *)
 (*---------------------------------------------------------------------------*)
-fun HB() = let fun tm2str tm = let val saved_val = !show_types
-                                   val _ = (show_types := false)
+fun HB() = let fun tm2str tm = let val saved_val = HOLFlags.get_bflag Parse.show_types
+                                   val _ = (HOLFlags.set_bflag (Parse.show_types, false))
                                    val s = Parse.term_to_string tm
-                                   val _ = (show_types := saved_val)
+                                   val _ = (HOLFlags.set_bflag (Parse.show_types, saved_val))
                                in s
                                end
            in tm2str ((snd o dest_eq o snd o dest_thm) HB_def)

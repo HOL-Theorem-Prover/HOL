@@ -89,7 +89,7 @@ def main(cmd, args=[],
     repl.sendline(' '.join([
       'PolyML.Compiler.prompt1:= "{}";'.format(prompt_string.replace('"', '\\"')),
       'PolyML.Compiler.prompt2:= "";', # Prevent extraneous prompt strings to appear in multiline mode
-      f'set_trace "Unicode" {int(unicode)};',
+      f'HOLFlags.set_bflag (Parse.avoid_unicode, {str(not unicode).lower()});',
       f'Parse.current_backend:= {backend};']))
     if repl.expect_exact([prompt_string, pexpect.EOF])!=0:
       print(repl.before)

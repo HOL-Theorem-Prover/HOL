@@ -4,7 +4,7 @@ Ancestors
 Libs
   binderLib boolSimps reductionEval
 
-val _ = set_trace "Unicode" 1
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, false)
 
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
 val _ = clear_overloads_on "FV"

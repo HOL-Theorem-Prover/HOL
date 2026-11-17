@@ -532,66 +532,99 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
         SOME (_, maximum) => maximum
       | NONE => ~1
 
-  (* The product of the argument cardinalities, saturating at [maximum];
-     [default] stands in for an argument type without a bounded card. *)
-  fun domain_card_with default maximum card_assigns constructor =
+  (* Accept prepared argument types and a shared
+     cardinality query during repair. The product saturates at [maximum]. *)
+  fun domain_card_for_types card_of_type maximum argument_types =
     List.foldl (fn (argument_ty, total) =>
       let
-        val card = MFH.bounded_card_of_type maximum default
-          card_assigns argument_ty
+        val card = card_of_type argument_ty
       in
         if total = 0 orelse card = 0 then 0
         else if total >= maximum orelse card >= maximum orelse
                 total > maximum div card then maximum
         else total * card
-      end) 1 (MFH.constructor_arg_types constructor)
+      end) 1 argument_types
 
-  fun constructor_domain_card maximum = domain_card_with ~1 maximum
+  fun domain_card_with default maximum card_assigns constructor =
+    domain_card_for_types
+      (MFH.bounded_card_of_type maximum default card_assigns) maximum
+      (MFH.constructor_arg_types constructor)
 
   fun domain_card maximum = domain_card_with maximum maximum
 
-  fun is_surely_inconsistent_card_assign context binarize
-        (card_assigns, max_assigns) (ty, card) =
-    case MFH.binarized_and_boxed_data_type_constrs context binarize ty of
-        [] => false
-      | constructors =>
-          let
-            fun effective_max domain_card constructor =
-              let val maximum = constr_max max_assigns constructor
-              in
-                if maximum = ~1 then domain_card
-                else Int.min (domain_card, maximum)
-              end
-            val maximum = List.foldl (fn (constructor, total) =>
-              total + effective_max
-                (constructor_domain_card card card_assigns constructor)
-                constructor) 0 constructors
-          in
-            maximum < card
-          end
-
-  fun is_surely_inconsistent_scope_description context binarize seen rest
-        max_assigns =
-    List.exists
-      (is_surely_inconsistent_card_assign context binarize
-        (seen @ rest, max_assigns)) seen
-
+  (* Constructor metadata and explicit maxima
+     are invariant while repair lowers cardinalities. Prepare them
+     on first use so rejected prefixes do not inspect later types. *)
   fun repair_card_assigns context binarize (card_assigns, max_assigns) =
     let
-      fun repair seen [] = SOME seen
-        | repair _ ((_, 0) :: _) = NONE
-        | repair seen ((ty, card) :: rest) =
-          ((if is_surely_inconsistent_scope_description context binarize
-                 ((ty, card) :: seen) rest max_assigns then
-              raise Util.SAME ()
-            else
-              case repair ((ty, card) :: seen) rest of
-                  result as SOME _ => result
-                | NONE => raise Util.SAME ())
-           handle Util.SAME () =>
-             repair seen ((ty, card - 1) :: rest))
+      val constrs = ref (Redblackmap.mkDict Type.compare)
+      fun constructors ty =
+        case Redblackmap.peek (!constrs, ty) of
+            SOME entries => entries
+          | NONE =>
+              let
+                val entries = map (fn constructor =>
+                  (MFH.constructor_arg_types constructor,
+                   constr_max max_assigns constructor))
+                  (MFH.binarized_and_boxed_data_type_constrs
+                    context binarize ty)
+                val _ = constrs := Redblackmap.insert (!constrs, ty, entries)
+              in entries end
+      fun inconsistent assigns =
+        let
+          (* The assignments stay fixed for this entire consistency scan.
+             Different constructors often repeat the same field types. *)
+          val cards = ref (Redblackmap.mkDict
+            (pair_compare (Type.compare, Int.compare)))
+          fun bounded maximum ty =
+            case Redblackmap.peek (!cards, (ty, maximum)) of
+                SOME card => card
+              | NONE =>
+                  let
+                    val card = MFH.bounded_card_of_type maximum ~1 assigns ty
+                    val _ = cards := Redblackmap.insert
+                      (!cards, (ty, maximum), card)
+                  in card end
+          fun check (ty, card) =
+            case constructors ty of
+                [] => false
+              | entries =>
+                  let
+                    fun add ((argument_types, maximum), total) =
+                      let
+                        val domain = domain_card_for_types
+                          (bounded card) card argument_types
+                      in
+                        total + (if maximum = ~1 then domain
+                                 else Int.min (domain, maximum))
+                      end
+                  in List.foldl add 0 entries < card end
+        in check end
+      (* At fixed own card, the constructor bound is monotone in the other
+         positive cards. A failing card therefore occurs in no consistent
+         subassignment. Lower it and stabilize the visited prefix before
+         inspecting new types; suffix backtracking cannot find a larger
+         solution. Step by one: bounded function cards depend on the cap. *)
+      val initial = rev card_assigns
+      fun lower seen (ty, card) rest =
+        if card <= 1 then NONE
+        else
+          let
+            val card' = card - 1
+            val assigns = List.revAppend (seen, (ty, card') :: rest)
+            val check = inconsistent assigns
+          in
+            if check (ty, card') then lower seen (ty, card') rest
+            else if null seen then sweep check [(ty, card')] rest
+            else sweep check [] assigns
+          end
+      and sweep _ seen [] = SOME seen
+        | sweep check seen ((ty, card) :: rest) =
+            if card <= 0 then NONE
+            else if check (ty, card) then lower seen (ty, card) rest
+            else sweep check ((ty, card) :: seen) rest
     in
-      repair [] (rev card_assigns)
+      sweep (inconsistent initial) [] initial
     end
 
   fun add_row_to_scope_descriptor (kind, candidates)
@@ -743,7 +776,7 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
              | Refute_ModelFinder_Util.TOO_LARGE _ => false
 
   fun data_type_spec_from_scope_descriptor context binarize deep_data_types
-        finitizable_data_types (desc as (card_assigns, _)) (ty, card) =
+        exact_card (desc as (card_assigns, _)) (ty, card) =
     let
       val deep = Util.member_type ty deep_data_types
       val co = MFH.is_codatatype ty
@@ -754,8 +787,7 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
       val num_self_recs = length (List.filter I self_recs)
       val num_non_self_recs = length self_recs - num_self_recs
       val self_rec = num_self_recs > 0
-      fun is_complete facto = has_exact_card context facto
-        finitizable_data_types card_assigns ty
+      fun is_complete facto = exact_card facto ty
       fun binder_types argument_ty =
         #1 (boolSyntax.strip_fun argument_ty)
       (* Concreteness asks whether each atom of the encoding denotes one
@@ -770,8 +802,7 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
          and its counterexample is lost. *)
       fun is_concrete facto =
         MFH.is_bitword_type ty orelse
-        List.all (has_exact_card context facto finitizable_data_types
-          card_assigns)
+        List.all (exact_card facto)
           (List.concat (map binder_types
             (List.concat
               (map MFH.constructor_arg_types constructors))))
@@ -796,9 +827,26 @@ structure Refute_ModelFinder_Scope :> Refute_ModelFinder_Scope = struct
   fun scope_from_descriptor context binarize deep_data_types
         finitizable_data_types (desc as (card_assigns, _)) =
     let
+      (* Complete/concrete queries share answers
+         only inside this descriptor, with its fixed assignments. *)
+      val exact_cards = ref (Redblackmap.mkDict
+        (pair_compare (Type.compare, Int.compare)))
+      fun exact_card facto ty =
+        let val key = (ty, Util.int_from_bool facto)
+        in
+          case Redblackmap.peek (!exact_cards, key) of
+              SOME result => result
+            | NONE =>
+                let
+                  val result = has_exact_card context facto
+                    finitizable_data_types card_assigns ty
+                  val _ = exact_cards := Redblackmap.insert
+                    (!exact_cards, key, result)
+                in result end
+        end
       val data_types = map
         (data_type_spec_from_scope_descriptor context binarize deep_data_types
-          finitizable_data_types desc)
+          exact_card desc)
         (List.filter (MFH.is_data_type o #1) card_assigns)
       fun card ty = MFH.assignment_lookup card_assigns ty
       val bits =

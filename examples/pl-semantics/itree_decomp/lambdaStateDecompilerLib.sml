@@ -3,8 +3,8 @@ struct
 
 open HolKernel boolLib bossLib;
 
-fun reduce_guesses f x = (Feedback.trace ("notify type variable guesses", 0)
-                         o Feedback.trace ("guess overloads", 0)) f x
+fun reduce_guesses f x = (HOLFlags.with_bflags [(Parse.notify_on_tyvar_guess, false)]
+                         o HOLFlags.with_bflags [(Preterm.guess_overloads, false)]) f x
 val new_definition =
     reduce_guesses Definition.new_definition
 val save_thm = reduce_guesses save_thm

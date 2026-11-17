@@ -36,7 +36,7 @@ in `boolSimps` embodies all of the usual rewrite theorems one
 would want over boolean formulas:
 
 ```repl
->>__ show_types := false;
+>>__ HOLFlags.set_bflag(Parse.show_types,false);
 >> SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
 ```
 

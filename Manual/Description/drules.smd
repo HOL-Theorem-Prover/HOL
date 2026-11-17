@@ -85,7 +85,7 @@ In the session below, the proof is performed in the HOL system,
 using the ML functions `ASSUME` and `MP`.
 
 ```repl
->> show_assums := true;
+>> HOLFlags.set_bflag(HOLFlags.show_assums, true);
 
 >> val th1 = ASSUME ``t1 ==> t2``
 
@@ -168,7 +168,7 @@ shown below:
 >> Count.inferences UNDISCH th;
 
 >> Count.inferences UNDISCH it;
->>__ show_assums := false;
+>>__ HOLFlags.set_bflag(HOLFlags.show_assums, false);
 ```
 
 Each successful application of `UNDISCH` to a theorem invokes an

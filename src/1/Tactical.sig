@@ -64,7 +64,7 @@ sig
   val REPEAT         : tactic -> tactic
   val rpt            : tactic -> tactic
   val REPEAT_LT      : list_tactic -> list_tactic
-  (* Feedback.trace round a tactic sets the flag only while `tac g'
+  (* HOLFlags.trace round a tactic sets the flag only while `tac g'
      builds its closure: a tactic does its work when that closure is
      applied to the context, by which time the flag has been restored.
      This spans the context application too.  Rules and conversions are

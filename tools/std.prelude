@@ -33,7 +33,7 @@ val _ = Globals.interactive := true;
 val _ = app load
   ["Mosml", "Process", "Path", "boolLib", "proofManagerLib", "Arbrat"];
 
-open HolKernel Parse boolLib proofManagerLib;
+open HolKernel HOLFlags Parse boolLib proofManagerLib;
 
 (* Loading HolKernel installs the "standard" set of infixes, which are
    set up in src/0/Overlay.sml *)
@@ -97,7 +97,7 @@ in
   val _ = installPP (mosmlpp Arbrat.pp_rat)
   val _ = installPP (mosmlpp timepp)
   val _ = installPP (mosmlpp locpp)
-  val _ = installPP (mosmlpp Feedback.pp_trace_elt)
+  val _ = installPP (mosmlpp HOLFlags.pp_trace_elt)
   val _ = installPP (mosmlpp Feedback.pp_hol_error)
 end;
 

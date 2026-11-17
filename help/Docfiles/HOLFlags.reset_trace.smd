@@ -1,0 +1,29 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `reset_trace`
+
+``` hol4
+HOLFlags.reset_trace : string -> unit
+```
+
+------------------------------------------------------------------------
+
+Resets a tracing variable to its default value.
+
+A call to `reset_trace n` resets the tracing variable associated with
+the name `n` to its default value, i.e., the value of the expression
+`!r` when `n` was registered with `register_trace n r`.
+
+### Failure
+
+Fails if the name given is not associated with a registered tracing
+variable, or if a `set` function associated with a "functional" trace
+(see `register_ftrace`) fails.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.reset_traces`](#HOLFlags.reset_traces),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

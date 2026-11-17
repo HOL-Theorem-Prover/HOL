@@ -39,7 +39,7 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
           (ignore (type_name id); appList heap typ args))
     fun tm p = visit p (fn p => case shTerm heap p of
         Const (id,ty) => (ignore (const_name id); typ ty)
-      | Fv (_,ty) => typ ty
+      | Fv (name,ty) => (on_fv name; typ ty)
       | Comb (a,b) => (tm a; tm b)
       | Abs (a,b) => (tm a; tm b)
       | Clos (s,t) => (subs s; tm t)
@@ -168,7 +168,7 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
         | Comb (t1, t2) =>
             Int.max(compute_closedness t1, compute_closedness t2)
         | Abs (_, t2) =>
-            compute_closedness t2 - 1
+            Int.max(~1, compute_closedness t2 - 1)
         | Clos (sub_ptr, body_ptr) =>
             sub_closedness(sub_ptr, compute_closedness body_ptr)
       in Array.update(closedness, key, result); result end
@@ -200,7 +200,7 @@ fun walk {heap, thyname, const_name, type_name, named_thms, anon_thms,
     case shTerm heap tm_ptr of
       Abs (t1, t2) => (walk_term t1; walk_term t2)
     | Comb (t1, t2) => (walk_term t1; walk_term t2)
-    | Const (_, typ) => ty typ
+    | Const (id, typ) => (ignore (const_name id); ty typ)
     | Fv (s, typ) => (on_fv s; ty typ)
     | Bv _ => ()
     | Clos (sbp, tmp) => (walk_subs sbp; walk_term tmp)

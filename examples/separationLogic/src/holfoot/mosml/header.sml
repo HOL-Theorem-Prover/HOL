@@ -10,9 +10,9 @@ open holfootParser;
 open holfoot_pp_print;
 open holfootLib;
 
-val _ = Feedback.set_trace "PPBackEnd use styles" 1;
-val _ = Feedback.set_trace "PPBackEnd show types" 0;
-val _ = Feedback.set_trace "metis" 0
+val _ = HOLFlags.set_bflag (PPBackEnd.use_styles, true);
+val _ = HOLFlags.set_bflag (PPBackEnd.show_types, false);
+val _ = HOLFlags.set_flag (metisTools.metis_trace, 0)
 
 val examplesDir =
     concat [Globals.HOLDIR,

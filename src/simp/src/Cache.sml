@@ -478,6 +478,28 @@ end
 fun RCACHE (spec : {capacity:int, per_key_cap:int}) (dpfvs, check, conv) = let
   open Uref
   val cache = new_cache spec
+  (* The simplifier calls the decider on every candidate subterm under a
+     context, passing the same list each time, and summarising it hashes
+     every theorem in it.  Keep the summaries of the last few lists, found
+     by pointer, so each list is summarised once; the summary is the same
+     value either way. *)
+  val summaries : (thm list * hypinfo) list ref = ref []
+  fun summary ctxt =
+      let
+        fun same (l, _) = Portable.pointer_eq (l, ctxt)
+      in
+        case List.find same (!summaries) of
+            SOME (_, h) => h
+          | NONE =>
+            let
+              val h = all_hyps ctxt
+              val old = !summaries
+              val kept = List.take (old, Int.min (length old, 7))
+            in
+              summaries := (ctxt, h) :: kept;
+              h
+            end
+      end
   fun build_up_ctxt mp th = let
     val c = concl th
   in
@@ -494,7 +516,7 @@ fun RCACHE (spec : {capacity:int, per_key_cap:int}) (dpfvs, check, conv) = let
     val _ = if check t then ()
             else raise mk_HOL_ERR "Cache" "RCACHE" "not applicable"
     val prevs = Option.getOpt (peek cache t, [])
-    val curr = all_hyps ctxt
+    val curr = summary ctxt
     fun oksome (prev, SOME thm) = prev << curr
       | oksome (_, NONE) = false
   in

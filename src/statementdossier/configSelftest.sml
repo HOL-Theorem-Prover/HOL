@@ -49,7 +49,7 @@ val _ = check "TOML identifies theories for the command to load"
   (Lib.set_eq theories ["numposrep", "bool", "arithmetic", "list", "pair"])
 
 val _ = write config_prose
-  "## <=\nThe input `n` is at most `m`.\n\n\
+  "## n\nThe input `n` is at most `m`.\n\n\
   \Pinned by: `arithmetic$LESS_EQ_REFL`.\n"
 val _ = write config_snippets "bTheorem LESS_EQ_IMP_LESS_SUC: ignored"
 val _ = report
@@ -62,6 +62,12 @@ val _ = check "TOML prose and snippet paths reach the report library"
   (contains (read config_report) "The input `n` is at most `m`" andalso
    contains (read config_report) "LESS_EQ_REFL" andalso
    contains (read config_printed) "LESS_EQ_IMP_LESS_SUC")
+val _ = report
+  "theorems = [\"arithmetic$LESS_EQ_IMP_LESS_SUC\"]\n\
+  \[[assumptions]]\ntheorem = \"arithmetic$LESS_EQ_IMP_LESS_SUC\"\n\
+  \prose = \"inputs.md\"\n[outputs]\nmarkdown = \"report.md\"\n"
+val _ = check "TOML accepts an array of assumption tables"
+  (contains (read config_report) "The input `n` is at most `m`")
 
 fun bad_toml label message text =
   check label ((parse text; false) handle Fail s => contains s message)

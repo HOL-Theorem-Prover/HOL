@@ -1185,7 +1185,7 @@ end
     A grammar carries the precedence matrix built from its rules and its
     specials, so the matrix has to be shared exactly as far as those two
     fields are --- and a matrix that is reused rather than built must
-    still be complained about as the "ambiguous grammar warning" trace
+    still be complained about as the "Parse.ambiguous_grammar" trace
     asks, and still count as an unambiguous use when it is one.
    ---------------------------------------------------------------------- *)
 
@@ -1207,7 +1207,7 @@ local
   fun ambiguous tok =
       g0 |> add_rule (infixrule (tok ^ "1") tok 500)
          |> add_rule (infixrule (tok ^ "2") tok 400)
-  fun at_level n = Feedback.set_trace "ambiguous grammar warning" n
+  fun at_level n = HOLFlags.set_trace "Parse.ambiguous_grammar" n
   fun raises g = (ignore (mx g); false) handle Feedback.HOL_ERR _ => true
   (* run f with Globals.interactive set to i, warnings silenced, and the
      trace put back to its default of 1 afterwards *)
@@ -1258,5 +1258,94 @@ val _ =
       if raised then OK() else die "\nno exception raised"
     end
 end (* local *)
+
+(* --------------------------------------------------------------------
+   `typedTerm_in' keeps the quotation's file positions
+   -------------------------------------------------------------------- *)
+
+(* It wraps its argument as `( <q> ):ty', and that `(' is HOL's own.
+   When it went in ahead of the fragment's `(*#loc*)' pragma the lexer
+   had nothing to rebase it against, so an unclosed paren in the body
+   -- which is what leaves this one on the parser's stack at end of
+   input -- was reported "at frag 0 row 0 col 1": a position in a
+   string no reader ever sees, and one an editor cannot turn into a
+   squiggle.  The pragma is now repeated in front of the paren, which
+   puts it at the quotation's first character.
+
+   `(*#loc 12 5*)' is 1-origin, as the quote filter writes it, and
+   comes back as the 0-origin `LocA (11, 4)' every other consumer
+   works in. *)
+local
+  fun innermost e =
+      List.foldl (fn (org, best) =>
+                     case #source_location org of
+                         l as locn.Loc (locn.LocA _, locn.LocA _) => SOME l
+                       | _ => best)
+                 NONE (Feedback.origins_of e)
+  (* The grammar echoes its complaint through `HOL_INFO' as well as
+     raising it; what it raises is what this is about, and a selftest
+     log reads better without the copy. *)
+  fun locOf q =
+      Feedback.quiet_info
+        (fn () =>
+            (ignore (Parse.typedTerm_in (Context.snapshot()) q Type.bool);
+             NONE)
+              handle Feedback.HOL_ERR e => innermost e) ()
+in
+val _ = tprint "typedTerm_in: an unclosed paren gets a file position"
+val _ =
+    case locOf [QUOTE " (*#loc 12 5*)\n  (x\n"] of
+        SOME (locn.Loc (locn.LocA (11, 4), _)) => OK()
+      | SOME l => die ("\nwanted line 12 character 4, got " ^
+                       locn.toString l)
+      | NONE => die "\nno located error raised"
+end
+
+(* A type constraint that cannot be met used to report the term, its
+   type and the constraint, and stop -- the unification error saying
+   which part of the two could not be made to agree was discarded
+   (`++' rather than `++?').  For anything bigger than an atomic type
+   that reason is the whole content of the report. *)
+val _ = tprint "Type constraint failure says why"
+val _ =
+    case (ignore (Parse.Term [QUOTE "(*#loc 1 1*)((x:bool):'a -> 'a)"]); NONE)
+           handle Feedback.HOL_ERR e => SOME (Feedback.message_of e) of
+        NONE => die "\nno error raised"
+      | SOME msg =>
+        if List.all (fn s => String.isSubstring s msg)
+                    ["Type constraint failure", "Reason:", "min$fun"]
+        then OK()
+        else die ("\nBad message:\n  " ^ msg)
+
+(* The argument of an application keeps the blame for a type clash.
+   `Pretype' now records where a type was forced on a unification
+   variable, and that position is used where there is no argument
+   position to use -- but not in preference to one, which would move
+   every report of this shape.  `T' is what does not fit here. *)
+val _ = tprint "An application's argument keeps the blame"
+val _ = let
+  fun innermost e =
+      List.foldl (fn (org, best) =>
+                     case #source_location org of
+                         l as locn.Loc (locn.LocA _, locn.LocA _) => SOME l
+                       | _ => best)
+                 NONE (Feedback.origins_of e)
+  (* `num' does not exist yet where this directory sits in the build.
+     Applying a boolean to an argument is clash enough: text after the
+     pragma starts at line 1, character 0, so the argument `T' that
+     does not fit is at character 2.
+       T T
+       012  *)
+  val q = [QUOTE "(*#loc 1 1*)T T"]
+in
+  case (ignore (Parse.Term q); NONE)
+         handle Feedback.HOL_ERR e => SOME (innermost e) of
+      NONE => die "\nno error raised"
+    | SOME (SOME (locn.Loc (locn.LocA (0, 2), locn.LocA (0, 2)))) => OK()
+    | SOME (SOME l) =>
+        die ("\nwanted line 1 character 2 (the argument `T'), got " ^
+             locn.toString l)
+    | SOME NONE => die "\nerror carried no file position"
+end
 
 val _ = exit_count0 failcount

@@ -5,8 +5,8 @@ Libs
   HolKernel boolLib Parse BasicProvers TotalDefn
   simpLib numSimps numLib metisLib
 
-(* This implementation is heavily inspired by the modular exponentiation
-   implementation in examples/AKS/compute/computeBasicScript.sml. *)
+(* This implementation is heavily inspired by the original modular
+   exponentiation in examples/AKS/compute/computeBasicScript.sml. *)
 
 Definition exp_mod_step_def:
   exp_mod_step b n k acc =
@@ -37,7 +37,7 @@ Proof
     [MOD_2, EXP_ADD, GSYM EXP_EXP_MULT, GSYM EXP_2, MULT_COMM]
 QED
 
-Theorem exp_mod_step_acc_eq[local]:
+Theorem exp_mod_step_eqn:
   exp_mod_step b e m acc = (acc * b ** e) MOD m
 Proof
   Q.ID_SPEC_TAC `acc` >>
@@ -65,5 +65,5 @@ QED
 Theorem exp_mod_binary_eqn:
   !m n a. exp_mod_binary a n m = (a ** n) MOD m
 Proof
-  SIMP_TAC (srw_ss()) [exp_mod_binary_def, exp_mod_step_acc_eq]
+  SIMP_TAC (srw_ss()) [exp_mod_binary_def, exp_mod_step_eqn]
 QED

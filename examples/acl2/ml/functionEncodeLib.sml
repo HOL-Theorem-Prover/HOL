@@ -62,16 +62,14 @@ struct
 
 local
 val traces = ref [];
-fun clear_trace
-    (trace : {default : int, max : int, name : string, trace_level : int}) =
-    (traces := trace::(!traces) ;
-     Feedback.set_trace (#name trace) 0)
-fun reset_trace
-    (trace : {default : int, max : int, name : string, trace_level : int}) =
-    (Feedback.set_trace (#name trace) (#trace_level trace));
+fun clear_trace (elt as HOLFlags.TraceElt {name, ...}) =
+    (traces := elt::(!traces) ;
+     HOLFlags.set_trace (HOLFlags.flag_name name) 0)
+fun reset_trace (HOLFlags.TraceElt {name, trace_level, ...}) =
+    HOLFlags.set_trace (HOLFlags.flag_name name) trace_level;
 in
 fun clear_traces () =
-    (traces := [] ; app clear_trace (Feedback.traces ()));
+    (traces := [] ; app clear_trace (HOLFlags.traces ()));
 fun reset_traces () =
     (app reset_trace (!traces) ; traces := []);
 end;
@@ -81,11 +79,11 @@ quietdec := true;
 clear_traces();
 
 load "encodeLib";
-Feedback.set_trace "polytypicLib.Trace" 0;
+HOLFlags.set_flag (polytypicLib.Trace_flag, 0);
 
 use "functionEncodeLib.sml";
 reset_traces();
-Feedback.set_trace "polytypicLib.Trace" 1;
+HOLFlags.set_flag (polytypicLib.Trace_flag, 1);
 
 *)
 
@@ -103,11 +101,11 @@ open polytypicLib encodeLib Feedback;
 (*     the level registered.                                                 *)
 (*                                                                           *)
 (*****************************************************************************)
-val Trace = ref 0;
+val {get = Trace, flag = Trace_flag, ...} =
+    HOLFlags.create_trace ({group = "functionEncodeLib", name = "Trace"},
+                           {initial = 0, max = 4});
 
-val _ = register_trace ("functionEncodeLib.Trace",Trace,4);
-
-fun trace level s = if level <= !Trace then print s else ();
+fun trace level s = if level <= Trace() then print s else ();
 
 (*****************************************************************************)
 (* is_encoded_term: term -> bool                                             *)

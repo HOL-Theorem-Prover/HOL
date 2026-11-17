@@ -1,6 +1,9 @@
 structure Context :> Context =
 struct
 
+  fun mem x [] = false
+    | mem x (y::ys) = x = y orelse mem x ys
+
   val ERR = Feedback.mk_HOL_ERR "Context"
 
 
@@ -92,14 +95,11 @@ struct
        there are 611k reads to report across a core build, which costs
        about a tenth of the build's heaviest theory and buries its log. *)
     val action = ref 1
-    val _ = Feedback.register_trace ("ambient context inside proof", action, 3)
     (* The same levels for the kernel-signature reads that `live` serves,
        reported separately and silent by default.  They are a different
        population with a different fix -- see `live` -- and mixing them
        into the tactic-state census would swamp it. *)
     val sig_action = ref 0
-    val _ = Feedback.register_trace
-              ("ambient signature inside proof", sig_action, 3)
     val reported : string list ref = ref []
     val sig_reported : string list ref = ref []
     (* An ambient read reports from `snapshot`, which cannot say *what*
@@ -155,7 +155,7 @@ struct
             fun warn () = Feedback.HOL_WARNING "Context" fname (msg ())
         in
           case lvl of
-              1 => if Lib.mem thy (!seen) then ()
+              1 => if mem thy (!seen) then ()
                    else (seen := thy :: !seen; warn ())
             | 2 => warn ()
             | _ => raise ERR fname (msg ())
@@ -165,6 +165,15 @@ struct
     fun report_sig () =
         report0 ("ambient signature", "live", !sig_action, sig_reported)
   in
+    (* These were traces until HOLFlags took the trace registry over.
+       HOLFlags keeps its map in a `Context.Data` slot, so it is built on
+       this module and cannot be called from it; a trace whose state lives
+       below HOLFlags can no longer be registered.  Plain setters instead:
+       the levels are a developer diagnostic, not something a proof script
+       is expected to bracket. *)
+    fun set_ambient_report_level i = action := i
+    fun set_ambient_sig_report_level i = sig_action := i
+
     fun in_proof f x =
         let fun enter () = let val n = get () in set (n + 1); n end
         in

@@ -165,7 +165,7 @@ fun is_prop_tm tm =
                      in is_bool_var v andalso is_prop_tm t end
                 else is_T tm orelse is_F tm orelse is_bool_var tm
 
-fun term_to_string2 t = with_flag (show_types,false) term_to_string t;
+fun term_to_string2 t = HOLFlags.with_bflags [(Parse.show_types, false)] term_to_string t;
 
 fun prime v = mk_var((term_to_string2 v)^"'",type_of v)
 

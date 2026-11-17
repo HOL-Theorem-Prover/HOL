@@ -16,7 +16,7 @@ open Parse
 val tmToString =
     term_to_string
         |> with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
-        |> trace ("Unicode", 0)
+        |> HOLFlags.with_bflags [(Parse.avoid_unicode, true)]
 
 
 val ERR = mk_HOL_ERR "binderLib"

@@ -45,7 +45,7 @@ sig
               val t = arm_eval "r0=B00, r1=A, pc=A00, cpsr=8C0EBA31" ``prog`` 1;
               val _ = print_arm_state t
 
-         Note: output is controlled with the trace variable "arm eval" (0--6).
+         Note: output is controlled with the trace variable "arm.eval" (0--6).
   *)
 
 end

@@ -229,6 +229,10 @@ end
 
 (* ------------------------------------------------------------------------ *)
 
+val {get = x64_spec_trace, flag = spec_trace, ...} =
+    HOLFlags.create_trace ({group = "x64", name = "spec"},
+                           {initial = 0, max = 2})
+
 local
    val component_11 = Drule.CONJUNCTS x64_progTheory.x64_component_11
    val x64_rwts =
@@ -251,8 +255,6 @@ local
            [qword, ``:Zreg``, ``:Zeflags``]
            NO_TAC STATE_TAC
    val disassemble1 = x64AssemblerLib.x64_disassemble1
-   val x64_spec_trace = ref 0
-   val () = Feedback.register_trace ("x64 spec", x64_spec_trace, 2)
 in
    val x64_spec =
       (* utilsLib.cache 2000 String.compare *)
@@ -261,7 +263,7 @@ in
                 val thm = x64_stepLib.x64_step_hex s
                 val t = x64_mk_pre_post thm
              in
-                case !x64_spec_trace of
+                case x64_spec_trace() of
                    1 => assemblerLib.printn (s ^ " ; " ^ disassemble1 s)
                  | 2 => print (" " ^ disassemble1 s)
                  | _ => ()
@@ -277,7 +279,7 @@ val x64_spec_code = List.map x64_spec o x64AssemblerLib.x64_code_no_spaces
 
 open x64_progLib
 
-val () = Feedback.set_trace "x64 spec" 1
+val () = HOLFlags.set_flag (spec_trace, 1)
 
 val thms = x64_spec_code
   `ret                          ; c3

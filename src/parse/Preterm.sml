@@ -19,11 +19,13 @@ fun tmlist_tyvs tlist =
 
 type 'a in_env = 'a Pretype.in_env
 
-val show_typecheck_errors = ref false
-val _ = register_btrace ("show_typecheck_errors", show_typecheck_errors)
-fun tcheck_say s = if !show_typecheck_errors then Lib.say s else ()
+val {get = get_show_typecheck_errors,flag = show_typecheck_errors,...} =
+    HOLFlags.create_btrace(
+      {group = "Parse", name = "show_typecheck_errors"},
+      false
+    )
+fun tcheck_say s = if get_show_typecheck_errors() then Lib.say s else ()
 
-val last_tcerror : error option ref = ref NONE
 
 type 'a errM = (Pretype.Env.t,'a,tcheck_error * locn.locn) errormonad.t
 type 'a seqM = (Pretype.Env.t,'a) seqmonad.seqmonad
@@ -260,15 +262,26 @@ fun tyVars ptm =  (* the pretype variables in a preterm *)
     overloading resolution should already have gotten rid of them.
  ---------------------------------------------------------------------------*)
 
-val _ =
-    register_btrace ("notify type variable guesses",
-                     Globals.notify_on_tyvar_guess)
+val {get = get_notify_on_tyvar_guess, flag = notify_on_tyvar_guess, ...} =
+    HOLFlags.create_btrace(
+      {group = "Parse", name = "notify_on_tyvar_guess"},
+      true
+    )
 
-val _ =
-    register_btrace ("guess overloads", Globals.guessing_overloads)
+val {get = guessing_overloads, flag = guess_overloads, ...} =
+    HOLFlags.create_btrace(
+      {group = "Parse", name = "guess_overloads"},
+      true
+    )
+
+val {get = guessing_tyvars, flag = guess_tyvars, ...} =
+    HOLFlags.create_btrace(
+      {group = "Parse", name = "guess_tyvars"},
+      true
+    )
 
 fun to_term (tm : preterm) : term in_env =
-    if !Globals.guessing_tyvars then
+    if guessing_tyvars() then
       let
         fun cleanup tm = let
           infix >> >-
@@ -332,7 +345,7 @@ fun to_term (tm : preterm) : term in_env =
                  val guessed_vars = List.take(vs, length vs - length vs0)
                  val _ =
                      if not (null guessed_vars) andalso
-                        !Globals.notify_on_tyvar_guess andalso
+                        get_notify_on_tyvar_guess() andalso
                         !Globals.interactive
                      then
                        Feedback.HOL_MESG
@@ -558,9 +571,9 @@ fun do_overloading_removal ptm =
 fun report_ovl_ambiguity b env =
   (* b is true if multiple resolutions weren't possible *)
   if not b andalso
-     (not (!Globals.guessing_overloads) orelse !Globals.notify_on_tyvar_guess)
+     (not (guessing_overloads()) orelse get_notify_on_tyvar_guess())
   then
-    if not (!Globals.guessing_overloads) then
+    if not (guessing_overloads()) then
       error (OvlTooMany, locn.Loc_None) env
     else if !Globals.interactive then
       (Feedback.HOL_MESG "more than one resolution of overloading was possible";
@@ -642,8 +655,9 @@ local
   open errormonad
   infix ++?
   fun smashTm ptm =
-    Lib.with_flag (Globals.notify_on_tyvar_guess, false)
-                  (smash (overloading_resolution ptm >- (to_term o #1)))
+    HOLFlags.with_bflags
+      [(notify_on_tyvar_guess, false)]
+      (smash (overloading_resolution ptm >- (to_term o #1)))
   fun safe_decase t = !rcm_for_msg t handle HOL_ERR _ => t
 in
 fun typecheck_phase1 printers = let
@@ -690,12 +704,43 @@ fun typecheck_phase1 printers = let
          "  case ", pretty_tm scrut, " ", pty(Term.type_of scrut), "\n",
          "  of ", ptm_arms arms_tree, "\n",
          "  Reason: ", errorMsg (#1 unify_error), "\n"]
+  (* What forced a type on an argument is the operator that took it,
+     so that is what a binding made while checking this application
+     should be blamed on.  `parse_term' gives an operator token its own
+     Locn, so for `x UNION y' this is the `UNION' itself -- the thing a
+     reader would point at -- and for a curried application it is the
+     head of the spine, which is the same symbol. *)
+  fun opLocn (Comb{Rator,...}) = opLocn Rator
+    | opLocn pt = locn pt
+  (* The argument keeps the blame: it is what the reader is being told
+     does not fit, and it is the answer this code has always given.
+
+     The unification error now often carries a position of its own --
+     where the type that clashed was forced on a variable (see
+     `Pretype.with_blame') -- and it is tempting to prefer it.  Don't,
+     except where there is no argument position to use.  Measured over
+     a spread of clashes it is better for some and worse for others,
+     because it has to choose between the two sides and they want
+     opposite answers: `let (a,b) = (d,d) in (a UNION b, d)' wants the
+     operator the function's type came from, while `P (s UNION s)'
+     against an earlier `P (n:num)' wants the one the *argument* came
+     from.  Both are reachable, nothing here can tell which is meant,
+     and `locn Rand' is right often enough that guessing loses.
+
+     Where there is no argument position -- `Parse_support' builds some
+     nodes with `Loc_None' -- anything beats nothing. *)
+  fun blameOf unify_error Rand =
+    case locn Rand of
+        locn.Loc_None => #2 unify_error
+      | locn.Loc_Unknown => #2 unify_error
+      | l => l
   fun check(Comb{Rator, Rand, Locn}) =
     check Rator >> check Rand >>
     ptype_of Rator >- (fn rator_ty =>
     ptype_of Rand >- (fn rand_ty =>
     Pretype.new_uvar >- (fn range_var =>
-    (Pretype.unify rator_ty (rand_ty --> range_var)) ++?
+    Pretype.with_blame (opLocn Rator)
+      (Pretype.unify rator_ty (rand_ty --> range_var)) ++?
      (fn unify_error => fn env =>
           let val Rator' = smashTm Rator env
               val Rand'  = smashTm Rand env
@@ -716,20 +761,25 @@ fun typecheck_phase1 printers = let
                          pty(Term.type_of Rand'), "\n",
                          "  Reason: ",   errorMsg (#1 unify_error), "\n"]
           in
-            Error (AppFail(Rator',Rand',message), locn Rand)
+            Error (AppFail(Rator',Rand',message), blameOf unify_error Rand)
           end))))
     | check (Abs{Bvar, Body, Locn}) = (check Bvar >> check Body)
     | check (Constrained{Ptm,Ty,Locn}) =
         check Ptm >> ptype_of Ptm >- (fn ptyp =>
-        (Pretype.unify ptyp Ty ++
-         (fn env =>
+        (* `++?', not `++': the unification error says which part of the
+           two types could not be made to agree, which for anything
+           bigger than an atomic type is the whole content of the
+           report.  It used to be dropped on the floor. *)
+        (Pretype.unify ptyp Ty ++?
+         (fn unify_error => fn env =>
              let val real_term = smashTm Ptm env
                  val rty = Term.type_of real_term
                  val constraint = Pretype.toType Ty
                  val message = String.concat
                      ["\nType constraint failure: \n",
                       "  Term: ", pretty_tm real_term, " ", pty rty, "\n",
-                      "  Constraint: ", pty constraint, "\n"]
+                      "  Constraint: ", pty constraint, "\n",
+                      "  Reason: ", errorMsg (#1 unify_error), "\n"]
              in
                Error(ConstrainFail(real_term, constraint, message), Locn)
              end)))
@@ -927,7 +977,9 @@ fun typecheck pfns ptm0 =
 fun typecheckS ptm =
   let
     open seqmonad
-    val TC' = errormonad.with_flagM (show_typecheck_errors, false) (TC NONE ptm)
+    val TC' = errormonad.with_Modifier
+                (HOLFlags.with_bflags[(show_typecheck_errors, false)])
+                (TC NONE ptm)
   in
     lift (!post_process_term o remove_case_magic)
          (fromErr TC' >> overloading_resolutionS ptm >-

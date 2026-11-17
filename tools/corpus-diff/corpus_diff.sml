@@ -27,18 +27,24 @@ fun sha1_file filename =
             | [] => die ("shasum on " ^ filename ^ " produced empty line")
     end
 
-(* Walk from root, collect .hol/objs/*Theory.dat paths.  A .hol directory is
-   visited only for its objs/ subdirectory; other dotted names are skipped. *)
+(* Walk from root, collect the *Theory.dat files in each directory's
+   object directory, as (logical, physical) paths.  The logical path is
+   <dir>/.hol/objs/<file> whatever the artifact layout, so captures taken
+   under different layouts compare equal.  Dotted directories and the
+   layout's objroot are skipped. *)
 fun walk root =
     let
-      fun list_dats objsdir acc =
-          let val ds = OS.FileSys.openDir objsdir
+      fun list_dats d acc =
+          let val objsdir = HFS_NameMunge.objdir_for d
+              val logical = OS.Path.concat(d, HFS_NameMunge.HOLOBJDIR)
+              val ds = OS.FileSys.openDir objsdir
               fun loop acc =
                   case OS.FileSys.readDir ds of
                       NONE => (OS.FileSys.closeDir ds; acc)
                     | SOME name =>
                       if String.isSuffix "Theory.dat" name then
-                        loop (OS.Path.concat(objsdir, name) :: acc)
+                        loop ((OS.Path.concat(logical, name),
+                               OS.Path.concat(objsdir, name)) :: acc)
                       else loop acc
           in loop acc end
           handle OS.SysErr _ => acc
@@ -50,17 +56,15 @@ fun walk root =
                       NONE => (OS.FileSys.closeDir ds; acc)
                     | SOME name =>
                       let val p = OS.Path.concat(d, name) in
-                        if name = "." orelse name = ".." then loop acc
+                        if String.sub(name, 0) = #"." then loop acc
                         else if (OS.FileSys.isLink p handle _ => false) then
                           loop acc
                         else if not (OS.FileSys.isDir p handle _ => false) then
                           loop acc
-                        else if name = ".hol" then
-                          loop (list_dats (OS.Path.concat(p, "objs")) acc)
-                        else if String.sub(name, 0) = #"." then loop acc
+                        else if HFS_NameMunge.in_objroot p then loop acc
                         else loop (descend p acc)
                       end
-          in loop acc end
+          in loop (list_dats d acc) end
           handle OS.SysErr _ => acc
     in
       descend root []
@@ -102,8 +106,14 @@ fun rel_to root path =
 fun capture root =
     let val abs_root = OS.FileSys.fullPath root
                        handle OS.SysErr _ => root
+        val _ = HFS_NameMunge.configure
+                  (HMProject.resolve_layout
+                     {start = abs_root, cli_objroot = NONE,
+                      cli_srcroot = NONE, no_project = false})
+                handle Fail s => die s
         val paths = walk abs_root
-        val hashed = map (fn p => (rel_to abs_root p, sha1_file p)) paths
+        val hashed = map (fn (l, p) => (rel_to abs_root l, sha1_file p))
+                         paths
         val sorted = sort cmp_entry hashed
     in
       List.app (fn (p, h) => pr (p ^ " " ^ h ^ "\n")) sorted;
@@ -172,10 +182,11 @@ val cline_options = [
 
 fun usage_string () =
     CommandLine.name() ^ " {capture ROOT | diff BEFORE AFTER}\n\n\
-    \  capture ROOT           walk ROOT for .hol/objs/*Theory.dat files;\n\
-    \                         emit sorted \"<rel-path> <sha1>\" lines\n\
-    \                         where <rel-path> is the .dat file's path\n\
-    \                         relative to ROOT\n\
+    \  capture ROOT           walk ROOT for *Theory.dat files in each\n\
+    \                         directory's object directory; emit sorted\n\
+    \                         \"<rel-path> <sha1>\" lines where <rel-path>\n\
+    \                         is DIR/.hol/objs/FILE relative to ROOT,\n\
+    \                         whatever the artifact layout\n\
     \  diff BEFORE AFTER      compare two capture files;\n\
     \                         prefix + added, - removed, ~ changed;\n\
     \                         exit 1 if any difference, else 0\n"

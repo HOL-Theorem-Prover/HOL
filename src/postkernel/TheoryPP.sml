@@ -95,10 +95,6 @@ fun pp_type mvartype mtype ty =
           ]
  end
 
-val include_html_docs = ref true
-val _ = Feedback.register_btrace
-          ("TheoryPP.include_html_docs", include_html_docs)
-
 fun classify As Ds Ts [] = (As,Ds,Ts)
   | classify As Ds Ts ((r as (s,th,i:thminfo))::rest) =
     let open DB_dtype
@@ -138,7 +134,7 @@ fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
   val axioms''      = filter_visible axioms'
   val definitions'' = filter_visible definitions'
   val theorems''    = filter_visible theorems'
-  val curr_docs_dir = OS.Path.concat (OS.FileSys.getDir(), ".hol/docs")
+  val curr_docs_dir = HFS_NameMunge.docsdir_for (OS.FileSys.getDir())
   fun src_url loc =
       case loc of
           DB_dtype.Unknown => NONE
@@ -148,8 +144,7 @@ fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
             val {dir, file} = OS.Path.splitDirFile abs_sml
             val {base, ...} = OS.Path.splitBaseExt file
             val abs_html =
-                OS.Path.concat (dir,
-                  OS.Path.concat (".hol/docs", base ^ ".html"))
+                OS.Path.concat (HFS_NameMunge.docsdir_for dir, base ^ ".html")
             val rel =
                 OS.Path.mkRelative {path = abs_html, relativeTo = curr_docs_dir}
                 handle OS.Path.Path => base ^ ".html"
@@ -164,8 +159,10 @@ fun print_doc_html {pp_thm, pp_type = pp_type_user} info_record ostrm = let
                (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
             then pp_thm th
             else
-              with_flag (Globals.show_tags, true)
-                        (with_flag (Globals.show_assums, true) pp_thm) th
+              HOLFlags.with_traces
+                [("PP.show_tags", 1), ("PP.show_assums", 1)]
+                pp_thm
+                th
       in
         PP.prettyPrint (out o html_escape, 75) pretty
       end

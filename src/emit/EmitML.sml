@@ -593,12 +593,8 @@ fun term_to_ML openthys side =
   and pp_itself tm =
     let fun skip1 s = String.extract(s, 1, NONE)
         fun num_type typ =
-              let val pp_n = !type_pp.pp_num_types
-                  val _ = type_pp.pp_num_types := true
-              in
-                skip1 (Hol_pp.type_to_string typ) before
-                type_pp.pp_num_types := pp_n
-              end
+              skip1 (HOLFlags.with_bflags [(type_pp.num_types, true)]
+                                    Hol_pp.type_to_string typ)
         fun itself x =
           block INCONSISTENT 2 (
             add_string "(" >>
@@ -880,7 +876,7 @@ fun adjust_tygram tygram =
  end;
 
 fun prim_pp_type_as_ML tygram ppstrm =
-   trace ("Greek tyvars",0)
+   HOLFlags.with_bflags [(type_tokens.greek_tyvars, false)]
       (type_pp.pp_type (adjust_tygram tygram) PPBackEnd.raw_terminal ppstrm)
 
 fun pp_type_as_ML ppstrm = prim_pp_type_as_ML (Parse.type_grammar()) ppstrm;
@@ -1524,7 +1520,7 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
 
 val emit_xML =
     (fn info => fn p => fn stuff =>
-                           Feedback.trace ("Unicode", 0)
+                           HOLFlags.with_bflags [(Parse.avoid_unicode, true)]
                                           (emit_xML info p)
                                           stuff)
 
@@ -1532,9 +1528,9 @@ val emitML = emit_xML (false,!sigSuffix,!structSuffix);
 
 val emitCAML = emit_xML (true,!sigCamlSuffix,!structCamlSuffix);
 
-fun eSML d l = with_flag (type_pp.pp_array_types, false)
+fun eSML d l = HOLFlags.with_bflags [(type_pp.array_types, false)]
                  (emitML (!Globals.emitMLDir)) (d, l);
-fun eCAML d l = with_flag (type_pp.pp_array_types, false)
+fun eCAML d l = HOLFlags.with_bflags [(type_pp.array_types, false)]
                  (emitCAML (!Globals.emitCAMLDir)) (d, l);
 
 fun MLSIGSTRUCT ll =

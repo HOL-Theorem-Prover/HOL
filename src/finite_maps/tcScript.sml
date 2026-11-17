@@ -19,7 +19,7 @@ Libs
   pred_setLib Defn TotalDefn PairRules PairRules pairLib
 
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 val _ = ParseExtras.temp_loose_equality()
 
 (* My habitual abbreviations: *)
