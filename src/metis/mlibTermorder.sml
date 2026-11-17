@@ -33,8 +33,7 @@ val term_subst    = mlibSubst.term_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibTermorder";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+fun chatting _ = tracing trace_max;  (* silent below the maximum *)
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -243,10 +242,10 @@ fun pp_termorder (TO (_,vars,eqns,sat)) =
   (pp_binop " |" (pp_sequence "" pp_string)
    (pp_sequence "," (pp_equation vars))) (vars,eqns);
 
-val termorder_to_string = PP.pp_to_string (!LINE_LENGTH) pp_termorder;
+val termorder_to_string = PP.pp_to_string LINE_LENGTH pp_termorder;
 
 local
-  val q2s = PP.pp_to_string (!LINE_LENGTH)
+  val q2s = PP.pp_to_string LINE_LENGTH
             (pp_list (pp_binop " |->" pp_string pp_int)) o M.to_list;
 
   fun wf_eqn vars eqn =
@@ -400,7 +399,7 @@ end;
 local
   val raw_equations_to_string =
     String.concat o
-    map (fn x => PP.pp_to_string (!LINE_LENGTH) (pp_list pp_int) x ^ "\n");
+    map (fn x => PP.pp_to_string LINE_LENGTH (pp_list pp_int) x ^ "\n");
 
   fun pos_eqns n =
     snd (funpow n (fn (t,r) => (0 :: t, (1 :: t) :: map (cons 0) r)) ([~1],[]));

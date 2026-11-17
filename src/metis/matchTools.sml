@@ -21,8 +21,7 @@ local
   open mlibUseful;
   val module = "matchTools";
 in
-  val () = add_trace {module = module, alignment = I}
-  fun chatting l = tracing {module = module, level = l};
+  fun chatting _ = tracing trace_max;  (* silent below the maximum *)
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
   fun BUG f m = Bug (f ^ ": " ^ m);

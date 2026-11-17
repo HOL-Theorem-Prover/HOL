@@ -28,30 +28,18 @@ exception OutOfDateTerm of string
    4: Log of each step in proof translation
    5: Log of each inference during proof search *)
 
-val {get = metis_trace_level, flag = metis_trace, ...} =
-    HOLFlags.create_trace(
-      {group = "metis", name = "trace"},
-      {max = 10, initial = if !Globals.interactive then 1 else 0}
-    )
-val () = mlibUseful.get_trace_level := metis_trace_level
+(* The modules under metisTools align their own levels onto this scale:
+   mlibClause adds 4, folMapping adds 3, and mlibTermorder, mlibModel,
+   mlibRewrite, mlibSubsume, mlibThm and matchTools speak only at
+   mlibUseful.trace_max. *)
+
+val metis_trace = mlibUseful.trace_flag
 
 local
   open mlibUseful;
   val module = "metisTools";
-  val aligned_traces =
-    [{module = "mlibClause",     alignment = fn n => n + 4},
-     {module = "mlibSolver",     alignment = I},
-     {module = "mlibMeson",      alignment = I},
-     {module = "mlibClauseset",  alignment = I},
-     {module = "mlibSupport",    alignment = I},
-     {module = "mlibResolution", alignment = I},
-     {module = "folMapping",     alignment = fn n => n + 3},
-     {module = "folTools",       alignment = I},
-     {module = "metisTools",     alignment = I},
-     {module = "metisLib",       alignment = I}];
-  val () = set_traces aligned_traces
 in
-  fun chatting l = tracing {module = module, level = l};
+  fun chatting l = tracing l;
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
   fun BUG f m = Bug (f ^ ": " ^ m);

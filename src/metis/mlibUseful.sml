@@ -63,29 +63,21 @@ in
   fun timed_many f a = several 0 0.0 f a
 end;
 
-val trace_level = ref 1;
+(* Trace levels run from 0 (silent) to trace_max (everything).  Each module
+   aligns its own levels onto this scale before asking tracing; see
+   metisTools for what the levels mean. *)
+val trace_max = 10;
 
-(* Where tracing reads the level; HOL's metisTools reads its "metis.trace"
-   flag instead. *)
-val get_trace_level = ref (fn () => !trace_level);
+val {get = trace_level, flag = trace_flag, ...} =
+    HOLFlags.create_trace(
+      {group = "metis", name = "trace"},
+      {max = trace_max, initial = if !Globals.interactive then 1 else 0}
+    )
 
-val traces : {module : string, alignment : int -> int} list ref = ref [];
-
-fun add_trace t = traces := t :: !traces
-fun set_traces ts = traces := ts
-
-local
-  val MAX = 10;
-  fun query m l =
-    let val t = List.find (fn {module, ...} => module = m) (!traces)
-    in case t of NONE => MAX | SOME {alignment, ...} => alignment l
-    end;
-in
-  fun tracing {module = m, level = l} =
-    let val t = !get_trace_level ()
-    in 0 < t andalso (MAX <= t orelse MAX <= l orelse query m l <= t)
-    end;
-end;
+fun tracing l =
+  let val t = trace_level ()
+  in 0 < t andalso (trace_max <= t orelse l <= t)
+  end;
 
 val trace = Lib.say;
 
@@ -569,7 +561,7 @@ local val ln2 = Math.ln 2.0 in fun log2 x = Math.ln x / ln2 end;
 
 type 'a pp = 'a Parse.pprinter
 
-val LINE_LENGTH = ref 75;
+val LINE_LENGTH = 75;
 
 fun pp_map f pp_a x = pp_a (f x);
 
@@ -620,7 +612,7 @@ fun pp_triple pp_a pp_b pp_c =
   (pp_map (fn (a, b, c) => (a, (b, c)))
    (pp_binop "," pp_a (pp_binop "," pp_b pp_c)));
 
-fun to_string pp_a a = PP.pp_to_string (!LINE_LENGTH) pp_a a;
+fun to_string pp_a a = PP.pp_to_string LINE_LENGTH pp_a a;
 
 (* ------------------------------------------------------------------------- *)
 (* Sums                                                                      *)
@@ -694,16 +686,6 @@ in
   fun new_ints 0 = []
     | new_ints k = generator() :: new_ints (k - 1)
 end;
-
-fun with_flag (r,update) f x =
-  let
-    val old = !r
-    val () = r := update old
-    val y = f x handle e => (r := old; raise e)
-    val () = r := old
-  in
-    y
-  end;
 
 (* ------------------------------------------------------------------------- *)
 (* Environment.                                                              *)
