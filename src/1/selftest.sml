@@ -417,6 +417,14 @@ val _ = temp_overload_on ("RM*", ``\x y. x /\ y``)
 val _ = tpp "RM* p q"
 val _ = clear_overloads_on "RM*"
 
+(* the printer's check for tokens that merge sees a token added since
+   it last printed, and its removal *)
+val _ = tpp "~a"
+val _ = temp_overload_on ("~a", ``\x:bool. F``)
+val _ = tpp "~ a"
+val _ = clear_overloads_on "~a"
+val _ = tpp "~a"
+
 val _ = add_rule {term_name = "=",
                   fixity = Infix(NONASSOC, 450),
                   block_style = (AroundSamePrec, (PP.CONSISTENT,0)),
