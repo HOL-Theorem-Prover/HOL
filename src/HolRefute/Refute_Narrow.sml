@@ -1144,6 +1144,11 @@ structure Refute_Narrow :> Refute_Narrow = struct
       malformed_value original_ty value
     else if Refute_ModelFinder_Names.is_irrelevant_marker value then
       Refute_ModelFinder_Names.irrelevant_marker original_ty
+    (* A variable stands for an arbitrary value, such as the replay's case
+       variable for an existential the search never refined; it keeps its
+       name at the original type. *)
+    else if Term.is_var value then
+      Term.mk_var (Lib.fst (Term.dest_var value), original_ty)
     else
       case Lib.total Type.dom_rng original_ty of
           SOME (domain, range) =>

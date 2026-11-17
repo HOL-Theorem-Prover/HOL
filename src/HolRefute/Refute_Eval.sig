@@ -19,21 +19,9 @@ signature Refute_Eval = sig
          as [false].  Marks [plan_uses_smart] so the executability
          gate can lift.
 
-         A complement deliberately carries no [program_version],
-         unlike [Enum] and [SmartGuard]: those name a program resolved
-         from the mutable [Refute_SmartGen] enumerator cache at
-         execution time, so a redefinition can silently replace the
-         cache entry behind an old plan's back, and only the version
-         stamp lets [Refute_QC.same_plan] tell a stale selection from
-         a current one.  A complement is instead inlined whole into
-         [condition] as a term value, with no deferred lookup that can
-         go stale.  [Refute_QC.same_plan] compares that term with
-         [Term.aconv]: if the relation is redefined and the
-         re-derived complement differs, the comparison fails and the
-         cached selection is not reused; if the redefinition
-         re-derives an identical complement, the comparison succeeds
-         and reuse is correct, because the term being tested is
-         exactly the same value either way. *)
+         A complement embeds its closed condition directly in the plan;
+         Enum and SmartGuard instead resolve versioned enumerator programs
+         at execution time. *)
     | SmartGuard of {predicate : term, version : program_version,
                      cont : plan}
     | Enum of {rel : relation_key, mode : mode, version : program_version,
@@ -124,6 +112,10 @@ signature Refute_Eval = sig
   val rand_below_limit : IntInf.int
   val checked_rand_below :
     IntInf.int -> IntInf.int -> IntInf.int * IntInf.int
+  (* Word values for exhaustive and random testing, at any width. *)
+  val word_boundary_values : int -> IntInf.int list
+  val word_enum_values : int -> int -> IntInf.int list
+  val random_word : int -> IntInf.int -> IntInf.int * IntInf.int
   val normalize_seed : IntInf.int -> IntInf.int
   val take_session_seed : unit -> IntInf.int
 

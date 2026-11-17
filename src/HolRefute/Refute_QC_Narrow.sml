@@ -331,7 +331,7 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
   val backend : Refute_Core.backend =
     {name = "narrowing",
      family = Refute_Core.QuickcheckFamily,
-     weight = 40,
+     weight = 10,
      configured = fn () => true,
      requires = Refute_Core.AnyGoal,
      input = Refute_Core.MonoInstances,
