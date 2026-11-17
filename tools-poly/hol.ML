@@ -738,6 +738,11 @@ in
            SML rather than an evalString, so it is type-checked at load
            and can be read; see the file for why the replay guard is
            per-thread. *)
+        (* Two `git' subprocesses, one of which walks the work tree,
+           and the `initialize' reply quotes the answer.  Kicked off
+           here so it runs against the init files below rather than
+           against a client waiting on the handshake. *)
+        LSPServer.beginStamp ();
         (* Future (Isabelle's task framework), and `Timeout', which
            bounds how long a replay may run.  `src/proofman' bakes
            `Future' into `hol.state0', which every later heap is built
