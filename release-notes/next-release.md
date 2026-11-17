@@ -153,6 +153,10 @@ Bugs fixed
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
     Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
 
+-   Rules added to a compset could reach the compset it was built from.
+    `computeLib.new_compset` added to a compset shared with `bool_compset`, and adding to a sealed compset such as `reduceLib.num_compset` changed it once the additions reached a constant it lacked.
+    Each new or extended compset now has its own entries, so evaluations with `bool_compset` and the compsets built on it no longer use rules that other code added elsewhere.
+
 -   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
     Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.
     Recursions through `MAP` and `EVERY` with a substitution-like extra parameter have exactly this shape.
