@@ -29,4 +29,10 @@ sig
     val print_theories_as_tex_doc : string list -> string -> unit
 
     val tex_theory                : string -> unit
+
+    val KR_record_type_defns          : HOLFlags.bflag
+    val dollar_parens_flag            : HOLFlags.bflag
+    val print_datatype_names_as_types : HOLFlags.bflag
+    val print_datatypes_compactly     : HOLFlags.bflag
+    val print_thm_turnstiles          : HOLFlags.bflag
 end

@@ -1333,8 +1333,9 @@ structure Refute_Core :> Refute_Core = struct
       | _ => result
 
   structure Private = struct
-    val {get = trace_level, ...} =
-      Feedback.create_trace {name = "Refute", initial = 1, max = 4}
+    val {get = trace_level, flag = trace, ...} =
+      HOLFlags.create_trace ({group = "Refute", name = "trace"},
+                             {initial = 1, max = 4})
 
     fun enabled level = trace_level () >= level
 
@@ -1642,7 +1643,7 @@ structure Refute_Core :> Refute_Core = struct
   fun format_term term =
     let
       fun delimit value =
-        if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
+        if HOLFlags.get_bflag Parse.avoid_unicode then
           "<<" ^ value ^ ">>"
         else
           "«" ^ value ^ "»"
@@ -1661,7 +1662,7 @@ structure Refute_Core :> Refute_Core = struct
            term_grammar)
       (* Suppressing free-variable annotations also prevents line wrapping
          from splitting an annotation away from its marker. *)
-      val string = Lib.with_flag (Globals.show_types, false)
+      val string = HOLFlags.with_bflags [(Parse.show_types, false)]
         (Parse.term_to_string_by_grammar grammars) term
       val length = size string
       fun clean index parts =
@@ -1888,6 +1889,14 @@ structure Refute_Core :> Refute_Core = struct
     Thread_Data.var ()
   val active_backend_result : outcome option ref Thread_Data.var =
     Thread_Data.var ()
+  val active_backend_diagnostics :
+      ((unit -> string list) * (outcome -> outcome)) ref Thread_Data.var =
+    Thread_Data.var ()
+
+  fun set_backend_diagnostics reasons report =
+    case Thread_Data.get active_backend_diagnostics of
+        NONE => ()
+      | SOME current => current := (reasons, report)
 
   fun publish_found make_result found =
     if null found then ()
@@ -1996,6 +2005,13 @@ structure Refute_Core :> Refute_Core = struct
           make_search_context_with (#memo context) share
         end
 
+  (* Append-if-absent, order preserved: the shared spelling for every
+     Refute reason list, whether held plainly or behind a ref. *)
+  fun add_reason (reason, reasons) =
+    if Lib.mem reason reasons then reasons else reasons @ [reason]
+
+  fun add_reasons (more, reasons) = List.foldl add_reason reasons more
+
   fun run_backend context budget (cfg : config) ceiling forms
         (backend, result_ref) =
     let
@@ -2011,18 +2027,28 @@ structure Refute_Core :> Refute_Core = struct
          "): " ^ name ^ "\n")
       fun timed_run () = Timeout.apply (#remaining search_context ())
         (#run backend cfg) instances
-      val raw_result = Thread_Data.setmp active_backend_result
+      val backend_diagnostics = ref ((fn () => [] : string list), Lib.I)
+      val raw_result = Thread_Data.setmp active_backend_diagnostics
+        (SOME backend_diagnostics) (Thread_Data.setmp active_backend_result
         (SOME result_ref) (fn () =>
           timed_run ()
           handle Timeout.TIMEOUT _ =>
-            (case !result_ref of
-                 SOME (published as Counterexample _) => published
-               | SOME (published as Model _) => published
-               | _ => Unknown [name ^ " timed out"])
+            (#2 (!backend_diagnostics))
+              (case !result_ref of
+                   SOME (published as Counterexample _) => published
+                 | SOME (published as Model _) => published
+                 | _ => Unknown [name ^ " timed out"])
                | Refute_Gen.NoGenerator pair =>
-                   Unknown [name ^ ": " ^ no_generator_reason pair]
+                   (#2 (!backend_diagnostics))
+                     (Unknown [name ^ ": " ^ no_generator_reason pair])
                | Interrupt => raise Interrupt
-               | e => Unknown [name ^ ": " ^ exception_reason e]) ()
+               | e => (#2 (!backend_diagnostics))
+                   (Unknown [name ^ ": " ^ exception_reason e]))) ()
+      val _ = case raw_result of
+          Unknown _ => ()
+        | _ => List.app (fn reason => Private.say 2
+            ("Refute backend " ^ name ^ ": " ^ reason ^ "\n"))
+            ((#1 (!backend_diagnostics)) ())
       val result = preserve_polymorphic_bounds backend forms instances
         raw_result
       val _ = result_ref := SOME result
@@ -2042,13 +2068,6 @@ structure Refute_Core :> Refute_Core = struct
     in
       List.concat (map one jobs)
     end
-
-  (* Append-if-absent, order preserved: the shared spelling for every
-     Refute reason list, whether held plainly or behind a ref. *)
-  fun add_reason (reason, reasons) =
-    if Lib.mem reason reasons then reasons else reasons @ [reason]
-
-  fun add_reasons (more, reasons) = List.foldl add_reason reasons more
 
   fun instance_gate_reasons instances =
     List.foldl (fn (instance : instance, reasons) =>
@@ -2284,7 +2303,7 @@ structure Refute_Core :> Refute_Core = struct
       fun run () =
         if not (#quiet cfg) then refute_problem_unquiet cfg problem
         else
-          Feedback.with_traces [("Refute", 0)]
+          HOLFlags.with_traces [("Refute.trace", 0)]
             (Feedback.quiet_messages
               (Feedback.quiet_warnings
                 (refute_problem_unquiet cfg))) problem

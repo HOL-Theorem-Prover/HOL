@@ -2146,10 +2146,14 @@ fun SOS_PROVER translator (eqs, les, lts) =
 local
   val zero_real = realSyntax.zero_tm
   val real_mul_tm = realSyntax.mult_tm
+  val a_tm = mk_var("a", real_ty)
+  val x_tm = mk_var("x", real_ty)
+  val y_tm = mk_var("y", real_ty)
+  val shuffle = GSYM (SPECL [x_tm, y_tm, a_tm] REAL_EQ_SUB_LADD)
   val shuffle1 =
-    CONV_RULE (REWR_CONV (REAL_ARITH ``a + x = (y:real) <=> x = y - a``))
-  val shuffle2 =
-    CONV_RULE (REWR_CONV (REAL_ARITH ``x + a = (y:real) <=> x = y - a``))
+    CONV_RULE (REWR_CONV
+      (SUBS [SPECL [x_tm, a_tm] REAL_ADD_COMM] shuffle))
+  val shuffle2 = CONV_RULE (REWR_CONV shuffle)
 
   fun substitutable_monomial fvs tm =
     if is_var tm andalso type_of tm = realSyntax.real_ty
@@ -2299,16 +2303,9 @@ local
   val eq_tm = realSyntax.real_eq_tm
   val x_tm = mk_var("x", real_ty)
   val y_tm = mk_var("y", real_ty)
-
-  val pth_le = REAL_ARITH ``x <= y <=> y - x >= &0:real``
-  val pth_lt = REAL_ARITH ``x < y <=> y - x > &0:real``
-  val pth_ge = REAL_ARITH ``x >= y <=> x - y >= &0:real``
-  val pth_gt = REAL_ARITH ``x > y <=> x - y > &0:real``
-  val pth_eq = REAL_ARITH ``(x = y:real) <=> x - y = &0``
-  val pth_nle = REAL_ARITH ``~(x <= y) <=> x - y > &0:real``
-  val pth_nlt = REAL_ARITH ``~(x < y) <=> x - y >= &0:real``
-  val pth_nge = REAL_ARITH ``~(x >= y) <=> y - x > &0:real``
-  val pth_ngt = REAL_ARITH ``~(x > y) <=> y - x >= &0:real``
+  val [pth_lt, pth_le, pth_gt, pth_ge, pth_eq,
+       pth_nlt, pth_nle, pth_ngt, pth_nge, _] =
+    CONJUNCTS (fetch "realax" "GEN_REAL_ARITH0_pth_init")
 
   fun norm_ineq th =
     let val tm = concl th

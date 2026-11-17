@@ -85,7 +85,6 @@ val count =
     SPEC = ref 0,
     SUBST = ref 0,
     SYM = ref 0,
-    TOTAL = ref 0,
     TRANS = ref 0}
 
 fun inc_count R =

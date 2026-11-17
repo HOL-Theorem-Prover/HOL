@@ -47,5 +47,10 @@ sig
   val lsp_terminal          : t
   val lsp_segments          : string -> pp_segment list
 
+  val show_types            : HOLFlags.bflag
+  val use_annotations       : HOLFlags.bflag
+  val use_styles            : HOLFlags.bflag
+  val use_css               : HOLFlags.bflag
+
 
 end

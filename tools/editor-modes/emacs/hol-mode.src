@@ -324,7 +324,7 @@ With a prefix ARG, uses `expandf' rather than `e'."
                 genvar tactic-string2 genvar))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
        (etactic-string
-        (format "Feedback.trace(\"show_typecheck_errors\", 0) %s (%s)"
+        (format "HOLFLags.trace(\"Parse.show_typecheck_errors\", 0) %s (%s)"
                 e-string tactic-string2))
        (region-string (with-hol-locpragma (+ start start-offset) etactic-string))
        (sender (if hol-emit-time-elapsed-p
@@ -1292,10 +1292,59 @@ offers any dumped-heap candidates in DIR via `hol--prompt-heap'."
    (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
    '("COPYRIGHT" "tools" "tools-poly" "bin" "sigobj")))
 
+(defun hol--toml-objroot (file)
+  "The top-level `objroot' string in TOML FILE, or nil."
+  (when (file-readable-p file)
+    (with-temp-buffer
+      (insert-file-contents file)
+      (let ((end (save-excursion
+                   (if (re-search-forward "^[ \t]*\\[" nil t)
+                       (match-beginning 0)
+                     (point-max)))))
+        (when (re-search-forward
+               (concat "^[ \t]*\\([\"']?\\)objroot\\1[ \t]*=[ \t]*"
+                       "\\(?:\"\\([^\"]*\\)\"\\|'\\([^']*\\)'\\)")
+               end t)
+          (replace-regexp-in-string
+           (regexp-quote "$(HOLDIR)") (directory-file-name hol-dir)
+           (or (match-string 2) (match-string 3)) t t))))))
+
+(defun hol--lastmaker-path (dir)
+  "The lastmaker file Holmake writes for DIR, following its artifact layout.
+The project's objroot (from holproject.local.toml, then holproject.toml)
+wins over HOLOBJROOT and HOLSRCROOT."
+  (let* ((dir (file-name-as-directory (file-truename dir)))
+         (root (locate-dominating-file dir "holproject.toml"))
+         (root (and root (file-name-as-directory (file-truename root))))
+         (toml-objroot
+          (and root
+               (or (hol--toml-objroot (concat root "holproject.local.toml"))
+                   (hol--toml-objroot (concat root "holproject.toml")))))
+         (objroot (if toml-objroot (expand-file-name toml-objroot root)
+                    (let ((e (getenv "HOLOBJROOT")))
+                      (and e (not (string= e ""))
+                           (expand-file-name e dir)))))
+         (srcroot (if toml-objroot root
+                    (let ((e (getenv "HOLSRCROOT")))
+                      (if (and e (not (string= e "")))
+                          (expand-file-name e dir)
+                        root))))
+         (objroot (and objroot
+                       (file-name-as-directory (file-truename objroot))))
+         (srcroot (and srcroot
+                       (file-name-as-directory (file-truename srcroot)))))
+    (if (and objroot srcroot
+             (string-prefix-p srcroot dir)
+             (not (string-prefix-p objroot dir)))
+        (expand-file-name "lastmaker"
+                          (expand-file-name (file-relative-name dir srcroot)
+                                            (concat objroot "make-deps")))
+      (concat dir ".hol/make-deps/lastmaker"))))
+
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
         (original-name (expand-file-name original-name0))
-        (lastmaker-path ".hol/make-deps/lastmaker"))
+        (lastmaker-path (hol--lastmaker-path dir0)))
     ;; check for lastmaker file
     (if-let*
         (((file-readable-p lastmaker-path))
@@ -1543,14 +1592,14 @@ argument N, sets the trace to that value in particular."
         (send-raw-string-to-hol
          (format "local open Int in
                   val _ = let val nm = \"%s\"
-                      fun findfn (Feedback.TraceElt r) = #name r = nm
-                      fun level (Feedback.TraceElt r) = #trace_level r
+                      fun findfn (HOLFlags.TraceElt r) = #name r = nm
+                      fun level (HOLFlags.TraceElt r) = #trace_level r
                       val old =
-                            level (valOf (List.find findfn (traces())))
+                            level (valOf (List.find findfn (HOLFlags.traces())))
                   in
                       print (\"** \"^nm^\" trace now \");
-                      if 0 < old then (set_trace nm 0; print \"off\\n\")
-                      else (set_trace nm 1; print \"on\\n\")
+                      if 0 < old then (HOLFlags.set_trace nm 0; print \"off\\n\")
+                      else (HOLFlags.set_trace nm 1; print \"on\\n\")
                   end handle Option =>
                         print \"** No such trace var: \\\"%s\\\"\\n\"
                   end" s s)
@@ -1558,37 +1607,39 @@ argument N, sets the trace to that value in particular."
     (let ((n (prefix-numeric-value arg)))
       (message (format "Setting %s to %d" s n))
       (send-raw-string-to-hol
-       (format "val _ = (set_trace \"%s\" %d; print \"** %s trace now %d\\n\")
+       (format "val _ = (HOLFlags.set_trace \"%s\" %d; print \"** %s trace now %d\\n\")
                         handle HOL_ERR _ =>
                            print \"** No such trace var: \\\"%s\\\"\\n\""
                s n s n s)
        nil))))
 
 (defun hol-toggle-unicode ()
-  "Toggles the \"Unicode\" trace."
+  "Toggles the \"PP.avoid_unicode\" trace.
+Note the sense: the trace is *avoid* unicode, so turning it on turns
+unicode output off."
   (interactive)
-  (hol-toggle-trace "Unicode"))
+  (hol-toggle-trace "PP.avoid_unicode"))
 
 (defun hol-toggle-emacs-tooltips ()
   "Toggles whether HOL produces tooltip information while pretty-printing."
   (interactive)
-  (hol-toggle-trace "PPBackEnd show types"))
+  (hol-toggle-trace "PPBackEnd.show_types"))
 
 (defun hol-toggle-pp-styles ()
   "Toggles whether HOL produces style informations while pretty-printing."
   (interactive)
-  (hol-toggle-trace "PPBackEnd use styles"))
+  (hol-toggle-trace "PPBackEnd.use_styles"))
 
 (defun hol-toggle-pp-cases ()
   "Toggles the \"pp_cases\" trace."
   (interactive)
-  (hol-toggle-trace "pp_cases")
-  (hol-toggle-trace "use pmatch_pp"))
+  (hol-toggle-trace "PP.cases")
+  (hol-toggle-trace "patternMatches.use_pp"))
 
 (defun hol-toggle-pp-annotations ()
   "Toggles whether HOL produces annotations while pretty-printing."
   (interactive)
-  (hol-toggle-trace "PPBackEnd use annotations"))
+  (hol-toggle-trace "PPBackEnd.use_annotations"))
 
 (defun hol-toggle-goalstack-fvs ()
   "Toggles the trace \"Goalstack.print_goal_fvs\"."
@@ -1613,12 +1664,12 @@ argument N, sets the trace to that value in particular."
 (defun hol-toggle-simplifier-trace (arg)
   "Toggles the trace \"simplifier\".  With ARG sets trace to this value."
   (interactive "P")
-  (hol-toggle-trace "simplifier" arg))
+  (hol-toggle-trace "simplifier.trace" arg))
 
 (defun hol-toggle-show-types (arg)
   "Toggles the global show_types variable. With prefix ARG sets trace to this value (setting trace to 2, is the same as setting the show_types_verbosely variable)."
   (interactive "P")
-  (hol-toggle-trace "types" arg))
+  (hol-toggle-trace "PP.types" arg))
 
 (defun hol-toggle-show-types-verbosely ()
   "Toggles the global show_types_verbosely variable."

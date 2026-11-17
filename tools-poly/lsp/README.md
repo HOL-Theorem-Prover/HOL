@@ -298,9 +298,11 @@ coverage:
   - **A missing prerequisite is a `SKIP`,** counted and named, never a
     pass — and `--requires <tag>` that selects nothing exits 2, since
     that means the wiring is broken rather than the tests are fine.
-  - **Holmake keeps objects under `.hol/objs/`** and presents them as
-    if they sat in the directory.  A prerequisite check that looks only
-    at the plain path reports every built directory as unbuilt, which
+  - **Use `HOLFileSys` to check for Holmake products.**  Objects live
+    under `.hol/objs/`, or `<objroot>/objs/<rel>/` with an artifact
+    root, but are accessed through their source-relative names.
+    A prerequisite check that looks only at the plain path reports
+    every built directory as unbuilt, which
     shows up as a whole group quietly skipping.
 
 `sortingTheory` is built by `src/sort`'s own Holmake run and stays
@@ -538,6 +540,46 @@ having none -- a hover is not a place to rediscover the same missing
 file.  `tools-poly/poly/Help.sml` reads the same index for the REPL's
 `help` command and knows nothing about any of the above.
 
+### Inside a quotation
+
+A hover inside a HOL quotation -- a `Theorem`'s goal, a `Definition`
+or `Inductive` body, an explicit `‘…’` -- is answered by
+`hover_quote_init.ML`, which re-parses the quotation and walks the
+resolved `Preterm` for the innermost leaf whose `locn` covers the
+cursor.  What comes back names the leaf, says what kind of thing it
+is, and gives its type, all on one line:
+
+```
+constant arithmetic$SUC :num -> num
+bound variable n :num
+free variable m :num
+overloaded MEM :α -> α list -> bool
+```
+
+An overloaded name adds a second paragraph saying what it overloads
+to, because that does not fit.  Nothing else does.
+
+Everything on one line is deliberate.  Emacs shows a hover in the echo
+area, and eglot cuts the rendered markdown at its first newline --
+`eglot-hover-eldoc-function` hands that index to eldoc as `:echo` --
+so a second paragraph is text an Emacs reader never sees, and `SUC
+:num -> num` on its own does not say whether `SUC` is a constant or a
+variable.  The kind leads rather than trails for the same reason: a
+long type would push a trailing note off the end of the line.  A
+constant's home theory rides along in the name as `thy$name`, which is
+HOL's own way of writing a constant with its theory.
+
+Syntax that spells no constant in the source still answers.  `d⟨s⟩`
+and `l❲i❳` are list forms whose application `combinpp`'s absyn
+postprocessor builds, and it used to build it with `locn.Loc_None` on
+the generated identifier -- so no leaf covered the brackets, and the
+hover fell out to whatever enclosed the form: in `(d⟨s⟩,d)`, the
+pair comma.  The identifier now carries the bracket pair's own span,
+so hovering either bracket, or the `↦` of an update, names the
+constant the brackets stand for.  The keys and values inside keep
+their own spans, which are shorter, so they still win where the two
+overlap.
+
 ### Positions
 
 A hover's range, like every position on the wire, counts whatever
@@ -625,6 +667,64 @@ directory — not from `$HOLDIR`.  A directory built by another tree is
 served by that tree's server, silently.  The first line of the eglot
 log says which one; `cat .hol/make-deps/lastmaker` says the same
 thing without starting anything.
+
+## Where a term error is squiggled
+
+A parse or type error inside a quotation — a `Theorem`'s goal, a
+`Definition` or `Inductive` body, a `Termination` obligation — is
+reported on the subterm at fault, not on the declaration's keyword.
+
+The position is HOL's own and arrives in buffer coordinates already.
+`HOLSourceExpand.mkLocPragma` prefixes every quotation literal the
+expander emits with `(*#loc LINE COL*)` in whole-file coordinates, and
+`base_lexer`'s `dolocpragma` rebases each token through
+`locn.rel_to_abs`, so the `locn` inside the `HOL_ERR` that escapes the
+declaration is a pair of absolute `LocA`s in the text the client sent.
+
+`server.ML` cannot read any of that: it is compiled before HOL exists
+and cannot name `Feedback` or `locn`.  The seam is
+`LSPExtension.exnReport`, installed by `error_locn_init.ML`, which
+answers with a byte-counting line/column range and HOL's own message.
+
+Three things about it are easy to get wrong:
+
+  - **The innermost origin, not the first.**  `Q.store_thm_at` catches
+    and re-raises through `wrap_exn`, which conses an origin carrying
+    `Loc_Unknown` onto the *front* — so `Feedback.top_location_of`
+    answers about the wrapper.  Nor is the first *located* origin
+    right: an intermediate one can hold a `locn.between`-merged span
+    straddling two different pragmas, which as a range runs from
+    somewhere else entirely to the fault.  `exnToReportIn` re-checks
+    the answer against the declaration's start byte for that reason.
+
+  - **The end is widened as an offset, never as a column.**  A region
+    whose last character ends a line has an end column past that line,
+    and `fromLineColBytes` clamps such a column back onto the line —
+    collapsing the range to nothing.  `hover_quote_init`'s `locn_range`
+    had this right first.
+
+  - **`locn` columns count bytes**, as does the column a `(*#loc*)`
+    pragma carries.  Handing them to a client that negotiated utf-16
+    without converting agrees exactly under utf-8 and skews every
+    position on a line holding a non-ASCII character.
+
+The message is `Feedback.message_of`, not `format_ERR`: the latter
+prepends `Exception raised ` and prints the whole origin chain *with*
+its locations, which is the squiggle's job.  Where a range was found,
+a trailing line that is nothing but `locn.toString` text is dropped —
+the term grammar bakes its own location into its message.
+
+An exception with no usable `locn` keeps the old answer, a zero-width
+range at the declaration's start.  So does one that is not a
+`HOL_ERR`, which also keeps the old rendering.
+
+Two limits worth knowing.  `Pretype.unify` reports `Loc_Unknown`
+(`src/parse/Pretype.sml`), so the position is the enclosing
+application's *argument* rather than the exact clashing subterm; in
+practice that is the subterm a reader would point at anyway.  And a
+term quotation inside a *tactic* fails during proof replay, in the
+pool, where the exception is reduced to a string before a diagnostic
+is built — those are still reported against the failing tactic.
 
 ## Proof checking
 

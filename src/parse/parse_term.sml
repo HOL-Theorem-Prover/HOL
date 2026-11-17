@@ -8,13 +8,16 @@ open parse_term_dtype
 
 infix >> >- ++ >->
 
-val syntax_error_trace = ref true
-val _ = Feedback.register_btrace ("syntax_error", syntax_error_trace)
+val {get = syntax_error_trace,flag=show_syntax_errors,...} =
+    HOLFlags.create_btrace(
+      {group = "Parse", name = "syntax_error"},
+      true
+    )
 
-fun WARN f msg = if !syntax_error_trace then
+fun WARN f msg = if syntax_error_trace() then
                    Feedback.HOL_WARNING "parse_term" f msg
                  else ()
-fun WARNloc f loc msg = if !syntax_error_trace then
+fun WARNloc f loc msg = if syntax_error_trace() then
                           Feedback.HOL_WARNINGloc "parse_term" f loc msg
                         else ()
 
@@ -32,16 +35,6 @@ fun liftlocn f (x,locn) = (f x,locn)
 exception ParseTermError of string locn.located
 type 'a token = 'a term_tokens.term_token
 type 'a qbuf = 'a qbuf.qbuf
-
-
-fun insert_sorted (k, v) [] = [(k, v)]
-  | insert_sorted kv1 (wholething as (kv2::rest)) = let
-      val (k1, _) = kv1
-      val (k2, _) = kv2
-    in
-      if (k1 < k2) then kv1::wholething
-      else kv2::insert_sorted kv1 rest
-    end
 
 
 fun listtoString f [] = "[]"
@@ -181,8 +174,11 @@ in
   Id :: map STD_HOL_TOK (binders G) @ map hd prefix_rules
 end
 
-val ambigrm = ref 1
-val _ = Feedback.register_trace ("ambiguous grammar warning", ambigrm, 2)
+val {get = ambigrm, flag = ambiguous_grammar_warning, ...} =
+    HOLFlags.create_trace(
+      {group = "Parse", name = "ambiguous_grammar"},
+      {max = 2, initial = 1}
+    )
 
 fun STtoString (G:grammar) x =
   case x of
@@ -505,9 +501,9 @@ fun report_ambiguity ({ambiguity, ...} : prec_matrix) =
       NONE => complained_already := false
     | SOME msg =>
         if not (!complained_already) andalso
-           (!Globals.interactive orelse !ambigrm = 2)
+           (!Globals.interactive orelse ambigrm() = 2)
         then
-          case !ambigrm of
+          case ambigrm() of
             0 => ()
           | 1 => (Feedback.HOL_WARNING "Parse" "Term" msg;
                   complained_already := true)
@@ -1387,7 +1383,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
              error (WARNloc_string lrlocn "Can't do this sort of reduction"))
         end
   end handle Failloc (loc,s) =>
-             (if !syntax_error_trace then
+             (if syntax_error_trace() then
                 Feedback.HOL_INFO (locn.toString loc ^ ":\n" ^ s ^ "\n")
               else ();
               error (WARNloc_string loc s))
@@ -1524,7 +1520,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                         locn.toString itlocn^" and " ^
                         locn.toString toplocn^".\n"
             in
-              if !syntax_error_trace then Feedback.HOL_INFO msg
+              if syntax_error_trace() then Feedback.HOL_INFO msg
               else ();
               error (msg, toplocn)
             end

@@ -25,6 +25,12 @@ val mk_fun_ty : pretype * pretype -> pretype
 val unify : pretype -> pretype -> unit in_env
 val can_unify : pretype -> pretype -> bool in_env
 
+(* [with_blame l m] runs m, recording l as the thing to blame for any
+   unification variable m binds.  A later clash involving such a
+   variable is then reported at l rather than with no position at all.
+   See the comment on Env in Pretype.sml. *)
+val with_blame : locn.locn -> 'a in_env -> 'a in_env
+
 val apply_subst : Env.t -> pretype -> pretype
 
 val rename_typevars : string list -> pretype -> pretype in_env

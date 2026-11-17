@@ -11,7 +11,7 @@ loadPath :=
             !loadPath;
 
 map load ["swsepLib", "elliptic_exampleTheory"];
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open swsepLib;

@@ -1,0 +1,44 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `HOLFlags`
+
+``` hol4
+   structure HOLFlags
+```
+
+------------------------------------------------------------------------
+
+Module for the flags and traces that tune HOL's behaviour.
+
+A *trace* is a named setting that some tool consults: how verbose to
+be, whether to print types, whether a check is strict. Each has an
+integer value between zero and a maximum fixed when it is created;
+those with a maximum of one are presented as booleans and called
+*bflags*.
+
+Names are a group and a name within it, so related traces cluster
+together and the group says which library owns the setting:
+`PP.types`, `Theory.allow_rebinds`, `words.printing`. Where a string
+is wanted, the two are joined with a dot.
+
+A trace can be reached two ways. By name, with `set_trace`,
+`current_trace` and `trace`, which is convenient but resolves at run
+time, so a misspelling fails only when the call is reached. Or by
+value: `create_trace` and `create_btrace` return a `flag` (or `bflag`)
+naming what they made, and the owning module exports it, so
+`set_flag`, `set_bflag`, `with_flags` and `with_bflags` are checked
+when the caller is compiled.
+
+The settings themselves live in a slot of the prevailing `Context.t`,
+so they travel with a context across `Context.snapshot` and
+`Context.restore`. The `C`-suffixed functions --- `get_flagC`,
+`set_bflagC` and the rest --- read and write the flags of a context
+supplied by the caller, rather than the ambient one.
+
+### See also
+
+[`Feedback`](#Feedback),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.create_btrace`](#HOLFlags.create_btrace),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

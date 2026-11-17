@@ -16,7 +16,7 @@ sig
 
   val pp_rewrites           : rewrites Parse.pprinter
   val bool_rewrites         : rewrites
-  val monitoring            : bool ref
+  val monitoring            : HOLFlags.bflag
 
   val REWRITES_CONV         : rewrites -> conv
   val GEN_REWRITE_CONV : (conv -> conv) -> rewrites -> thm list -> conv

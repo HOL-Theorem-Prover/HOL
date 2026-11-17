@@ -26,7 +26,7 @@ val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss ++
                    BasicProvers.thy_ssfrag "intreal") [LET_THM]
 
 fun test conv nm (problem, result) = let
-  val t2s = trace ("Unicode", 0) term_to_string
+  val t2s = HOLFlags.with_bflags [(Parse.avoid_unicode, true)] term_to_string
 in
   convtest("[" ^ nm ^ "] " ^ t2s problem ^ " = " ^ t2s result,
            conv, problem, result)

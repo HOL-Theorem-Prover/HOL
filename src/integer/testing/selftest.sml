@@ -40,6 +40,23 @@ val _ = require (check_result (K true))
                 (SIMP_CONV (bool_ss ++ intSimps.OMEGA_ss) [])
                 ``x > 2n /\ F ==> x > 1``
 
+(* The int compset has no rule for a ground division by 0, so the
+   "Integer calculation" conversion must fail there rather than return
+   |- t = t, which the simplifier would reapply forever.  The limit turns
+   such a loop into an early stop that leaves the second conjunct
+   unsimplified. *)
+fun ground_simp t =
+  Conv.QCONV (SIMP_CONV (limit 1000 (BasicProvers.srw_ss())) []) t
+val _ = List.app (fn t => convtest ("srw_ss simplifies “" ^
+                                    term_to_string t ^ "”",
+                                    ground_simp, t, boolSyntax.F))
+                 [“5 / 0i = 6 /\ ?m:num. m < 0”,
+                  “5 % 0i = 6 /\ ?m:num. m < 0”,
+                  “5 quot 0i = 6 /\ ?m:num. m < 0”,
+                  “5 rem 0i = 6 /\ ?m:num. m < 0”]
+val _ = convtest ("srw_ss still reduces “-7 % 2i”", ground_simp, “-7 % 2i”,
+                  “1i”)
+
 val _ = shouldfail {testfn = intLib.ARITH_CONV, printresult = thm_to_string,
                     printarg = (fn t => "ARITH_CONV “" ^ term_to_string t ^
                                         "” fails correctly (gh1209)"),

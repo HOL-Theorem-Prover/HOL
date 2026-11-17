@@ -20,9 +20,9 @@ type name = {Thy : string, Name : string}
    snippets: optionally (input, output) files for pages that link into
      the HTML dossier: text read from the input is printed by HOL with
      the dossier's highlighting and links (see README.md).
-   assumptions: optionally a theorem and a markdown file explaining each
-     of its hypotheses (see README.md); the dossier shows each
-     hypothesis, its definition and its explanation after the theorem.
+   assumptions: some of the theorems, each with a markdown file explaining
+     its hypotheses (see README.md); the dossier shows each hypothesis,
+     its definition and its explanation after the theorem.
    supporting: stored theorems shown after the theorems, stated but not
      expanded. *)
 datatype output_format = Markdown | Html
@@ -39,7 +39,7 @@ type config = {
   source_dirs : (string * string) list,
   outputs : (output_format * string) list,
   snippets : (string * string) option,
-  assumptions : {theorem : name, prose : string} option,
+  assumptions : {theorem : name, prose : string} list,
   supporting : name list
 }
 
@@ -50,5 +50,21 @@ val script_theories : string list -> string list
 (* Write stored statements and their definition closure to the outputs.
    Raises Fail on invalid configuration or assumption prose. *)
 val run : config -> unit
+
+(* Original stored statements selected for the theorem and definition sections.
+   Definition sections identify their constant and retain whole sequents. *)
+val statement_sections : config ->
+  (string * (name * Thm.thm) list) list
+
+(* Additional prose belongs in About, away from the opening explanation.
+   Omitted types are not described or linked; their uses remain in formulas.
+   Reader view hides traversal metadata, raw duplicate statements and pinning
+   formulas, and displays definitions as implicitly quantified clauses.
+   Pinning names are still validated. Theory sources link boundary constants
+   to caller-supplied source URLs. About prose is Markdown. *)
+type presentation = {about : string, omit_types : name list,
+                     reader_view : bool,
+                     theory_sources : (string * string) list}
+val run_with_presentation : presentation -> config -> unit
 
 end

@@ -4,7 +4,7 @@
 
 val _ = print "Testing HolQbfLib "
 
-val _ = QbfTrace.trace := 0
+val _ = HOLFlags.set_flag (QbfTrace.trace_flag, 0)
 
 (*****************************************************************************)
 (* check whether Squolem is installed                                        *)

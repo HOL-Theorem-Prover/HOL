@@ -66,9 +66,10 @@ val mk_rewrites = map fst o local_mk_rewrites;
 (* Support for examining some aspects of the work of the rewriter            *)
 (*---------------------------------------------------------------------------*)
 
-val monitoring = ref false;
-
-val _ = register_btrace ("Rewrite", monitoring) ;
+val {flag = monitoring, get = get_monitoring, ...} = HOLFlags.create_btrace(
+      {group = "Rewrite", name = "monitoring"},
+      false
+    );
 
 (*---------------------------------------------------------------------------*)
 (* Abstract datatype of rewrite rule sets.                                   *)
@@ -108,7 +109,7 @@ end (* abstype *)
 
 fun REWRITES_CONV rws tm =
  let val net = net_of rws
- in if !monitoring
+ in if get_monitoring()
     then case mapfilter (fn f => f tm) (Net.match tm net)
           of []   => Conv.NO_CONV tm
            | [x]  => (HOL_MESG (String.concat

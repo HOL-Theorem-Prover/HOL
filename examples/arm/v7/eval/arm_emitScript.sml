@@ -127,8 +127,8 @@ Definition unsigned_sat_q_itself_def:
   unsigned_sat_q_itself (i,N,(:'a)) = (unsigned_sat_q (i,N)) : 'a word # bool
 End
 
-val _ = type_pp.pp_num_types := false;
-val _ = type_pp.pp_array_types := false;
+val _ = HOLFlags.set_bflag (type_pp.num_types, false);
+val _ = HOLFlags.set_bflag (type_pp.array_types, false);
 val _ = temp_disable_tyabbrev_printing "proc";
 val _ = temp_disable_tyabbrev_printing "FullAddress";
 val _ = temp_disable_tyabbrev_printing "cpid";
@@ -139,7 +139,9 @@ val _ = temp_clear_overloads_on "UInt"
 val _ = temp_clear_overloads_on "SInt"
 val _ = temp_overload_on("w2i", ``integer_word$w2i``);
 
-fun f x = [QUOTE (trace ("Unicode",0) EmitTeX.datatype_thm_to_string x)]
+fun f x =
+  [QUOTE (HOLFlags.with_bflags [(Parse.avoid_unicode, true)]
+                               EmitTeX.datatype_thm_to_string x)]
 
 val n2w_rule = Q.SPEC `n2w m`
 

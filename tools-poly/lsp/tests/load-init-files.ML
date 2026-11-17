@@ -62,10 +62,10 @@ fun tryMeta m =
 
 val () = List.app tryMeta ["Future", "Event_Timer", "Timeout"]
 val () = List.app tryLoad
-  ["deferred_proofs.ML", "pretty_printers_init.ML", "defnbase_init.ML",
-   "hover_quote_init.ML", "tactic_steps.ML", "tactic_walker.ML",
-   "goal_state_init.ML", "db_symbols_init.ML", "db_search_init.ML",
-   "help_init.ML"]
+  ["error_locn_init.ML", "deferred_proofs.ML", "pretty_printers_init.ML",
+   "defnbase_init.ML", "hover_quote_init.ML", "tactic_steps.ML",
+   "tactic_walker.ML", "goal_state_init.ML", "db_symbols_init.ML",
+   "db_search_init.ML", "help_init.ML"]
 
 val () =
   case rev (!failures) of

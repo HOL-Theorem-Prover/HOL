@@ -1,0 +1,34 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `create_btrace`
+
+``` hol4
+HOLFlags.create_btrace :
+  trace_name * bool ->
+  {get : unit -> bool, set : bool -> unit, flag : bflag}
+```
+
+------------------------------------------------------------------------
+
+Creates a new boolean-valued trace.
+
+A call to `create_btrace({group,name}, b)` creates a trace under the
+given name that takes just two values, 0 and 1, presented to the
+caller as a boolean starting at `b`.
+
+The returned record's `get` and `set` read and write it as a boolean,
+and `flag` is a `bflag` value naming it, for passing to `set_bflag`,
+`with_bflags` and their context-taking variants.
+
+### Failure
+
+Never fails. Creating a trace whose name is already in use replaces the
+existing one, with a warning.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.current_trace`](#HOLFlags.current_trace),
+[`HOLFlags.create_trace`](#HOLFlags.create_trace),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.trace`](#HOLFlags.trace),
+[`HOLFlags.traces`](#HOLFlags.traces)

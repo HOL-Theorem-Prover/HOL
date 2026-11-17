@@ -335,7 +335,7 @@ val _ = eSML "llist"
 
 (* == Patricia trees ======================================================= *)
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 fun Datatype x = DATATYPE [QUOTE (EmitTeX.datatype_thm_to_string x)]
 
 val fun_rule = REWRITE_RULE [FUN_EQ_THM]

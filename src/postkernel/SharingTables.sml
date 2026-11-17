@@ -559,5 +559,7 @@ fun dec_sdata {before_types,before_terms,tables,exports} =
 fun export_from_sharing_data (_, _, _, _, exp) = exp
 fun read_term (_,_,_,tmv,_) = Term.read_raw tmv
 fun read_string (strv,_,_,_,_) i = Vector.sub(strv,i)
+fun shared_vectors (strv,_,_,tmv,_) = (strv, tmv)
+fun shared_ids (_,idv,_,_,_) = idv
 
 end; (* struct *)

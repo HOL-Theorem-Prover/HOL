@@ -270,11 +270,11 @@ struct
       end
       handle Feedback.HOL_ERR _ =>  (* 'tm' is not existentially quantified *)
         ()
-    val _ = if !QbfTrace.trace > 0 then check_bvars tm else ()
+    val _ = if QbfTrace.trace() > 0 then check_bvars tm else ()
     (* Because the semantics of free variables differs in QDIMACS (where they
        are implicitly existential) vs. HOL (where they are implicitly
        universal), we inform the user if there are any free variables. *)
-    val _ = if !QbfTrace.trace > 0 andalso
+    val _ = if QbfTrace.trace() > 0 andalso
       HOLset.numItems (Term.FVL [tm] Term.empty_varset) > 0 then
         Feedback.HOL_WARNING "QDimacs" "read_qdimacs_file"
           "QDIMACS problem contains free variables"

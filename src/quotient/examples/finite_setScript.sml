@@ -545,7 +545,8 @@ val fnlist =
 (*   LIFT TYPES, CONSTANTS, AND THEOREMS BY QUOTIENTS   *)
 (* ==================================================== *)
 
-val _ = quotient.chatting := true;   (* Causes display of quotient as built *)
+(* Causes display of quotient as built *)
+val _ = HOLFlags.set_bflag (quotient.chatting, true);
 
 val  [finite_set_cases, Insert_LEFT_COMM, Insert_LEFT_IDEM,
       In, NONE_In_Empty, In_Insert, finite_set_strong_cases,

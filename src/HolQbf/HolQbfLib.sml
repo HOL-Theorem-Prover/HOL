@@ -14,7 +14,7 @@ structure HolQbfLib :> HolQbfLib = struct
           val dict = QDimacs.write_qdimacs_file path t
           (* the actual system call to Squolem *)
           val cmd = "squolem2 -c " ^ path ^ " >/dev/null 2>&1"
-          val _ = if !QbfTrace.trace > 1 then
+          val _ = if QbfTrace.trace() > 1 then
                     Feedback.HOL_MESG ("HolQbfLib: calling external command '" ^
                                        cmd ^ "'")
                   else ()
@@ -25,7 +25,7 @@ structure HolQbfLib :> HolQbfLib = struct
         end
     fun finish () =
     (* delete temporary files *)
-        if !QbfTrace.trace < 4 then
+        if QbfTrace.trace() < 4 then
           List.app (fn path => OS.FileSys.remove path handle SysErr _ => ())
                    [path, cert_path]
         else ()

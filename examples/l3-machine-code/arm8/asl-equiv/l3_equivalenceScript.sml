@@ -59,6 +59,42 @@ Definition reg_rel_def:
     ∀n. n ≤ 31 ⇒ l3 (n2w n) = EL n (R_ref.read_from asl)
 End
 
+Definition fp_reg_rel_def:
+  fp_reg_rel (l3 : word5 -> word64) (asl : regstate) ⇔
+    LENGTH (Z_ref.read_from asl) = 32 ∧
+    ∀n. n ≤ 31 ⇒ l3 (n2w n) = w2w (EL n (Z_ref.read_from asl))
+End
+
+Theorem fp_reg_rel_read:
+  fp_reg_rel regs asl ⇒
+  w2w (EL (w2n n) (Z_ref.read_from asl)) = regs n
+Proof
+  strip_tac >>
+  gvs[fp_reg_rel_def] >>
+  qpat_x_assum `∀n. _` (qspec_then `w2n n` mp_tac) >>
+  qspec_then `n` mp_tac w2n_lt >> simp[] >> decide_tac
+QED
+
+Theorem fp_reg_rel_write:
+  fp_reg_rel regs asl ⇒
+  fp_reg_rel ((n =+ w2w value) regs)
+    (Z_ref.write_to (LUPDATE value (w2n n) (Z_ref.read_from asl)) asl)
+Proof
+  rw[fp_reg_rel_def, Z_ref_def, EL_LUPDATE, combinTheory.APPLY_UPDATE_THM] >>
+  rename1 `index ≤ 31` >>
+  qspec_then `n` mp_tac w2n_lt >> simp[] >> strip_tac >>
+  `index < 32` by decide_tac >>
+  `n = n2w index ⇔ w2n n = index` by
+    (eq_tac >> strip_tac >> gvs[]) >>
+  namedCases_on `w2n n = index` ["", ""] >> gvs[]
+QED
+
+Theorem fp_reg_rel_unique:
+  fp_reg_rel regs asl ∧ fp_reg_rel regs' asl ⇒ regs = regs'
+Proof
+  rw[FUN_EQ_THM] >> metis_tac[fp_reg_rel_read]
+QED
+
 Definition mem_rel_def:
   mem_rel (l3 : word64 -> word8) (asl : num |-> bitU list) tags =
     ∀w.
@@ -96,6 +132,9 @@ Definition state_rel_def:
     read_rel tcr_el2_3_rel l3.TCR_EL3 asl.regstate TCR_EL3_ref ∧
     read_rel branch_hint_rel l3.branch_hint asl.regstate BranchTaken_ref ∧
     reg_rel l3.REG asl.regstate ∧
+    fp_reg_rel l3.FP_REG asl.regstate ∧
+    read_rel ($=) l3.FPCR asl.regstate FPCR_ref ∧
+    read_rel ($=) l3.FPSR asl.regstate FPSR_ref ∧
     mem_rel l3.MEM asl.memstate asl.tagstate ∧
     l3.exception = NoException
 End
@@ -125,7 +164,12 @@ Definition asl_sys_regs_ok_def:
       ¬word_bit 29 TCR_EL2) ∧
 
     (let TCR_EL3 = asl.regstate.bitvector_32_dec_reg "TCR_EL3" in
-      ¬word_bit 29 TCR_EL3)
+      ¬word_bit 29 TCR_EL3) ∧
+
+    word_bit 20 (asl.regstate.bitvector_32_dec_reg "CPACR_EL1") ∧
+    word_bit 21 (asl.regstate.bitvector_32_dec_reg "CPACR_EL1") ∧
+    ¬word_bit 10 (asl.regstate.bitvector_32_dec_reg "CPTR_EL2") ∧
+    ¬word_bit 10 (asl.regstate.bitvector_32_dec_reg "CPTR_EL3")
 End
 
 Definition l3_models_asl_def:
@@ -146,4 +190,3 @@ Definition l3_models_asl_instr_def:
       | ARM8 opcode => l3_models_asl opcode
       | _ => F
 End
-

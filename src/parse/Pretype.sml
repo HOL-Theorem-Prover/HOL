@@ -7,20 +7,104 @@ infix >> >-;
 
 val TCERR = mk_HOL_ERR "Pretype";
 
+(* Blame.  A pretype has no `locn' field, and cannot be given one: it
+   is shared, substituted into and rebuilt constantly, and a type is
+   not a piece of source text.  What *is* a piece of source text is the
+   moment a unification variable was bound -- some subterm demanded
+   that type of it -- and that is usually the thing a reader needs to
+   be shown.  So the environment remembers, per unification variable,
+   where it was bound; `unify' reports that position when two bound
+   types clash, instead of the `Loc_Unknown' it used to have to use.
+
+   Callers say what to blame with `with_blame', which scopes a locn
+   over whatever bindings an action makes.  A caller that says nothing
+   records nothing, so this costs the rest of the parser nothing and
+   cannot move a position that was already being reported. *)
 structure Env =
 struct
-  type t = (pretype Inttab.table * int)
-  fun lookup (d,c) i = Inttab.lookup d i
-  fun update (i,pty) (d,c) = (Inttab.update (i,pty) d, c)
-  val empty : t = (Inttab.empty, 0)
-  fun new (d,c) = ((d,c+1), c)
-  fun toList (d,c) = List.tabulate(c, fn i => (i, Inttab.lookup d i))
+  type t = {binds : pretype Inttab.table,
+            (* uvar |-> (when it was bound, what to blame for it) *)
+            prov : (int * locn.locn) Inttab.table,
+            next : int, stamp : int, blame : locn.locn}
+  fun lookup ({binds,...}:t) i = Inttab.lookup binds i
+  (* `src' is the unification variable the type being bound was chased
+     through, if any.  A type reached that way did not originate here:
+     it originated wherever that variable got it, and inheriting the
+     blame follows it back to the subterm that produced it instead of
+     stopping at whatever happened to be unifying when the copy was
+     made.  Without this the answer for `(value1 UNION value2, d2)' is
+     the pair comma -- the last operator to handle the type -- rather
+     than the `UNION' that made it a set. *)
+  fun update_from src (i,pty) ({binds,prov,next,stamp,blame}:t) : t =
+      let
+        val inherited =
+            case src of
+                NONE => NONE
+              | SOME j => (case Inttab.lookup prov j of
+                               SOME (_, l) => SOME l
+                             | NONE => NONE)
+        val entry =
+            case inherited of
+                SOME l => SOME (stamp, l)
+              | NONE =>
+                (case blame of
+                     locn.Loc_None => NONE
+                   | locn.Loc_Unknown => NONE
+                   | l => SOME (stamp, l))
+      in
+        {binds = Inttab.update (i,pty) binds,
+         prov = (case entry of
+                     NONE => prov
+                   | SOME e => Inttab.update (i,e) prov),
+         next = next, stamp = stamp + 1, blame = blame}
+      end
+  fun update arg E = update_from NONE arg E
+  val empty : t = {binds = Inttab.empty, prov = Inttab.empty,
+                   next = 0, stamp = 0, blame = locn.Loc_None}
+  fun new ({binds,prov,next,stamp,blame}:t) =
+      ({binds = binds, prov = prov, next = next + 1, stamp = stamp,
+        blame = blame} : t, next)
+  fun toList ({binds,next,...}:t) =
+      List.tabulate(next, fn i => (i, Inttab.lookup binds i))
+  fun provenance ({prov,...}:t) i = Inttab.lookup prov i
+  fun blame_of ({blame,...}:t) = blame
+  fun set_blame l ({binds,prov,next,stamp,...}:t) : t =
+      {binds = binds, prov = prov, next = next, stamp = stamp, blame = l}
 end
 
 open typecheck_error
 type 'a in_env = (Env.t,'a,error) errormonad.t
 
+fun with_blame l (m : 'a in_env) : 'a in_env = fn e =>
+  case m (Env.set_blame l e) of
+      Error err => Error err
+    | Some (e', v) => Some (Env.set_blame (Env.blame_of e) e', v)
+
 fun fail s = error (Misc s, locn.Loc_Unknown)
+
+(* Of the unification variables a failing `unify' was chased through,
+   the position of the one bound *latest*: inference runs left to right
+   through the source, so the most recent constraint is the newest
+   information and the likeliest culprit.  No candidate was bound under
+   a `with_blame', or none was chased at all, and there is nothing to
+   say. *)
+fun bestBlame (e : Env.t) cands = let
+  fun better (NONE, acc) = acc
+    | better (SOME i, acc) =
+      (case Env.provenance e i of
+           NONE => acc
+         | SOME (s, l) =>
+             case acc of
+                 SOME (s', _) => if s > s' then SOME (s, l) else acc
+               | NONE => SOME (s, l))
+in
+  case List.foldl better NONE cands of
+      SOME (_, l) => l
+    | NONE => locn.Loc_Unknown
+end
+
+fun failAt (c1, c2) s : 'a in_env =
+    fn e => Error (Misc s, bestBlame e [c1, c2])
 
 fun boundcase i (n:'a in_env) (sf : pretype -> 'a in_env) : 'a in_env = fn e =>
   case Env.lookup e i of
@@ -39,12 +123,8 @@ fun tyvars t =
 fun mk_fun_ty (dom,rng) = Tyop{Thy="min", Tyop="fun", Args = [dom,rng]}
 
 val new_uvar = lift UVar (Some o Env.new)
-fun update arg E =
-  let
-    val E' = Env.update arg E
-  in
-    Some (E', ())
-  end
+fun update_from src arg E = Some (Env.update_from src arg E, ())
+fun update arg E = update_from NONE arg E
 
 infix ref_occurs_in
 
@@ -68,37 +148,45 @@ fun r ref_equiv value =
                          (fn pty => if r = r' then return true
                                     else r ref_equiv pty)
 
-fun bind i pty : unit in_env =
+fun bind_from src i pty : unit in_env =
   case pty of
       UVar j => if i = j then ok
-                else boundcase j (update(i,pty)) (bind i)
+                else boundcase j (update_from src (i,pty))
+                                 (fn pty' => bind_from (SOME j) i pty')
     | _ => (i ref_occurs_in pty) >-
            (fn b => if b then fail "Circular binding in unification"
-                    else update(i,pty))
+                    else update_from src (i,pty))
+fun bind i pty = bind_from NONE i pty
 
-fun unify t1 t2 =
+(* `cs' is the unification variable, if any, that each side has been
+   chased through to reach the type now in hand.  Descending into a
+   type operator's arguments keeps it: the argument was carried there
+   by that same binding. *)
+fun unify t1 t2 = unifyc (NONE, NONE) t1 t2
+and unifyc (cs as (c1,c2)) t1 t2 =
   case (t1, t2) of
       (UVar r, _) =>
-        boundcase r (bind r t2) (fn t1' => unify t1' t2)
-    | (_, UVar r) => boundcase r (bind r t1) (fn t2' => unify t1 t2')
+        boundcase r (bind r t2) (fn t1' => unifyc (SOME r, c2) t1' t2)
+    | (_, UVar r) =>
+        boundcase r (bind r t1) (fn t2' => unifyc (c1, SOME r) t1 t2')
     | (Vartype v1, Vartype v2) =>
         if v1 = v2 then ok
-        else fail ("Attempt to unify fixed variable types "^v1^" and " ^ v2)
+        else failAt cs ("Attempt to unify fixed variable types "^v1^" and " ^ v2)
     | (Vartype v, Tyop {Thy,Tyop=s,...}) =>
-      fail ("Attempt to unify fixed variable type "^v^" with operator "^
-            Thy^"$"^s)
+      failAt cs ("Attempt to unify fixed variable type "^v^" with operator "^
+                 Thy^"$"^s)
     | (Tyop {Thy,Tyop=s,...}, Vartype v) =>
-      fail ("Attempt to unify fixed variable type "^v^" with operator "^
-            Thy^"$"^s)
+      failAt cs ("Attempt to unify fixed variable type "^v^" with operator "^
+                 Thy^"$"^s)
     | (Tyop{Args=as1, Tyop=op1, Thy=thy1}, Tyop{Args=as2, Tyop=op2, Thy=thy2})=>
         if thy1 <> thy2 orelse op1 <> op2 then
-          fail ("Attempt to unify different type operators: " ^
-                thy1 ^ "$" ^ op1^ " and " ^ thy2 ^ "$" ^ op2)
-        else unifyl as1 as2
-and unifyl [] [] = ok
-  | unifyl [] _ = fail "Same tyop with different # of arguments?"
-  | unifyl _ [] = fail "Same tyop with different # of arguments?"
-  | unifyl (t1::t1s) (t2::t2s) = unify t1 t2 >> unifyl t1s t2s
+          failAt cs ("Attempt to unify different type operators: " ^
+                     thy1 ^ "$" ^ op1^ " and " ^ thy2 ^ "$" ^ op2)
+        else unifycl cs as1 as2
+and unifycl _ [] [] = ok
+  | unifycl cs [] _ = failAt cs "Same tyop with different # of arguments?"
+  | unifycl cs _ [] = failAt cs "Same tyop with different # of arguments?"
+  | unifycl cs (t1::t1s) (t2::t2s) = unifyc cs t1 t2 >> unifycl cs t1s t2s
 
 fun can_unify pty1 pty2 : bool in_env = fn e =>
   case unify pty1 pty2 e of

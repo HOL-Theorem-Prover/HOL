@@ -7,7 +7,7 @@ loadPath :=
             (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
             (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) ::
             !loadPath;
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open HolKernel boolLib bossLib PPBackEnd Parse
@@ -22,7 +22,7 @@ quietdec := false;
 val holfoot_pretty_printer_block_indent = ref 3;
 
 fun unicode_choice snu su =
-  if (current_trace "Unicode" = 1) then su else snu
+  if HOLFlags.get_bflag Parse.avoid_unicode then snu else su
 
 val _ = register_UserStyle NONE "holfoot_comment" [FG LightGrey]
 val _ = register_UserStyle NONE "holfoot_spec"    [FG OrangeRed]
@@ -1328,12 +1328,12 @@ val pretty_printer_list =
      frame split (imp:holfoot_a_proposition -> num) pred``, holfoot_frame_split_printer)
  ]:(string * Parse.term * term_grammar.userprinter) list;
 
-val use_holfoot_pp = ref true
-val _ = Feedback.register_btrace ("use holfoot_pp", use_holfoot_pp);
+val {get = use_holfoot_pp, flag = use_pp, ...} =
+    HOLFlags.create_btrace ({group = "holfoot", name = "use_pp"}, true);
 
 fun trace_user_printer (up:term_grammar.userprinter) =
    (fn GS => fn sys => fn ppfns => fn gravs => fn d => fn pps => fn t =>
-   if (!use_holfoot_pp) then
+   if (use_holfoot_pp()) then
        (up GS sys ppfns gravs d pps t)
           handle Interrupt => raise Interrupt
                | _         => raise term_pp_types.UserPP_Failed
@@ -1385,7 +1385,7 @@ temp_remove_holfoot_pp ();temp_add_holfoot_pp ();t
 temp_remove_holfoot_pp ();t
 *)
 
-val _ = Feedback.set_trace "PPBackEnd use annotations" 0
+val _ = HOLFlags.set_bflag (PPBackEnd.use_annotations, false)
 val _ = add_holfoot_pp_quiet();
 
 end

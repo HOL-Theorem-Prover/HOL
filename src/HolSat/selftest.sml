@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib testutils HolSatLib
 
-val _ = set_trace "Unicode" 0
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true)
 
 (* #1170: SAT_ORACLE used to fabricate a bogus theorem on inputs whose
    negated form has a top-level conjunct that boolean-simplifies to F.

@@ -53,6 +53,15 @@ fun prim_new_type {Thy,Tyop} n = let
 in
   upd_typesig (#1 o KernelSig.insert({Thy=Thy,Name=Tyop},n))
 end
+
+fun prim_load_type {Thy,Tyop} n = let
+  val _ = n >= 0 orelse failwith "invalid arity"
+in
+  KernelSig.epoch_of
+    (genupd_typesig
+       (KernelSig.insert_sealed_type ({Thy=Thy,Name=Tyop}, n))) =
+  KernelSig.canonical_type_epoch
+end
 fun del_segment s =
     if KernelSig.is_sealed_thy s then
       raise ERR "del_segment"
@@ -225,14 +234,18 @@ val delta  = Tyv "'d"
 val etyvar = Tyv "'e"
 val ftyvar = Tyv "'f"
 
-val varcomplain = ref true
-val _ = register_btrace ("Vartype Format Complaint", varcomplain)
+type bflag = HOLFlags.bflag
+val {get=getvc,flag=vartype_fmt_complaint,...} =
+    HOLFlags.create_btrace (
+      {group="Kernel",name = "Vartype_Format_Complaint"},
+      true
+    )
 
 fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
   | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
   | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
-                   else (if !varcomplain then
+                   else (if getvc() then
                            WARN "mk_vartype"
                                 ("non-standard syntax: \""^ String.toString s ^
                                  "\"")

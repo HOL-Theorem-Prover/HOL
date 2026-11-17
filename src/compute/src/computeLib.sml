@@ -12,9 +12,11 @@ open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
      https://doi.org/10.1007/3-540-44659-1_2
 *)
 
-val auto_import_definitions = ref true;
-val _ = Feedback.register_btrace
-          ("computeLib.auto_import_definitions", auto_import_definitions)
+val {get = get_auto_import_definitions, flag = auto_import_definitions,
+     ...} = HOLFlags.create_btrace(
+      {group = "computeLib", name = "auto_import_definitions"},
+      true
+    );
 
 (* re-exporting types from clauses *)
 
@@ -456,11 +458,14 @@ fun apply_delta cld () =
           upd_compset (fn cs => set_skip cs t iopt)
       | CLD_delconst t => del_consts [t]
 
+(* The per-theory values are unit; only the global compset is updated.  The
+   per-theory apply_delta must not touch it: ancestry merges re-apply
+   ancestors' deltas, which would undo later add_persistent_funs. *)
 val {record_delta,get_deltas=thy_updates,...} =
     AncestryData.fullmake {
       adinfo = {tag = "computeLib.delta",
                 initial_values = [("min", ())],
-                apply_delta = apply_delta},
+                apply_delta = fn _ => fn () => ()},
       uptodate_delta = uptodate_delta,
       sexps = {dec = decdelta, enc = encdelta},
       globinfo = {apply_to_global = apply_delta,

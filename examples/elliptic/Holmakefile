@@ -1,0 +1,1 @@
+INCLUDES = $(HOLDIR)/src/num/extra_theories $(HOLDIR)/src/res_quan/src

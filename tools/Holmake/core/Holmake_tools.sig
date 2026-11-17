@@ -84,6 +84,13 @@ sig
   val bold : string -> string
   val dim : string -> string
   val CLR_EOL : string
+  val fancy_output_ok : TextIO.outstream -> bool
+    (* True when `strm' is a terminal that will interpret the escape
+       sequences an in-place progress animation needs (carriage return
+       plus clear-to-end-of-line).  Everything that overwrites a line
+       rather than appending to it should be guarded by this; when it
+       is false the caller must restrict itself to whole, newline-
+       terminated lines. *)
   val getWidth : unit -> int
   val strip_codes : string -> string
   val noesc_size : string -> int
@@ -110,6 +117,12 @@ sig
   val die_with : string -> 'a
 
 
+  val layout_exports : unit -> string
+    (* Shell commands exporting HOLOBJROOT and HOLSRCROOT for the
+       current artifact layout, to put before a command run through
+       the shell; "" with no layout, or where the shell is not a Unix
+       one. *)
+
   val check_distrib : string -> string option
     (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->
@@ -126,7 +139,7 @@ sig
        getting in the way of the later cline-parse chdir. *)
 
   val write_lastmaker_in_cwd : output_functions -> unit
-    (* Records DEPDIR/lastmaker in the current working directory,
+    (* Records the lastmaker file of the current working directory,
        using the path captured by do_lastmade_checks.  No-op if
        do_lastmade_checks has not yet run, or if Holmake started
        under any HOLDIR (HOLDIR-relative resolution handles those
@@ -168,6 +181,9 @@ sig
   val createDirIfNecessary : string -> unit
   val clean_dir : output_functions -> {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
+  val clean_artifact_dirs : output_functions -> string list -> unit
+    (* Remove files and symlinks directly inside each artifact directory,
+       then remove it if empty.  Preserve subdirectories. *)
   val clean_forReloc : {holheap : string option} -> unit
   val pushdir : string -> ('a -> 'b) -> ('a -> 'b)
 
@@ -264,7 +280,7 @@ sig
 
 
   val get_direct_dependencies :
-      {incinfo : include_info, DEPDIR : string,
+      {incinfo : include_info, depdir : string,
        output_functions : output_functions,
        extra_targets : dep list } ->
       File -> dep list

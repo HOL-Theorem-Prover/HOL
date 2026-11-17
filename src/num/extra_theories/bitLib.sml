@@ -13,16 +13,19 @@ open Parse
 (* ------------------------------------------------------------------------- *)
 
 local
+   val n_tm = mk_var("n", numSyntax.num)
    val TIMES_2EXP1 =
       (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
-       Q.SPECL [`x`, `1`]) bitTheory.TIMES_2EXP_def
+       SPECL [mk_var("x", numSyntax.num), numSyntax.term_of_int 1])
+      bitTheory.TIMES_2EXP_def
    val rule = simpLib.SIMP_RULE (numLib.arith_ss++boolSimps.LET_ss)
    fun nrule l x =
       let
          val y = SPEC_ALL x
       in
-         CONJ ((GEN_ALL o rule l o Q.INST [`n` |-> `0n`]) y)
-              ((GEN_ALL o Q.INST [`n` |-> `NUMERAL n`]) y)
+         CONJ ((GEN_ALL o rule l o INST [n_tm |-> numSyntax.zero_tm]) y)
+              ((GEN_ALL o INST
+                [n_tm |-> mk_comb(numSyntax.numeral_tm, n_tm)]) y)
       end
    val BIT =
       (SIMP_RULE numLib.std_ss

@@ -18,7 +18,7 @@ val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 val _ = BasicProvers.temp_delsimps ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-val _ = goalStack.chatting := !Globals.interactive
+val _ = HOLFlags.set_bflag (goalStack.chatting, !Globals.interactive)
 
 (* import simplist *)
 val _ = simp_thms_list := (CONJUNCTS simplist_export_thm);
