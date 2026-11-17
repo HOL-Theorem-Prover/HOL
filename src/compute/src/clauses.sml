@@ -198,9 +198,9 @@ fun partition_skip (SOME n) Args =
 
    A compset can be "sealed" to prevent mutation of existing constant entries.
    This allows base compsets (like bool_compset) to be shared safely as values.
-   Adding rules for NEW constants to a sealed compset works fine: the result
-   is an unsealed compset with fresh refs (see `unseal`), so the sealed one
-   is left untouched.
+   Adding rules for NEW constants (or constants with no rules yet) to a
+   sealed compset works fine: the result is an unsealed compset with fresh
+   refs (see `unseal`), so the sealed one is left untouched.
    Adding rules for EXISTING constants in a sealed compset raises an exception.
    Use `copy` to create an unsealed copy if you need to extend existing
    constants.
@@ -280,7 +280,7 @@ fun add_in_db_upd compset (name,arity,hcst) action =
                    #2 name ^ "$" ^ #1 name ^
                    " in sealed compset; use copy to create an unsealed copy")
               else ()
-      val (compset', rl) = assoc_clause compset name
+      val (compset', rl) = assoc_clause (unseal compset) name
       val (db, sk) = !rl
   in rl := (add_in_db (arity,hcst,action,db), sk)
    ; compset'
@@ -293,7 +293,7 @@ fun set_skip compset p sk =
                    #2 p ^ "$" ^ #1 p ^
                    " in sealed compset; use copy to create an unsealed copy")
               else ()
-      val (compset', rl) = assoc_clause compset p
+      val (compset', rl) = assoc_clause (unseal compset) p
       val (db,_) = !rl
   in rl := (db,sk)
    ; compset'

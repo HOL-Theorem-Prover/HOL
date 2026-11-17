@@ -239,6 +239,11 @@ val _ = computeLib.add_thms [mk_thm ([], “result4 = ARB”),
 val _ = if unchanged_by computeLib.bool_compset “(y:ind) = ARB” then OK()
         else die "a rule added to a copy of bool_compset reached it"
 
+val _ = tprint "Checking a first rule for a sealed compset's constant stays out"
+val _ = computeLib.add_thms [mk_thm ([], “T <=> F”)] computeLib.bool_compset
+val _ = if unchanged_by computeLib.bool_compset “T” then OK()
+        else die "a first rule for T added to bool_compset reached it"
+
 (* Registered conversions: a conversion that makes no progress must fall
    through to the constant's remaining rules rather than be retried on
    its own (reflexive) result, or escape CBV_CONV (UNCHANGED). *)
