@@ -411,6 +411,28 @@ val _ = OK ()
 val _ = convtest ("finalised definition enters EVAL", EVAL,
                  “susp 3”, “3”)
 
+val _ = tprint "mutual definitions complete through prepare_qDefine"
+val mutual_goal = valOf (prepare_qDefine "mev_def[induction=mev_steps]"
+  ‘(mev n = if n = 0 then T else mod (n - 1)) /\
+   (mod n = if n = 0 then F else mev (n - 1))’)
+val mev_def = complete_definition "mev_def"
+  (TAC_PROOF (mutual_goal, WF_REL_TAC ‘measure (\x. sum_CASE x I I)’))
+val _ = assert (length (strip_conj (concl mev_def)) = 2 andalso
+                stored "mev_steps" andalso no_pending "mev_def")
+val _ = OK ()
+val _ = convtest ("mutual definition enters EVAL", EVAL, “mod 3”, “T”)
+
+(* Last, since it discards the scratch theory *)
+val _ = tprint "a definition pending in another theory is not completed"
+fun rejects_with s f =
+  (f (); false) handle HOL_ERR e => String.isSubstring s (message_of e)
+val _ = prepare_qDefine "elsewhere_def"
+  ‘elsewhere n = if n = 0 then 0n else elsewhere (n - 1) + 1’
+val _ = with_flag (Globals.interactive, true) new_theory "staged_other"
+val _ = assert (rejects_with "pending in theory scratch"
+                  (fn () => complete_definition "elsewhere_def" TRUTH))
+val _ = OK ()
+
 val _ = if Systeml.ML_SYSNAME <> "poly" then () else let
   val hol = OS.Path.concat (Systeml.HOLDIR, "bin/hol")
   val heap = "staged-termination.save"
