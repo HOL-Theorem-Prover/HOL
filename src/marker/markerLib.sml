@@ -1054,6 +1054,24 @@ val (susp_enc, susp_dec) = bij_ed (
     ) (tagged_sum ("add", pair_ed (pair_ed (string_ed, string_ed), thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
+(* An add is out of date once the global table no longer holds its
+   theorem under its key: a remove took it out, and the key may since
+   have been added again with another theorem.  AncestryData then drops
+   it from the current theory's data, so descendants don't load
+   theorems no lookup can reach.  Scanning decodes the data afresh, so
+   theorems are compared by statement.  The table only exists once
+   fullmake returns, hence the reference. *)
+fun same_statement th1 th2 =
+    aconv (concl th1) (concl th2) andalso
+    HOLset.equal (hypset th1, hypset th2)
+
+val susp_global = ref (fn () => empty_susp_table)
+fun susp_uptodate (AddSuspended (k, th)) =
+      (case KNametab.lookup (!susp_global ()) k of
+           SOME th' => same_statement th th'
+         | NONE => false)
+  | susp_uptodate (RemoveSuspended _) = true
+
 val {record_delta = record_suspension_delta_raw,
      get_global_value = get_susp_global,
      update_global_value = update_susp_global,
@@ -1064,12 +1082,14 @@ val {record_delta = record_suspension_delta_raw,
       adinfo = {tag = "suspension.theorems",
                 initial_values = [("min", empty_susp_table)],
                 apply_delta = apply_susp_delta},
-      uptodate_delta = K true,
+      uptodate_delta = susp_uptodate,
       sexps = {dec = susp_dec, enc = susp_enc},
       globinfo = {apply_to_global = apply_susp_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_susp_table}
     }
+
+val _ = susp_global := get_susp_global
 
 (* Wrapper that both persists the delta and updates the in-memory global *)
 fun record_suspension_delta d =
@@ -1131,6 +1151,15 @@ val (res_enc, res_dec) = bij_ed (
     ) (tagged_sum ("add", pair_ed (reskey_ed, thm_ed))
                   ("rm", pair_ed (string_ed, string_ed)))
 
+(* As for suspensions: an add is out of date once the global table no
+   longer holds its theorem under its key. *)
+val res_global = ref (fn () => empty_res_dict)
+fun res_uptodate (AddResumption (k, th)) =
+      (case ResTab.lookup (!res_global ()) k of
+           SOME ths => List.exists (same_statement th) ths
+         | NONE => false)
+  | res_uptodate (RemoveResumptions _) = true
+
 val {record_delta = record_resumption_delta_raw,
      get_global_value = get_res_global,
      update_global_value = update_res_global,
@@ -1141,12 +1170,14 @@ val {record_delta = record_resumption_delta_raw,
       adinfo = {tag = "suspension.resumptions",
                 initial_values = [("min", empty_res_dict)],
                 apply_delta = apply_res_delta},
-      uptodate_delta = K true,
+      uptodate_delta = res_uptodate,
       sexps = {dec = res_dec, enc = res_enc},
       globinfo = {apply_to_global = apply_res_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_res_dict}
     }
+
+val _ = res_global := get_res_global
 
 (* Wrapper that both persists the delta and updates the in-memory global *)
 fun record_resumption_delta d =

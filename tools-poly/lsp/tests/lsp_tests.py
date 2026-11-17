@@ -3730,6 +3730,16 @@ def _search_names(c, req_id, fragment):
 
 
 def test_stale_ancestor_draws_a_warning():
+    _stale_ancestor_draws_a_warning(objroot=False)
+
+
+def test_stale_ancestor_draws_a_warning_under_objroot():
+    """As above, with the artifacts in an artifact root that
+    `holproject.toml' names, which the lookup has to see through."""
+    _stale_ancestor_draws_a_warning(objroot=True)
+
+
+def _stale_ancestor_draws_a_warning(objroot):
     """A dependency is read once per process, so a theory whose script
     has been edited since it was built goes on answering from the
     version that was built -- with nothing about it looking wrong.
@@ -3753,10 +3763,15 @@ def test_stale_ancestor_draws_a_warning():
                     "Theorem zzup_triv:\n  T\nProof\n  REWRITE_TAC[]\nQED\n")
         with open(os.path.join(d, "Holmakefile"), "w") as f:
             f.write("")
+        if objroot:
+            with open(os.path.join(d, "holproject.toml"), "w") as f:
+                f.write('name = "zzstale"\nobjroot = "build"\n')
+            objs = os.path.join(d, "build", "objs")
+        else:
+            objs = os.path.join(d, ".hol", "objs")
         r = subprocess.run([f"{REPO}/bin/Holmake"], cwd=d,
                            capture_output=True, text=True, timeout=300)
-        assert_true(os.path.exists(os.path.join(d, ".hol", "objs",
-                                                "zzupTheory.uo")),
+        assert_true(os.path.exists(os.path.join(objs, "zzupTheory.uo")),
                     f"the scratch theory built ({r.stdout[-400:]!r})")
 
         uri = "file://" + os.path.join(d, "zzdownScript.sml")
@@ -10229,6 +10244,117 @@ def test_overload_hover_sees_through_the_alias_chain():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_hover_first_line_says_what_the_leaf_is():
+    """Everything a quotation hover knows about an identifier has to be
+    on the first line of the markdown.  Emacs shows a hover in the echo
+    area, and eglot cuts it there at the first newline -- so a second
+    paragraph holding `Theory \\`num\\`' or `*free variable*' is text the
+    reader never sees, and the line that does arrive, `SUC :num ->
+    num', does not say whether `SUC' is a constant or a variable."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_firstline.sml"
+        #   byte columns of line 4: 2='!' 3='n' 10..12='SUC' 14='n'
+        #                           18='n' 20='+' 22='m' 26='3'
+        src = ("Theory hover_firstline\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. SUC n = n + m + 3\n"
+               "Proof\n"
+               "  cheat\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def first_line(rid, col):
+            r = _hover_at(c, rid, uri, 4, col)
+            assert_true(r is not None, f"hover at column {col} answers")
+            md = r["contents"]["value"]
+            body = [l for l in md.split("\n") if not l.startswith("`")]
+            return body[0] if body else ""
+
+        line = first_line(980, 11)
+        assert_true(line.startswith("constant "),
+                    f"a constant says so first ({line!r})")
+        assert_true("num$SUC" in line,
+                    f"and names its theory with it ({line!r})")
+        assert_true("num -> num" in line,
+                    f"and still gives the type ({line!r})")
+
+        line = first_line(981, 14)
+        assert_true(line.startswith("bound variable "),
+                    f"a bound variable says so first ({line!r})")
+        assert_true("n :num" in line, f"with name and type ({line!r})")
+
+        line = first_line(982, 22)
+        assert_true(line.startswith("free variable "),
+                    f"a free variable says so first ({line!r})")
+        assert_true("m :num" in line, f"with name and type ({line!r})")
+
+        # A numeral is one token but a tree of constants, each node
+        # carrying that token's Locn; the innermost used to win.
+        line = first_line(983, 26)
+        assert_true(line == "numeral 3 :num",
+                    f"a numeral hovers as itself ({line!r})")
+    finally:
+        c.close()
+
+
+def test_hover_on_dictionary_brackets():
+    """`l\u2772i\u2773' and `d\u27e8k\u27e9' name their constant nowhere: the
+    brackets are a list form, and combinpp's absyn postprocessor
+    builds the application.  It used to build it with `Loc_None' on
+    the generated identifier, so no leaf covered the brackets and the
+    hover fell out to whatever enclosed the form -- in `(d\u27e8s\u27e9,d)',
+    the pair comma.  The identifier now carries the bracket pair's own
+    span."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_brackets.sml"
+        src = ("Theory hover_brackets\n"
+               "Ancestors list\n\n"
+               "Definition g_def:\n"
+               "  g l i = (l\u2772i\u2773, l\u2772i \u21a6 3\u2773)\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        body = src.split("\n")[4].encode()
+
+        def md_at(rid, col):
+            r = _hover_at(c, rid, uri, 4, col)
+            return r["contents"]["value"] if r else None
+
+        # The opening bracket of the lookup form.
+        md = md_at(983, body.index("\u2772".encode()))
+        assert_true(md is not None, "hovering the opening bracket answers")
+        assert_true("EL" in md,
+                    f"and names the lookup it stands for ({md!r})")
+        assert_true(" , " not in md and "pair$," not in md,
+                    f"not the enclosing pair ({md!r})")
+
+        # The closing bracket of the same form.
+        md = md_at(984, body.index("\u2773".encode()))
+        assert_true(md is not None and "EL" in md,
+                    f"so does the closing one ({md!r})")
+
+        # The update form's arrow, inside the second pair of brackets.
+        md = md_at(985, body.index("\u21a6".encode()))
+        assert_true(md is not None and "LUPDATE" in md,
+                    f"and an update names LUPDATE ({md!r})")
+
+        # The key keeps its own, shorter span: the bracket identifier
+        # spans it but must not win.
+        md = md_at(986, body.index("\u2772".encode()) + 3)
+        assert_true(md is not None and "variable i " in md,
+                    f"the key still hovers as itself ({md!r})")
+    finally:
+        c.close()
+
+
 def test_quotation_hover_positions_under_utf16():
     """Every test here advertises utf-8, which is what eglot
     negotiates and where a byte offset and a column agree -- so nothing
@@ -13169,6 +13295,8 @@ TESTS = [
                     test_tryTactic_budget_bounds_both_of_its_walks),
     ("stale_ancestor_draws_a_warning",
                     test_stale_ancestor_draws_a_warning),
+    ("stale_ancestor_draws_a_warning_under_objroot",
+                    test_stale_ancestor_draws_a_warning_under_objroot),
     ("eval_runs_in_a_world_that_is_thrown_away",
                     test_eval_runs_in_a_world_that_is_thrown_away),
     ("eval_refuses_what_it_cannot_throw_away",
@@ -13384,6 +13512,9 @@ TESTS = [
      test_overload_hover_names_the_expansion),
     ("overload_hover_sees_through_the_alias_chain",
      test_overload_hover_sees_through_the_alias_chain),
+    ("hover_first_line_says_what_the_leaf_is",
+     test_hover_first_line_says_what_the_leaf_is),
+    ("hover_on_dictionary_brackets", test_hover_on_dictionary_brackets),
     ("quotation_hover_positions_under_utf16",
      test_quotation_hover_positions_under_utf16),
     ("check_proofs_switchable_without_a_restart",

@@ -28,6 +28,22 @@ fun get_subdirs d =
     end
 
 
+(* True if d holds a file.  Under an artifact root, a directory's
+   artifact directories also hold those of its subdirectories, so
+   their existence alone does not show that d was built. *)
+fun has_file d =
+    let val ds = OS.FileSys.openDir d
+        fun loop () =
+            case OS.FileSys.readDir ds of
+                NONE => false
+              | SOME f =>
+                not (OS.FileSys.isDir (OS.Path.concat(d, f))
+                     handle OS.SysErr _ => true)
+                orelse loop ()
+    in
+      loop () before OS.FileSys.closeDir ds
+    end handle OS.SysErr _ => false
+
 fun traverse ignores wlist A =
     case wlist of
         [] => A
@@ -36,21 +52,26 @@ fun traverse ignores wlist A =
         let val (smlp, children0) = get_subdirs d
             fun goodWRTIgnores d =
                 List.all (fn i => not (String.isSubstring i d)) ignores
+                andalso not (HFS_NameMunge.in_objroot d)
             val children = List.filter goodWRTIgnores children0
             open OS.FileSys
         in
-          if smlp then
-            let val dstrm =
-                    openDir (OS.Path.concat(d,".hol/logs"))
-                    handle OS.SysErr _ => openDir(OS.Path.concat(d, ".hol/objs"))
-            in
-              closeDir dstrm;
-              traverse ignores (children :: ds :: Ds) A
-            end handle OS.SysErr _ =>
-                       traverse ignores (children :: ds :: Ds) (d :: A)
+          if smlp andalso
+             not (has_file (HFS_NameMunge.logdir_for d) orelse
+                  has_file (HFS_NameMunge.objdir_for d))
+          then traverse ignores (children :: ds :: Ds) (d :: A)
           else traverse ignores (children :: ds :: Ds) A
         end
 
+
+(* Use the artifact layout Holmake would use when run in dir. *)
+fun configure_layout dir =
+    HFS_NameMunge.configure
+      (HMProject.resolve_layout {start = dir, cli_objroot = NONE,
+                                 cli_srcroot = NONE, no_project = false})
+    handle Fail s =>
+           (TextIO.output(TextIO.stdErr, s ^ "\n");
+            OS.Process.exit OS.Process.failure)
 
 fun commonPrefix2 s1 s2 =
     let
