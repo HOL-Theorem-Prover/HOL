@@ -10244,6 +10244,58 @@ def test_overload_hover_sees_through_the_alias_chain():
         shutil.rmtree(d, ignore_errors=True)
 
 
+def test_hover_first_line_says_what_the_leaf_is():
+    """Everything a quotation hover knows about an identifier has to be
+    on the first line of the markdown.  Emacs shows a hover in the echo
+    area, and eglot cuts it there at the first newline -- so a second
+    paragraph holding `Theory \\`num\\`' or `*free variable*' is text the
+    reader never sees, and the line that does arrive, `SUC :num ->
+    num', does not say whether `SUC' is a constant or a variable."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_firstline.sml"
+        #   byte columns of line 4: 2='!' 3='n' 10..12='SUC' 14='n'
+        #                           18='n' 20='+' 22='m'
+        src = ("Theory hover_firstline\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. SUC n = n + m\n"
+               "Proof\n"
+               "  cheat\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def first_line(rid, col):
+            r = _hover_at(c, rid, uri, 4, col)
+            assert_true(r is not None, f"hover at column {col} answers")
+            md = r["contents"]["value"]
+            body = [l for l in md.split("\n") if not l.startswith("`")]
+            return body[0] if body else ""
+
+        line = first_line(980, 11)
+        assert_true(line.startswith("constant "),
+                    f"a constant says so first ({line!r})")
+        assert_true("num$SUC" in line,
+                    f"and names its theory with it ({line!r})")
+        assert_true("num -> num" in line,
+                    f"and still gives the type ({line!r})")
+
+        line = first_line(981, 14)
+        assert_true(line.startswith("bound variable "),
+                    f"a bound variable says so first ({line!r})")
+        assert_true("n :num" in line, f"with name and type ({line!r})")
+
+        line = first_line(982, 22)
+        assert_true(line.startswith("free variable "),
+                    f"a free variable says so first ({line!r})")
+        assert_true("m :num" in line, f"with name and type ({line!r})")
+    finally:
+        c.close()
+
+
 def test_quotation_hover_positions_under_utf16():
     """Every test here advertises utf-8, which is what eglot
     negotiates and where a byte offset and a column agree -- so nothing
@@ -13401,6 +13453,8 @@ TESTS = [
      test_overload_hover_names_the_expansion),
     ("overload_hover_sees_through_the_alias_chain",
      test_overload_hover_sees_through_the_alias_chain),
+    ("hover_first_line_says_what_the_leaf_is",
+     test_hover_first_line_says_what_the_leaf_is),
     ("quotation_hover_positions_under_utf16",
      test_quotation_hover_positions_under_utf16),
     ("check_proofs_switchable_without_a_restart",

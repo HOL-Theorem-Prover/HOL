@@ -540,6 +540,35 @@ having none -- a hover is not a place to rediscover the same missing
 file.  `tools-poly/poly/Help.sml` reads the same index for the REPL's
 `help` command and knows nothing about any of the above.
 
+### Inside a quotation
+
+A hover inside a HOL quotation -- a `Theorem`'s goal, a `Definition`
+or `Inductive` body, an explicit `‘…’` -- is answered by
+`hover_quote_init.ML`, which re-parses the quotation and walks the
+resolved `Preterm` for the innermost leaf whose `locn` covers the
+cursor.  What comes back names the leaf, says what kind of thing it
+is, and gives its type, all on one line:
+
+```
+constant arithmetic$SUC :num -> num
+bound variable n :num
+free variable m :num
+overloaded MEM :α -> α list -> bool
+```
+
+An overloaded name adds a second paragraph saying what it overloads
+to, because that does not fit.  Nothing else does.
+
+Everything on one line is deliberate.  Emacs shows a hover in the echo
+area, and eglot cuts the rendered markdown at its first newline --
+`eglot-hover-eldoc-function` hands that index to eldoc as `:echo` --
+so a second paragraph is text an Emacs reader never sees, and `SUC
+:num -> num` on its own does not say whether `SUC` is a constant or a
+variable.  The kind leads rather than trails for the same reason: a
+long type would push a trailing note off the end of the line.  A
+constant's home theory rides along in the name as `thy$name`, which is
+HOL's own way of writing a constant with its theory.
+
 ### Positions
 
 A hover's range, like every position on the wire, counts whatever

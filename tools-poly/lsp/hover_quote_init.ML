@@ -237,24 +237,34 @@ local
      own. *)
   fun format_leaf nameOf env leaf =
     let
-      val (name, tystr, tail) = case leaf of
+      (* What the leaf *is* goes on the same line as its name and type,
+         and in front of them.  Emacs shows a hover in the echo area,
+         where eglot cuts it at the first newline: everything below
+         that line -- which is where the theory and the free/bound
+         distinction used to live -- never reaches the reader, and a
+         bare `s :string' does not say whether `s' is a constant.  In
+         front rather than behind because a long type pushes a trailing
+         note off the end of the line. *)
+      val (kind, name, tystr, tail) = case leaf of
           HLConst {Name, Thy, Ty, ...} =>
-            (Name, render_type env Ty, "Theory `" ^ Thy ^ "`")
+            (* `thy$name' is HOL's own way of writing a constant with
+               its home, so the theory needs no words of its own. *)
+            ("constant ", Thy ^ "$" ^ Name, render_type env Ty, "")
         | HLBound {Name, Ty, ...} =>
-            (Name, render_type env Ty, "*bound variable*")
+            ("bound variable ", Name, render_type env Ty, "")
         | HLFree  {Name, Ty, ...} =>
-            (Name, render_type env Ty, "*free variable*")
+            ("free variable ", Name, render_type env Ty, "")
         | HLOverload {Name, Ty, Ops, ...} => let
             fun describe tm = let
               val {Name = n, Thy = thy, ...} = Term.dest_thy_const tm
               in "`" ^ n ^ "` (theory `" ^ thy ^ "`)" end
               handle _ => "`" ^ Parse.term_to_string tm ^ "`"
             val tail = case Ops of
-                [] => "*overloaded*"
+                [] => ""
               | [tm] => "Overloads " ^ describe tm
               | ops => "Overloaded, one of: " ^
                        String.concatWith ", " (map describe ops)
-            in (Name, render_type env Ty, tail) end
+            in ("overloaded ", Name, render_type env Ty, tail) end
         | HLPattern {Ptm, Locn} => let
             val tystr = case Preterm.ptype_of Ptm env of
                 Some (_, ty) => render_type env ty
@@ -272,14 +282,15 @@ local
                 handle _ => NONE
             val tail =
                 case expansion of
-                    NONE => "*overloaded*"
+                    NONE => ""
                   | SOME tm =>
                     "Overloads `" ^ expansion_string tm ^ "`"
-            in (nameOf Locn, tystr, tail) end
+            in ("overloaded ", nameOf Locn, tystr, tail) end
     in
       (* Parse.type_to_string already prefixes ``:`` (HOL type-
          annotation convention), so we don't add another one. *)
-      "```\n" ^ name ^ " " ^ tystr ^ "\n```\n\n" ^ tail
+      "```\n" ^ kind ^ name ^ " " ^ tystr ^ "\n```" ^
+      (if tail = "" then "" else "\n\n" ^ tail)
     end
 in
 
