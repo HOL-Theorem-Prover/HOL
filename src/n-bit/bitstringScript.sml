@@ -272,6 +272,24 @@ Proof
   lrw [bitify_reverse_map]
 QED
 
+Theorem length_boolify:
+  ∀ls b. LENGTH (boolify b ls) = LENGTH ls + LENGTH b
+Proof
+  simp[boolify_reverse_map]
+QED
+
+Theorem boolify_normalise:
+  ∀xs n. boolify xs n = boolify [] n ++ xs
+Proof
+  simp[boolify_reverse_map]
+QED
+
+Theorem extend_GENLIST:
+  ∀n l l'. extend b n l = GENLIST (λ_. b) n ++ l
+Proof
+  Induct>>simp[extend_def,listTheory.GENLIST]
+QED
+
 Theorem length_bitify_null:
    !v l. LENGTH (bitify [] v) = LENGTH v
 Proof
@@ -748,6 +766,249 @@ Proof
   simp[v2n_def, bitify_reverse_map, l2n_def]
 QED
 
+Theorem v2n_0_EVERY_F:
+  v2n bs = 0 ⇔ EVERY ((=)F) bs
+Proof
+  Induct_on ‘bs’>>rw[] >>
+  fs[v2n]>>
+  Cases_on ‘h’>>fs[]
+QED
+
+Theorem v2n_Fs:
+  v2n (GENLIST (K F) n) = 0
+Proof
+  Induct_on ‘n’>>rw[] >-EVAL_TAC>>
+  fs[listTheory.GENLIST_CONS,v2n]
+QED
+
+Theorem v2n_Ts:
+  v2n (GENLIST (K T) n) = 2 ** n - 1
+Proof
+  Induct_on ‘n’>>simp[v2n,listTheory.GENLIST_CONS]>>
+  simp[arithmeticTheory.ADD1,arithmeticTheory.EXP_ADD]
+QED
+
+Theorem v2n_bnot:
+  v2n (bnot v) = 2 ** LENGTH v - 1 - v2n v
+Proof
+  Induct_on ‘v’>>rw[] >- EVAL_TAC>>
+  Cases_on ‘h’>>simp[bnot_def,v2n]>>
+  simp[GSYM bnot_def,ETA_THM]>>
+  simp[arithmeticTheory.ADD1,arithmeticTheory.EXP_ADD]>>
+  ‘v2n v + 1 ≤ 2 ** LENGTH v’ by
+    (simp[GSYM arithmeticTheory.ADD1]>>
+     irule arithmeticTheory.LESS_OR>>
+     irule v2n_lt)>>
+  simp[]
+QED
+
+Theorem LENGTH_n2v:
+  LENGTH (n2v n) = (if n = 0 then 1 else SUC (LOG2 n))
+Proof
+  Induct_on ‘n’>>rw[]>>fs[bitTheory.LOG2_def]>-
+   EVAL_TAC>>
+  fs[n2v_def,LENGTH_n2l,length_boolify]
+QED
+
+Theorem n2v_not_NIL:
+  n2v n ≠ []
+Proof
+  Induct_on ‘n’>>rw[]>>simp[boolify_def,n2v_def]>>
+  once_rewrite_tac[n2l_def]>>
+  CASE_TAC>>fs[boolify_def]>>
+  simp[Once boolify_normalise]
+QED
+
+Theorem LAST_n2v:
+  LAST (n2v n) = (n MOD 2 = 1)
+Proof
+  Induct_on ‘n’>>rw[]>>
+  simp[n2v_def,boolify_def]>>
+  once_rewrite_tac[n2l_def]>>
+  CASE_TAC>>fs[boolify_def]>>
+  simp[Once boolify_normalise]>>
+  simp[arithmeticTheory.MOD_2]>>CASE_TAC>>fs[]
+QED
+
+Theorem n2v_odd:
+  n ≠ 0 ⇒ n2v (2 * n + 1) = n2v n ++ [T]
+Proof
+  Induct_on ‘n’>>rw[]>>
+  last_x_assum kall_tac>>
+  simp[arithmeticTheory.ADD1]>>
+  simp[n2v_def]>>
+  once_rewrite_tac[n2l_def]>>
+  CASE_TAC>>fs[]>>
+  CASE_TAC>>fs[arithmeticTheory.NOT_LESS]>-
+   (Cases_on ‘n’>>fs[boolify_def])>>
+  fs[boolify_def]>>
+  once_rewrite_tac[boolify_normalise]>>simp[]>>
+  rewrite_tac[Once n2l_def,SimpLHS]>>
+  simp[]>>
+  fs[boolify_def]>>
+  once_rewrite_tac[boolify_normalise]>>simp[]
+QED
+
+Theorem n2v_even:
+ 0 < n ⇒ n2v (2 * n) = n2v n ++ [F]
+Proof
+  Induct_on ‘n’>>rw[]>>
+  pop_assum mp_tac>>
+  simp[arithmeticTheory.ADD1]>>
+  fs[n2v_def]>>
+  once_rewrite_tac[n2l_def]>>simp[]>>
+  CASE_TAC>>fs[]>>
+  TRY (CASE_TAC>>fs[])>>
+  simp[boolify_def]>>
+  once_rewrite_tac[boolify_normalise]>>simp[]>-
+   (Cases_on ‘n’>>fs[boolify_def])>-
+   (Cases_on ‘n’>>fs[arithmeticTheory.ADD1]>>
+    Cases_on ‘n'’>>fs[arithmeticTheory.ADD1]>>
+    simp[boolify_def])>>
+  rw[]>>
+  rewrite_tac[Once n2l_def,SimpRHS]>>simp[]>>
+  simp[boolify_def]>>
+  once_rewrite_tac[boolify_normalise]>>simp[]
+QED
+
+Theorem n2v_DIV2:
+  2 ≤ n ⇒ n2v (n DIV 2) = TAKE (LENGTH (n2v n) - 1) (n2v n)
+Proof
+  Induct_on ‘n’>>rw[]>>
+  Cases_on ‘EVEN n’>>fs[]>-
+   (fs[arithmeticTheory.EVEN_EXISTS,arithmeticTheory.ADD1]>>
+    simp[n2v_odd]>>
+    simp[listTheory.TAKE_APPEND1,listTheory.LENGTH_TAKE])>>
+  Cases_on ‘n’>>fs[arithmeticTheory.EVEN]>>rename1 ‘EVEN n’>>
+  gs[arithmeticTheory.EVEN_EXISTS,arithmeticTheory.ADD1]>>
+  ‘2 * m + 2 = 2 * (m + 1)’ by simp[]>>simp[]>>
+  simp[n2v_even]>>
+  simp[listTheory.TAKE_APPEND1,listTheory.LENGTH_TAKE]
+QED
+
+Theorem n2v_exp2_gen:
+  0 < n ∧ r < 2 ** n ∧ 0 < m ⇒
+  n2v (m * 2 ** n + r) = n2v m ++ GENLIST (λ_. F) (n - LENGTH (n2v r)) ++ n2v r
+Proof
+  Induct_on ‘m * 2 ** n + r’ using arithmeticTheory.COMPLETE_INDUCTION>>
+  rw[]>>
+  Cases_on ‘r=0’>>fs[]>-
+   (Cases_on ‘n’>>fs[]>>
+    simp[arithmeticTheory.EXP_ADD,arithmeticTheory.ADD1]>>
+    simp[EVAL “n2v 0”]>>
+    simp[n2v_even]>>
+    rename [‘SUC n’]>>
+    last_x_assum $ qspec_then ‘m * 2 ** n’ assume_tac>>gs[]>>
+    first_x_assum $ qspecl_then [‘m’,‘n’,‘0’] assume_tac>>gs[]>>
+    Cases_on ‘n’>>fs[]>>
+    simp[EVAL “n2v 0”, listTheory.GENLIST])>>
+  Cases_on ‘n’>>fs[]>>
+  assume_tac (Q.SPEC ‘r’ arithmeticTheory.EVEN_OR_ODD)>>
+  assume_tac (Q.SPEC ‘r’ arithmeticTheory.EVEN_ODD_EXISTS)>>gvs[]>-
+   (simp[arithmeticTheory.EXP_ADD,arithmeticTheory.ADD1]>>
+    rewrite_tac[GSYM arithmeticTheory.LEFT_ADD_DISTRIB]>>
+    simp[n2v_even]>>
+    last_x_assum irule>>simp[]>>
+    fs[arithmeticTheory.EXP_ADD,arithmeticTheory.ADD1]>>
+    Cases_on ‘n'’>>fs[])>>
+  fs[arithmeticTheory.EXP_ADD,arithmeticTheory.ADD1]>>
+  rewrite_tac[arithmeticTheory.ADD_ASSOC,
+              GSYM arithmeticTheory.LEFT_ADD_DISTRIB]>>
+  Cases_on ‘m' = 0’>>fs[n2v_odd]>-
+   (simp[EVAL “n2v 1”]>>
+    Cases_on ‘n' = 0’>>fs[]>>
+    last_x_assum $ qspec_then ‘m * 2 ** n'’ assume_tac>>gs[]>>
+    first_x_assum $ qspecl_then [‘m’,‘n'’,‘0’] assume_tac>>gs[EVAL “n2v 0”]>>
+    irule listTheory.LIST_EQ>>rw[]>>
+    simp[listTheory.EL_APPEND_EQN]>>
+    Cases_on ‘x = n' - 1’>>fs[])>>
+  last_x_assum $ qspec_then ‘m' + m * 2 ** n'’ assume_tac>>gs[]>>
+  first_x_assum $ qspecl_then [‘m’,‘n'’,‘m'’] assume_tac>>gs[]>>
+  Cases_on ‘n' = 0’>>fs[]
+QED
+
+Theorem n2v_exp2_mul:
+ 0 < m ⇒ n2v (m * 2 ** n) = n2v m ++ GENLIST (λ_. F) n
+Proof
+  Cases_on ‘n = 0’>>rw[]>>
+  simp[GEN_ALL n2v_exp2_gen |> Q.SPEC ‘0’ |> SIMP_RULE std_ss[]]>>
+  simp[EVAL “n2v 0”]>>
+  Cases_on ‘n’>>fs[listTheory.GENLIST]
+QED
+
+Theorem n2v_exp2:
+  n2v (2 ** n) = [T] ++ GENLIST (K F) n
+Proof
+  once_rewrite_tac[GSYM (Q.SPEC ‘n’ arithmeticTheory.MULT_LEFT_1),SimpLHS]>>
+  simp[n2v_exp2_mul]>>
+  simp[n2v_def,boolify_def,combinTheory.K_DEF]
+QED
+
+Theorem n2v_exp2_res:
+  0 < r ∧ 0 < n ∧ r < 2 ** n ⇒
+  n2v (2 ** n + r) = [T] ++ GENLIST (K F) (n - LENGTH (n2v r)) ++ n2v r
+Proof
+  rw[]>>
+  once_rewrite_tac[GSYM (Q.SPEC ‘2 ** n’ arithmeticTheory.MULT_LEFT_1),SimpLHS]>>
+  rewrite_tac[Once arithmeticTheory.ADD_COMM]>>
+  simp[n2v_exp2_gen]>>
+  simp[EVAL “n2v 1”]>>metis_tac[]
+QED
+
+Theorem n2v_v2n:
+  bs ≠ [] ⇒
+  n2v (v2n bs) = DROP (LENGTH bs - LENGTH (n2v (v2n bs))) bs
+Proof
+  qid_spec_tac ‘bs’>>
+  ho_match_mp_tac listTheory.SNOC_INDUCT>> rw[]>>
+  Cases_on ‘v2n bs = 0’>-
+   (imp_res_tac v2n_0_EVERY_F>>fs[]>>
+    fs[listTheory.DROP_GENLIST,listTheory.SNOC_APPEND,v2n_APPEND]>>
+    Cases_on ‘x’>>EVAL_TAC>>simp[listTheory.DROP_APPEND1])>>
+  Cases_on ‘bs=[]’>>fs[]>-(fs[v2n]>>CASE_TAC>>fs[n2v_def,boolify_def])>>
+  fs[listTheory.SNOC_APPEND,v2n_APPEND]>>
+  Cases_on ‘x’>>fs[v2n]>>
+  simp[n2v_odd,n2v_even]>>
+  simp[listTheory.DROP_APPEND1,arithmeticTheory.ADD1]
+QED
+
+Theorem LENGTH_n2v_v2n_le:
+  bs ≠ [] ⇒ LENGTH (n2v (v2n bs)) ≤ LENGTH bs
+Proof
+  rw[]>>
+  simp[Once n2v_v2n]
+QED
+
+Theorem leadingF_n2v_v2n:
+  bs ≠ [] ⇒ TAKE (LENGTH bs - LENGTH (n2v (v2n bs))) bs = GENLIST (K F) (LENGTH bs - LENGTH (n2v (v2n bs)))
+Proof
+  qid_spec_tac ‘bs’>>
+  ho_match_mp_tac listTheory.SNOC_INDUCT>> rw[]>>
+  Cases_on ‘v2n bs = 0’>>
+  simp[listTheory.SNOC_APPEND,v2n_APPEND]>-
+   (imp_res_tac v2n_0_EVERY_F>>fs[listTheory.EVERY_const_GENLIST]>>
+    Cases_on ‘x’>>fs[v2n] >>
+    EVAL_TAC>>
+    simp[arithmeticTheory.ADD1,listTheory.TAKE_APPEND1,
+         listTheory.TAKE_GENLIST])>>
+  Cases_on ‘x’>>fs[v2n]>>
+  simp[n2v_odd,n2v_even]>>
+  simp[arithmeticTheory.ADD1,listTheory.TAKE_APPEND1]>>
+  Cases_on ‘bs=[]’>>fs[]
+QED
+
+Theorem leadingF_bitstring:
+  bs ≠ [] ⇒ bs = GENLIST (K F) (LENGTH bs - LENGTH (n2v (v2n bs))) ++ n2v (v2n bs)
+Proof
+  rw[]>>
+  simp[GSYM leadingF_n2v_v2n]>>
+  irule EQ_TRANS>>
+  irule_at Any (GSYM listTheory.TAKE_DROP)>>
+  irule_at Any (iffRL $ cj 1 listTheory.APPEND_11_LENGTH)>>simp[]>>
+  irule_at Any listTheory.LENGTH_TAKE>>simp[]>>
+  irule_at Any (GSYM n2v_v2n)>>simp[]
+QED
+
 (* ------------------------------------------------------------------------- *)
 
 fun bitwise_tac x y =
@@ -852,6 +1113,118 @@ Proof
        length_fixwidth, listTheory.EL_MAP]
   \\ Cases_on `i < LENGTH v`
   \\ lrw []
+QED
+
+Theorem UINT_MAXw_v2w_Ts:
+  UINT_MAXw:'a words$word = v2w (GENLIST (K T) (dimindex (:'a)))
+Proof
+  once_rewrite_tac[GSYM v2w_w2v]>>
+  AP_TERM_TAC>>simp[w2v_v2w]>>
+  simp[w2v_def,fixwidth]>>
+  irule (iffLR listTheory.REVERSE_11)>>
+  rewrite_tac[listTheory.REVERSE_GENLIST]>>
+  simp[listTheory.GENLIST_FUN_EQ]>>rw[]>>
+  simp[arithmeticTheory.PRE_SUB1]>>
+  imp_res_tac word_T>>fs[]
+QED
+
+Theorem v2w_0_EVERY_F:
+  LENGTH v ≤ dimindex (:'a) ⇒
+  (v2w v = 0w : 'a word ⇔ EVERY ((=)F) v)
+Proof
+  Induct_on ‘v’>>rw[]>- simp[v2w_NIL]>>
+  Cases_on ‘h’>>simp[v2w_thm]>>fs[]>>
+  ‘v2n v + 2 ** LENGTH v < dimword(:'a)’ by
+    (simp[dimword_def]>>
+     irule arithmeticTheory.LESS_LESS_EQ_TRANS>>
+     qexists ‘2 ** LENGTH v +  2 ** LENGTH v’>>
+     conj_tac>-simp[v2n_lt]>>
+     irule arithmeticTheory.LESS_EQ_TRANS>>
+     irule_at Any bitTheory.TWOEXP_MONO2>>
+     first_assum $ irule_at Any>>
+     simp[arithmeticTheory.EXP_ADD,arithmeticTheory.ADD1])>>
+  ‘0w = v2w v && (word_lsl 1w (LENGTH v)) : 'a word’ by
+    (irule_at Any (GSYM word_and_lsl_eq_0)>>
+     fs[word_lsl_n2w,GSYM n2w_v2n]>>
+     simp[arithmeticTheory.LESS_MOD]>>
+     simp[v2n_lt])>>
+  drule (GSYM WORD_ADD_OR)>>strip_tac>>
+  pop_assum (fn h => rewrite_tac[h])>>
+  pop_assum kall_tac>>
+  fs[word_lsl_n2w,GSYM n2w_v2n]>>
+  simp[word_add_n2w]
+QED
+
+Theorem v2w_Fs:
+  ∀n. v2w (GENLIST (K F) n) = 0w
+Proof
+  Induct_on ‘n’>>rw[v2w_thm]>>
+  fs[listTheory.GENLIST_CONS,v2w_thm]
+QED
+
+Theorem v2w_Ts:
+  ∀n. v2w (GENLIST (K T) n) =
+      (if dimindex(:'a) < n then n2w (dimword(:'a) - 1) else n2w (2 ** n - 1)):'a word
+Proof
+  Induct_on ‘n’>>simp[v2w_thm,listTheory.GENLIST_CONS]>>
+  simp[arithmeticTheory.ADD1,arithmeticTheory.EXP_ADD,dimword_def]>>
+  CASE_TAC>>fs[]>>
+  CASE_TAC>>fs[arithmeticTheory.NOT_LESS]>-
+   (‘dimindex (:'a) = n’ by gvs[]>>simp[])>>
+  ‘n2w (2 ** n - 1) && (word_lsl 1w n) = 0w : 'a word’ by
+    (irule word_and_lsl_eq_0>>
+     simp[w2n_n2w]>>
+     simp[dimword_def]>>
+     ‘2 ** n - 1 < 2 ** dimindex (:'a)’ by
+       (irule arithmeticTheory.OR_LESS>>
+        simp[arithmeticTheory.ADD1]>>
+        simp[arithmeticTheory.SUB_ADD])>>
+     simp[])>>
+  simp[GSYM WORD_ADD_OR]>>
+  simp[word_lsl_n2w]>>
+  simp[word_add_n2w]
+QED
+
+Theorem v2w_Ts_add1:
+  n < dimindex (:'a) ⇒
+  v2w (GENLIST (K T) n) + 1w :'a word = v2w (T::GENLIST (K F) n)
+Proof
+  Induct_on ‘n’>>rw[]>-
+   simp[v2w_thm,v2w_T]>>
+  irule (iffLR w2n_11)>>
+  once_rewrite_tac[GSYM v2w_fixwidth]>>
+  irule EQ_TRANS>>
+  qexists ‘w2n (v2w (fixwidth (dimindex(:'a)) (GENLIST (K T) (SUC n))): 'a word) + w2n (1w:'a word)’>>
+  irule_at Any w2n_add>>
+  rewrite_tac[Once CONJ_ASSOC]>>
+  conj_tac >-
+   (simp[fixwidth,extend_GENLIST,word_msb,GSYM word_bit]>>
+    simp[word_index]>>
+    rewrite_tac[word_index_v2w]>>simp[]>>
+    simp[testbit]>>
+    Cases_on ‘dimindex (:'a) - SUC n’>>fs[]>>
+    simp[listTheory.GENLIST_CONS,rich_listTheory.HD_APPEND])>>
+  simp[fixwidth,extend_GENLIST]>>
+    ‘2 ** SUC n - 1 < 2 ** dimindex (:'a)’ by
+      (irule arithmeticTheory.OR_LESS>>
+       simp[arithmeticTheory.ADD1]>>
+       simp[arithmeticTheory.SUB_ADD])>>
+  CASE_TAC>>fs[]>-
+   (simp[w2n_v2w]>>
+    simp[v2n_APPEND]>>
+    simp[SIMP_RULE std_ss[combinTheory.K_DEF] v2n_Fs,v2n]>>
+    simp[v2n_Fs,v2n,listTheory.GENLIST_CONS,v2n_Ts]>>
+    simp[bitTheory.MOD_2EXP_def]>>
+    simp[arithmeticTheory.LESS_MOD]>>
+    simp[arithmeticTheory.SUB_ADD])>>
+  fs[arithmeticTheory.NOT_LESS]>>
+  fs[arithmeticTheory.LESS_OR_EQ]>>
+  pop_assum (assume_tac o GSYM)>>simp[]>>
+  simp[w2n_v2w]>>
+  simp[v2n,v2n_Ts,v2n_Fs]>>
+  simp[bitTheory.MOD_2EXP_def]>>
+  simp[arithmeticTheory.LESS_MOD]>>
+  simp[arithmeticTheory.SUB_ADD]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -1173,6 +1546,93 @@ Proof
   >- lfs [listTheory.PAD_LEFT, zero_extend_def]
   \\ `LENGTH (shiftr v i) <> 0` by (strip_tac \\ gvs[])
   \\ lfs [GSYM listTheory.NULL_LENGTH, DROP_LAST]
+QED
+
+(* ------------------------------------------------------------------------- *)
+
+Theorem w2v_extract:
+  dimindex (:'b) = SUC h - l ∧ h < dimindex (:'a) ⇒
+  w2v ((h >< l) (w:'a words$word): 'b words$word)
+  = DROP (dimindex (:'a) - SUC h) (TAKE (dimindex (:'a) - l) (w2v w))
+Proof
+  rw[]>>simp[w2v_def]>>
+  simp[listTheory.TAKE_GENLIST,listTheory.DROP_GENLIST]>>
+  assume_tac (INST_TYPE [alpha|->beta] DIMINDEX_GT_0)>>
+  ‘MIN (dimindex (:'a) - l) (dimindex (:'a)) = dimindex (:'a) - l’ by
+    simp[arithmeticTheory.MIN_DEF]>>
+  simp[combinTheory.o_DEF]>>
+  simp[listTheory.GENLIST_FUN_EQ]>>rw[]>>
+  last_x_assum $ assume_tac o GSYM>>
+  simp[arithmeticTheory.ADD1]>>
+  ‘x < SUC h - l’ by gvs[]>>
+  Cases_on ‘w’>>fs[word_extract_n2w]>>
+  simp[word_index]>>
+  simp[bitTheory.BIT_OF_BITS_THM]
+QED
+
+Theorem w2v_lsl:
+  n < dimindex (:'a) ⇒
+  w2v (word_lsl (w:'a words$word) n)
+  = DROP n (w2v w) ++ GENLIST (λ_. F) n
+Proof
+  rw[]>>
+  assume_tac (Q.SPEC ‘w’ ranged_bitstring_nchotomy)>>fs[]>>
+  simp[word_lsl_v2w]>>
+  simp[shiftl_def,listTheory.PAD_RIGHT]>>
+  simp[w2v_v2w,fixwidth]>>
+  simp[listTheory.DROP_GENLIST,listTheory.DROP_APPEND]>>
+  simp[combinTheory.K_DEF]>>
+  ‘n - LENGTH v = 0’ by gvs[]>>simp[]
+QED
+
+Theorem w2v_lsr:
+  n < dimindex (:'a) ⇒
+  w2v (word_lsr (w:'a words$word) n) = GENLIST (K F) n ++ shiftr (w2v w) n
+Proof
+  rw[]>>
+  assume_tac (Q.SPEC ‘w’ ranged_bitstring_nchotomy)>>fs[]>>
+  simp[word_lsr_v2w,shiftr_def]>>
+  simp[w2v_v2w,fixwidth]>>
+  CASE_TAC>>fs[arithmeticTheory.NOT_LESS,extend_GENLIST]>>
+  simp[combinTheory.K_DEF]
+QED
+
+Theorem w2v_asr:
+  n < dimindex (:'a) ⇒
+  w2v (word_asr (w:'a words$word) n) =
+  GENLIST (K (case w2v w of [] => F | x::xs => x)) n ++ shiftr (w2v w) n
+Proof
+  rw[]>>
+  assume_tac (Q.SPEC ‘w’ ranged_bitstring_nchotomy)>>fs[]>>
+  simp[word_asr_v2w]>>
+  simp[w2v_v2w,fixwidth,sign_extend_def,listTheory.PAD_LEFT]>>
+  simp[shiftr_def,listTheory.HD_TAKE]>>
+  CASE_TAC>>fs[]
+QED
+
+Theorem bnot_w2v:
+  bnot (w2v w) = w2v (¬w)
+Proof
+  assume_tac $ Q.SPEC ‘w’ ranged_bitstring_nchotomy>>fs[]>>
+  simp[word_1comp_v2w]>>
+  simp[w2v_v2w]>>simp[fixwidth,bnot_def]
+QED
+
+Theorem leadingF_w2v:
+  w2v (w:'a words$word) = GENLIST (K F) (dimindex(:'a) - LENGTH (n2v (w2n w))) ++ n2v (w2n w)
+Proof
+  assume_tac (Q.SPEC ‘w’ ranged_bitstring_nchotomy)>>fs[]>>
+  ‘v2n v < dimword (:'a)’ by
+    (irule arithmeticTheory.LESS_LESS_EQ_TRANS>>
+     irule_at Any v2n_lt>>
+     simp[dimword_def])>>
+  ‘v ≠ []’ by (CCONTR_TAC>>fs[DIMINDEX_GT_0])>>
+  irule EQ_TRANS>>
+  irule_at Any (Q.SPEC ‘w2v (v2w v)’ $ GEN_ALL leadingF_bitstring)>>simp[]>>
+  simp[w2v_v2w]>>simp[fixwidth]>>
+  simp[w2n_v2w]>>
+  dxrule EQ_SYM>>strip_tac>>simp[]>>
+  simp[GSYM MOD_2EXP_DIMINDEX]
 QED
 
 (* ------------------------------------------------------------------------- *)
