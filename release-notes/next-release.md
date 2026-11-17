@@ -21,6 +21,14 @@ Contents
 New features
 ------------
 
+-   Proof traces can be converted to version 0.1.0 binary PFT for HOL4 or
+    Candle replay, with shared logical and stateful compute preambles for
+    Candle. The `pft.sh` driver converts theory dumps and merges selected
+    exports across their dependencies. Conversion preserves oracle hypotheses and
+    live/retired symbol identities; merging processes one input graph at a
+    time and reuses IDs after their final uses. Raw traces include live-signature
+    and import metadata, so earlier raw traces must be regenerated.
+
 -   Types and constants of theories loaded from disk now get canonical kernel ids, the same in every process whatever was loaded before.
     On Poly/ML runtimes with dependent modules, `Meta.configureTheoryModuleCache` saves a loaded theory's signature, theorems and decoded data in a module (up to `Meta.theoryModuleWriteLimit` per process), so later loads skip compiling the generated code and reading the `.dat`, and repeat only the theory's registration and load hooks.  `Meta.writeTheoryModules` writes modules from `.dat` files alone, for stores the loading processes must not write.
     Missing or unusable modules fall back to source loading.

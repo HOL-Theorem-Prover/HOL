@@ -65,3 +65,17 @@ pft-regression.log: selftest.exe
 endif
 
 all: PFTCandleComputePreamble.uo
+
+all: merge-selftest.exe
+
+merge-selftest.exe: merge-selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: merge-selftest.log
+
+merge-selftest.log: merge-selftest.exe
+	$(tee ./$<, $@)
+endif
+
+EXTRA_CLEANS += merge-selftest.exe merge-selftest.log
