@@ -29,7 +29,8 @@ local
   open mlibUseful;
   val module = "folMapping";
 in
-  fun chatting l = tracing (l + 3);
+  val () = add_trace {module = module, alignment = I}
+  fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
   fun BUG f m = Bug (f ^ ": " ^ m);

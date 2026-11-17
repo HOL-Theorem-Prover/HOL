@@ -20,6 +20,32 @@ structure M = mlibMeson; local open mlibMeson in end;
 structure R = mlibResolution; local open mlibResolution in end;
 
 (* ------------------------------------------------------------------------- *)
+(* Aligning trace levels.                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* mlibMetis trace levels:
+   0: No output
+   1: Status information during proof search
+   2: More status information
+   3: More detailed prover information: slice by slice
+   4: High-level proof search information
+   5: Log of every inference during proof search
+   6: mlibSupport infrastructure such as mlibTermorder *)
+
+val aligned_traces =
+  [{module = "mlibTermorder",  alignment = fn n => n + 5},
+   {module = "mlibModel",      alignment = fn n => n + 5},
+   {module = "mlibRewrite",    alignment = fn n => n + 4},
+   {module = "mlibClause",     alignment = fn n => n + 4},
+   {module = "mlibSolver",     alignment = I},
+   {module = "mlibMeson",      alignment = I},
+   {module = "mlibClauseset",  alignment = I},
+   {module = "mlibSupport",    alignment = I},
+   {module = "mlibResolution", alignment = I}];
+
+val () = set_traces aligned_traces
+
+(* ------------------------------------------------------------------------- *)
 (* Helper functions                                                          *)
 (* ------------------------------------------------------------------------- *)
 
@@ -117,7 +143,7 @@ local
   fun s2s (s : sos_filter option) =
     "sos: " ^ (case s of NONE => "natural" | SOME {name, ...} => name) ^ "\n";
 
-  fun c2s c = "cost_fn: " ^ PP.pp_to_string LINE_LENGTH pp_cost_fn c ^ "\n";
+  fun c2s c = "cost_fn: " ^ PP.pp_to_string (!LINE_LENGTH) pp_cost_fn c ^ "\n";
 in
   fun parameters_to_string (parm : parameters) =
     join "\n" (map (fn (p,s,c) => p2s p ^ s2s s ^ c2s c) parm);

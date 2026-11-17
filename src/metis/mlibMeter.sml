@@ -47,7 +47,7 @@ fun pp_limit {time,infs} =
     ]
   end;
 
-fun limit_to_string l = PP.pp_to_string LINE_LENGTH pp_limit l;
+fun limit_to_string l = PP.pp_to_string (!LINE_LENGTH) pp_limit l;
 
 (* ------------------------------------------------------------------------- *)
 (* mlibMeter readings.                                                           *)
@@ -64,7 +64,7 @@ val pp_meter_reading =
   pp_map (fn {time,infs} => {time = SOME time, infs = SOME infs}) pp_limit;
 
 fun meter_reading_to_string r =
-  PP.pp_to_string LINE_LENGTH pp_meter_reading r;
+  PP.pp_to_string (!LINE_LENGTH) pp_meter_reading r;
 
 (* ------------------------------------------------------------------------- *)
 (* mlibMeters record time and inferences.                                        *)

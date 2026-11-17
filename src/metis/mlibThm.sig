@@ -72,7 +72,7 @@ val pp_proof             : (thm * inference') list pp
 val thm_to_string'       : int -> thm -> string        (* purely functional *)
 val inference_to_string' : int -> inference' -> string
 val proof_to_string'     : int -> (thm * inference') list -> string
-val thm_to_string        : thm -> string               (* uses LINE_LENGTH *)
+val thm_to_string        : thm -> string               (* uses !LINE_LENGTH *)
 val inference_to_string  : inference' -> string
 val proof_to_string      : (thm * inference') list -> string
 

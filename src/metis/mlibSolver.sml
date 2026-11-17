@@ -28,7 +28,8 @@ val op ::> = mlibSubst.::>;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibSolver";
-fun chatting l = tracing l;
+val () = add_trace {module = module, alignment = I}
+fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)

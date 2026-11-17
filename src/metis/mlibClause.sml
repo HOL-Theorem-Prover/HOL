@@ -33,7 +33,8 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibClause";
-fun chatting l = tracing (l + 4);
+val _ = add_trace {module = module, alignment = I}
+fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -190,7 +191,7 @@ fun constraint_consistent (p : parameters) to =
   | NONE =>
     (chatting 1 andalso
      chat ("merge_orderings: resulting termorder is inconsistent:\n" ^
-           PP.pp_to_string LINE_LENGTH T.pp_termorder to);
+           PP.pp_to_string (!LINE_LENGTH) T.pp_termorder to);
      raise Error "consistent: inconsistent orderings");
 
 fun constraint_subsumes sub to1 to2 =

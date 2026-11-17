@@ -148,7 +148,7 @@ val pp_formula'        : infixities -> formula pp
 val term_to_string'    : infixities -> int -> term -> string
 val formula_to_string' : infixities -> int -> formula -> string
 val pp_term            : term pp                       (* uses !infixes    *)
-val pp_formula         : formula pp                    (* and LINE_LENGTH *)
+val pp_formula         : formula pp                    (* and !LINE_LENGTH *)
 val term_to_string     : term -> string
 val formula_to_string  : formula -> string
 

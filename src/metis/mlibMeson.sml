@@ -28,7 +28,8 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibMeson";
-fun chatting l = tracing l;
+val () = add_trace {module = module, alignment = I}
+fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -227,7 +228,7 @@ local fun dest ({asms, c, ...} : rule) = (asms,c);
 in val pp_rule = pp_map dest (pp_binop " ==>" (pp_list pp_formula) pp_formula);
 end;
 
-fun rule_to_string r = PP.pp_to_string LINE_LENGTH pp_rule r;
+fun rule_to_string r = PP.pp_to_string (!LINE_LENGTH) pp_rule r;
 
 val pp_rules =
   pp_map (map (fn _ |-> x => x) o N.to_maplets o dest_rules)

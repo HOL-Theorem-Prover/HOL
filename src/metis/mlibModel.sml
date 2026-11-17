@@ -21,7 +21,8 @@ structure W = Word; local open Word in end;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibModel";
-fun chatting _ = tracing trace_max;  (* silent below the maximum *)
+val () = add_trace {module = module, alignment = I}
+fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -232,7 +233,7 @@ val pp_valuation =
   pp_map (map op|-> o Binarymap.listItems)
   (pp_list (pp_maplet pp_string pp_int));
 
-fun valuation_to_string v = PP.pp_to_string LINE_LENGTH pp_valuation v;
+fun valuation_to_string v = PP.pp_to_string (!LINE_LENGTH) pp_valuation v;
 
 (* ------------------------------------------------------------------------- *)
 (* Random models are based on cryptographic hashing                          *)
@@ -461,7 +462,7 @@ val pp_perturbation =
            | FnP (p |-> n) => p |-> int_to_string n)
   (pp_maplet pp_fp pp_string);
 
-fun perturbation_to_string p = PP.pp_to_string LINE_LENGTH pp_perturbation p;
+fun perturbation_to_string p = PP.pp_to_string (!LINE_LENGTH) pp_perturbation p;
 
 fun comparep (PredP _, FnP _) = LESS
   | comparep (PredP (p1 |-> b1), PredP (p2 |-> b2)) =

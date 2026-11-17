@@ -17,9 +17,10 @@ val can         : ('a -> 'b) -> 'a -> bool
 val partial     : exn -> ('a -> 'b option) -> 'a -> 'b
 val timed       : ('a -> 'b) -> 'a -> real * 'b
 val timed_many  : ('a -> 'b) -> 'a -> real * 'b
-val trace_flag  : HOLFlags.flag             (* "metis.trace" *)
-val trace_max   : int
-val tracing     : int -> bool
+val trace_flag  : HOLFlags.flag                  (* "metis.trace" *)
+val add_trace   : {module : string, alignment : int -> int} -> unit
+val set_traces  : {module : string, alignment : int -> int} list -> unit
+val tracing     : {module : string, level : int} -> bool
 val trace       : string -> unit
 
 (* Combinators *)
@@ -139,7 +140,7 @@ val log2              : real -> real              (* Domain *)
 
 (* Pretty-printing *)
 type 'a pp = 'a Parse.pprinter
-val LINE_LENGTH : int
+val LINE_LENGTH : int ref
 val pp_map      : ('a -> 'b) -> 'b pp -> 'a pp
 val pp_bracket  : string -> string -> 'a pp -> 'a pp
 val pp_sequence : string -> 'a pp -> 'a list pp
@@ -179,6 +180,7 @@ val tree_partial_foldl :
 val memoize   : (unit -> 'a) -> unit -> 'a
 val new_int   : unit -> int
 val new_ints  : int -> int list
+val with_flag : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
 
 (* The environment *)
 val warn           : string -> unit

@@ -29,7 +29,8 @@ type clause = C.clause;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibSupport";
-fun chatting l = tracing l;
+val () = add_trace {module = module, alignment = I}
+fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -104,7 +105,7 @@ fun clause_to_formula cl = list_mk_disj (C.literals cl);
 
 val clause_id = #id o C.dest_clause;
 
-fun clause_to_string cl = PP.pp_to_string LINE_LENGTH mlibClause.pp_clause cl;
+fun clause_to_string cl = PP.pp_to_string (!LINE_LENGTH) mlibClause.pp_clause cl;
 
 val clause_lits = Real.fromInt o length o C.literals;
 
@@ -149,8 +150,8 @@ end;
 (* belongs upstream, in the naming, not here.                                *)
 (*                                                                           *)
 (* Not formula_to_string: that goes through the pretty-printer, which        *)
-(* reads the global !infixes, and the point here is to have nothing          *)
-(* outside the problem decide what the models are.                           *)
+(* reads the global !infixes and !LINE_LENGTH, and the point here is to      *)
+(* have nothing outside the problem decide what the models are.              *)
 (* ------------------------------------------------------------------------- *)
 
 local

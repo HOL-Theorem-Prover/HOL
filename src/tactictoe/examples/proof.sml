@@ -5,7 +5,7 @@ load "gcdTheory";
 load "arithmeticTheory";
 open arithmeticTheory dividesTheory;
 load "tttUnfold"; tttUnfold.ttt_record ();
-HOLFlags.set_flag (metisTools.metis_trace, 0);
+mlibUseful.trace_level := 0;
 
 (* 2 divides a *)
 val thm1 = TAC_PROOF (([], ``(divides 2 (a*a)) ==> divides 2 a``),

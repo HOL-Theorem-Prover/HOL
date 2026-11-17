@@ -1,7 +1,7 @@
 app load ["Future", "metisLib", "computeLib" , "numLib"];
 open metisLib
 
-val _ = HOLFlags.set_flag (metisTools.metis_trace, 3)
+val _ = mlibUseful.trace_level := 3
 fun METIS_PROVE thl g =
   metisLib.METIS_PROVE thl g
   handle e => (let open PolyML.Exception
