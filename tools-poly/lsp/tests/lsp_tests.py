@@ -7488,6 +7488,51 @@ def test_term_error_points_inside_a_definition():
                    "the squiggle covers the `T' inside the definition")
 
 
+def test_cross_clause_type_error_points_at_the_operator():
+    """A `Definition' whose clauses disagree about the type of the
+    function being defined.
+
+    Unlike the test above, no single clause is ill-typed: each is
+    consistent on its own, and the contradiction appears only when the
+    types the clauses give `ev' are reconciled.  `Defn' does that with
+    a bare `Pretype.unify', outside the two places in `Preterm' that
+    attach a position to a clash, so the exception used to carry none
+    -- and the innermost origin left with a usable one was
+    `Defn.Hol_defn''s wrap, whose span is the whole quotation.  The
+    whole definition went red, with the bare "Attempt to unify
+    different type operators: min$fun and num$num" for a message.
+
+    `Pretype' now records where a type was forced on a unification
+    variable -- here the `UNION' that made `a' a set -- and `Defn'
+    says whose types are being reconciled.
+
+    A `UNION' rather than a clash of two concrete types on purpose:
+    the position is recovered from a *bound* unification variable, so
+    a clash that never went through one -- `n + T' in the test above
+    -- still reports the argument, and should."""
+    src = ("Theory xclause\n"
+           "Ancestors arithmetic pred_set\n"
+           "\n"
+           "Definition ev_def:\n"
+           "  ev 0 = (1,2) /\\\n"
+           "  ev (SUC n) =\n"
+           "    (let (a,b) = ev n in\n"
+           "       (a UNION b, b))\n"
+           "End\n")
+    diags = _diags_for(src, "xclause")
+    _assert_covers(src, diags, (src.index("UNION"), len("UNION")),
+                   "the squiggle covers the `UNION'")
+    msg = [m for _, _, _, m in _spans(src, diags)]
+    assert_true(any("Clauses give" in m for m in msg),
+                f"the message says the clauses disagree ({msg!r})")
+    assert_true(any('"ev"' in m for m in msg),
+                f"and names the function ({msg!r})")
+    assert_true(any("num # num" in m for m in msg),
+                f"and gives the type one clause settled on ({msg!r})")
+    assert_true(any("Reason:" in m for m in msg),
+                f"and keeps what the unifier said ({msg!r})")
+
+
 def test_term_error_points_at_the_inductive_rule_that_is_wrong():
     """A labelled `Inductive' body is not one quotation: `expandQuote-
     Core' emits one `QUOTE' per rule, each with its own `(*#loc*)',
@@ -13188,6 +13233,8 @@ TESTS = [
                              test_term_error_points_inside_a_theorem_goal),
     ("term_error_points_inside_a_definition",
                                test_term_error_points_inside_a_definition),
+    ("cross_clause_type_error_points_at_the_operator",
+                     test_cross_clause_type_error_points_at_the_operator),
     ("term_error_points_at_the_inductive_rule_that_is_wrong",
                  test_term_error_points_at_the_inductive_rule_that_is_wrong),
     ("a_term_parse_error_points_into_the_goal",
