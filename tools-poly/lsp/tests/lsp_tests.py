@@ -10296,6 +10296,59 @@ def test_hover_first_line_says_what_the_leaf_is():
         c.close()
 
 
+def test_hover_on_dictionary_brackets():
+    """`l\u2772i\u2773' and `d\u27e8k\u27e9' name their constant nowhere: the
+    brackets are a list form, and combinpp's absyn postprocessor
+    builds the application.  It used to build it with `Loc_None' on
+    the generated identifier, so no leaf covered the brackets and the
+    hover fell out to whatever enclosed the form -- in `(d\u27e8s\u27e9,d)',
+    the pair comma.  The identifier now carries the bracket pair's own
+    span."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_brackets.sml"
+        src = ("Theory hover_brackets\n"
+               "Ancestors list\n\n"
+               "Definition g_def:\n"
+               "  g l i = (l\u2772i\u2773, l\u2772i \u21a6 3\u2773)\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        body = src.split("\n")[4].encode()
+
+        def md_at(rid, col):
+            r = _hover_at(c, rid, uri, 4, col)
+            return r["contents"]["value"] if r else None
+
+        # The opening bracket of the lookup form.
+        md = md_at(983, body.index("\u2772".encode()))
+        assert_true(md is not None, "hovering the opening bracket answers")
+        assert_true("EL" in md,
+                    f"and names the lookup it stands for ({md!r})")
+        assert_true(" , " not in md and "pair$," not in md,
+                    f"not the enclosing pair ({md!r})")
+
+        # The closing bracket of the same form.
+        md = md_at(984, body.index("\u2773".encode()))
+        assert_true(md is not None and "EL" in md,
+                    f"so does the closing one ({md!r})")
+
+        # The update form's arrow, inside the second pair of brackets.
+        md = md_at(985, body.index("\u21a6".encode()))
+        assert_true(md is not None and "LUPDATE" in md,
+                    f"and an update names LUPDATE ({md!r})")
+
+        # The key keeps its own, shorter span: the bracket identifier
+        # spans it but must not win.
+        md = md_at(986, body.index("\u2772".encode()) + 3)
+        assert_true(md is not None and "variable i " in md,
+                    f"the key still hovers as itself ({md!r})")
+    finally:
+        c.close()
+
+
 def test_quotation_hover_positions_under_utf16():
     """Every test here advertises utf-8, which is what eglot
     negotiates and where a byte offset and a column agree -- so nothing
@@ -13455,6 +13508,7 @@ TESTS = [
      test_overload_hover_sees_through_the_alias_chain),
     ("hover_first_line_says_what_the_leaf_is",
      test_hover_first_line_says_what_the_leaf_is),
+    ("hover_on_dictionary_brackets", test_hover_on_dictionary_brackets),
     ("quotation_hover_positions_under_utf16",
      test_quotation_hover_positions_under_utf16),
     ("check_proofs_switchable_without_a_restart",

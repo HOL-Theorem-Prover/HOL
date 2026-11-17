@@ -569,6 +569,17 @@ long type would push a trailing note off the end of the line.  A
 constant's home theory rides along in the name as `thy$name`, which is
 HOL's own way of writing a constant with its theory.
 
+Syntax that spells no constant in the source still answers.  `d⟨s⟩`
+and `l❲i❳` are list forms whose application `combinpp`'s absyn
+postprocessor builds, and it used to build it with `locn.Loc_None` on
+the generated identifier -- so no leaf covered the brackets, and the
+hover fell out to whatever enclosed the form: in `(d⟨s⟩,d)`, the
+pair comma.  The identifier now carries the bracket pair's own span,
+so hovering either bracket, or the `↦` of an update, names the
+constant the brackets stand for.  The keys and values inside keep
+their own spans, which are shorter, so they still win where the two
+overlap.
+
 ### Positions
 
 A hover's range, like every position on the wire, counts whatever
