@@ -297,9 +297,18 @@ def _init(c, root=None, timeout=30, encodings=("utf-8",)):
                       "processId":None}})
     def got_init_reply(cl):
         msgs, _ = cl.messages_since(0)
-        return any(m.get("id") == 1 for m in msgs)
+        if any(m.get("id") == 1 for m in msgs):
+            return True
+        # A server that has exited is never going to answer, so stop
+        # rather than sit out the budget.  Checked after the reply, so
+        # a server that answers and then exits still counts as having
+        # answered.  Twelve tests spent 150s each here when a
+        # concurrent build removed `bin/hol.state' under them, and the
+        # stderr tail saying exactly that was already in hand after
+        # 0.1s.
+        return "exited" if cl.p.poll() is not None else False
     t0 = time.time()
-    if not c.wait_until(got_init_reply, timeout):
+    if c.wait_until(got_init_reply, timeout) is not True:
         rc = c.p.poll()
         raise RuntimeError(
             "initialize timed out: waited %.1fs of a %ss budget; spawn took "
@@ -2396,7 +2405,14 @@ def _susp_goal(c, uri, rid, line, char, timeout=50):
     n, r = 0, None
     while True:
         since = c.total_msgs()
-        r = (_send_goalstate(c, rid + n, uri, line, char) or {}).get("result")
+        # Cap the per-request wait by what is left of this deadline:
+        # `timeout' here is sometimes deliberately short (a Resume that
+        # never settles), and the inner budget must not outlive it.
+        # Divided back out by TIME_SCALE because `_send_goalstate'
+        # scales what it is given, and `deadline' is already scaled.
+        left = max(0.1, (deadline - time.time()) / TIME_SCALE)
+        r = (_send_goalstate(c, rid + n, uri, line, char,
+                             timeout=left) or {}).get("result")
         if r and r.get("status") == "ok":
             return r
         n += 1
@@ -3103,7 +3119,24 @@ def test_statement_edit_still_clears_later_proofs():
         shutil.rmtree(d, ignore_errors=True)
 
 
-def _send_goalstate(c, req_id, uri, line, char, step=None):
+def _send_goalstate(c, req_id, uri, line, char, step=None, timeout=20):
+    """Ask for goal state and return the reply, or None if none came.
+
+    The budget used to be 5s -- by a long way the tightest in this
+    file, where a round trip waits 20s and a compile 30-60.  A goal
+    state can involve a walk, so it is not the *cheapest* request
+    either, and 5s left no headroom at all when the suite runs beside
+    the rest of the build: it is what failed
+    `resume_goal_does_not_recompile_on_every_request' on 2026-11-17,
+    in a window where the median test took 16s against a 3.5s
+    baseline.
+
+    Raising it is close to free on the happy path.  A server that is
+    going to answer -- including with `pending' or an error -- answers
+    in milliseconds, so the budget is only ever spent when nothing
+    comes back at all, which is the case this is supposed to catch
+    rather than race.
+    """
     params = {"textDocument":{"uri":uri},
               "position":{"line":line,"character":char}}
     if step is not None:
@@ -3116,7 +3149,7 @@ def _send_goalstate(c, req_id, uri, line, char, step=None):
             for m in cl.msgs:
                 if m.get("id") == req_id: return m
         return None
-    return c.wait_until(got, 5)
+    return c.wait_until(got, timeout)
 
 
 @requires("integer")
@@ -3730,6 +3763,16 @@ def _search_names(c, req_id, fragment):
 
 
 def test_stale_ancestor_draws_a_warning():
+    _stale_ancestor_draws_a_warning(objroot=False)
+
+
+def test_stale_ancestor_draws_a_warning_under_objroot():
+    """As above, with the artifacts in an artifact root that
+    `holproject.toml' names, which the lookup has to see through."""
+    _stale_ancestor_draws_a_warning(objroot=True)
+
+
+def _stale_ancestor_draws_a_warning(objroot):
     """A dependency is read once per process, so a theory whose script
     has been edited since it was built goes on answering from the
     version that was built -- with nothing about it looking wrong.
@@ -3753,10 +3796,15 @@ def test_stale_ancestor_draws_a_warning():
                     "Theorem zzup_triv:\n  T\nProof\n  REWRITE_TAC[]\nQED\n")
         with open(os.path.join(d, "Holmakefile"), "w") as f:
             f.write("")
+        if objroot:
+            with open(os.path.join(d, "holproject.toml"), "w") as f:
+                f.write('name = "zzstale"\nobjroot = "build"\n')
+            objs = os.path.join(d, "build", "objs")
+        else:
+            objs = os.path.join(d, ".hol", "objs")
         r = subprocess.run([f"{REPO}/bin/Holmake"], cwd=d,
                            capture_output=True, text=True, timeout=300)
-        assert_true(os.path.exists(os.path.join(d, ".hol", "objs",
-                                                "zzupTheory.uo")),
+        assert_true(os.path.exists(os.path.join(objs, "zzupTheory.uo")),
                     f"the scratch theory built ({r.stdout[-400:]!r})")
 
         uri = "file://" + os.path.join(d, "zzdownScript.sml")
@@ -7440,6 +7488,51 @@ def test_term_error_points_inside_a_definition():
                    "the squiggle covers the `T' inside the definition")
 
 
+def test_cross_clause_type_error_points_at_the_operator():
+    """A `Definition' whose clauses disagree about the type of the
+    function being defined.
+
+    Unlike the test above, no single clause is ill-typed: each is
+    consistent on its own, and the contradiction appears only when the
+    types the clauses give `ev' are reconciled.  `Defn' does that with
+    a bare `Pretype.unify', outside the two places in `Preterm' that
+    attach a position to a clash, so the exception used to carry none
+    -- and the innermost origin left with a usable one was
+    `Defn.Hol_defn''s wrap, whose span is the whole quotation.  The
+    whole definition went red, with the bare "Attempt to unify
+    different type operators: min$fun and num$num" for a message.
+
+    `Pretype' now records where a type was forced on a unification
+    variable -- here the `UNION' that made `a' a set -- and `Defn'
+    says whose types are being reconciled.
+
+    A `UNION' rather than a clash of two concrete types on purpose:
+    the position is recovered from a *bound* unification variable, so
+    a clash that never went through one -- `n + T' in the test above
+    -- still reports the argument, and should."""
+    src = ("Theory xclause\n"
+           "Ancestors arithmetic pred_set\n"
+           "\n"
+           "Definition ev_def:\n"
+           "  ev 0 = (1,2) /\\\n"
+           "  ev (SUC n) =\n"
+           "    (let (a,b) = ev n in\n"
+           "       (a UNION b, b))\n"
+           "End\n")
+    diags = _diags_for(src, "xclause")
+    _assert_covers(src, diags, (src.index("UNION"), len("UNION")),
+                   "the squiggle covers the `UNION'")
+    msg = [m for _, _, _, m in _spans(src, diags)]
+    assert_true(any("Clauses give" in m for m in msg),
+                f"the message says the clauses disagree ({msg!r})")
+    assert_true(any('"ev"' in m for m in msg),
+                f"and names the function ({msg!r})")
+    assert_true(any("num # num" in m for m in msg),
+                f"and gives the type one clause settled on ({msg!r})")
+    assert_true(any("Reason:" in m for m in msg),
+                f"and keeps what the unifier said ({msg!r})")
+
+
 def test_term_error_points_at_the_inductive_rule_that_is_wrong():
     """A labelled `Inductive' body is not one quotation: `expandQuote-
     Core' emits one `QUOTE' per rule, each with its own `(*#loc*)',
@@ -10227,6 +10320,117 @@ def test_overload_hover_sees_through_the_alias_chain():
             c.close()
     finally:
         shutil.rmtree(d, ignore_errors=True)
+
+
+def test_hover_first_line_says_what_the_leaf_is():
+    """Everything a quotation hover knows about an identifier has to be
+    on the first line of the markdown.  Emacs shows a hover in the echo
+    area, and eglot cuts it there at the first newline -- so a second
+    paragraph holding `Theory \\`num\\`' or `*free variable*' is text the
+    reader never sees, and the line that does arrive, `SUC :num ->
+    num', does not say whether `SUC' is a constant or a variable."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_firstline.sml"
+        #   byte columns of line 4: 2='!' 3='n' 10..12='SUC' 14='n'
+        #                           18='n' 20='+' 22='m' 26='3'
+        src = ("Theory hover_firstline\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  !n:num. SUC n = n + m + 3\n"
+               "Proof\n"
+               "  cheat\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+
+        def first_line(rid, col):
+            r = _hover_at(c, rid, uri, 4, col)
+            assert_true(r is not None, f"hover at column {col} answers")
+            md = r["contents"]["value"]
+            body = [l for l in md.split("\n") if not l.startswith("`")]
+            return body[0] if body else ""
+
+        line = first_line(980, 11)
+        assert_true(line.startswith("constant "),
+                    f"a constant says so first ({line!r})")
+        assert_true("num$SUC" in line,
+                    f"and names its theory with it ({line!r})")
+        assert_true("num -> num" in line,
+                    f"and still gives the type ({line!r})")
+
+        line = first_line(981, 14)
+        assert_true(line.startswith("bound variable "),
+                    f"a bound variable says so first ({line!r})")
+        assert_true("n :num" in line, f"with name and type ({line!r})")
+
+        line = first_line(982, 22)
+        assert_true(line.startswith("free variable "),
+                    f"a free variable says so first ({line!r})")
+        assert_true("m :num" in line, f"with name and type ({line!r})")
+
+        # A numeral is one token but a tree of constants, each node
+        # carrying that token's Locn; the innermost used to win.
+        line = first_line(983, 26)
+        assert_true(line == "numeral 3 :num",
+                    f"a numeral hovers as itself ({line!r})")
+    finally:
+        c.close()
+
+
+def test_hover_on_dictionary_brackets():
+    """`l\u2772i\u2773' and `d\u27e8k\u27e9' name their constant nowhere: the
+    brackets are a list form, and combinpp's absyn postprocessor
+    builds the application.  It used to build it with `Loc_None' on
+    the generated identifier, so no leaf covered the brackets and the
+    hover fell out to whatever enclosed the form -- in `(d\u27e8s\u27e9,d)',
+    the pair comma.  The identifier now carries the bracket pair's own
+    span."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hover_brackets.sml"
+        src = ("Theory hover_brackets\n"
+               "Ancestors list\n\n"
+               "Definition g_def:\n"
+               "  g l i = (l\u2772i\u2773, l\u2772i \u21a6 3\u2773)\n"
+               "End\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 60),
+                    "compileCompleted")
+        body = src.split("\n")[4].encode()
+
+        def md_at(rid, col):
+            r = _hover_at(c, rid, uri, 4, col)
+            return r["contents"]["value"] if r else None
+
+        # The opening bracket of the lookup form.
+        md = md_at(983, body.index("\u2772".encode()))
+        assert_true(md is not None, "hovering the opening bracket answers")
+        assert_true("EL" in md,
+                    f"and names the lookup it stands for ({md!r})")
+        assert_true(" , " not in md and "pair$," not in md,
+                    f"not the enclosing pair ({md!r})")
+
+        # The closing bracket of the same form.
+        md = md_at(984, body.index("\u2773".encode()))
+        assert_true(md is not None and "EL" in md,
+                    f"so does the closing one ({md!r})")
+
+        # The update form's arrow, inside the second pair of brackets.
+        md = md_at(985, body.index("\u21a6".encode()))
+        assert_true(md is not None and "LUPDATE" in md,
+                    f"and an update names LUPDATE ({md!r})")
+
+        # The key keeps its own, shorter span: the bracket identifier
+        # spans it but must not win.
+        md = md_at(986, body.index("\u2772".encode()) + 3)
+        assert_true(md is not None and "variable i " in md,
+                    f"the key still hovers as itself ({md!r})")
+    finally:
+        c.close()
 
 
 def test_quotation_hover_positions_under_utf16():
@@ -13029,6 +13233,8 @@ TESTS = [
                              test_term_error_points_inside_a_theorem_goal),
     ("term_error_points_inside_a_definition",
                                test_term_error_points_inside_a_definition),
+    ("cross_clause_type_error_points_at_the_operator",
+                     test_cross_clause_type_error_points_at_the_operator),
     ("term_error_points_at_the_inductive_rule_that_is_wrong",
                  test_term_error_points_at_the_inductive_rule_that_is_wrong),
     ("a_term_parse_error_points_into_the_goal",
@@ -13169,6 +13375,8 @@ TESTS = [
                     test_tryTactic_budget_bounds_both_of_its_walks),
     ("stale_ancestor_draws_a_warning",
                     test_stale_ancestor_draws_a_warning),
+    ("stale_ancestor_draws_a_warning_under_objroot",
+                    test_stale_ancestor_draws_a_warning_under_objroot),
     ("eval_runs_in_a_world_that_is_thrown_away",
                     test_eval_runs_in_a_world_that_is_thrown_away),
     ("eval_refuses_what_it_cannot_throw_away",
@@ -13384,6 +13592,9 @@ TESTS = [
      test_overload_hover_names_the_expansion),
     ("overload_hover_sees_through_the_alias_chain",
      test_overload_hover_sees_through_the_alias_chain),
+    ("hover_first_line_says_what_the_leaf_is",
+     test_hover_first_line_says_what_the_leaf_is),
+    ("hover_on_dictionary_brackets", test_hover_on_dictionary_brackets),
     ("quotation_hover_positions_under_utf16",
      test_quotation_hover_positions_under_utf16),
     ("check_proofs_switchable_without_a_restart",
@@ -13484,14 +13695,33 @@ def _check_all_registered():
         sys.exit(2)
 
 
-def _default_jobs():
+def _default_jobs(build_jobs=0):
     """Workers for a run that did not say.
 
-    Capped at 8 whatever the machine has.  Past that the suite stops
-    scaling for a reason that is not the machine's: every server's
-    stdout is framed and JSON-parsed in *this* process, one reader
-    thread each, under the GIL.
+    Standalone, capped at 8 whatever the machine has.  Past that the
+    suite stops scaling for a reason that is not the machine's: every
+    server's stdout is framed and JSON-parsed in *this* process, one
+    reader thread each, under the GIL.
+
+    `build_jobs' is the enclosing build's own `-j', passed through as
+    `HOL_LSP_BUILD_JOBS' by the Holmakefile.  Those jobs are running
+    *beside* this suite -- the target is a node inside
+    `src/parallel_builds/core' -- so N workers here means 2N processes
+    on an N-way box.  It used to ask for exactly `-j HOL_NUMJOBS',
+    which on 2026-11-17 cost 5-10x on the first half of the suite and
+    a ~200s window where all seven workers and the harness itself
+    stalled together; the second half, after the build drained, beat
+    the standalone baseline.
+
+    Half the build's count, then, with a floor of 2 so the suite still
+    overlaps something, and 1 when the build is serial -- `-j1' has
+    always run this suite serially.  Halving is not obviously a cost
+    even on the critical path: the contended run took 541s of wall
+    clock for 3790s of work, where the same work uncontended at four
+    workers is nearer 290s.
     """
+    if build_jobs > 0:
+        return 1 if build_jobs <= 1 else max(2, (build_jobs + 1) // 2)
     return min(8, os.cpu_count() or 1)
 
 
@@ -13566,11 +13796,20 @@ def main():
             sys.exit(2)
         jobs = int(argv[i + 1])
         del argv[i:i + 2]
+    build_jobs = int(os.environ.get("HOL_LSP_BUILD_JOBS", "0") or 0)
     if jobs is None:
-        jobs = int(os.environ.get("HOL_LSP_TEST_JOBS", "0")) or _default_jobs()
+        jobs = (int(os.environ.get("HOL_LSP_TEST_JOBS", "0"))
+                or _default_jobs(build_jobs))
     global TIME_SCALE
-    TIME_SCALE = float(os.environ.get("HOL_LSP_TIME_SCALE",
-                                      max(1.0, jobs / 2.0)))
+    # Scale for everything on the box, not just for this suite.  The
+    # old `jobs / 2' saw only its own workers, so a run inside the
+    # build got x3.5 against a measured 5-10x slowdown; the build's
+    # other `build_jobs - 1' slots (one of them is this target) are
+    # the rest of the load.  Standalone, `build_jobs' is 0 and this is
+    # exactly the old formula.
+    TIME_SCALE = float(os.environ.get(
+        "HOL_LSP_TIME_SCALE",
+        max(1.0, (jobs + max(0, build_jobs - 1)) / 2.0)))
 
     wanted = set(argv)
     # A name nobody answers to is a typo, not a selection.  Left to

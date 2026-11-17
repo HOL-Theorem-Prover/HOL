@@ -1301,4 +1301,51 @@ val _ =
       | NONE => die "\nno located error raised"
 end
 
+(* A type constraint that cannot be met used to report the term, its
+   type and the constraint, and stop -- the unification error saying
+   which part of the two could not be made to agree was discarded
+   (`++' rather than `++?').  For anything bigger than an atomic type
+   that reason is the whole content of the report. *)
+val _ = tprint "Type constraint failure says why"
+val _ =
+    case (ignore (Parse.Term [QUOTE "(*#loc 1 1*)((x:bool):'a -> 'a)"]); NONE)
+           handle Feedback.HOL_ERR e => SOME (Feedback.message_of e) of
+        NONE => die "\nno error raised"
+      | SOME msg =>
+        if List.all (fn s => String.isSubstring s msg)
+                    ["Type constraint failure", "Reason:", "min$fun"]
+        then OK()
+        else die ("\nBad message:\n  " ^ msg)
+
+(* The argument of an application keeps the blame for a type clash.
+   `Pretype' now records where a type was forced on a unification
+   variable, and that position is used where there is no argument
+   position to use -- but not in preference to one, which would move
+   every report of this shape.  `T' is what does not fit here. *)
+val _ = tprint "An application's argument keeps the blame"
+val _ = let
+  fun innermost e =
+      List.foldl (fn (org, best) =>
+                     case #source_location org of
+                         l as locn.Loc (locn.LocA _, locn.LocA _) => SOME l
+                       | _ => best)
+                 NONE (Feedback.origins_of e)
+  (* `num' does not exist yet where this directory sits in the build.
+     Applying a boolean to an argument is clash enough: text after the
+     pragma starts at line 1, character 0, so the argument `T' that
+     does not fit is at character 2.
+       T T
+       012  *)
+  val q = [QUOTE "(*#loc 1 1*)T T"]
+in
+  case (ignore (Parse.Term q); NONE)
+         handle Feedback.HOL_ERR e => SOME (innermost e) of
+      NONE => die "\nno error raised"
+    | SOME (SOME (locn.Loc (locn.LocA (0, 2), locn.LocA (0, 2)))) => OK()
+    | SOME (SOME l) =>
+        die ("\nwanted line 1 character 2 (the argument `T'), got " ^
+             locn.toString l)
+    | SOME NONE => die "\nerror carried no file position"
+end
+
 val _ = exit_count0 failcount
