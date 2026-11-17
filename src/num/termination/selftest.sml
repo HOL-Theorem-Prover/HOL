@@ -425,6 +425,27 @@ val _ = OK ()
 val _ = convtest ("finalised definition enters EVAL", EVAL,
                  “susp 3”, “3”)
 
+val _ = tprint "a suspended nested definition keeps its support constants"
+fun is_snest_aux t = is_const t andalso fst (dest_const t) = "snest_aux"
+fun has_snest_aux () = List.exists is_snest_aux
+                                   (thy_consts (current_theory ()))
+fun aux_in_goal (g : goal) =
+  (assert (can (find_term is_snest_aux) (snd g)); ALL_TAC g)
+val snest_eqns = located_qDefine DB.Unknown "snest_def[induction=snest_steps]"
+  ‘snest n = if n = 0 then 0n else snest (snest (n - 1) MOD n)’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
+  (Context.snapshot ())
+val _ = assert (has_snest_aux () andalso not (stored "snest_def"))
+val _ = markerLib.resume {suspension_name = "snest_def", label_name = "tc"}
+          (markerLib.RESUME_TAC THEN aux_in_goal THEN CONJ_TAC THEN1 WF_TAC
+           THEN TC_SIMP_TAC (termination_ss ()) [])
+          (Context.snapshot ())
+val _ = assert (has_snest_aux ())
+val snest_def = located_finalise_definition DB.Unknown "snest_def"
+val _ = assert (not (has_snest_aux ()) andalso null (hyp snest_def) andalso
+                null (hyp (DB.fetch "-" "snest_steps")))
+val _ = OK ()
+
 val _ = tprint "a failed finalisation can be retried"
 val fail_next = ref true
 fun fail_once {name,attrname,args,thm} =
