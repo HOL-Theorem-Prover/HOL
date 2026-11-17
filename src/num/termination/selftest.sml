@@ -288,7 +288,10 @@ fun rejects f = (f (); false) handle HOL_ERR _ => true
 fun assert b = if b then () else die "staged termination check failed"
 fun auto_import () = HOLFlags.get_bflag computeLib.auto_import_definitions
 fun stored nm = Option.isSome (DB.lookup {Thy = "-", Name = nm})
-fun no_pending nm = rejects (fn () => complete_definition nm TRUTH)
+fun rejects_with s f =
+  (f (); false) handle HOL_ERR e => String.isSubstring s (message_of e)
+fun no_pending nm = rejects_with "No pending definition"
+                                 (fn () => complete_definition nm TRUTH)
 
 val attribute_calls = ref ([] : string list)
 fun staged_attribute {name,attrname,args,thm} =
@@ -373,6 +376,17 @@ val _ = assert (hd (!attribute_calls) = "nested_def")
 val _ = assert (Option.isSome (DefnBase.lookup_indn “nested”))
 val _ = assert (no_pending "nested_def")
 val _ = assert (rejects (fn () => complete_definition "nowhere_def" TRUTH))
+val _ = OK ()
+
+val _ = tprint "a proof made out of date is not accepted"
+val stale_goal = valOf (prepare_qDefine "stale_def"
+  ‘stale n = if n = 0 then 0n else stale (stale (n - 1) MOD n)’)
+val stale_th = TAC_PROOF (stale_goal, WF_REL_TAC ‘$<’)
+val _ = Theory.delete_const "stale_aux"
+val _ = assert (rejects_with "does not prove"
+                  (fn () => complete_definition "stale_def" stale_th))
+val _ = assert (not (stored "stale_def") andalso
+                not (Option.isSome (DefnBase.lookup_indn “stale”)))
 val _ = OK ()
 
 val _ = tprint "deferred completion keeps the flags of its preparation"
@@ -484,8 +498,6 @@ val _ = convtest ("mutual definition enters EVAL", EVAL, “mod 3”, “T”)
 
 (* Last, since it discards the scratch theory *)
 val _ = tprint "a definition pending in another theory is not completed"
-fun rejects_with s f =
-  (f (); false) handle HOL_ERR e => String.isSubstring s (message_of e)
 val _ = prepare_qDefine "elsewhere_def"
   ‘elsewhere n = if n = 0 then 0n else elsewhere (n - 1) + 1’
 val _ = with_flag (Globals.interactive, true) new_theory "staged_other"
