@@ -66,32 +66,45 @@ tacticparse-selftest.log: tacticparse-tests.ML $(dprot $(HOLDIR)/bin/hol)
 # says so in the log and moves on rather than failing the build.  The
 # message is the point: a suite that quietly stops running reads
 # exactly like a suite that passes.
-# One worker per Holmake job.  Nearly all of a test is a server
-# booting -- mapping an 18.7MB heap and QUse-ing ten .ML files -- so
-# the suite sits idle about three quarters of the time and N
-# concurrent tests cost well under N cores.  Running N of them beside
-# the build's other N-1 jobs is a mild overcommit rather than a
-# doubling, and it matters: at `-t1' this target *is* the critical
-# path of `src/parallel_builds/core', so until it shortens, adding
-# cores to the build buys nothing.
+# Tell the suite what the build's own `-j' is and let it choose its
+# worker count from that: `_default_jobs' halves it, and the timeouts
+# are then sized for the whole box rather than for this suite's own
+# workers.
+#
+# It used to ask for `-j $(HOL_NUMJOBS)' -- one worker per Holmake
+# job.  Nearly all of a test is a server booting -- mapping an 18.7MB
+# heap and QUse-ing ten .ML files -- so the suite sits idle about
+# three quarters of the time and N concurrent tests cost well under N
+# cores; running N of them beside the build's other N-1 jobs read as a
+# mild overcommit rather than a doubling.  On 2026-11-17 it was not
+# mild: against a kept baseline the first half of the suite ran 5-10x
+# slow, with a ~200s window in which all seven workers and the Python
+# harness stalled together.  That cost two tests and six servers that
+# could not be scheduled to exit.  The second half of the same run, by
+# which time the build had drained, beat the baseline outright.
+#
+# Halving is not obviously a loss even though at `-t1' this target
+# *is* the critical path of `src/parallel_builds/core': contention was
+# superlinear, and the contended run spent 541s of wall clock on 3790s
+# of work, where four uncontended workers would be nearer 290s.
 #
 # `HOL_NUMJOBS' is Holmake's own `-j' (4 when nobody said), so a `-j1'
-# build runs the suite exactly as it always did.  The `ifdef' guard
-# matters: a bare `-j' with nothing after it would swallow
-# `--requires'.
+# build still runs the suite serially.  The `ifdef' guard matters: an
+# empty assignment would otherwise put a bare `=' in front of
+# `python3'.
 #
 # Deliberately NOT `LOCAL_PARALLELISM_LIMIT': that caps the *global*
 # job count for this node, so any value would stop the suite running
 # alongside the rest of the build, which is the whole reason it is
 # reached from `src/parallel_builds/core'.
 ifdef HOL_NUMJOBS
-PROTOCOL_JOBS = -j $(HOL_NUMJOBS)
+PROTOCOL_JOBS = HOL_LSP_BUILD_JOBS=$(HOL_NUMJOBS)
 else
 PROTOCOL_JOBS =
 endif
 
 PROTOCOL_CMD = if command -v python3 > /dev/null 2>&1 ; \
-               then python3 -u lsp_tests.py $(PROTOCOL_JOBS) \
+               then $(PROTOCOL_JOBS) python3 -u lsp_tests.py \
                       --requires none 2>&1 ; \
                else echo "python3 not found: LSP protocol suite NOT run" ; \
                fi

@@ -286,6 +286,7 @@ Unless otherwise noted, they are built by the configuration process.
 `h4pedant`
 :   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
     The directories to scan come from positional command-line arguments or, when none are given, from the `[h4pedant]` section of the enclosing `holproject.toml` (see the *Description* manual); options dictate which requirements are enforced/checked for.
+    An option naming a check (`--linelen=`*n*, `--unicode`/`--unicodeok`, `--defaultgoal`/`--nodefaultgoal`) settles that check in every directory visited, whatever the project file says there, and `--ignore-project-file` ignores the project file entirely — the way to check a directory the project exempts.
     The enforcing of style is done by the `Holmakefile` in `src/portableML/testsrc`.
     The executable is in `tools/h4pedant`.
 

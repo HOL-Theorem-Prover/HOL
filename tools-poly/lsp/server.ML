@@ -7,6 +7,16 @@ sig
      the wire. *)
   val claimStdout : unit -> TextIO.StreamIO.outstream
 
+  (* Start working out which git revision the run-time sources are at.
+     The `initialize' reply quotes it, and arriving at it means two
+     `git' subprocesses, one of which walks the whole work tree.  Call
+     this as early as there is anything to overlap it with --
+     `tools-poly/hol.ML' does, before compiling the startup files --
+     and the handshake finds the answer already waiting.  Optional:
+     not calling it only means `initialize' pays for it inline, as it
+     always used to. *)
+  val beginStamp : unit -> unit
+
   (* `warnings' are things that went wrong before the server could
      speak -- a heap the directory asked for that would not load, say.
      They are shown to the user once the handshake is done, because a
@@ -1424,7 +1434,61 @@ in
                then sha else sha ^ "-dirty"
 end
 val builtFrom = gitStamp ()
-fun sourcesNow () = gitStamp ()
+
+(* `sourcesNow' off the handshake.  The sha half is a ref read; the
+   `-dirty' half is `git status' walking the work tree, which on a
+   tree a build has just rewritten measured 1.4-3.7s here -- and
+   0.03-0.15s for every caller after, the first one having left a
+   refreshed index behind.  Either way it is not work to do between
+   receiving `initialize' and answering it, which is where it sat:
+   `initialize' is the one request that timed out when the protocol
+   suite, which starts ~300 servers, ran beside a parallel build on
+   2026-11-17.
+
+   So compute it on its own thread, started by `beginStamp' before the
+   init files load -- ~0.4s to hide behind -- and collect here.
+   `sourcesNow' starts it itself if nobody did, so a path that forgets
+   is slow rather than wrong, and gives up after 20s rather than
+   blocking the handshake for ever: `unknown' in a field nothing reads
+   but a log beats a server that never answers.  Interrupts are
+   deferred on that thread for the same reason -- a client interrupt
+   landing in the middle of `git' must not leave the answer unpublished. *)
+local
+  val cell : string option ref = ref NONE
+  val started = ref false
+  val slock = Mutex.mutex ()
+  val scond = ConditionVar.conditionVar ()
+  fun publish s =
+    Multithreading.synchronized "stamp.publish" slock (fn () => (
+      cell := SOME s; ConditionVar.broadcast scond))
+  fun compute () = publish (gitStamp () handle _ => "")
+in
+  fun beginStamp () = let
+    val fresh = Multithreading.synchronized "stamp.begin" slock (fn () =>
+                  (not (!started)) before (started := true))
+  in
+    if not fresh then ()
+    else (ignore (Thread.fork
+                    (compute, [Thread.InterruptState Thread.InterruptDefer]))
+          handle _ => compute ())
+  end
+  (* The deadline is tested here rather than read off `waitUntil's
+     result, which keeps this correct whichever way that flag runs --
+     same reasoning as `Conn.drain' above. *)
+  fun sourcesNow () = let
+    val () = beginStamp ()
+    val deadline = Time.now () + Time.fromSeconds 20
+  in
+    Multithreading.synchronized "stamp.collect" slock (fn () => let
+      fun loop () =
+        case !cell of
+            SOME s => s
+          | NONE => if Time.>= (Time.now (), deadline) then ""
+                    else (ConditionVar.waitUntil (scond, slock, deadline);
+                          loop ())
+    in loop () end)
+  end
+end
 
 fun encBuildInfo print = let
   val now = sourcesNow ()
