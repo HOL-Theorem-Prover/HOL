@@ -33,6 +33,11 @@ sig
      `[projects.<id>]` are skipped during parsing and listed in
      `dead_keys` so the caller can warn the user.
 
+     `objroot` is the optional artifact root, resolved against `root`;
+     `holproject.local.toml` may set it too, overriding
+     `holproject.toml`.  See `resolve_layout` for command-line and
+     environment overrides.
+
      `unknown_keys` has the same shape as `dead_keys` -- human-readable
      key labels for the caller to warn about -- but a different cause:
      these are keys no reader of `holproject.toml` understands at all.
@@ -50,6 +55,7 @@ sig
     externals : external_project list,
     external_includes : string list,
     holmake : bool,
+    objroot : string option,
     dead_keys : string list,
     unknown_keys : string list
   }
@@ -72,6 +78,32 @@ sig
      entries are made absolute relative to `root` if they are not
      already absolute.  Raises Fail on parse errors. *)
   val load : { root : string } -> config
+
+  (* objroot_declared_at root - the objroot set by root's
+     holproject.local.toml, else by its holproject.toml, resolved against
+     root.  Raises Fail if root has no holproject.toml or a file does not
+     parse. *)
+  val objroot_declared_at : string -> string option
+
+  (* resolve_layout {start, cli_objroot, cli_srcroot, no_project}
+     selects the artifact layout for a run in `start`.
+
+     Artifact root: cli_objroot, then the governing project's objroot
+     (objroot_declared_at), then HOLOBJROOT.  With none set, returns
+     NONE (legacy).  no_project disables project-file lookup.
+
+     Source root: cli_srcroot, then the project root if objroot was
+     selected from its project files, then HOLSRCROOT, then the governing
+     project root unless it is HOLDIR.
+
+     Relative command-line and environment paths are resolved against
+     start; project-file paths are relative to the project root.
+     Results have symlinks resolved in their existing prefixes.
+     Raises Fail if the source root cannot be determined, the roots
+     coincide, or the source root lies inside the artifact root. *)
+  val resolve_layout : {start : string, cli_objroot : string option,
+                        cli_srcroot : string option, no_project : bool} ->
+                       HFS_NameMunge.layout option
 
   (* build_times_files root - the committed cost-seed files to consult
      for a build governed by `root` (NONE = no project; HOLDIR is
@@ -96,7 +128,9 @@ sig
      The consumer's `exclude` prunes subtrees rooted under cfg.root;
      each external's `exclude` prunes subtrees rooted under that
      external's path.  Always skips dot-directories (.git, .hol,
-     .claude, .svn).  Result is sorted for determinism. *)
+     .claude, .svn).  Also skips artifact roots from cfg.objroot and
+     HFS_NameMunge.current_layout when they lie inside the tree.
+     Results are sorted. *)
   val discover_dirs : config -> string list
 
   (* discover cfg - as `discover_dirs`, but also reporting the
