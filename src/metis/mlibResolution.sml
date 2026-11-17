@@ -26,9 +26,7 @@ type distance = mlibSupport.distance;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibResolution";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+val chatting = chatting_at 0;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -86,17 +84,20 @@ fun clauses_to_string cls =
 (* mlibResolution                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-datatype resolution = RES of {set : mlibClauseset.clauseset, sos : mlibSupport.sos};
+datatype resolution =
+  RES of {set : mlibClauseset.clauseset, sos : mlibSupport.sos, chat : int};
 
 fun update_set b res =
-  let val RES {set = _, sos = a} = res
-  in RES {set = b, sos = a}
+  let val RES {set = _, sos = a, chat = c} = res
+  in RES {set = b, sos = a, chat = c}
   end;
 
 fun update_sos a res =
-  let val RES {set = b, sos = _} = res
-  in RES {set = b, sos = a}
+  let val RES {set = b, sos = _, chat = c} = res
+  in RES {set = b, sos = a, chat = c}
   end;
+
+fun rchat (RES {chat, ...}) = chat;
 
 fun dest (RES r) = r;
 
@@ -123,9 +124,14 @@ fun mk_thms_hyps (clause_parm : mlibClause.parameters) thms hyps =
       end
   end;
 
-fun new (parm : parameters, units, thms, hyps) =
+(* The one place the level is injected: everything below reads it off
+   the parameters it already carries. *)
+fun new (parm : parameters, ch, units, thms, hyps) =
   let
     val {clause_parm,sos_parm,set_parm,...} = parm
+    val clause_parm = mlibClause.update_chat (K ch) clause_parm
+    val sos_parm = mlibSupport.update_model_parms
+                     (map (mlibModel.update_chat (K ch))) sos_parm
     val hyp_fms = map thm_to_formula hyps
     val axioms = mk_axioms (map thm_to_formula thms) hyp_fms
     (* Seed the models from the set of support rather than from a
@@ -144,7 +150,7 @@ fun new (parm : parameters, units, thms, hyps) =
     val (hyps,set) = mlibClauseset.factor hyps set
     val sos = mlibSupport.new sos_parm seed axioms hyps
   in
-    RES {set = set, sos = sos}
+    RES {set = set, sos = sos, chat = ch}
   end;
 
 local
@@ -162,7 +168,8 @@ in
     let
       val RES {set,sos,...} = res
       val (n,dcl_sos) = get_clause set sos 0
-      val _ = 0 < n andalso chatting 2 andalso chat ("x" ^ int_to_string n)
+      val _ = 0 < n andalso chatting (rchat res) 2 andalso
+              chat ("x" ^ int_to_string n)
     in
       case dcl_sos of NONE => NONE
       | SOME ((d,cl),sos) =>
@@ -180,7 +187,7 @@ end;
 
 fun deduce cl res =
   let
-    val _ = chatting 4 andalso
+    val _ = chatting (rchat res) 4 andalso
             chat ("\ngiven clause:\n" ^ clause_to_string cl ^ "\n")
     val RES {set,...} = res
     val cl = mlibClause.FRESH_VARS cl
@@ -194,7 +201,7 @@ fun factor cls res =
     val RES {set,...} = res
     val (cls,set) = mlibClauseset.factor cls set
     val res = update_set set res
-    val _ = chatting 4 andalso
+    val _ = chatting (rchat res) 4 andalso
             chat ("\nnew clauses:\n" ^ clauses_to_string cls ^ "\n")
   in
     (cls,res)
@@ -234,16 +241,16 @@ val pp_resolution = pp_map resolution_to_string pp_string;
 (* The resolution procedure as a solver_node                                 *)
 (* ------------------------------------------------------------------------- *)
 
-fun resolution_stream slice_ref units_ref =
+fun resolution_stream ch slice_ref units_ref =
   let
     fun stat func res () =
-      (chatting 3 andalso chat (resolution_to_string res); func res)
+      (chatting ch 3 andalso chat (resolution_to_string res); func res)
 
     fun sq f x =
       let
-        val _ = chatting 1 andalso chat "["
+        val _ = chatting ch 1 andalso chat "["
         val y = f x
-        val _ = chatting 1 andalso chat "]"
+        val _ = chatting ch 1 andalso chat "]"
       in
         y
       end
@@ -271,21 +278,22 @@ fun resolution_stream slice_ref units_ref =
         else (swipe res; S.CONS (NONE, stat (f o shove) res))
       end;
   in
-    fn (parm,thms,hyps) => stat f (sq new (parm,Uref.!units_ref,thms,hyps)) ()
+    fn (parm,thms,hyps) =>
+       stat f (sq new (parm,ch,Uref.!units_ref,thms,hyps)) ()
   end;
 
 fun resolution' (name, parm : parameters) =
   mk_solver_node
   {name = name,
    solver_con =
-   fn {slice = slice_ref, units = units_ref, thms, hyps} =>
+   fn {slice = slice_ref, units = units_ref, thms, hyps, chat = ch} =>
    let
-     val _ = chatting 3 andalso chat
+     val _ = chatting ch 3 andalso chat
        (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
      val solution_stream =
        S.map (Option.map (sing o #thm o mlibClause.dest_clause)) o
-       resolution_stream slice_ref units_ref
+       resolution_stream ch slice_ref units_ref
    in
      fn [False] => solution_stream (parm,thms,hyps) | _ => S.NIL
    end};

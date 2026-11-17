@@ -26,8 +26,7 @@ local
   open mlibUseful;
   val module = "folTools";
 in
-  val () = add_trace {module = module, alignment = I}
-  fun chatting l = tracing {module = module, level = l};
+  val chatting = chatting_at 0;
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
   fun BUG f m = Bug (f ^ ": " ^ m);
@@ -39,44 +38,57 @@ end;
 
 type parameters =
   {equality : bool, combinator : bool, boolean : bool,
-   mapping_parm : folMapping.parameters};
+   mapping_parm : folMapping.parameters,
+   chat : int};   (* how loud to be: per call, not tuning *)
 
 type 'a parmupdate = ('a -> 'a) -> parameters -> parameters;
 
 val defaults =
   {equality = false, combinator = false, boolean = false,
-   mapping_parm = folMapping.defaults};
+   mapping_parm = folMapping.defaults, chat = 0};
 
 fun update_equality f (parm : parameters) : parameters =
   let
-    val {equality,combinator,boolean,mapping_parm} = parm
+    val {equality,combinator,boolean,mapping_parm,chat} = parm
   in
     {equality = f equality, combinator = combinator, boolean = boolean,
-     mapping_parm = mapping_parm}
+     mapping_parm = mapping_parm, chat = chat}
   end;
 
 fun update_combinator f (parm : parameters) : parameters =
   let
-    val {equality,combinator,boolean,mapping_parm} = parm
+    val {equality,combinator,boolean,mapping_parm,chat} = parm
   in
     {equality = equality, combinator = f combinator, boolean = boolean,
-     mapping_parm = mapping_parm}
+     mapping_parm = mapping_parm, chat = chat}
   end;
 
 fun update_boolean f (parm : parameters) : parameters =
   let
-    val {equality,combinator,boolean,mapping_parm} = parm
+    val {equality,combinator,boolean,mapping_parm,chat} = parm
   in
     {equality = equality, combinator = combinator, boolean = f boolean,
-     mapping_parm = mapping_parm}
+     mapping_parm = mapping_parm, chat = chat}
   end;
 
 fun update_mapping_parm f (parm : parameters) : parameters =
   let
-    val {equality,combinator,boolean,mapping_parm} = parm
+    val {equality,combinator,boolean,mapping_parm,chat} = parm
   in
     {equality = equality, combinator = combinator, boolean = boolean,
-     mapping_parm = f mapping_parm}
+     mapping_parm = f mapping_parm, chat = chat}
+  end;
+
+(* The mapping's own level moves with it: `folMapping' is reached only
+   through the parameters a logic map carries. *)
+fun update_chat f (parm : parameters) : parameters =
+  let
+    val {equality,combinator,boolean,mapping_parm,chat} = parm
+    val chat = f chat
+  in
+    {equality = equality, combinator = combinator, boolean = boolean,
+     mapping_parm = folMapping.update_chat (K chat) mapping_parm,
+     chat = chat}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -85,10 +97,10 @@ fun update_mapping_parm f (parm : parameters) : parameters =
 
 fun possibly f x = f x handle HOL_ERR _ => x;
 
-fun timed_fn s f a =
+fun timed_fn ch s f a =
   let
     val (t,r) = mlibUseful.timed f a
-    val _ = chatting 2 andalso chat
+    val _ = chatting ch 2 andalso chat
       ("metis: " ^ s ^ " time: " ^ mlibUseful.real_to_string t ^ "\n")
   in
     r
@@ -213,9 +225,9 @@ val empty_map = new_map defaults;
 
 fun add_thm vth lmap : logic_map =
   let
-    val _ = chatting 5 andalso
-            chat ("adding thm:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
+    val _ = chatting (#chat parm) 5 andalso
+            chat ("adding thm:\n" ^ thm_to_string (snd vth) ^ "\n")
     val th = hol_thm_to_fol (#mapping_parm parm) vth
   in
     {parm = parm, axioms = (th, vth) :: axioms,
@@ -224,9 +236,9 @@ fun add_thm vth lmap : logic_map =
 
 fun add_hyp vth lmap : logic_map =
   let
-    val _ = chatting 5 andalso
-            chat ("adding hyp:\n" ^ thm_to_string (snd vth) ^ "\n")
     val {parm, axioms, thms, hyps, consts} = lmap
+    val _ = chatting (#chat parm) 5 andalso
+            chat ("adding hyp:\n" ^ thm_to_string (snd vth) ^ "\n")
     val th = hol_thm_to_fol (#mapping_parm parm) vth
   in
     {parm = parm, axioms = (th, vth) :: axioms, thms = thms,
@@ -259,23 +271,25 @@ local
       (cs, vths @ vths')
     end;
 
-  fun carefully s f t m = f t m
+  fun carefully ch s f t m = f t m
     handle HOL_ERR _ =>
-      (chatting 2 andalso chat
+      (chatting ch 2 andalso chat
        ("metis: raised exception adding " ^ s ^ ": dropping.\n"); m);
 in
-  fun build_map (parm,cs,thmhyps) =
+  fun build_map (parm : parameters,cs,thmhyps) =
     let
-      val _ = chatting 5 andalso chat "metis: beginning build_map.\n"
+      val ch = #chat parm
+      val _ = chatting ch 5 andalso chat "metis: beginning build_map.\n"
       val (thms, hyps) = partition (null o hyp) thmhyps
-      val _ = chatting 5 andalso chat "metis: partitioned thms and hyps.\n"
+      val _ = chatting ch 5 andalso chat "metis: partitioned thms and hyps.\n"
       val (cs,thms) = foldl ithm (cs,[]) thms
-      val _ = chatting 5 andalso chat "metis: applied ithm to theorems.\n"
+      val _ = chatting ch 5 andalso chat "metis: applied ithm to theorems.\n"
       val (cs,hyps) = foldl ithm (cs,[]) hyps
-      val _ = chatting 5 andalso chat "metis: applied ithm to hypotheses.\n"
+      val _ = chatting ch 5 andalso chat "metis: applied ithm to hypotheses.\n"
       val lmap = new_map parm
-      val lmap = foldl (fn(t,m)=>carefully"a theorem"add_thm t m) lmap thms
-      val lmap = foldl (fn(t,m)=>carefully"an assumption"add_hyp t m) lmap hyps
+      val lmap = foldl (fn(t,m)=>carefully ch "a theorem" add_thm t m) lmap thms
+      val lmap =
+          foldl (fn(t,m)=>carefully ch "an assumption" add_hyp t m) lmap hyps
       val lmap = foldl (fn(c,m)=>add_const c m) lmap cs
     in
       lmap
@@ -437,13 +451,13 @@ fun initialize_solver solv init =
   ((mlibSolver.solved_filter o mlibSolver.subsumed_filter)
    (mlibSolver.initialize solv init));
 
-fun eliminate consts =
+fun eliminate ch consts =
   mlibStream.filter
   (fn (_, ths) =>
    null (intersect consts (varnames (map concl ths))) orelse
-   (chatting 2 andalso
+   (chatting ch 2 andalso
     chat "metis: solution contained a skolem const: dropping.\n";
-    chatting 4 andalso
+    chatting ch 4 andalso
     chat (foldl (fn (h,t) => t ^ "  " ^ thm_to_string h ^ "\n") "" ths);
     false));
 
@@ -451,10 +465,13 @@ fun FOL_SOLVE solv lmap lim =
   let
     val {parm, axioms, thms, hyps, consts} =
       (add_equality_thms o add_boolean_thms o add_combinator_thms) lmap
+    (* The level the caller asked for, on its way into the prover: from
+       here down it is carried by the solver's own records. *)
+    val ch = #chat (parm : parameters)
     val (thms, hyps) = (rev thms, rev hyps)
     val solver =
-      timed_fn "solver initialization"
-      (initialize_solver solv) {thms = thms, hyps = hyps, limit = lim}
+      timed_fn ch "solver initialization" (initialize_solver solv)
+      {thms = thms, hyps = hyps, limit = lim, chat = ch}
   in
     fn query =>
     let
@@ -463,10 +480,10 @@ fun FOL_SOLVE solv lmap lim =
         else hol_literals_to_fol (#mapping_parm parm) query
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping_parm parm) (C assoc axioms) query
-      val timed_lift = timed_fn "proof translation" lift
-      val timed_stream = map_thk (timed_fn "proof search")
+      val timed_lift = timed_fn ch "proof translation" lift
+      val timed_stream = map_thk (timed_fn ch "proof search")
     in
-      eliminate consts
+      eliminate ch consts
       (mlibStream.map timed_lift (timed_stream (fn () => solver q) ()))
     end
   end;
@@ -534,12 +551,12 @@ val FOL_NORM_TAC =
 
 (* A flexible tactic that performs normalization of theorems and goal. *)
 
-fun FOL_NORM_TTAC tac ths =
+fun FOL_NORM_TTAC ch tac ths =
   let
     fun f asms = FOL_NORM (asms @ ths)
   in
-    timed_fn "tactic normalization" FOL_NORM_TAC
-    THEN POP_ASSUM_LIST (tac o timed_fn "theorem normalization" f)
+    timed_fn ch "tactic normalization" FOL_NORM_TAC
+    THEN POP_ASSUM_LIST (tac o timed_fn ch "theorem normalization" f)
   end;
 
 (* ------------------------------------------------------------------------- *)

@@ -56,8 +56,10 @@ val REL_CONGRUENCE : string * int -> thm
 val SYM            : formula -> thm -> thm
 val EQ_FACTOR      : thm -> thm
 val REWR           : thm * bool -> thm * formula * int list -> thm
-val DEPTH1         : (term->thm*term*bool) -> thm * formula -> thm * formula
-val DEPTH          : (term->thm*term*bool) -> thm -> thm
+(* The leading int is the chatting level in force. *)
+val DEPTH1         : int -> (term->thm*term*bool) -> thm * formula ->
+                     thm * formula
+val DEPTH          : int -> (term->thm*term*bool) -> thm -> thm
 
 (* Converting to clauses *)
 val axiomatize : formula -> thm list

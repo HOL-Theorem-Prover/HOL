@@ -25,7 +25,8 @@ type parameters =
   {equality     : bool,     (* Add equality axioms if needed *)
    combinator   : bool,     (* Add combinator reduction rules *)
    boolean      : bool,     (* Add rules for reasoning about booleans *)
-   mapping_parm : folMapping.parameters}
+   mapping_parm : folMapping.parameters,
+   chat         : int}      (* How loud to be: per call, not tuning *)
 
 type 'a parmupdate = ('a -> 'a) -> parameters -> parameters
 val defaults            : parameters
@@ -33,6 +34,7 @@ val update_equality     : bool parmupdate
 val update_combinator   : bool parmupdate
 val update_boolean      : bool parmupdate
 val update_mapping_parm : folMapping.parameters parmupdate
+val update_chat         : int parmupdate
 
 (* If recent_fol_problems is set to NONE then nothing happens (the default). *)
 (* If it is set to SOME l then every compiled FOL problem is cons'ed to l. *)
@@ -60,7 +62,9 @@ val FOL_TACTIC : solver_node -> logic_map -> limit -> tactic
 (* HOL normalization to conjunctive normal form *)
 val FOL_NORM      : thm list -> string list * thm list  (* Definitional CNF *)
 val FOL_NORM_TAC  : tactic                  (* Stripping + Elimination of @ *)
-val FOL_NORM_TTAC : (string list * thm list -> tactic) -> thm list -> tactic
+(* The leading int is the chatting level in force. *)
+val FOL_NORM_TTAC : int -> (string list * thm list -> tactic) -> thm list ->
+                    tactic
 
 (* Reading in TPTP problems *)
 val tptp_read : {filename : string} -> term

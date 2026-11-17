@@ -17,10 +17,11 @@ val can         : ('a -> 'b) -> 'a -> bool
 val partial     : exn -> ('a -> 'b option) -> 'a -> 'b
 val timed       : ('a -> 'b) -> 'a -> real * 'b
 val timed_many  : ('a -> 'b) -> 'a -> real * 'b
-val trace_level : int ref
-val add_trace   : {module : string, alignment : int -> int} -> unit
-val set_traces  : {module : string, alignment : int -> int} list -> unit
-val tracing     : {module : string, level : int} -> bool
+(* Chatting.  The level in force is passed in; `chatting_at off' is a
+   module's guard, with `off' its alignment and ~1 for "only at
+   MAX_LEVEL".  See mlibUseful.sml. *)
+val MAX_LEVEL   : int
+val chatting_at : int -> int -> int -> bool
 val trace       : string -> unit
 
 (* Combinators *)

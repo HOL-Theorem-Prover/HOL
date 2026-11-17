@@ -28,28 +28,23 @@ exception OutOfDateTerm of string
    4: Log of each step in proof translation
    5: Log of each inference during proof search *)
 
-val {flag = metis_trace, ...} = HOLFlags.create_trace(
+val {flag = metis_trace, get = metis_trace_level, ...} =
+    HOLFlags.create_trace(
       {group = "metis", name = "trace"},
       {max = 10, initial = if !Globals.interactive then 1 else 0}
     )
 
+(* The one place the level is read.  Everything below is handed the
+   value: the tactics take it from the context they are run in, which
+   is what makes `trace_tac ("metis.trace", 0)` work, and the solver
+   entry points from the ambient flag, having no context to read. *)
+fun trace_level_of ctxt = HOLFlags.get_flagC ctxt metis_trace
+
 local
   open mlibUseful;
   val module = "metisTools";
-  val aligned_traces =
-    [{module = "mlibClause",     alignment = fn n => n + 4},
-     {module = "mlibSolver",     alignment = I},
-     {module = "mlibMeson",      alignment = I},
-     {module = "mlibClauseset",  alignment = I},
-     {module = "mlibSupport",    alignment = I},
-     {module = "mlibResolution", alignment = I},
-     {module = "folMapping",     alignment = fn n => n + 3},
-     {module = "folTools",       alignment = I},
-     {module = "metisTools",     alignment = I},
-     {module = "metisLib",       alignment = I}];
-  val () = set_traces aligned_traces
 in
-  fun chatting l = tracing {module = module, level = l};
+  val chatting = chatting_at 0;
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
   fun BUG f m = Bug (f ^ ": " ^ m);
@@ -189,10 +184,10 @@ fun update_limit f {interface, solver, limit} =
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun timed_fn s f a =
+fun timed_fn ch s f a =
   let
     val (t, r) = mlibUseful.timed f a
-    val _ = chatting 2 andalso chat
+    val _ = chatting ch 2 andalso chat
       ("metis: " ^ s ^ " time: " ^ mlibUseful.real_to_string t ^ "\n")
   in
     r
@@ -213,13 +208,13 @@ fun const_scheme c =
      handle HOL_ERR _ => raise OutOfDateTerm Name
   end;
 
-fun trap f g x =
+fun trap ch f g x =
   f x
   handle e as HOL_ERR herr =>
     (if not (contains "proof translation error" (message_of herr)) then
        raise e
      else
-       (chatting 1 andalso
+       (chatting ch 1 andalso
         chat "metis: proof translation error: trying again with types.\n";
         g x));
 
@@ -232,13 +227,17 @@ local
     {equality = false,
      boolean = false,
      combinator = false,
-     mapping_parm = {higher_order = false, with_types = true}};
+     mapping_parm = folMapping.update_with_types (K true)
+                      folMapping.defaults,
+     chat = 0};
 in
   fun PROLOG_SOLVE ths =
     let
-      val _ = (chatting 1 andalso chat "prolog: "; chatting 2 andalso chat "\n")
+      val ch = metis_trace_level ()
+      val _ = (chatting ch 1 andalso chat "prolog: ";
+               chatting ch 2 andalso chat "\n")
       val (cs,ths) = FOL_NORM ths
-      val lmap = build_map (prolog_parm,cs,ths)
+      val lmap = build_map (folTools.update_chat (K ch) prolog_parm,cs,ths)
     in
       FOL_SOLVE mlibMeson.prolog lmap mlibMeter.unlimited
     end;
@@ -251,10 +250,11 @@ end;
 fun GEN_METIS_SOLVE parm ths =
   let
     val {interface, solver, limit, ...} : parameters = parm
-    val _ = (chatting 1 andalso chat "metis solver: ";
-             chatting 2 andalso chat "\n")
+    val ch = metis_trace_level ()
+    val _ = (chatting ch 1 andalso chat "metis solver: ";
+             chatting ch 2 andalso chat "\n")
     val (cs,ths) = FOL_NORM ths
-    val lmap = build_map (interface,cs,ths)
+    val lmap = build_map (folTools.update_chat (K ch) interface,cs,ths)
   in
     FOL_SOLVE (mlibMetis.metis' solver) lmap limit
   end;
@@ -263,14 +263,22 @@ fun GEN_METIS_SOLVE parm ths =
 (* Tactic interface to the metis prover.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun X_METIS_TAC ttac ths goal =
-  (chatting 1 andalso chat "metis: "; chatting 2 andalso chat "\n";
-   FOL_NORM_TTAC ttac ths goal);
+(* Takes the context explicitly rather than stopping at `goal`: the
+   level has to be read from the context the tactic is run in, and
+   handed to the prover then, not when the tactic is built. *)
+fun X_METIS_TAC ttac ths goal ctxt =
+  let
+    val ch = trace_level_of ctxt
+  in
+    chatting ch 1 andalso chat "metis: "; chatting ch 2 andalso chat "\n";
+    FOL_NORM_TTAC ch (ttac ch) ths goal ctxt
+  end;
 
-fun GEN_METIS_TTAC parm (cs,ths) =
+fun GEN_METIS_TTAC parm ch (cs,ths) =
   let
     val {interface, solver, limit, ...} : parameters = parm
-    val lmap = timed_fn "logic map build" build_map (interface,cs,ths)
+    val interface = folTools.update_chat (K ch) interface
+    val lmap = timed_fn ch "logic map build" build_map (interface,cs,ths)
   in
     FOL_TACTIC (mlibMetis.metis' solver) lmap limit
   end;
@@ -288,13 +296,13 @@ val limit : limit ref = ref (#limit defaults);
 (* ------------------------------------------------------------------------- *)
 
 fun inc_limit p = update_limit (K (!limit)) p;
-fun set_limit f p t g = f (inc_limit p) t g;
+fun set_limit f p ch t g = f (inc_limit p) ch t g;
 
 (* First-order *)
 
 val fo_parm =
   update_interface
-  (update_mapping_parm (K {higher_order = false, with_types = false}))
+  (update_mapping_parm (K folMapping.defaults))
   (update_solver (K fo_solver) defaults);
 
 val fot_parm =
@@ -302,14 +310,15 @@ val fot_parm =
 
 val FOT_METIS_TTAC = set_limit GEN_METIS_TTAC fot_parm;
 
-fun FO_METIS_TTAC ths =
-  trap (set_limit GEN_METIS_TTAC fo_parm ths) (FOT_METIS_TTAC ths);
+fun FO_METIS_TTAC ch ths =
+  trap ch (set_limit GEN_METIS_TTAC fo_parm ch ths) (FOT_METIS_TTAC ch ths);
 
 (* Higher-order *)
 
 val ho_parm =
   update_interface
-  (update_mapping_parm (K {higher_order = true, with_types = false}))
+  (update_mapping_parm
+     (K (folMapping.update_higher_order (K true) folMapping.defaults)))
   (update_solver (K ho_solver) defaults);
 
 val hot_parm =
@@ -317,8 +326,8 @@ val hot_parm =
 
 val HOT_METIS_TTAC = set_limit GEN_METIS_TTAC hot_parm;
 
-fun HO_METIS_TTAC ths =
-  trap (set_limit GEN_METIS_TTAC ho_parm ths) (HOT_METIS_TTAC ths);
+fun HO_METIS_TTAC ch ths =
+  trap ch (set_limit GEN_METIS_TTAC ho_parm ch ths) (HOT_METIS_TTAC ch ths);
 
 (* Higher-order with rules for combinator reductions and booleans *)
 
@@ -431,13 +440,13 @@ in
           ("Input thm includes out-of-date constant with name " ^ nm)
 end;
 
-fun METIS_TTAC (cs,ths) =
+fun METIS_TTAC ch (cs,ths) =
   let
-    val class = timed_fn "problem classification" classify (map concl ths)
-    val _ = chatting 2 andalso
+    val class = timed_fn ch "problem classification" classify (map concl ths)
+    val _ = chatting ch 2 andalso
             chat ("metis: a " ^ class_str class ^ " problem.\n")
   in
-    class_tac class (cs,ths)
+    class_tac class ch (cs,ths)
   end;
 
 val METIS_TAC = X_METIS_TAC METIS_TTAC;

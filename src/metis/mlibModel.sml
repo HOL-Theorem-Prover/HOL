@@ -20,9 +20,9 @@ structure W = Word; local open Word in end;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibModel";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+(* HOL's alignment table never listed this module, so its output only
+   ever appeared at MAX_LEVEL; ~1 says exactly that. *)
+val chatting = chatting_at ~1;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -200,15 +200,23 @@ fun set_fix N =
 (* Parameters                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-type parameters = {size : int, fix : fix};
+(* `chat' is how loud to be: a per-call value the solver injects, not
+   a tuning parameter like the other two. *)
+type parameters = {size : int, fix : fix, chat : int};
 
-val defaults = {size = 5, fix = pure_fix};
+val defaults = {size = 5, fix = pure_fix, chat = 0};
 
 fun update_size f (parm : parameters) : parameters =
-  let val {size = n, fix = r} = parm in {size = f n, fix = r} end;
+  let val {size = n, fix = r, chat = c} = parm
+  in {size = f n, fix = r, chat = c} end;
 
 fun update_fix f (parm : parameters) : parameters =
-  let val {size = n, fix = r} = parm in {size = n, fix = f r} end;
+  let val {size = n, fix = r, chat = c} = parm
+  in {size = n, fix = f r, chat = c} end;
+
+fun update_chat f (parm : parameters) : parameters =
+  let val {size = n, fix = r, chat = c} = parm
+  in {size = n, fix = r, chat = f c} end;
 
 (* ------------------------------------------------------------------------- *)
 (* Valuations.                                                               *)
@@ -240,13 +248,13 @@ fun valuation_to_string v = PP.pp_to_string (!LINE_LENGTH) pp_valuation v;
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun randomize id p pred args =
+  fun randomize ch id p pred args =
     let
       val mesg =
         int_to_string id ^ " " ^ p ^ " " ^ (if pred then "p" else "f") ^
         foldl (fn (a,s) => s ^ " " ^ int_to_string a) "" args
       val hash = mlibPortable.md5 mesg
-      val _ = chatting 4 andalso
+      val _ = chatting ch 4 andalso
               chat ("randomize: mesg=" ^ mesg ^ ", hash=" ^ hash ^ ".\n")
     in
       hash
@@ -275,15 +283,17 @@ local
       ext (N * bias - 1) 0
     end;
 in
-  fun random_fn N id (f,args) =
-    extract N (String.explode (randomize id f false args));
+  fun random_fn ch N id (f,args) =
+    extract N (String.explode (randomize ch id f false args));
 
-  fun random_pred id (p,args) =
-    base64_to_int (String.sub (randomize id p true args, 0)) mod 2 = 0;
+  fun random_pred ch id (p,args) =
+    base64_to_int (String.sub (randomize ch id p true args, 0)) mod 2 = 0;
 end;
 
-fun cached_random_fn cache N id f_args = cached cache (random_fn N id) f_args;
-fun cached_random_pred cache id p_args = cached cache (random_pred id) p_args;
+fun cached_random_fn ch cache N id f_args =
+  cached cache (random_fn ch N id) f_args;
+fun cached_random_pred ch cache id p_args =
+  cached cache (random_pred ch id) p_args;
 
 (* ------------------------------------------------------------------------- *)
 (* Representing finite models.                                               *)
@@ -316,7 +326,7 @@ local
 in
 fun new (parm : parameters) seed =
   let
-    val {size = n, fix = r} = parm
+    val {size = n, fix = r, ...} = parm : parameters
     val {func = fixf, pred = fixp} = r n
     val () = assert (1 <= n) (Bug "mlibModel.new: nonpositive size")
     val id = 1 + seed mod SEED_BOUND
@@ -333,6 +343,9 @@ fun new (parm : parameters) seed =
 end;
 
 fun msize (MODEL {parm = {size = N, ...}, ...}) = N;
+
+(* How loud this model's search was asked to be. *)
+fun mchat (MODEL {parm = {chat, ...}, ...}) = chat;
 
 fun mgen (MODEL {gen, ...}) = gen;
 
@@ -359,22 +372,23 @@ fun pp_model (MODEL {parm = {size = N, ...}, id, ...}) =
 
 fun eval_fn m f_args =
   let
-    val MODEL {parm = {size = N, ...}, id, cachef, overf, fixf, ...} = m
+    val MODEL {parm = {size = N, chat = ch, ...}, id, cachef, overf, fixf, ...} =
+        m
   in
     case fixf f_args of SOME b => b
     | NONE =>
       (case Binarymap.peek (overf,f_args) of SOME n => n
-       | NONE => cached_random_fn cachef N id f_args)
+       | NONE => cached_random_fn ch cachef N id f_args)
   end;
 
 fun eval_pred m p_args =
   let
-    val MODEL {id,cachep,overp,fixp,...} = m
+    val MODEL {parm = {chat = ch, ...}, id, cachep, overp, fixp, ...} = m
   in
     case fixp p_args of SOME b => b
     | NONE =>
       (case Binarymap.peek (overp,p_args) of SOME b => b
-       | NONE => cached_random_pred cachep id p_args)
+       | NONE => cached_random_pred ch cachep id p_args)
   end;
 
 fun eval_term m v =
@@ -414,7 +428,7 @@ fun evaluate_formula m fm = eval_formula m emptyv fm;
 fun check1 fvs m fm =
   let
     val v = randomv (mgen m) (msize m) fvs
-    val _ = chatting 3 andalso
+    val _ = chatting (mchat m) 3 andalso
             chat ("check: valuation=" ^ valuation_to_string v ^ ".\n")
   in
     eval_formula m v fm
@@ -428,7 +442,7 @@ fun checkn m fm n =
     val r =
       if null fvs then if check1 [] m fm then n else 0
       else funpow n (fn i => if check1 fvs m fm then i + 1 else i) 0
-    val _ = chatting 1 andalso
+    val _ = chatting (mchat m) 1 andalso
             chat ("checkn: " ^ formula_to_string fm ^ ": " ^
                   int_to_string r ^ "/" ^ int_to_string n ^ "\n")
   in
@@ -444,7 +458,7 @@ fun count m fm =
       | f x ((v, w :: ws) :: l) =
       f x (foldl (fn (i,z) => (insertv (w |-> i) v, ws) :: z) l n)
     val r = f (0,0) [(emptyv, FV fm)]
-    val _ = chatting 1 andalso
+    val _ = chatting (mchat m) 1 andalso
             chat ("count: " ^ formula_to_string fm ^ ": " ^
                   int_to_string (fst r) ^ "/" ^ int_to_string (snd r) ^ "\n")
   in
@@ -567,11 +581,11 @@ fun override m =
     val MODEL {overf,overp,fixf,fixp,...} = m
   in
     fn PredP (p |-> b) =>
-       (if chatting 2 andalso chat "checking pred override\n" andalso
+       (if chatting (mchat m) 2 andalso chat "checking pred override\n" andalso
            Option.isSome (fixp p) then raise Bug "override: fixp" else ();
         update_overp (Binarymap.insert (overp,p,b)) m)
      | FnP (f |-> n) =>
-       (if chatting 2 andalso chat "checking fn override\n" andalso
+       (if chatting (mchat m) 2 andalso chat "checking fn override\n" andalso
            Option.isSome (fixf f) then raise Bug "override: fixf" else ();
         update_overf (Binarymap.insert (overf,f,n)) m)
   end;
@@ -584,7 +598,7 @@ fun perturb m v fm =
           val pert = randomp (mgen m) perts
           val m' = override m pert
           val good = eval_formula m' v fm
-          val _ = chatting 2 andalso
+          val _ = chatting (mchat m) 2 andalso
                   chat ("perturb: " ^ (if good then "good" else "bad") ^
                         " pert: " ^ perturbation_to_string pert ^ ".\n")
         in
@@ -598,7 +612,7 @@ local
   fun integrate (vs,fm,n,i,p) m =
     let
       val v = randomv (mgen m) (msize m) vs
-      val _ = chatting 3 andalso
+      val _ = chatting (mchat m) 3 andalso
               chat ("integrate: valuation=" ^ valuation_to_string v ^ ".\n")
     in
       if eval_formula m v fm then ((vs, fm, n + 1, i, p), m) else
@@ -617,7 +631,7 @@ in
     let
       val fmi = map (fn p => (FV p, p, 0, 0, 0)) fms
       val (fmi,m) = funpow perts (uncurry (maps integrate)) (fmi,m)
-      val _ = chatting 1 andalso List.all chatperturb fmi
+      val _ = chatting (mchat m) 1 andalso List.all chatperturb fmi
     in
       m
     end;

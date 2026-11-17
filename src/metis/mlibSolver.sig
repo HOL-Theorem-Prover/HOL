@@ -38,7 +38,8 @@ type form =
   {slice : meter Uref.t,                   (* A meter to stop after each slice *)
    units : units Uref.t,                   (* mlibSolvers share a unit cache *)
    thms  : thm list,                    (* Context, assumed consistent *)
-   hyps  : thm list}                    (* Hypothesis, or set of support *)
+   hyps  : thm list,                    (* Hypothesis, or set of support *)
+   chat  : int}                         (* How loud to be *)
 
 (* mlibSolver nodes also incorporate a name. *)
 
@@ -75,7 +76,8 @@ val all_positive : sos_filter
 
 (* Initializing a solver node makes it ready for action. *)
 
-type init_data = {limit : limit, thms : thm list, hyps : thm list}
+type init_data =
+  {limit : limit, thms : thm list, hyps : thm list, chat : int}
 
 val initialize : solver_node -> init_data -> solver
 
