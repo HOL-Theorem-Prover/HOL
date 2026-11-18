@@ -1,4 +1,4 @@
-all: $(DEFAULT_TARGETS) hhStature.uo hhMePo.uo hhLearn.uo \
+all: $(DEFAULT_TARGETS) hhPool.uo hhStature.uo hhMePo.uo hhLearn.uo \
      hhTptpProblem.uo hhTypeEnc.uo \
      hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
      hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo \
@@ -26,11 +26,13 @@ hhConfig.uo: hhConfig.sml hhConfig.ui hhTptpProblem.uo hhTypeEnc.uo \
 
 hhProver.uo: hhProver.sml hhProver.ui hhConfig.uo
 
+hhPool.uo: hhPool.sml hhPool.ui
+
 hhSlice.uo: hhSlice.sml hhSlice.ui hhConfig.uo hhProver.uo
 
 hhCache.uo: hhCache.sml hhCache.ui hhConfig.uo hhProver.uo
 
-hhSchedule.uo: hhSchedule.sml hhSchedule.ui hhConfig.uo hhProver.uo \
+hhSchedule.uo: hhSchedule.sml hhSchedule.ui hhPool.uo hhConfig.uo hhProver.uo \
                hhSlice.uo hhCache.uo hhProblemGen.uo
 
 hhEval.uo: hhEval.sml hhEval.ui hhConfig.uo hhProver.uo hhSlice.uo \

@@ -324,9 +324,9 @@ datatype prepared =
 
 datatype finished = Temp of string | Copying of string
 
-(* A pending item keeps its prepared state for abandon next to the
-   deferred finishing work that await forces. *)
-type pending = prepared * (unit -> finished)
+(* A pending item: the finishing work of one item, awaited at resolution
+   or cancelled when the item is dropped. *)
+type pending = {await : unit -> finished, cancel : unit -> unit}
 
 (* Prepare runs on the caller and the legacy exporter stages its file
    here too: it opens its output before collecting arities, and it closes
@@ -349,22 +349,59 @@ fun prepare_work (observer : export_observer) conjecture memo named_for
                (conjecture, named_for key)))
   end
 
-fun finish_work ({path, ...} : work, prepared) =
+(* The finishing work of a generated problem formats the prepared AST and
+   writes it to a temporary whose name was chosen beforehand, so that
+   whoever drops the item can remove it whatever the writer did.  It
+   touches no HOL state (it may run on a worker). *)
+fun finish_work ({path, ...} : work, prepared) temporary =
   case prepared of
       Problem (options, problem) =>
-        Temp (#1 (hhConfig.stage_write
-          {open_out = TextIO.openOut, close_out = TextIO.closeOut} path
-          (fn output => TextIO.output
-             (output, hhProblemGen.format_pb options problem))))
+        (hhConfig.stage_to
+           {open_out = TextIO.openOut, close_out = TextIO.closeOut}
+           temporary
+           (fn output => TextIO.output
+              (output, hhProblemGen.format_pb options problem));
+         Temp temporary)
     | Written temporary => Temp temporary
     | Copy first => Copying first
 
+fun remove_staged (Written temporary) = hhConfig.remove_quietly temporary
+  | remove_staged _ = ()
+
 (* The inline implementation: the finishing work is deferred and runs on
    the caller when await forces it. *)
-fun submit_inline (work, prepared) : pending =
-  (prepared, fn () => finish_work (work, prepared))
+fun submit_inline (work as {path, ...} : work, prepared) : pending =
+  let val temporary = hhConfig.temp_path path in
+    {await = fn () => finish_work (work, prepared) temporary,
+     cancel = fn () =>
+       (remove_staged prepared; hhConfig.remove_quietly temporary)}
+  end
 
-fun await_inline ((_, run) : pending) = run ()
+fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
+  | release_finished (Copying _) = ()
+
+(* The pool-backed implementation: a generated problem is finished on a
+   worker, everything else (a staged legacy file, a copy) is cheap and
+   stays inline. *)
+fun submit_pooled pool before_finish
+    (work as {path, index, ...} : work, prepared) : pending =
+  case prepared of
+      Problem _ =>
+        let
+          val temporary = hhConfig.temp_path path
+          val job = hhPool.submit pool
+            {run = fn () => (before_finish index;
+                             finish_work (work, prepared) temporary),
+             discard = fn () => hhConfig.remove_quietly temporary}
+        in
+          {await = fn () => hhPool.await job,
+           cancel = fn () => hhPool.abandon job}
+        end
+    | _ => submit_inline (work, prepared)
+
+fun await_pending ({await, ...} : pending) = await ()
+
+fun abandon_pending ({cancel, ...} : pending) = cancel ()
 
 fun publish_work (observer : export_observer)
     ({path, slice, ...} : work, finished) =
@@ -374,19 +411,28 @@ fun publish_work (observer : export_observer)
          handle exn => (hhConfig.remove_quietly temporary; raise exn))
     | Copying first => #copied observer (slice, copy_file first path)
 
-(* Written files are the staged temporaries of the legacy exporter, which
-   finishing turns into Temp; both are removed here (idempotently). *)
-fun abandon_pending ((Written temporary, _) : pending) =
-      hhConfig.remove_quietly temporary
-  | abandon_pending _ = ()
+(* The number of threads that finish generated problems: the configured
+   export_workers, at most the cores and the number of generated problems;
+   one means inline.  The items admitted and waiting for publication are
+   bounded by twice the workers, so the prepared ASTs and the finished
+   files held at any time are bounded as well. *)
+fun pool_size (options : hhConfig.hh_options) works =
+  let
+    val generated = length (List.filter
+      (fn {kind = ExportGenerated _, ...} => true | _ => false) works)
+  in
+    Int.min (Int.min (#export_workers options, #cores options), generated)
+  end
 
-fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
-  | release_finished (Copying _) = ()
-
-(* This function is called before any scheduler thread is created.  Both
-   thml_of_namel and the exporters touch HOL process-global state. *)
-fun export_problems_observed (observer : export_observer) root options goal
-    rankings schedule =
+(* prepare (and everything that draws fresh names or touches HOL state)
+   runs on the calling thread, which is the thread that called this
+   function before any scheduler thread was created.  Both thml_of_namel
+   and the exporters touch HOL process-global state.  Only the finishing
+   work of generated problems moves to the workers of a pool, which is
+   closed (its workers stopped and their files removed) before this
+   returns or raises. *)
+fun export_problems_using {fork, before_finish}
+    (observer : export_observer) root options goal rankings schedule =
   let
     val works = ordered_work root options rankings schedule
     val conjecture = list_mk_imp goal
@@ -406,13 +452,24 @@ fun export_problems_observed (observer : export_observer) root options goal
               named_memo := (key, named) :: !named_memo;
               named
             end
+    fun run window submit =
+      run_staged {window = window}
+        {prepare = prepare_work observer conjecture memo named_for,
+         submit = submit, await = await_pending,
+         publish = publish_work observer, abandon = abandon_pending,
+         release = release_finished} works
+    val workers = pool_size options works
   in
-    run_staged {window = 0}
-      {prepare = prepare_work observer conjecture memo named_for,
-       submit = submit_inline, await = await_inline,
-       publish = publish_work observer, abandon = abandon_pending,
-       release = release_finished} works
+    if workers <= 1 then run 0 submit_inline
+    else
+      hhPool.with_pool {workers = workers, fork = fork}
+        (fn pool =>
+         run (2 * workers) (submit_pooled pool before_finish))
   end
+
+fun export_problems_observed observer =
+  export_problems_using
+    {fork = hhPool.default_fork, before_finish = fn _ => ()} observer
 
 val export_problems = export_problems_observed silent_observer
 

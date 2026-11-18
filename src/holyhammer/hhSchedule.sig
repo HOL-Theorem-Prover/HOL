@@ -66,6 +66,21 @@ sig
   type export_observer =
     {generated : hhProver.slice -> unit,
      copied : hhProver.slice * int -> unit}
+  (* export_problems_using {fork} is export_problems_observed with the
+     function that starts the worker threads of the pool (the default is
+     hhPool.default_fork) and a function that a worker applies to the index
+     of its item before it finishes it (the default does nothing; a test
+     hook).  The number of workers is min (export_workers,
+     cores, generated problems); one means inline.  prepare, which draws
+     fresh names and touches HOL state, stays on the calling thread in
+     schedule order, workers only format and write private temporaries, and
+     the files are published in schedule order.  A failure or an interrupt
+     stops and waits for the workers and removes their temporaries before
+     it propagates. *)
+  val export_problems_using :
+    {fork : hhPool.fork, before_finish : int -> unit} -> export_observer ->
+    string -> hhConfig.hh_options -> goal -> (string * string list) list ->
+    (hhProver.prover_config * hhProver.slice) list -> unit
   val export_problems_observed : export_observer -> string ->
     hhConfig.hh_options -> goal -> (string * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit

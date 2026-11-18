@@ -14,6 +14,7 @@ sig
      provers : prover list,
      slices : int,
      cores : int,
+     export_workers : int,
      filter : string,
      max_facts : int option,
      format : string,
@@ -47,6 +48,14 @@ sig
   val stage_write :
     {open_out : string -> 'a, close_out : 'a -> unit} ->
     string -> ('a -> 'b) -> string * 'b
+  (* stage_to io temporary write is stage_write into a temporary chosen by
+     the caller (see temp_path), so that the caller can remove it whatever
+     happens to the writer, an interrupt included; the stream is opened and
+     closed with interrupts deferred. *)
+  val temp_path : string -> string
+  val stage_to :
+    {open_out : string -> 'a, close_out : 'a -> unit} ->
+    string -> ('a -> 'b) -> 'b
   val commit : {temporary : string, final : string} -> unit
   val remove_quietly : string -> unit
   val directory_names : string -> string list

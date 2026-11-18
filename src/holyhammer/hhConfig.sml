@@ -27,6 +27,7 @@ type hh_options =
    provers : prover list,
    slices : int,
    cores : int,
+   export_workers : int,
    filter : string,
    max_facts : int option,
    format : string,
@@ -87,17 +88,22 @@ fun commit {temporary, final} =
     (remove_quietly final;
      OS.FileSys.rename {old = temporary, new = final})
 
-fun stage_write {open_out, close_out} path write =
+(* The temporary is opened and closed inside Portable.bracket, so that an
+   interrupt cannot leave the stream open, and removed on any exception
+   (also one that arrives as the bracket returns). *)
+fun stage_to {open_out, close_out} temporary write =
   let
-    val temporary = temp_path path
-    val output = open_out temporary
-    fun abort exn =
-      ((close_out output handle _ => ()); remove_quietly temporary;
-       raise exn)
-    val result = (write output before close_out output)
-      handle exn => abort exn
+    fun release output = (close_out output handle _ => ())
+    fun body output =
+      let val result = write output in (close_out output; result) end
   in
-    (temporary, result)
+    Portable.bracket (fn () => open_out temporary) release body
+    handle exn => (remove_quietly temporary; raise exn)
+  end
+
+fun stage_write io path write =
+  let val temporary = temp_path path in
+    (temporary, stage_to io temporary write)
   end
 
 fun write_atomically io path write =
@@ -318,6 +324,11 @@ val option_specs : option_spec list =
    {name = "cores", default = fn () => "0",
     expected = "a non-negative integer",
     doc = "worker count (0 means detected processor count)",
+    valid = nonnegative_int},
+   {name = "export_workers", default = fn () => "1",
+    expected = "a non-negative integer",
+    doc = "threads that format generated problems (1 means inline on " ^
+          "the calling thread, 0 means cores; at most cores)",
     valid = nonnegative_int},
    {name = "filter", default = fn () => "",
     expected = "empty, knn, mepo, mash, mesh, or none",
@@ -576,6 +587,10 @@ fun snapshot_with overrides =
     val configured_cores = required "cores" int_value
     val cores = if configured_cores = 0 then detected_cores ()
                 else configured_cores
+    val configured_workers = required "export_workers" int_value
+    val export_workers =
+      Int.min (cores, if configured_workers = 0 then cores
+                      else configured_workers)
     val slices = if configured_slices = 0 then 24 * cores
                  else configured_slices
     val filter = required "filter" (SOME o trim)
@@ -597,7 +612,8 @@ fun snapshot_with overrides =
     val verbose = required "verbose" bool_value
   in
     {timeout = timeout, max_proofs = max_proofs, provers = provers,
-     slices = slices, cores = cores, filter = filter,
+     slices = slices, cores = cores,
+     export_workers = export_workers, filter = filter,
      max_facts = max_facts, format = format, type_enc = type_enc,
      lam_trans = lam_trans, mono_iters = mono_iters,
      mono_instances = mono_instances, minimize = minimize,
