@@ -349,7 +349,7 @@ val option_specs : option_spec list =
     expected = "a positive real number",
     doc = "time limit for each minimization attempt, in seconds",
     valid = positive_real},
-   {name = "preplay_drop_one", default = fn () => "false",
+   {name = "preplay_drop_one", default = fn () => "true",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",
     doc = "while no new lemma list waits, retry each list Metis could " ^
           "not replay without one of its lemmas",

@@ -216,10 +216,14 @@ fun test_child root =
     val _ = hhConfig.hh_set ("cache", "yes")
     val _ = hhConfig.hh_set ("debug_dir", join root "debug")
     val quiet = not (#verbose (hhConfig.snapshot ()))
+    val drop_one = #preplay_drop_one (hhConfig.snapshot ())
     val _ = hhConfig.hh_set ("verbose", "on")
+    val _ = hhConfig.hh_set ("preplay_drop_one", "off")
     val options : hhConfig.hh_options = hhConfig.snapshot ()
     val _ = expect "verbose is off by default and parsed as a Boolean"
       (quiet andalso #verbose options)
+    val _ = expect "preplay_drop_one is on by default and parsed as a Boolean"
+      (drop_one andalso not (#preplay_drop_one options))
     val _ = expect "snapshot parses values and computes slices"
       (#timeout options = 23 andalso #max_proofs options = 4 andalso
        #provers options = [Eprover, Vampire, Zipperposition] andalso
@@ -265,7 +269,7 @@ fun test_child root =
     val _ = hhConfig.hh_unset "provers"
     val _ = List.app hhConfig.hh_unset
       ["format", "type_enc", "lam_trans", "mono_iters", "mono_instances",
-       "verbose"]
+       "verbose", "preplay_drop_one"]
     val default_options : hhConfig.hh_options = hhConfig.snapshot ()
     val _ = expect "new option defaults preserve per-slice values"
       (#filter default_options = "none" andalso

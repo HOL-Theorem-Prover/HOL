@@ -48,9 +48,10 @@ it starts and ends.
 
 A prover's lemma list sometimes holds a lemma that sends Metis astray, so
 the list cannot be replayed within `preplay_timeout` although a sublist
-can.  With `preplay_drop_one` set, each list that fails to replay is tried
-again once without each of its lemmas in turn.  These retries run only
-while no new list waits for reconstruction, and stop at the timeout.
+can.  With `preplay_drop_one` set, as it is by default, each list that
+fails to replay is tried again once without each of its lemmas in turn.
+These retries run only while no new list waits for reconstruction, and stop
+at the timeout.
 
 The `filter` values are:
 
