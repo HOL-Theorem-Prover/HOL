@@ -54,16 +54,14 @@ sig
       that goal: stores its equations and induction theorem, runs its
       attributes and registrations, and returns the equations.  If th
       has suspended goals (markerLib.suspend), the definition is
-      suspended under name instead: Resume its goals, then
-      finalise_definition name completes it.  NONE from prepare_qDefine
-      means the definition needed no termination proof and is complete.
-      A pending definition is part of the context, so a saved heap
-      carries it. *)
+      suspended under name instead: Resume its goals, then Finalise name
+      (markerLib.finalise_suspended_thm) completes it.  NONE from
+      prepare_qDefine means the definition needed no termination proof
+      and is complete.  A pending definition is part of the context, so
+      a saved heap carries it; its theory cannot be exported until it is
+      complete. *)
    val prepare_qDefine : string -> term quotation -> goal option
-   val located_prepare_qDefine : DB.thm_src_location -> string ->
-                                 term quotation -> goal option
    val complete_definition : string -> thm -> thm
-   val located_finalise_definition : DB.thm_src_location -> string -> thm
 
    datatype phase
         = PARSE of term quotation

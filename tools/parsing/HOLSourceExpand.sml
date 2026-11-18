@@ -247,9 +247,8 @@ val srwShimOK = ref false
 val caseEqShimOK = ref false
 
 (* The definitions in this file with a Termination proof, each with the
-   name its induction theorem is bound to.  Finalise of one completes the
-   definition, if its proof was suspended, and binds both theorems.
-   Reset by the Theory declaration. *)
+   name its induction theorem is bound to; Finalise of one binds that name
+   too.  Reset by the Theory declaration. *)
 val terminationInds = ref ([] : (string * (int * string)) list)
 
 (* wrapTac, plus a rebinding of srw_ss to the simpset carried by the
@@ -986,10 +985,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val fileline = fileline (#1 id)
     val indThm = Option.map (fn (_, (_, ind)) => (#1 id, ind))
                    (List.find (fn (n, _) => n = #2 id) (!terminationInds))
-    val f = case indThm of
-        NONE => "markerLib.finalise_suspended_thm"
-      | SOME _ => "TotalDefn.located_finalise_definition"
-    val e = mkLocString' (finalise_, f) fileline
+    val e = mkLocString' (finalise_, "markerLib.finalise_suspended_thm")
+                         fileline
     val e = App (e, mkNameAttrs mkKval id attrs)
     val dec' = [valPat finalise_ (mkIdent id) e]
     val dec' = case indThm of NONE => dec' | SOME ind => magicBind ind dec'

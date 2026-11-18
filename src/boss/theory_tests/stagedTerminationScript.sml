@@ -1,4 +1,5 @@
 Theory stagedTermination
+Ancestors stagedTerminationAnc
 
 (* A Termination proof that suspends a goal, resumed after a helper
    theorem; Finalise binds the equations and the named induction theorem *)
@@ -24,5 +25,7 @@ Finalise staged_def
 
 val _ =
   if null (hyp staged_def) andalso null (hyp staged_steps) andalso
-     is_forall (concl staged_steps)
+     is_forall (concl staged_steps) andalso
+     Option.isSome
+       (markerLib.lookup_suspension "stagedTerminationAnc.staged_def")
   then () else raise Fail "Finalise did not bind the completed definition"

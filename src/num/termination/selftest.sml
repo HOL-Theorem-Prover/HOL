@@ -367,7 +367,7 @@ val _ = assert (consts_pending > consts_before + 1)
 val _ = assert (not (stored "nested_def") andalso not (stored "nested_steps"))
 val _ = assert (rejects (fn () => complete_definition "nested_def" TRUTH))
 val _ = assert (rejects (fn () =>
-  located_finalise_definition DB.Unknown "nested_def"))
+  markerLib.finalise_suspended_thm DB.Unknown "nested_def"))
 val nested_def =
     complete_definition "nested_def" (TAC_PROOF (nested_goal, WF_REL_TAC ‘$<’))
 val _ = assert (length (thy_consts (current_theory ())) < consts_pending)
@@ -423,8 +423,8 @@ val _ = markerLib.resume {suspension_name = "susp_def", label_name = "tc"}
                       FIRST_ASSUM ACCEPT_TAC])
           (Context.snapshot ())
 val _ = assert (rejects (fn () =>
-  located_finalise_definition DB.Unknown "susp_def[simp]"))
-val susp_def = located_finalise_definition suspend_loc "susp_def"
+  markerLib.finalise_suspended_thm DB.Unknown "susp_def[simp]"))
+val susp_def = markerLib.finalise_suspended_thm suspend_loc "susp_def"
 val _ = assert (null (hyp susp_def) andalso
                 aconv (concl susp_def) (concl suspended_eqns))
 val _ = assert (null (hyp (DB.fetch "-" "susp_steps")))
@@ -455,34 +455,45 @@ val _ = markerLib.resume {suspension_name = "snest_def", label_name = "tc"}
            THEN TC_SIMP_TAC (termination_ss ()) [])
           (Context.snapshot ())
 val _ = assert (has_snest_aux ())
-val snest_def = located_finalise_definition DB.Unknown "snest_def"
+val snest_def = markerLib.finalise_suspended_thm DB.Unknown "snest_def"
 val _ = assert (not (has_snest_aux ()) andalso null (hyp snest_def) andalso
                 null (hyp (DB.fetch "-" "snest_steps")))
 val _ = OK ()
 
-val _ = tprint "a failed finalisation can be retried"
-val fail_next = ref true
-fun fail_once {name,attrname,args,thm} =
-  if !fail_next then (fail_next := false; raise mk_HOL_ERR "" "" "once")
-  else ()
-val _ = ThmAttribute.register_attribute
-          ("fail_once", {localf = fail_once, storedf = fail_once})
-val _ = located_qDefine DB.Unknown "retry_def[allow_rebind,fail_once]"
-  ‘retry n = if n = 0 then 0n else retry (n - 1) + 1’
-  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
-  (Context.snapshot ())
-val _ = markerLib.resume {suspension_name = "retry_def", label_name = "tc"}
+val _ = tprint "a definition prepared and completed in ML finalises in ML"
+val mlfin_goal = valOf (prepare_qDefine "mlfin_def[induction=mlfin_steps]"
+  ‘mlfin n = if n = 0 then 0n else mlfin (n - 1) + 1’)
+val _ = complete_definition "mlfin_def"
+  (boolLib.prove_named (Context.snapshot ())
+     {name = "mlfin_def", goal = mlfin_goal,
+      tac = Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"})
+val _ = assert (not (stored "mlfin_def") andalso no_pending "mlfin_def")
+val _ = markerLib.resume {suspension_name = "mlfin_def", label_name = "tc"}
           (markerLib.RESUME_TAC THEN CONJ_TAC THENL
              [WF_TAC, REPEAT STRIP_TAC THEN MATCH_MP_TAC susp_helper THEN
                       FIRST_ASSUM ACCEPT_TAC])
           (Context.snapshot ())
-val _ = assert (rejects (fn () =>
-  located_finalise_definition DB.Unknown "retry_def"))
-val retry_def = located_finalise_definition DB.Unknown "retry_def"
-val _ = assert (aconv (concl retry_def) (concl (DB.fetch "-" "retry_def")))
-val _ = assert (not (is_conj (concl retry_def)) andalso
-                Option.isSome (DefnBase.lookup_userdef “retry”) andalso
-                no_pending "retry_def")
+val mlfin_def = markerLib.finalise_suspended_thm DB.Unknown "mlfin_def"
+val _ = assert (null (hyp mlfin_def) andalso not (is_conj (concl mlfin_def))
+                andalso stored "mlfin_def" andalso
+                null (hyp (DB.fetch "-" "mlfin_steps")))
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “mlfin”) andalso
+                Option.isSome (DefnBase.lookup_indn “mlfin”))
+val _ = OK ()
+
+val _ = tprint "a resumed proof with an extra hypothesis is not stored"
+val _ = located_qDefine DB.Unknown "xhyp_def"
+  ‘xhyp n = if n = 0 then 0n else xhyp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "xhyp"))
+  (Context.snapshot ())
+val _ = markerLib.resume {suspension_name = "xhyp_def", label_name = "xhyp"}
+          (markerLib.RESUME_TAC THEN
+           (fn (g as (_, w)) => ACCEPT_TAC (ASSUME w) g))
+          (Context.snapshot ())
+val _ = assert (rejects_with "does not prove" (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "xhyp_def"))
+val _ = assert (not (stored "xhyp_def") andalso not (stored "xhyp_ind") andalso
+                not (Option.isSome (DefnBase.lookup_indn “xhyp”)))
 val _ = OK ()
 
 val _ = tprint "mutual definitions complete through prepare_qDefine"
@@ -496,13 +507,38 @@ val _ = assert (length (strip_conj (concl mev_def)) = 2 andalso
 val _ = OK ()
 val _ = convtest ("mutual definition enters EVAL", EVAL, “mod 3”, “T”)
 
-(* Last, since it discards the scratch theory *)
-val _ = tprint "a definition pending in another theory is not completed"
-val _ = prepare_qDefine "elsewhere_def"
-  ‘elsewhere n = if n = 0 then 0n else elsewhere (n - 1) + 1’
-val _ = with_flag (Globals.interactive, true) new_theory "staged_other"
-val _ = assert (rejects_with "pending in theory scratch"
-                  (fn () => complete_definition "elsewhere_def" TRUTH))
+(* Last, since they discard the scratch theory *)
+fun discard_to thy = with_flag (Globals.interactive, true) new_theory thy
+fun count_goal g = WF_REL_TAC ‘$<’ g
+
+val _ = tprint "a theory is not exported with a definition pending"
+val _ = discard_to "staged_export"
+val export_goal = valOf (prepare_qDefine "exp_def"
+  ‘exp_fun n = if n = 0 then 0n else exp_fun (n - 1) + 1’)
+val _ = assert (rejects_with "not proved: exp_def" export_theory)
+val _ = complete_definition "exp_def" (TAC_PROOF (export_goal, count_goal))
+val _ = located_qDefine DB.Unknown "expsusp_def"
+  ‘expsusp n = if n = 0 then 0n else expsusp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
+  (Context.snapshot ())
+val _ = assert (rejects_with "finalised in their own theory: expsusp_def"
+                  export_theory)
+val _ = OK ()
+
+val _ = tprint "a discarded or restarted theory leaves nothing pending"
+val _ = discard_to "staged_other"
+val _ = assert (no_pending "exp_def")
+val _ = located_qDefine DB.Unknown "expsusp_def"
+  ‘expsusp n = if n = 0 then 0n else expsusp (n - 1) + 1’ (SOME count_goal)
+  (Context.snapshot ())
+val _ = assert (stored "expsusp_def")
+val _ = prepare_qDefine "restart_def"
+  ‘restart n = if n = 0 then 0n else restart (n - 1) + 1’
+val _ = new_theory "staged_other"
+val restart_goal = valOf (prepare_qDefine "restart_def"
+  ‘restart n = if n = 0 then 0n else restart (n - 1) + 1’)
+val _ = complete_definition "restart_def" (TAC_PROOF (restart_goal, count_goal))
+val _ = assert (stored "restart_def")
 val _ = OK ()
 
 val _ = if Systeml.ML_SYSNAME <> "poly" then () else let

@@ -924,7 +924,8 @@ end
 (* proof suspends goals (markerLib.suspend), the definition waits under its  *)
 (* equations' name among the suspended theorems, for Resume, and finalising  *)
 (* that name completes it.  Pending definitions live in the context, so a    *)
-(* heap saved part-way through carries them.                                 *)
+(* heap saved part-way through carries them; a theory with one pending      *)
+(* cannot be exported.                                                       *)
 (*---------------------------------------------------------------------------*)
 
 (* The settings a definition is made and stored under: their values when
@@ -943,43 +944,68 @@ fun current_scope () : scope =
                   [computeLib.auto_import_definitions, allow_schema_definition,
                    Theory.allow_rebinds, delete_support_defs]}
 
-datatype pending
-  = Unproved of {loc : DB.thm_src_location, goal : goal,
-                 validate : thm -> thm, finish : thm -> thm * thm option}
-  | Suspended of thm -> thm * thm option
+type pending = {loc : DB.thm_src_location, goal : goal,
+                validate : thm -> thm, finish : thm -> thm * thm option}
 
-(* (theory, equations' name, state) *)
-val pending_slot : (string * string * pending) list Context.Data.slot =
+(* The current theory's definitions whose termination is not yet proved,
+   by their equations' name *)
+val pending_slot : (string * pending) list Context.Data.slot =
     Context.Data.new {name = "TotalDefn.pending_definitions", empty = [],
-                      pp = String.concatWith ", " o map #2}
+                      pp = String.concatWith ", " o map #1}
 
-fun pending_definition fname name =
-    case List.find (fn (_, n, _) => n = name)
-                   (Context.Data.get pending_slot (Context.snapshot ())) of
-        NONE => NONE
-      | SOME (thy, _, p) =>
-        if thy = current_theory () then SOME p
-        else raise ERR fname ("Definition " ^ Lib.quote name ^
-                              " is pending in theory " ^ thy)
+fun pending_definition name =
+    Option.map #2 (List.find (fn (n, _) => n = name)
+                     (Context.Data.get pending_slot (Context.snapshot ())))
 
 fun set_pending name p =
-    let val entry = case p of NONE => []
-                            | SOME p => [(current_theory (), name, p)]
+    let val entry = case p of NONE => [] | SOME p => [(name, p)]
     in
       Context.Data.modify pending_slot
-        (fn ps => entry @ List.filter (fn (_, n, _) => n <> name) ps)
+        (fn ps => entry @ List.filter (fn (n, _) => n <> name) ps)
     end
+
+val _ = Theory.register_hook
+  ("TotalDefn.pending_definitions",
+   fn TheoryDelta.NewTheory _ => Context.Data.write pending_slot []
+    | TheoryDelta.ExportTheory _ =>
+      (case Context.Data.get pending_slot (Context.snapshot ()) of
+           [] => ()
+         | ps => raise ERR "export_theory"
+                   ("The termination of these definitions is not proved: " ^
+                    String.concatWith ", " (map #1 ps)))
+    | _ => ())
+
+fun is_suspended name =
+    case markerLib.lookup_suspension name of
+        SOME (thy, _) => thy = current_theory ()
+      | NONE => false
+
+(* th proves the goal (asl, w) of name's termination, or what that proof
+   gives, from the goal's assumptions and suspended goals only *)
+fun check_proof fname name asl th =
+    List.all (fn h => tmem h asl orelse
+                      Option.isSome (boolLib.dest_suspended h)) (hyp th)
+    andalso Theory.uptodate_thm th orelse
+    raise ERR fname ("Theorem does not prove the termination goal of " ^
+                     Lib.quote name)
 
 fun list_conj_gen th = th |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
 
 datatype prepared = Made of thm * thm option
                   | Goal of {bind : string, name : string, goal : goal}
 
+fun delete_consts cs =
+    if deleting_support () then
+      List.app (fn c => Theory.delete_const (fst (dest_const c))
+                        handle HOL_ERR _ => ()) cs
+    else ()
+
 (* Makes the definition, in scope; post runs after it is stored, outside *)
 fun prepare loc stem q scope post =
   let open Defn
       val bind = stem ^ !Defn.def_suffix
-      val _ = not (Option.isSome (pending_definition "prepare" bind)) orelse
+      val _ = not (Option.isSome (pending_definition bind) orelse
+                   is_suspended bind) orelse
               raise ERR "prepare" ("Definition " ^ Lib.quote bind ^
                                    " is already pending")
       val snap1 = thy_consts (current_theory())
@@ -998,45 +1024,45 @@ fun prepare loc stem q scope post =
       end
     else
       let val (name, (goal, validate)) = tc_obligation defn
-          val snap2 = thy_consts (current_theory())
+          val support =
+              DefnBase.support_consts defn (thy_consts (current_theory())) snap1
           fun store th =
               let val def = list_conj_gen (CONJUNCT1 th)
                   val ind = CONJUNCT2 th
               in
-                delete_support defn snap2 snap1;
+                delete_consts support;
                 store_at loc (stem,def,ind);
                 (def, SOME ind)
               end
           fun finish th = let val r = in_scope scope store th
                           in post r; r end
       in
-        set_pending bind (SOME (Unproved {loc = loc, goal = goal,
-                                          validate = validate,
-                                          finish = finish}));
+        set_pending bind (SOME {loc = loc, goal = goal, validate = validate,
+                                finish = finish});
         Goal {bind = bind, name = name, goal = goal}
       end
   end
 
+(* Completes the pending definition name from th, a proof of its goal.  If
+   th has suspended goals, the definition is suspended under name, and
+   finalising it (markerLib.finalise_suspended_thm) completes it. *)
 fun complete fname name th =
-    case pending_definition fname name of
+    case pending_definition name of
         NONE => raise ERR fname ("No pending definition " ^ Lib.quote name)
-      | SOME (Suspended _) =>
-        raise ERR fname ("The termination proof of " ^ Lib.quote name ^
-                         " is suspended: resume and finalise it")
-      | SOME (Unproved {loc, goal = (asl, w), validate, finish}) =>
+      | SOME {loc, goal = (asl, w), validate, finish} =>
         let
-          fun allowed h = tmem h asl orelse
-                          Option.isSome (boolLib.dest_suspended h)
-          val _ = aconv (concl th) w andalso List.all allowed (hyp th) andalso
-                  Theory.uptodate_thm th orelse
+          val _ = aconv (concl th) w orelse
                   raise ERR fname ("Theorem does not prove the termination \
                                    \goal of " ^ Lib.quote name)
+          val _ = check_proof fname name asl th
           val th = validate th
         in
           if boolLib.has_suspended_subgoals th then
             (boolLib.save_thm_attrs loc
-               (ThmAttribute.extract_attributes name, th);
-             set_pending name (SOME (Suspended finish));
+               ({thmname = name, attrs = [], reserved = [], unknown = []}, th);
+             markerLib.set_finaliser name
+               (fn th => (check_proof "Finalise" name asl th; #1 (finish th)));
+             set_pending name NONE;
              (list_conj_gen (CONJUNCT1 th), NONE))
           else
             (set_pending name NONE; finish th)
@@ -1063,27 +1089,6 @@ fun located_tDefine loc stem q tac =
 val tDefine = located_tDefine DB.Unknown
 
 fun complete_definition name th = #1 (complete "complete_definition" name th)
-
-fun located_finalise_definition loc nm =
-    let
-      val {thmname = name, attrs, reserved, unknown} =
-          ThmAttribute.extract_attributes nm
-    in
-      case pending_definition "finalise_definition" name of
-          NONE => markerLib.finalise_suspended_thm loc nm
-        | SOME (Unproved _) =>
-          raise ERR "finalise_definition"
-                ("The termination of " ^ Lib.quote name ^
-                 " has not been proved")
-        | SOME (Suspended finish) =>
-          if null attrs andalso null reserved andalso null unknown then
-            markerLib.finalise_suspension name
-              (fn th => #1 (finish th) before set_pending name NONE)
-          else
-            raise ERR "finalise_definition"
-                  ("Give the attributes of " ^ Lib.quote name ^
-                   " on its definition")
-    end
 
 (* ----------------------------------------------------------------------
     version of Define that allows control of options with "attributes"
@@ -1185,13 +1190,13 @@ fun located_qDefine loc stem q tacopt (_ : Context.t) =
           #1 (define_with_tactic loc corename q tac scope post)
     end
 
-fun located_prepare_qDefine loc stem q =
+fun prepare_qDefine stem q =
     let
       val {corename, scope, post, tailrecp} = definition_options stem
       val _ = not tailrecp orelse
               raise ERR "prepare_qDefine"
                     "Tail-recursive definitions have no termination proof"
-      fun prep () = prepare loc corename q scope post
+      fun prep () = prepare DB.Unknown corename q scope post
       fun thunk () =
           case in_scope scope prep () of
               Made r => (post r; NONE)
@@ -1200,8 +1205,6 @@ fun located_prepare_qDefine loc stem q =
       Parse.try_grammar_extension thunk ()
       handle e => render_exn (wrap_exn "TotalDefn" "prepare_qDefine" e)
     end
-
-val prepare_qDefine = located_prepare_qDefine DB.Unknown
 
 fun qDefine stem q tacopt =
     located_qDefine DB.Unknown stem q tacopt (Context.snapshot())

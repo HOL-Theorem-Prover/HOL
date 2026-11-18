@@ -1202,14 +1202,10 @@ fun lookup_suspension_unqualified nm =
                 if n = nm then (t, th) :: acc else acc)
             tab []
     in
-      case matches of
-          [] => NONE
-        | [(thy, th)] => SOME (thy, th)
-        | _ =>
-            (* Multiple matches - ambiguous. For now, just pick the first.
-               A future enhancement could raise an error and require
-               qualified syntax. *)
-            SOME (hd matches)
+      (* Several theories may hold one; the current theory's comes first *)
+      case List.find (fn (t, _) => t = Theory.current_theory ()) matches of
+          SOME m => SOME m
+        | NONE => (case matches of [] => NONE | m :: _ => SOME m)
     end
 
 (* Main entry point: supports both "foo" and "thyname.foo" forms *)
@@ -1505,52 +1501,86 @@ fun assemble_finalised parent_thy parent_nm parent_th =
       aux parent_th susp_hyps
     end
 
-(* Assemble the suspended theorem nm from its resumption proofs and pass
-   it, with where it was found, to save; once save returns, drop nm and
-   its resumption proofs from the suspension stores. *)
-fun prim_finalise fname nm save =
-    case find_parent nm of
-        NONE => raise ERR fname ("No such suspended theorem: " ^ nm)
-      | SOME (src, parent_thy, parent_th) =>
-        let
-          val clean_th = assemble_finalised parent_thy nm parent_th
-          val remaining = boolLib.get_suspended_names clean_th
-          val _ = null remaining orelse
-                  raise ERR fname
-                     ("Theorem retains unproved subgoals: " ^
-                      String.concatWith ", " remaining)
-          val saved = save (src, clean_th)
-          (* Drop this name from the suspension store so it's no
-             longer considered pending.  (For FromDB there was no
-             entry to drop anyway; the delta is harmless.) *)
-          val _ = record_suspension_delta
-                    (RemoveSuspended {Thy = parent_thy, Name = nm})
-          (* Also clean up the resumption proofs for this theorem. *)
-          val _ = record_resumption_delta (RemoveResumptions (parent_thy, nm))
-        in
-          saved
-        end
+(* Finalisers of the current theory's suspended theorems, by name: what
+   finalising such a theorem does in place of saving it *)
+val finaliser_slot : (string * (thm -> thm)) list Context.Data.slot =
+    Context.Data.new {name = "markerLib.finalisers", empty = [],
+                      pp = String.concatWith ", " o map #1}
+
+fun finalisers () = Context.Data.get finaliser_slot (Context.snapshot ())
+
+fun set_finaliser name f =
+    Context.Data.modify finaliser_slot
+      (fn fs => (name, f) :: List.filter (fn (n, _) => n <> name) fs)
+
+(* A theory is exported only once its finalisers have run; a new theory
+   drops those of the previous one *)
+val _ = Theory.register_hook
+  ("markerLib.finalisers",
+   fn TheoryDelta.ExportTheory _ =>
+        (case finalisers () of
+             [] => ()
+           | fs => raise ERR "export_theory"
+                     ("These suspended theorems must be finalised in \
+                      \their own theory: " ^
+                      String.concatWith ", " (map #1 fs)))
+    | TheoryDelta.NewTheory _ => Context.Data.write finaliser_slot []
+    | _ => ())
 
 fun finalise_suspended_thm loc nm0 =
     let
       val attrblock = ThmAttribute.extract_attributes nm0
-      fun save_attrs th = boolLib.save_thm_attrs loc (attrblock, th)
-      (* Save under the user name.  For FromStore this is the first
-         time the name hits the DB; for FromDB (--fast or re-finalise)
-         it's already there and we need rebind. *)
-      fun save (FromStore, th) = save_attrs th
-        | save (FromDB, th) =
-          HOLFlags.with_bflags [(Theory.allow_rebinds, true)] save_attrs th
+      val name = #thmname attrblock
     in
-      prim_finalise "finalise_suspended_thm" (#thmname attrblock) save
+      case find_parent name of
+          NONE => raise ERR "finalise_suspended_thm"
+                    ("No such suspended theorem: " ^ name)
+        | SOME (src, parent_thy, parent_th) =>
+          let
+            val clean_th = assemble_finalised parent_thy name parent_th
+            val remaining = boolLib.get_suspended_names clean_th
+            val _ = null remaining orelse
+                    raise ERR "finalise_suspended_thm"
+                       ("Theorem retains unproved subgoals: " ^
+                        String.concatWith ", " remaining)
+            val own =
+                if parent_thy <> Theory.current_theory () then NONE
+                else Option.map #2 (List.find (fn (n, _) => n = name)
+                                              (finalisers ()))
+            val _ = not (Option.isSome own) orelse
+                    null (#attrs attrblock) andalso
+                    null (#reserved attrblock) andalso
+                    null (#unknown attrblock) orelse
+                    raise ERR "finalise_suspended_thm"
+                      ("Give the attributes of " ^ name ^
+                       " where its proof started, not here")
+            (* Save under the user name.  For FromStore this is the
+               first time the name hits the DB; for FromDB (--fast or
+               re-finalise) it's already there and we need rebind. *)
+            val saved =
+                case (src, own) of
+                    (FromStore, SOME f) => f clean_th
+                  | (FromStore, NONE) =>
+                      boolLib.save_thm_attrs loc (attrblock, clean_th)
+                  | (FromDB, _) =>
+                      HOLFlags.with_bflags [(Theory.allow_rebinds, true)]
+                        (fn () =>
+                            boolLib.save_thm_attrs loc (attrblock, clean_th)) ()
+            (* Drop this name from the suspension store so it's no
+               longer considered pending.  (For FromDB there was no
+               entry to drop anyway; the delta is harmless.) *)
+            val _ = record_suspension_delta
+                      (RemoveSuspended {Thy = parent_thy, Name = name})
+            (* Also clean up the resumption proofs for this theorem. *)
+            val _ = record_resumption_delta (RemoveResumptions (parent_thy, name))
+            val _ = if Option.isSome own then
+                      Context.Data.modify finaliser_slot
+                        (List.filter (fn (n, _) => n <> name))
+                    else ()
+          in
+            saved
+          end
     end
-
-fun finalise_suspension nm f =
-    prim_finalise "finalise_suspension" nm
-      (fn (FromStore, th) => f th
-        | (FromDB, _) =>
-          raise ERR "finalise_suspension"
-                    ("No suspended theorem named " ^ nm ^ " is pending"))
 
 (* ----------------------------------------------------------------------
     Safety net at export_theory time: no theorem persisted to the
