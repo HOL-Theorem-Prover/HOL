@@ -40,10 +40,17 @@ prover output.
 
 The options are `timeout`, `max_proofs`, `provers`, `slices`, `cores`,
 `filter`, `max_facts`, `format`, `type_enc`, `lam_trans`, `mono_iters`,
-`mono_instances`, `minimize`, `preplay_timeout`, `minimize_timeout`, `cache`,
-`cache_dir`, `cache_max_entries`, `debug_dir`, and `verbose`.  By default a
-call prints only its outcome: the verified tactic or why it failed.  With
-`verbose` set it also reports every slice as it starts and ends.
+`mono_instances`, `minimize`, `preplay_timeout`, `minimize_timeout`,
+`preplay_drop_one`, `cache`, `cache_dir`, `cache_max_entries`, `debug_dir`,
+and `verbose`.  By default a call prints only its outcome: the verified
+tactic or why it failed.  With `verbose` set it also reports every slice as
+it starts and ends.
+
+A prover's lemma list sometimes holds a lemma that sends Metis astray, so
+the list cannot be replayed within `preplay_timeout` although a sublist
+can.  With `preplay_drop_one` set, each list that fails to replay is tried
+again once without each of its lemmas in turn.  These retries run only
+while no new list waits for reconstruction, and stop at the timeout.
 
 The `filter` values are:
 

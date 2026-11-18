@@ -37,6 +37,7 @@ type hh_options =
    minimize : bool,
    preplay_timeout : real,
    minimize_timeout : real,
+   preplay_drop_one : bool,
    cache : bool,
    cache_dir : string,
    cache_max_entries : int,
@@ -348,6 +349,11 @@ val option_specs : option_spec list =
     expected = "a positive real number",
     doc = "time limit for each minimization attempt, in seconds",
     valid = positive_real},
+   {name = "preplay_drop_one", default = fn () => "false",
+    expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",
+    doc = "while no new lemma list waits, retry each list Metis could " ^
+          "not replay without one of its lemmas",
+    valid = Option.isSome o bool_value},
    {name = "cache", default = fn () => "false",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",
     doc = "enable the result cache", valid = Option.isSome o bool_value},
@@ -589,6 +595,7 @@ fun snapshot_with overrides =
     val minimize = required "minimize" bool_value
     val preplay_timeout = required "preplay_timeout" real_value
     val minimize_timeout = required "minimize_timeout" real_value
+    val preplay_drop_one = required "preplay_drop_one" bool_value
     val cache = required "cache" bool_value
     val cache_dir = required "cache_dir" SOME
     val cache_max_entries = required "cache_max_entries" int_value
@@ -601,7 +608,8 @@ fun snapshot_with overrides =
      lam_trans = lam_trans, mono_iters = mono_iters,
      mono_instances = mono_instances, minimize = minimize,
      preplay_timeout = preplay_timeout,
-     minimize_timeout = minimize_timeout, cache = cache,
+     minimize_timeout = minimize_timeout,
+     preplay_drop_one = preplay_drop_one, cache = cache,
      cache_dir = cache_dir, cache_max_entries = cache_max_entries,
      debug_dir = debug_dir, verbose = verbose}
   end

@@ -24,6 +24,7 @@ sig
      minimize : bool,
      preplay_timeout : real,
      minimize_timeout : real,
+     preplay_drop_one : bool,
      cache : bool,
      cache_dir : string,
      cache_max_entries : int,

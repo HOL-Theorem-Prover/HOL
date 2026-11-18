@@ -27,6 +27,18 @@ type result =
 
 type success = hhProver.slice * string list * real
 
+(* A lemma list waiting for reconstruction.  A Retry is a list that Metis
+   could not replay, less one of its lemmas; origin is the key of that
+   list. *)
+datatype recon_item =
+    Fresh of success
+  | Retry of {origin : string, success : success}
+
+(* The lists left by dropping each lemma in turn. *)
+fun drop_one_variants lemmas =
+  List.tabulate (length lemmas, fn index =>
+    List.take (lemmas, index) @ List.drop (lemmas, index + 1))
+
 fun join left right = OS.Path.concat (left, right)
 
 val with_mutex = hhProver.with_mutex
@@ -261,6 +273,11 @@ fun run_in root {options, goal, rankings, progress} =
        does the same on the same list, so a list found again by another
        slice is not replayed again. *)
     val tried_keys = ref ([] : string list)
+    (* With preplay_drop_one, a list Metis cannot replay queues its
+       drop-one variants here.  They are tried only while no new list
+       waits, and no longer once one variant of the same list verifies. *)
+    val retries = ref ([] : {origin : string, success : success} list)
+    val recovered = ref ([] : string list)
     val stopping = ref false
     val reason = ref (NONE : stop_reason option)
     val running = ref ([] : (int * bool ref * (unit -> unit)) list)
@@ -433,9 +450,13 @@ fun run_in root {options, goal, rankings, progress} =
         fun wait () =
           if !stopping then NONE
           else
-            case !recon of
-                item :: rest => (recon := rest; SOME item)
-              | [] =>
+            case (!recon, !retries) of
+                (item :: rest, _) => (recon := rest; SOME (Fresh item))
+              | ([], retry :: rest) =>
+                  if time_before (Time.now ()) deadline then
+                    (retries := rest; SOME (Retry retry))
+                  else (retries := []; wait ())
+              | ([], []) =>
                   if !launch_done andalso !workers_left = 0 then NONE
                   else
                     (ConditionVar.wait (state_changed, state_mutex); wait ())
@@ -447,14 +468,30 @@ fun run_in root {options, goal, rankings, progress} =
       end
       handle exn => (Mutex.unlock state_mutex handle _ => (); raise exn)
 
-    fun reconstruct (slice, lemmas, t_prover) =
+    fun reconstruct item =
       let
+        val (origin, (slice, lemmas, t_prover)) =
+          case item of
+              Fresh success => (NONE, success)
+            | Retry {origin, success} => (SOME origin, success)
         val key = lemma_key lemmas
-        val duplicate = with_mutex state_mutex (fn () =>
-          List.exists (fn other => key = other) (!tried_keys) orelse
+        fun member list value = List.exists (fn other => value = other) list
+        val skip = with_mutex state_mutex (fn () =>
+          (case origin of
+               SOME parent => member (!recovered) parent
+             | NONE => false) orelse
+          member (!tried_keys) key orelse
           (tried_keys := key :: !tried_keys; false))
+        fun queue_variants () =
+          if #preplay_drop_one options andalso length lemmas > 1 then
+            with_mutex state_mutex (fn () =>
+              retries := !retries @
+                map (fn variant =>
+                       {origin = key, success = (slice, variant, t_prover)})
+                  (drop_one_variants lemmas))
+          else ()
       in
-        if duplicate then ()
+        if skip then ()
         else
           ((let
               (* Minimisation stops at the deadline, so that a verified
@@ -477,6 +514,8 @@ fun run_in root {options, goal, rankings, progress} =
                  t_replay = t_replay}
               val reached = with_mutex state_mutex (fn () =>
                 (suggestions := suggestion :: !suggestions;
+                 Option.app (fn parent => recovered := parent :: !recovered)
+                   origin;
                  length (!suggestions) >= #max_proofs options))
               val _ = emit (Verified suggestion)
             in
@@ -484,15 +523,19 @@ fun run_in root {options, goal, rankings, progress} =
             end)
            handle Interrupt => raise Interrupt
                 | error =>
-                    TextIO.output (TextIO.stdErr,
-                      "HolyHammer reconstruction failed: " ^
-                      General.exnMessage error ^ "\n"))
+                    (* A variant that fails is expected and not reported. *)
+                    if Option.isSome origin then ()
+                    else
+                      (TextIO.output (TextIO.stdErr,
+                         "HolyHammer reconstruction failed: " ^
+                         General.exnMessage error ^ "\n");
+                       queue_variants ()))
       end
 
     fun recon_loop () =
       case take_success () of
           NONE => ()
-        | SOME success => (reconstruct success; recon_loop ())
+        | SOME item => (reconstruct item; recon_loop ())
 
     fun reconstruction_worker () =
       ((recon_loop () handle _ => ());

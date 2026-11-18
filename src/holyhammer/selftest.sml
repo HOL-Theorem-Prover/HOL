@@ -1633,7 +1633,7 @@ fun slice_options provers slices cores timeout filter max_facts
    mono_instances = NONE, minimize = true,
    preplay_timeout = 1.0, minimize_timeout = 1.0, cache = false,
    cache_dir = "", cache_max_entries = 100000, debug_dir = NONE,
-   verbose = false}
+   preplay_drop_one = false, verbose = false}
 
 fun slice_summary (slice : hhProver.slice) =
   (#prover slice, #format slice, #type_enc slice, #lam_trans slice,
@@ -1832,7 +1832,7 @@ fun test_hhSlice () =
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
        cache_max_entries = 100000, debug_dir = NONE,
-       verbose = false}
+       preplay_drop_one = false, verbose = false}
     val triple_schedule = hhSlice.mk_schedule triple_options
     val _ = expect "slice construction accepts a supported full triple"
       (case triple_schedule of
@@ -1856,7 +1856,7 @@ fun test_hhSlice () =
            mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
            minimize_timeout = 1.0, cache = false, cache_dir = "",
            cache_max_entries = 100000, debug_dir = NONE,
-           verbose = false}
+           preplay_drop_one = false, verbose = false}
       in
         ((ignore (hhSlice.mk_schedule options); false) handle Fail _ => true)
       end
@@ -1895,7 +1895,7 @@ fun cache_options directory maximum enabled : hhConfig.hh_options =
    mono_instances = NONE, minimize = true,
    preplay_timeout = 1.0, minimize_timeout = 1.0, cache = enabled,
    cache_dir = directory, cache_max_entries = maximum, debug_dir = NONE,
-   verbose = false}
+   preplay_drop_one = false, verbose = false}
 
 fun test_hhCache () =
   let
@@ -3236,7 +3236,7 @@ fun fixture_options provers slices cores timeout max_proofs cache cache_dir
    minimize_timeout = 1.0,
    cache = cache, cache_dir = cache_dir, cache_max_entries = 100,
    debug_dir = debug_dir,
-   verbose = false}
+   preplay_drop_one = false, verbose = false}
 
 (* A fixture prover_config stands in for a built-in prover while f runs.
    Its name stays its own, so its output files and probe results are not
@@ -3245,20 +3245,20 @@ fun with_fixtures [] f = f ()
   | with_fixtures ((prover, config) :: rest) f =
       hhProver.with_override prover config (fn () => with_fixtures rest f)
 
-fun without_minimization (options : hhConfig.hh_options)
-    : hhConfig.hh_options =
+fun reconstruction_options {minimize, preplay_drop_one}
+    (options : hhConfig.hh_options) : hhConfig.hh_options =
   {timeout = #timeout options, max_proofs = #max_proofs options,
    provers = #provers options, slices = #slices options,
    cores = #cores options, filter = #filter options,
    max_facts = #max_facts options, format = #format options,
    type_enc = #type_enc options, lam_trans = #lam_trans options,
    mono_iters = #mono_iters options, mono_instances = #mono_instances options,
-   minimize = false, preplay_timeout = #preplay_timeout options,
+   minimize = minimize, preplay_timeout = #preplay_timeout options,
    minimize_timeout = #minimize_timeout options, cache = #cache options,
    cache_dir = #cache_dir options,
    cache_max_entries = #cache_max_entries options,
    debug_dir = #debug_dir options,
-   verbose = #verbose options}
+   preplay_drop_one = preplay_drop_one, verbose = #verbose options}
 
 fun slice_event_tag (slice : hhProver.slice) =
   hhConfig.prover_name (#prover slice) ^ ":" ^
@@ -3444,7 +3444,8 @@ fun test_schedule_without_minimization () =
     val slice = fixture_slice Z3 ["0", "schedule-truth.out"] 1
     val config = printer_config name [slice] (fn _ => ())
       (fn _ => (hhProver.SzsTheorem, SOME lemmas))
-    val options = without_minimization
+    val options =
+      reconstruction_options {minimize = false, preplay_drop_one = false}
       (fixture_options [Z3] 1 1 5 1 false "" NONE)
     val (result, _) =
       with_fixtures [(Z3, config)] (fn () => run_schedule options)
@@ -3458,6 +3459,34 @@ fun test_schedule_without_minimization () =
 
 (* Five slices report the same list, which Metis cannot replay within
    preplay_timeout (1 s).  Replaying it once per slice took 5 s. *)
+(* fixtureTheory.unreconstructable does not exist, so Metis cannot replay
+   the list; without it the list proves ADD1. *)
+fun test_schedule_drop_one () =
+  let
+    val name = "hh-schedule-drop-one"
+    val lemmas = ["fixtureTheory.unreconstructable", "arithmeticTheory.ADD1"]
+    val slice = fixture_slice Z3 ["0", "schedule-truth.out"] 1
+    val config = printer_config name [slice] (fn _ => ())
+      (fn _ => (hhProver.SzsTheorem, SOME lemmas))
+    val goal = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
+    fun run preplay_drop_one =
+      #1 (with_fixtures [(Z3, config)] (fn () =>
+        run_schedule_on goal
+          (reconstruction_options
+             {minimize = true, preplay_drop_one = preplay_drop_one}
+             (fixture_options [Z3] 1 1 5 1 false "" NONE))))
+    val plain = run false
+    val retried = run true
+  in
+    expect "an unreplayable list fails without preplay_drop_one"
+      (null (#suggestions plain) andalso
+       #stopped plain = hhSchedule.Exhausted);
+    expect "preplay_drop_one replays the list less a lemma"
+      (case #suggestions retried of
+           [suggestion] => #lemmas suggestion = ["arithmeticTheory.ADD1"]
+         | _ => false)
+  end
+
 fun test_schedule_failed_list_once () =
   let
     val name = "hh-schedule-failed-list-once"
@@ -3734,7 +3763,7 @@ fun test_schedule_filter_rankings parser =
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
        cache_max_entries = 100, debug_dir = NONE,
-       verbose = false}
+       preplay_drop_one = false, verbose = false}
     val knn_path = hhSchedule.problem_path root knn
     val mepo_path = hhSchedule.problem_path root mepo
     fun clean () = List.app (remove_tree o OS.Path.dir)
@@ -3788,7 +3817,7 @@ fun test_schedule_knn_anchor_export () =
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
        cache_max_entries = 100, debug_dir = NONE,
-       verbose = false}
+       preplay_drop_one = false, verbose = false}
     val expected_one = OS.FileSys.tmpName ()
     val expected_two = OS.FileSys.tmpName ()
     val _ = List.app (fn path => OS.FileSys.remove path handle _ => ())
@@ -3847,7 +3876,7 @@ fun test_schedule_mono_cap_export () =
        mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
        minimize_timeout = 1.0, cache = false, cache_dir = "",
        cache_max_entries = 100, debug_dir = NONE,
-       verbose = false}
+       preplay_drop_one = false, verbose = false}
     val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = LENGTH (REVERSE [1; 2n])``)
     val _ = smlRedirect.hidef (hhSchedule.export_problems root options goal
       [("knn", map (fn fact => "listTheory." ^ fact) facts)])
@@ -3937,7 +3966,7 @@ fun test_schedule_export_wiring () =
        minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
        cache = false, cache_dir = "", cache_max_entries = 100,
        debug_dir = NONE,
-       verbose = false}
+       preplay_drop_one = false, verbose = false}
     fun slice type_enc lam_trans : hhProver.slice =
       {prover = Eprover, format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",
@@ -4011,6 +4040,7 @@ fun test_hhSchedule () =
           val _ = test_schedule_reconstruction_failure parser
           val _ = test_schedule_without_minimization ()
           val _ = test_schedule_failed_list_once ()
+          val _ = test_schedule_drop_one ()
           val _ = test_schedule_early_stop parser
           val _ = test_schedule_budget_truncation parser
           val _ = test_schedule_cache parser
@@ -5304,7 +5334,7 @@ fun test_hypothesis_premises () =
        minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
        cache = false, cache_dir = "", cache_max_entries = 100,
        debug_dir = NONE,
-       verbose = false}
+       preplay_drop_one = false, verbose = false}
     fun slice type_enc lam_trans : hhProver.slice =
       {prover = Eprover, format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",
