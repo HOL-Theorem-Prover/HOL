@@ -1455,10 +1455,12 @@ resulting from the declaration of the datatype.
 
 The `Termination` argument may also `suspend` goals (see *Proof
 Suspension and Resumption* in the chapter on tactics).  Then
-`Definition` stores nothing yet: once `Resume` blocks have proved the
-suspended goals, `Finalise` of the definition's name stores its
-equations and induction theorem.  Such a definition's attributes are
-given on `Definition`; its `Finalise` takes none.
+`Definition` introduces the function's constant but does not yet store
+its equations and induction theorem: once `Resume` blocks have proved
+the suspended goals, `Finalise` of the definition's name stores them
+and applies the definition's attributes, which are given on
+`Definition`; its `Finalise` takes none.  Until then the theory cannot
+be exported.
 
 Part of the process of the automatic termination proof involves
 the use of “termination simplification” theorems.  These encode

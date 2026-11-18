@@ -594,6 +594,15 @@ val _ = prepare_qDefine "held_def"
 val _ = assert (rejects (fn () =>
   markerLib.finalise_suspended_thm DB.Unknown "held_def"))
 val _ = assert (rejects_with "held_def" export_theory)
+fun failing_attribute _ = raise mk_HOL_ERR "selftest" "staged_fail" "failed"
+val _ = ThmAttribute.register_attribute
+          ("staged_fail", {localf = failing_attribute,
+                           storedf = failing_attribute})
+val _ = assert (rejects (fn () => ignore (qDefine "attrfail_def[staged_fail]"
+  ‘attrfail n = if n = 0 then 0n else attrfail (n - 1) + 1’
+  (SOME count_goal))))
+val _ = assert (stored "attrfail_def" andalso
+                rejects_with "attrfail_def" export_theory)
 val _ = OK ()
 
 val _ = tprint "a discarded or restarted theory leaves nothing pending"

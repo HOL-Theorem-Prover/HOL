@@ -928,27 +928,31 @@ end
 (* cannot be exported.                                                       *)
 (*---------------------------------------------------------------------------*)
 
-(* Settings a definition is made under: the suffixes, and the flags its
+(* Settings a definition is made under: the suffixes and flags its
    attributes set *)
-type scope = {def_suffix : string, ind_suffix : string,
+type scope = {def_suffix : string option, ind_suffix : string option,
               bflags : (HOLFlags.bflag * bool) list}
 
 fun in_scope ({def_suffix, ind_suffix, bflags} : scope) f =
-    (if null bflags then I else HOLFlags.with_bflags bflags)
-      (with_flag (Defn.def_suffix, def_suffix)
-         (with_flag (Defn.ind_suffix, ind_suffix) f))
+    let fun set r = case r of (_, NONE) => I
+                            | (r, SOME v) => with_flag (r, v)
+    in
+      (if null bflags then I else HOLFlags.with_bflags bflags)
+        (set (Defn.def_suffix, def_suffix)
+           (set (Defn.ind_suffix, ind_suffix) f))
+    end
 
-fun current_scope () : scope =
-    {def_suffix = !Defn.def_suffix, ind_suffix = !Defn.ind_suffix,
-     bflags = []}
+val no_scope : scope = {def_suffix = NONE, ind_suffix = NONE, bflags = []}
 
 (* The settings in force, which a definition completed later is stored
    under *)
 fun saved_scope () : scope =
-    {def_suffix = !Defn.def_suffix, ind_suffix = !Defn.ind_suffix,
+    {def_suffix = SOME (!Defn.def_suffix),
+     ind_suffix = SOME (!Defn.ind_suffix),
      bflags = map (fn f => (f, HOLFlags.get_bflag f))
                   [computeLib.auto_import_definitions, allow_schema_definition,
-                   Theory.allow_rebinds, delete_support_defs]}
+                   Theory.allow_rebinds, delete_support_defs,
+                   Defn.storage_message]}
 
 type pending = {loc : DB.thm_src_location, goal : goal,
                 validate : thm -> thm, store : thm -> thm * thm option,
@@ -1089,11 +1093,12 @@ fun complete release name ({loc, goal = (asl, _), finish, ...} : pending) th =
     end
 
 (* Proves the termination goal with tac and, unless suspended, stores the
-   definition in the same scope, so settings the tactic changes apply *)
+   definition in the same scope, so settings the tactic changes apply.
+   Then, outside the scope, post runs and the definition stops pending. *)
 fun define_with_tactic loc stem q tac scope post =
   let fun make () =
         case prepare loc stem q post of
-            Made r => (r, true)
+            Made r => (r, SOME NONE)
           | Goal {bind, name, goal} =>
             let
               val (p, th) =
@@ -1103,20 +1108,20 @@ fun define_with_tactic loc stem q tac scope post =
                   handle e => (set_pending bind NONE; raise e)
             in
               if boolLib.has_suspended_subgoals th then
-                (complete true bind p th, false)
-              else (#store p th before set_pending bind NONE, true)
+                (complete true bind p th, NONE)
+              else (#store p th, SOME (SOME bind))
             end
-      fun thunk () =
-          case in_scope scope make () of
-              (r, true) => (post r; r)
-            | (r, false) => r
+      val (r, stored) =
+          Parse.try_grammar_extension (in_scope scope make) ()
+          handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
   in
-    Parse.try_grammar_extension thunk ()
-    handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
+    case stored of
+        NONE => r
+      | SOME bind => (post r; Option.app (fn b => set_pending b NONE) bind; r)
   end
 
 fun located_tDefine loc stem q tac =
-    define_with_tactic loc stem q tac (current_scope ()) ignore
+    define_with_tactic loc stem q tac no_scope ignore
 
 val tDefine = located_tDefine DB.Unknown
 
@@ -1170,8 +1175,8 @@ fun definition_options stem =
                      String.concatWith ", " (map #1 unknown))
       fun set (b, fl) = if b then [fl] else []
       val scope =
-          {def_suffix = "",
-           ind_suffix = case indopt of NONE => "" | SOME s => " " ^ s,
+          {def_suffix = SOME "",
+           ind_suffix = SOME (case indopt of NONE => "" | SOME s => " " ^ s),
            bflags = set (nocomp, (computeLib.auto_import_definitions, false)) @
                     set (svarsok, (allow_schema_definition, true)) @
                     set (rebindok, (Theory.allow_rebinds, true))}
