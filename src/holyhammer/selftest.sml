@@ -1850,8 +1850,9 @@ val _ = test_hhProblemGen_mono_extensionality ()
    order differently once the counter gains a digit (99 > 100), and under
    a binding mono_instances cap that order can pick different instances.
    So the bytes are a function of the counter state: the same export is
-   reproducible whenever its counter window stays within one digit length,
-   and always draws the same number of names. *)
+   reproducible whenever its counter window stays within one digit length
+   (also when two windows differ in digit length), and always draws the
+   same number of names. *)
 fun test_hhProblemGen_counter_window () =
   let
     open boolSyntax
@@ -1879,30 +1880,33 @@ fun test_hhProblemGen_counter_window () =
     fun counter () =
       valOf (Int.fromString (String.extract (Type.dest_vartype
         (Type.gen_tyvar ()), size "%%gen_tyvar%%", NONE)))
-    fun digits n = size (Int.toString n)
-    (* Advance so that the next [window] names share one digit length. *)
-    fun align window =
+    (* Draw names until the next one drawn is numbered [target]. *)
+    fun advance_to target =
       let
-        val now = counter () + 1
-        val limit = Real.round (Math.pow (10.0, Real.fromInt (digits now)))
         fun advance n =
           if n <= 0 then () else (Type.gen_tyvar (); advance (n - 1))
-      in
-        if now + window < limit then () else advance (limit + 10 - now)
-      end
-    fun export () =
+      in advance (target - (counter () + 1)) end
+    (* Least power of ten above [n]. *)
+    fun power_above n =
+      let fun up p = if p > n then p else up (10 * p) in up 10 end
+    val power = power_above (counter () + 2000)
+    fun export start =
       let
         val file = OS.FileSys.tmpName ()
-        val _ = align 1000
+        fun finish () = OS.FileSys.remove file handle _ => ()
+        val _ = advance_to start
         val first = counter ()
-        val _ = hhProblemGen.export_pb options file (goal, premises)
-        val used = counter () - first - 1
-        val text = String.concat (read_lines file)
+        val used_text =
+          (hhProblemGen.export_pb options file (goal, premises);
+           (counter () - first - 1, String.concat (read_lines file)))
+          handle e => (finish (); raise e)
       in
-        OS.FileSys.remove file; (text, used)
+        finish (); used_text
       end
-    val (text1, used1) = export ()
-    val (text2, used2) = export ()
+    (* The first window ends below the next power of ten; the second
+       starts just above it, so its names have one more digit. *)
+    val (used1, text1) = export (power - 1500)
+    val (used2, text2) = export (power + 10)
   in
     expect "hhProblemGen counter window: same bytes and name count"
       (text1 = text2 andalso used1 = used2 andalso used1 > 0)
