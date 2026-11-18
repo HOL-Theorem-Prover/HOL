@@ -27,7 +27,7 @@ type slice =
    extra_opts : string list, slice_size : int}
 
 type run_request =
-  {timeout : int, format : string, problem : string, extra : string list,
+  {timeout : int, problem : string, extra : string list,
    debug_dir : string option}
 
 type run_result =
@@ -49,7 +49,7 @@ type prover_config =
    mk_command : string -> run_request -> string * string list,
    parse_output : string list -> szs * string list option,
    mono_instances : int,
-   slices : unit -> slice list,
+   slices : slice list,
    legacy : bool}
 
 val trim = hhConfig.trim
@@ -139,7 +139,9 @@ fun unescape_axiom raw =
     hhTptpProblem.fact_of_name name
   end
 
-fun comma_at_top s =
+(* Scans s from start for the first character outside quotes at which
+   stop (character, parenthesis depth) holds; depth starts at depth0. *)
+fun scan_unquoted stop s start depth0 =
   let
     fun loop i depth quoted =
       if i = String.size s then NONE
@@ -152,65 +154,57 @@ fun comma_at_top s =
               else loop (i + 1) depth false
             else loop (i + 1) depth true
           else if c = #"'" then loop (i + 1) depth true
+          else if stop (c, depth) then SOME i
           else if c = #"(" then loop (i + 1) (depth + 1) false
           else if c = #")" then loop (i + 1) (depth - 1) false
-          else if c = #"," andalso depth = 0 then SOME i
           else loop (i + 1) depth false
         end
   in
-    loop 0 0 false
+    loop start depth0 false
   end
 
+fun comma_at_top s =
+  scan_unquoted (fn (c, depth) => c = #"," andalso depth = 0) s 0 0
+
 fun closing_paren s start =
+  scan_unquoted (fn (c, depth) => c = #")" andalso depth = 1) s start 1
+
+(* The index of the first occurrence of marker in text at or after i. *)
+fun index_from marker text i =
   let
-    fun loop i depth quoted =
-      if i = String.size s then NONE
-      else
-        let val c = String.sub (s, i) in
-          if quoted then
-            if c = #"'" then
-              if i + 1 < String.size s andalso String.sub (s, i + 1) = #"'"
-              then loop (i + 2) depth true
-              else loop (i + 1) depth false
-            else loop (i + 1) depth true
-          else if c = #"'" then loop (i + 1) depth true
-          else if c = #"(" then loop (i + 1) (depth + 1) false
-          else if c = #")" then
-            if depth = 1 then SOME i else loop (i + 1) (depth - 1) false
-          else loop (i + 1) depth false
-        end
+    val (_, rest) =
+      Substring.position marker (Substring.extract (text, i, NONE))
   in
-    loop start 1 false
+    if Substring.isEmpty rest then NONE else SOME (#2 (Substring.base rest))
   end
 
 fun file_names line =
   let
     val marker = "file("
-    val marker_size = String.size marker
     fun find i names =
-      if i + marker_size > String.size line then List.rev names
-      else if String.substring (line, i, marker_size) = marker then
-        let
-          val start = i + marker_size
-        in
-          case closing_paren line start of
-              NONE => List.rev names
-            | SOME finish =>
-              let
-                val args = String.substring (line, start, finish - start)
-                val name =
-                  case comma_at_top args of
-                      NONE => NONE
-                    | SOME comma =>
-                      unescape_axiom
-                        (String.extract (args, comma + 1, NONE))
-                val names' =
-                  case name of NONE => names | SOME item => item :: names
-              in
-                find (finish + 1) names'
-              end
-        end
-      else find (i + 1) names
+      case index_from marker line i of
+          NONE => List.rev names
+        | SOME found =>
+          let
+            val start = found + String.size marker
+          in
+            case closing_paren line start of
+                NONE => List.rev names
+              | SOME finish =>
+                let
+                  val args = String.substring (line, start, finish - start)
+                  val name =
+                    case comma_at_top args of
+                        NONE => NONE
+                      | SOME comma =>
+                        unescape_axiom
+                          (String.extract (args, comma + 1, NONE))
+                  val names' =
+                    case name of NONE => names | SOME item => item :: names
+                in
+                  find (finish + 1) names'
+                end
+          end
   in
     find 0 []
   end
@@ -293,44 +287,29 @@ fun parse_z3 lines =
   end
 
 fun version_after marker text =
-  let
-    val n = String.size marker
-    fun find i =
-      if i + n > String.size text then NONE
-      else if String.substring (text, i, n) = marker then
-        let val version = first_word (String.extract (text, i + n, NONE)) in
+  case index_from marker text 0 of
+      NONE => NONE
+    | SOME i =>
+        let
+          val version =
+            first_word (String.extract (text, i + String.size marker, NONE))
+        in
           if version = "" then NONE else SOME version
         end
-      else find (i + 1)
-  in
-    find 0
-  end
 
 fun e_version output = version_after "E " output
 fun vampire_version output = version_after "Vampire " output
 fun zipperposition_version output = version_after "zipperposition " output
 
 fun version_between left right text =
-  let
-    val left_size = String.size left
-    fun seek index =
-      if index + left_size > String.size text then NONE
-      else if String.substring (text, index, left_size) = left then
-        let
-          val start = index + left_size
-          fun finish cursor =
-            if cursor = String.size text then NONE
-            else if String.isPrefix right
-              (String.extract (text, cursor, NONE)) then
-              SOME (String.substring (text, start, cursor - start))
-            else finish (cursor + 1)
-        in
-          finish start
+  case index_from left text 0 of
+      NONE => NONE
+    | SOME index =>
+        let val start = index + String.size left in
+          Option.map
+            (fn finish => String.substring (text, start, finish - start))
+            (index_from right text start)
         end
-      else seek (index + 1)
-  in
-    seek 0
-  end
 
 fun z3_version output =
   case version_after "Z3 version " output of
@@ -395,7 +374,7 @@ val portfolio =
    mk_slice Eprover ("tx0-", "mono_native_fool", "lifting") "mash" 128,
    mk_slice Vampire legacy_fof "mash" 256]
 
-fun portfolio_slices prover () =
+fun portfolio_slices prover =
   List.filter (fn slice => #prover slice = prover) portfolio
 
 (* Pinned E 3.2.5-ho, Vampire 5.0.1, and Zipperposition 2.1 smoke
@@ -465,7 +444,7 @@ val z3_config : prover_config =
    tested_versions = ["4.11.2"], supported_formats = ["fof"],
    mk_command = z3_command,
    parse_output = parse_z3, mono_instances = 100,
-   slices = fn () => [], legacy = true}
+   slices = [], legacy = true}
 
 fun builtin_config Eprover = e_config
   | builtin_config Vampire = vampire_config
@@ -698,39 +677,32 @@ fun warn_untested name path version =
 fun probe (config : prover_config) =
   let
     val name = #name config
+    fun unprobed path = SOME {path = path, version = NONE, tested = false}
     fun discover () =
       case find_exec config of
           NONE => NONE
         | SOME path =>
             let
-              val result =
-                (let
-                   val {output, killed, ...} =
-                     read_process path (#version_args config) 7.0
-                   val version =
-                     if killed then NONE else (#parse_version config output)
-                   val tested =
-                     case version of
-                         NONE => false
-                       | SOME value => List.exists
-                           (fn prefix => String.isPrefix prefix value)
-                           (#tested_versions config)
-                   val _ =
-                     case version of
-                         SOME value =>
-                           if tested then ()
-                           else warn_untested name path value
-                       | NONE => warn_untested name path "unknown"
-                 in
-                   SOME {path = path, version = version, tested = tested}
-                 end
-                 handle OS.SysErr _ =>
-                   SOME {path = path, version = NONE, tested = false}
-                      | IO.Io _ =>
-                   SOME {path = path, version = NONE, tested = false})
+              val {output, killed, ...} =
+                read_process path (#version_args config) 7.0
+              val version =
+                if killed then NONE else (#parse_version config output)
+              val tested =
+                case version of
+                    NONE => false
+                  | SOME value => List.exists
+                      (fn prefix => String.isPrefix prefix value)
+                      (#tested_versions config)
+              val _ =
+                case version of
+                    SOME value =>
+                      if tested then () else warn_untested name path value
+                  | NONE => warn_untested name path "unknown"
             in
-              result
+              SOME {path = path, version = version, tested = tested}
             end
+            handle OS.SysErr _ => unprobed path
+                 | IO.Io _ => unprobed path
   in
     case List.find (fn (other, _) => other = name) (!probes) of
         SOME (_, result) => result
@@ -784,6 +756,7 @@ fun run_async (config : prover_config) request =
     fun failure version message =
       {szs = RunFailure message, used_axioms = NONE,
        time = elapsed started, version = version, output_file = ""}
+    fun could_not_execute version = failure version "could not execute prover"
   in
     case probe config of
         NONE => completed (failure NONE (missing_prover (#name config)))
@@ -831,11 +804,9 @@ fun run_async (config : prover_config) request =
                     | NONE =>
                         let
                           val result =
-                            (collect ()
-                             handle OS.SysErr _ =>
-                               failure version "could not execute prover"
-                                  | IO.Io _ =>
-                               failure version "could not execute prover")
+                            collect ()
+                            handle OS.SysErr _ => could_not_execute version
+                                 | IO.Io _ => could_not_execute version
                           val _ = saved := SOME result
                         in
                           result
@@ -843,10 +814,8 @@ fun run_async (config : prover_config) request =
             in
               {kill = #kill process, wait = wait}
            end)
-           handle OS.SysErr _ =>
-             completed (failure version "could not execute prover")
-                | IO.Io _ =>
-             completed (failure version "could not execute prover"))
+           handle OS.SysErr _ => completed (could_not_execute version)
+                | IO.Io _ => completed (could_not_execute version))
   end
 
 fun run config request = #wait (run_async config request) ()

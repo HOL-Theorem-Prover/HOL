@@ -63,8 +63,6 @@ val default_fudge : fudge =
    special_fact_index = 45,
    hopeless_iter = 5}
 
-val default_relevance_fudge = default_fudge
-
 val pseudo_abs_name = "%abs"
 fun pseudo_theory_name thy = "%thy%" ^ thy
 

@@ -32,7 +32,6 @@ sig
      hopeless_iter : int}
 
   val default_fudge : fudge
-  val default_relevance_fudge : fudge
   val pseudo_abs_name : string
   val pseudo_theory_name : string -> string
 

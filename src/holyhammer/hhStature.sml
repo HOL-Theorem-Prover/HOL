@@ -5,7 +5,6 @@ open HolKernel boolSyntax aiLib
 
 type stature =
   {simp : bool, local_ : bool, def : bool, induction : bool}
-type name_set = (string, unit) Redblackmap.dict
 type induction_concls = (goal, unit) Redblackmap.dict
 type statures = (string, stature) Redblackmap.dict
 

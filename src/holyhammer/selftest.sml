@@ -1484,7 +1484,7 @@ val _ = test_hhProblemGen_mono_extensionality ()
 val prover = hhProver.config_of
 
 val sample_request : hhProver.run_request =
-  {timeout = 7, format = "fof", problem = "problem.p", extra = ["--extra"],
+  {timeout = 7, problem = "problem.p", extra = ["--extra"],
    debug_dir = NONE}
 
 fun test_recording file parser expected_szs expected_axioms =
@@ -1688,10 +1688,10 @@ fun test_hhSlice () =
        expected_filter Vampire "fof" "" "" "mash" 256]
     val phase2_golden = phase1 @ phase2
     val expected_default = phase2_golden @ ensemble
-    val e_slices = map slice_summary (#slices (prover Eprover) ())
-    val vampire_slices = map slice_summary (#slices (prover Vampire) ())
+    val e_slices = map slice_summary (#slices (prover Eprover))
+    val vampire_slices = map slice_summary (#slices (prover Vampire))
     val zipperposition_slices =
-      map slice_summary (#slices (prover Zipperposition) ())
+      map slice_summary (#slices (prover Zipperposition))
     val _ = expect_equal "E slice table"
       [List.nth (phase1, 1), List.nth (phase1, 4),
        List.nth (phase2, 1), List.nth (phase2, 3),
@@ -1709,7 +1709,7 @@ fun test_hhSlice () =
        List.nth (phase2, 2), List.nth (phase2, 7),
        List.nth (ensemble, 2)] zipperposition_slices
     val _ = expect "Z3 stays callable without scheduler slices"
-      (List.all (null o (fn config => #slices config ()))
+      (List.all (null o (fn config => #slices config))
        (map prover [Z3]))
     val _ = expect_equal "rotation truncates to requested slice count"
       [Vampire, Eprover, Zipperposition, Vampire, Eprover]
@@ -1759,10 +1759,10 @@ fun test_hhSlice () =
     fun anchor_command_equal (config, slice) =
       let
         val baseline : hhProver.run_request =
-          {timeout = 30, format = "fof", problem = "anchor.p", extra = [],
+          {timeout = 30, problem = "anchor.p", extra = [],
            debug_dir = NONE}
         val scheduled : hhProver.run_request =
-          {timeout = 30, format = #format slice, problem = "anchor.p",
+          {timeout = 30, problem = "anchor.p",
            extra = #extra_opts slice, debug_dir = NONE}
       in
         #mk_command config "anchor-prover" baseline =
@@ -1879,7 +1879,7 @@ fun test_hhSlice () =
          tested_versions = [], supported_formats = ["fof"],
          mk_command = fn executable => fn _ => (executable, []),
          parse_output = fn _ => (hhProver.SzsUnknown "selftest", NONE),
-         mono_instances = 100, slices = fn () => [slice], legacy = true}
+         mono_instances = 100, slices = [slice], legacy = true}
       end
     fun rejects_filter filter =
       hhProver.with_override Z3 (filter_test_config filter) (fn () =>
@@ -1956,8 +1956,8 @@ fun test_hhCache () =
     val stored : hhProver.run_result =
       {szs = hhProver.SzsTheorem, used_axioms = SOME ["a", "b"],
        time = 1.25, version = SOME "3.2.5", output_file = "ignored.out"}
-    val _ = hhCache.store options first stored
-    val round_trip = hhCache.lookup options relocated
+    val _ = hhCache.store options (hhCache.key_of first) stored
+    val round_trip = hhCache.lookup options (hhCache.key_of relocated)
     val _ = expect "cache store and relocated lookup round-trip"
       (case round_trip of
            SOME result =>
@@ -1968,13 +1968,14 @@ fun test_hhCache () =
              #output_file result = ""
          | NONE => false)
     val _ = expect "a longer timeout is a cache miss"
-      (not (Option.isSome (hhCache.lookup options longer)))
+      (not (Option.isSome
+        (hhCache.lookup options (hhCache.key_of longer))))
     val timeout_result : hhProver.run_result =
       {szs = hhProver.SzsTimeout, used_axioms = NONE, time = 10.0,
        version = SOME "3.2.5", output_file = "timeout.out"}
-    val _ = hhCache.store options longer timeout_result
+    val _ = hhCache.store options (hhCache.key_of longer) timeout_result
     val _ = expect "timeout results are cached"
-      (case hhCache.lookup options longer of
+      (case hhCache.lookup options (hhCache.key_of longer) of
            SOME result => #szs result = hhProver.SzsTimeout
          | NONE => false)
     val corrupt : hhCache.key_parts =
@@ -1983,14 +1984,16 @@ fun test_hhCache () =
     val corrupt_path = join cache (hhCache.key_of corrupt)
     val _ = write_file corrupt_path "this is not JSON"
     val _ = expect "corrupt cache entries are misses"
-      (not (Option.isSome (hhCache.lookup options corrupt)))
+      (not (Option.isSome
+        (hhCache.lookup options (hhCache.key_of corrupt))))
     val _ = expect "corrupt cache entries are deleted"
       (not (OS.FileSys.access (corrupt_path, [])))
       handle OS.SysErr _ => OK ()
     val disabled : hhCache.key_parts =
       {prover = "e", version = NONE, argv = ["--disabled", problem1],
        problem = problem1}
-    val _ = hhCache.store (cache_options cache 100 false) disabled stored
+    val _ = hhCache.store (cache_options cache 100 false)
+      (hhCache.key_of disabled) stored
     val _ = expect "disabled cache does not store entries"
       (not (OS.FileSys.access (join cache (hhCache.key_of disabled), [])))
       handle OS.SysErr _ => OK ()
@@ -2000,7 +2003,8 @@ fun test_hhCache () =
        problem = problem1}
     val lru_parts_list = List.tabulate (6, lru_parts)
     val lru_options = cache_options lru_cache 5 true
-    val _ = List.app (fn parts => hhCache.store lru_options parts stored)
+    val _ = List.app
+      (fn parts => hhCache.store lru_options (hhCache.key_of parts) stored)
       lru_parts_list
     fun path_of parts = join lru_cache (hhCache.key_of parts)
     fun set_times ([], _) = ()
@@ -2012,7 +2016,7 @@ fun test_hhCache () =
     val _ = set_times (lru_parts_list, 10)
     val oldest = hd lru_parts_list
     val before_touch = OS.FileSys.modTime (path_of oldest)
-    val _ = ignore (hhCache.lookup lru_options oldest)
+    val _ = ignore (hhCache.lookup lru_options (hhCache.key_of oldest))
     val after_touch = OS.FileSys.modTime (path_of oldest)
     val _ = expect "cache lookup refreshes the LRU mtime"
       (Time.compare (after_touch, before_touch) = GREATER)
@@ -2071,7 +2075,7 @@ fun fake_config name exec_name args parser : hhProver.prover_config =
    tested_versions = ["test"], supported_formats = ["fof"],
    mk_command = fn executable => fn _ => (executable, args),
    parse_output = parser, mono_instances = 100,
-   slices = fn () => [],
+   slices = [],
    legacy = false}
 
 fun wait_until deadline predicate =
@@ -2104,7 +2108,7 @@ fun test_runner_load parser =
     val config = fake_config "runner-load" "/bin/echo"
       ["% SZS status Theorem"] parser
     val request : hhProver.run_request =
-      {timeout = 2, format = "fof", problem = "unused", extra = [],
+      {timeout = 2, problem = "unused", extra = [],
        debug_dir = NONE}
     val _ = ignore (hhProver.probe config)
     val _ = hhProver.reset_spawn_count ()
@@ -2160,7 +2164,7 @@ fun test_runner () =
     val debug_dir = OS.FileSys.tmpName ()
     val _ = remove_tree debug_dir
     val good_request : hhProver.run_request =
-      {timeout = 1, format = "fof", problem = "unused", extra = [],
+      {timeout = 1, problem = "unused", extra = [],
        debug_dir = SOME debug_dir}
     val good_result = hhProver.run good good_request
     val _ = expect "runner parses stdout"
@@ -2171,7 +2175,7 @@ fun test_runner () =
     val timeout = fake_config "runner-timeout" "/bin/sleep" ["30"]
       (#parse_output e)
     val timeout_request : hhProver.run_request =
-      {timeout = 0, format = "fof", problem = "unused", extra = [],
+      {timeout = 0, problem = "unused", extra = [],
        debug_dir = NONE}
     val timeout_result = hhProver.run timeout timeout_request
     val _ = expect "runner watchdog timeout"
@@ -2180,7 +2184,7 @@ fun test_runner () =
     val killed = fake_config "runner-killed" "/bin/sleep" ["30"]
       (#parse_output e)
     val kill_request : hhProver.run_request =
-      {timeout = 30, format = "fof", problem = "unused", extra = [],
+      {timeout = 30, problem = "unused", extra = [],
        debug_dir = NONE}
     val running_sleep = hhProver.run_async killed kill_request
     val _ = #kill running_sleep ()
@@ -2199,7 +2203,7 @@ fun test_runner () =
     val printer_dir = OS.FileSys.tmpName ()
     val _ = remove_tree printer_dir
     val printer_request : hhProver.run_request =
-      {timeout = 2, format = "fof", problem = "unused", extra = [],
+      {timeout = 2, problem = "unused", extra = [],
        debug_dir = SOME printer_dir}
     val printer_result = hhProver.run printer printer_request
     val printed = String.concat (read_lines (#output_file printer_result))
@@ -2215,7 +2219,7 @@ fun test_runner () =
     val forking_dir = OS.FileSys.tmpName ()
     val _ = remove_tree forking_dir
     val forking_request : hhProver.run_request =
-      {timeout = 30, format = "fof", problem = "unused", extra = [],
+      {timeout = 30, problem = "unused", extra = [],
        debug_dir = SOME forking_dir}
     val running_fork = hhProver.run_async forking forking_request
     val _ = OS.Process.sleep (Time.fromMilliseconds 200)
@@ -2235,7 +2239,7 @@ fun test_runner () =
        mk_command = fn _ => fn _ =>
          ("/definitely/missing/holyhammer-prover", []),
        parse_output = #parse_output e,
-       mono_instances = 100, slices = fn () => [], legacy = false}
+       mono_instances = 100, slices = [], legacy = false}
     val exec_result = hhProver.run exec_failure timeout_request
     val _ = expect "runner exec failure returns RunFailure"
       (case #szs exec_result of hhProver.RunFailure _ => true | _ => false)
@@ -2245,7 +2249,7 @@ fun test_runner () =
        tested_versions = [], supported_formats = ["fof"],
        mk_command = fn executable => fn _ => (executable, []),
        parse_output = #parse_output e,
-       mono_instances = 100, slices = fn () => [], legacy = false}
+       mono_instances = 100, slices = [], legacy = false}
     val missing_result = hhProver.run missing timeout_request
     val _ = expect "missing prover names downloader"
       (case #szs missing_result of
@@ -2273,7 +2277,7 @@ fun test_installed_prover problem config =
     | SOME _ =>
         let
           val request : hhProver.run_request =
-            {timeout = 5, format = "fof", problem = problem, extra = [],
+            {timeout = 5, problem = problem, extra = [],
              debug_dir = NONE}
           val result = hhProver.run config request
         in
@@ -3219,7 +3223,7 @@ fun printer_config name slices note parser : hhProver.prover_config =
    mk_command = fn executable => fn request =>
      (note request; (executable, #extra request)),
    parse_output = parser, mono_instances = 100,
-   slices = fn () => slices, legacy = false}
+   slices = slices, legacy = false}
 
 fun sleeper_config prover name parser : hhProver.prover_config =
   let val slice = fixture_slice prover [] 1 in
@@ -3228,7 +3232,7 @@ fun sleeper_config prover name parser : hhProver.prover_config =
      tested_versions = ["test"], supported_formats = ["fof"],
      mk_command = fn executable => fn _ => (executable, []),
      parse_output = parser, mono_instances = 100,
-     slices = fn () => [slice], legacy = false}
+     slices = [slice], legacy = false}
   end
 
 fun fixture_options provers slices cores timeout max_proofs cache cache_dir

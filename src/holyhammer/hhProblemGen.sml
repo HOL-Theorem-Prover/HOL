@@ -626,7 +626,7 @@ struct
     end
 
   fun guard_name ty = aiLib.escape ("gd." ^ mangle_type ty)
-  fun guard_atom encoding ty tm =
+  fun guard_atom ty tm =
     hhTptpProblem.Atom (hhTptpProblem.Tm ((guard_name ty, []), [tm]))
 
   fun guarded_type
@@ -642,7 +642,7 @@ struct
      guarded quantifier and gsy result to its HOL carrier; wit witnesses make
      each such carrier inhabited.  Thus each family extends a HOL model and
      cannot prove a non-theorem merely by confusing types. *)
-  fun encode_formula format encoding needs formula =
+  fun encode_formula encoding needs formula =
     let
       fun encode (FOQuant (all, vars, body)) =
             List.foldr (fn (var, result) =>
@@ -653,10 +653,10 @@ struct
                 val result' =
                   if guarded_type encoding needs ty then
                     if all then hhTptpProblem.Conn (hhTptpProblem.Implies,
-                      [guard_atom encoding ty
+                      [guard_atom ty
                         (hhTptpProblem.Tm ((var_name, []), [])), result])
                     else hhTptpProblem.Conn (hhTptpProblem.And,
-                      [guard_atom encoding ty
+                      [guard_atom ty
                         (hhTptpProblem.Tm ((var_name, []), [])), result])
                   else result
               in
@@ -798,7 +798,7 @@ struct
             ((encoded_symbol encoding head, []),
              map (fn (name, _) =>
                hhTptpProblem.Tm ((name, []), [])) variables)
-          val body = guard_atom encoding result application
+          val body = guard_atom result application
           val formula = if null variables then body else hhTptpProblem.Quant
             (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
         in
@@ -814,7 +814,7 @@ struct
       val term = hhTptpProblem.Tm ((witness, []), [])
     in
       hhTptpProblem.FormLine (aiLib.escape ("wit." ^ mangle_type ty),
-        hhTptpProblem.Axiom, guard_atom encoding ty term)
+        hhTptpProblem.Axiom, guard_atom ty term)
     end
 
   fun is_helper_name name = String.isPrefix "help." name
@@ -838,7 +838,7 @@ struct
       fun line (name, formula, copies) =
         (hhTptpProblem.FormLine
            (ident name copies, hhTptpProblem.Axiom,
-            encode_formula format encoding needs formula),
+            encode_formula encoding needs formula),
          if is_lambda_name name then copies else add name copies)
       fun loop [] _ result = List.rev result
         | loop (item :: rest) copies result =
@@ -1166,7 +1166,7 @@ struct
                   val suffix = if n = 1 then "" else "." ^ Int.toString n
                   val line = hhTptpProblem.FormLine
                     (aiLib.escape (name ^ suffix), hhTptpProblem.Axiom,
-                     encode_formula format encoding needs formula)
+                     encode_formula encoding needs formula)
                 in
                   loop rest ((name, n) :: seen) (line :: result)
                 end
@@ -1175,7 +1175,7 @@ struct
         end
       val conjecture' = hhTptpProblem.FormLine ("conjecture",
         hhTptpProblem.Conjecture,
-        encode_formula format encoding needs conjecture)
+        encode_formula encoding needs conjecture)
     in
       [("Declarations", decls @ gsy @ witnesses),
        ("Helpers", helper_lines helpers @ direct_helpers),

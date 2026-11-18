@@ -104,7 +104,7 @@ fun mk_schedule (options : hhConfig.hh_options) =
     val tables =
       map (fn prover =>
         let val config = hhProver.config_of prover
-        in (prover, config, #slices config ()) end) requested
+        in (prover, config, #slices config) end) requested
     val order = schedule_of_provers requested (#slices options)
 
     fun consume _ [] = NONE

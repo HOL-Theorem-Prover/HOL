@@ -19,7 +19,7 @@ sig
      extra_opts : string list, slice_size : int}
 
   type run_request =
-    {timeout : int, format : string, problem : string, extra : string list,
+    {timeout : int, problem : string, extra : string list,
      debug_dir : string option}
 
   type run_result =
@@ -43,7 +43,7 @@ sig
      mk_command : string -> run_request -> string * string list,
      parse_output : string list -> szs * string list option,
      mono_instances : int,
-     slices : unit -> slice list,
+     slices : slice list,
      legacy : bool}
 
   val same_slice : slice -> slice -> bool

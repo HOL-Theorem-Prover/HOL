@@ -85,11 +85,6 @@ fun bound_name lemma =
   end
   handle Interrupt => raise Interrupt | _ => lemma
 
-fun prettify_stac stac =
-  (smlPrettify.smart_space o smlPrettify.elim_infix o
-   smlPrettify.elim_struct o smlPrettify.elim_par o
-   smlPrettify.elim_dbfetch o smlLexer.partial_sml_lexer) stac
-
 (* As in Sledgehammer's minimiser, an attempt may take at most twice the
    time of the last successful replay, plus some slack; minimize_timeout
    caps it.  A failing attempt, the common case for a needed fact,
@@ -183,7 +178,8 @@ fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
                   minimize_deadline g replayed full
                 val raw = mk_metis_call kept
                 val pretty =
-                  prettify_stac (mk_metis_call (map bound_name kept))
+                  psMinimize.unsafe_prettify_stac
+                    (mk_metis_call (map bound_name kept))
               in
                 (* The short names are resolved in the current namespace,
                    so the printed form is verified on its own. *)

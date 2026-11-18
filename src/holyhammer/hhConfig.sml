@@ -124,54 +124,28 @@ fun state_dir () =
   end
 
 fun trim_left s =
-  let
-    fun loop i =
-      if i < String.size s andalso Char.isSpace (String.sub (s, i)) then
-        loop (i + 1)
-      else i
-    val i = loop 0
-  in
-    String.extract (s, i, NONE)
-  end
+  Substring.string (Substring.dropl Char.isSpace (Substring.full s))
 
-fun trim_right s =
-  let
-    fun loop i =
-      if i > 0 andalso Char.isSpace (String.sub (s, i - 1)) then
-        loop (i - 1)
-      else i
-    val i = loop (String.size s)
-  in
-    String.substring (s, 0, i)
-  end
-
-fun trim s = trim_right (trim_left s)
+fun trim s =
+  Substring.string (Substring.dropr Char.isSpace
+    (Substring.dropl Char.isSpace (Substring.full s)))
 
 fun before_comment s =
-  let
-    fun find i =
-      if i = String.size s then i
-      else if String.sub (s, i) = #"#" then i else find (i + 1)
-    val i = find 0
-  in
-    String.substring (s, 0, i)
-  end
+  Substring.string (#1 (Substring.splitl (fn c => c <> #"#")
+    (Substring.full s)))
 
 fun split_assignment s =
   let
-    fun find i =
-      if i = String.size s then NONE
-      else if String.sub (s, i) = #"=" then SOME i else find (i + 1)
+    val (key, rest) = Substring.splitl (fn c => c <> #"=") (Substring.full s)
   in
-    case find 0 of
-        NONE => NONE
-      | SOME i =>
-        let
-          val key = trim (String.substring (s, 0, i))
-          val value = trim (String.extract (s, i + 1, NONE))
-        in
-          if key = "" then NONE else SOME (key, value)
-        end
+    if Substring.isEmpty rest then NONE
+    else
+      let
+        val key = trim (Substring.string key)
+        val value = trim (Substring.string (Substring.triml 1 rest))
+      in
+        if key = "" then NONE else SOME (key, value)
+      end
   end
 
 fun read_config path =
@@ -424,21 +398,7 @@ fun get_int key =
       NONE => NONE
     | SOME value => Int.fromString (trim value)
 
-fun get_bool key =
-  let
-    val lower = String.map Char.toLower
-  in
-    case Option.map lower (get key) of
-        SOME "true" => SOME true
-      | SOME "yes" => SOME true
-      | SOME "on" => SOME true
-      | SOME "1" => SOME true
-      | SOME "false" => SOME false
-      | SOME "no" => SOME false
-      | SOME "off" => SOME false
-      | SOME "0" => SOME false
-      | _ => NONE
-  end
+fun get_bool key = Option.mapPartial bool_value (get key)
 
 fun get_path key =
   case get key of
@@ -631,12 +591,8 @@ fun platform () =
       if machine = "x86_64" orelse machine = "amd64" then "x86_64"
       else if machine = "aarch64" orelse machine = "arm64" then "arm64"
       else machine
-    val os =
-      if system = "linux" then "linux"
-      else if system = "darwin" then "darwin"
-      else system
   in
-    arch ^ "-" ^ os
+    arch ^ "-" ^ system
   end
 
 fun path_exec names =

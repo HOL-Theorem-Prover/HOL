@@ -97,8 +97,6 @@ fun document_frequency ({dffreq, ...} : idf_table) feature =
 fun idf_of ({weights, ...} : idf_table) feature =
   Redblackmap.peek (weights, feature)
 
-fun idf_entries ({weights, ...} : idf_table) = dlist weights
-
 (* Ranking can expand the fetchable subset, but training needs the original
    proof's completeness and size before any missing dependencies are removed. *)
 type dep_info =
@@ -276,9 +274,6 @@ fun create_dep_table (_, facts) =
 fun dependencies_of (table : dep_table) thmid =
   Option.map #fetchable (Redblackmap.peek (table, thmid))
 
-fun dependency_entries (table : dep_table) =
-  map (fn (name, info) => (name, #fetchable info)) (dlist table)
-
 fun pure_logic_concl conclusion =
   let
     fun pure_constant constant =
@@ -436,8 +431,6 @@ fun train_nb_from_thmdata constants idf dependencies statures (_, facts) =
     train_nb constants idf dependencies (map fact_info facts)
   end
 
-fun nb_thmids ({names, ...} : nb_model) = Vector.foldr op:: [] names
-
 fun model_index ({indices, ...} : nb_model) thmid =
   Redblackmap.peek (indices, thmid)
 
@@ -453,9 +446,6 @@ fun nb_sfreq (model as {sfreq, ...} : nb_model) thmid feature =
           (Vector.find (fn entry => #feature entry = feature)
              (Vector.sub (sfreq, index)))
     | NONE => NONE
-
-fun nb_knows_feature ({idf, ...} : nb_model) feature =
-  Option.isSome (idf_of idf feature)
 
 (* The goal's known features in increasing order, with summed weights
    and their IDF. *)

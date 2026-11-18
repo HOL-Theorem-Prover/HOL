@@ -152,9 +152,7 @@ struct
       infinite [] ty
     end
 
-  fun member_type ty tys = List.exists (fn other => other = ty) tys
-
-  fun insert_type ty tys = if member_type ty tys then tys else tys @ [ty]
+  fun insert_type ty tys = if mem ty tys then tys else tys @ [ty]
 
   fun is_fequal_head tm =
     let

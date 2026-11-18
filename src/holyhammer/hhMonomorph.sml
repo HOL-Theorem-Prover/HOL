@@ -26,8 +26,6 @@ struct
 
   val sort = Listsort.sort
 
-  fun mem_type ty = List.exists (fn other => other = ty)
-
   fun insert_type ty [] = [ty]
     | insert_type ty (old :: rest) =
         case Type.compare (ty, old) of
@@ -63,7 +61,7 @@ struct
       walk tm []
     end
 
-  fun tvar_is_bound tvars ty = mem_type ty tvars
+  fun tvar_is_bound tvars ty = mem ty tvars
 
   fun groundable tvars schematics =
     let
@@ -84,7 +82,7 @@ struct
      unrenamed premise could never be instantiated there. *)
   fun rename_apart rigid theorem =
     let
-      val clashing = List.filter (fn ty => mem_type ty rigid)
+      val clashing = List.filter (fn ty => mem ty rigid)
         (Term.type_vars_in_term theorem)
     in
       if null clashing then theorem
@@ -136,7 +134,7 @@ struct
     else table
 
   fun is_ground rigid ty =
-    List.all (fn tvar => mem_type tvar rigid) (Type.type_vars ty)
+    List.all (fn tvar => mem tvar rigid) (Type.type_vars ty)
 
   fun add_grounds rigid tm table =
     let
@@ -208,7 +206,7 @@ struct
       List.concat (map (try_one false) (lookup name known))
     end
 
-  fun substitutions nickname tvars schematics known new require_new limit =
+  fun substitutions tvars schematics known new require_new limit =
     let
       val visited = ref 0
       fun same_subst left right = subst_compare (left, right) = EQUAL
@@ -246,7 +244,7 @@ struct
             end)
       fun covers_all ty =
         let val vars = Type.type_vars ty in
-          List.all (fn tvar => mem_type tvar vars) tvars
+          List.all (fn tvar => mem tvar vars) tvars
         end
       fun direct all_schematics (name, ty) initial =
         let
@@ -291,7 +289,7 @@ struct
 
   fun process_fact rigid round known new remaining fact next_new =
     case fact of
-        Schematic {nickname, theorem, tvars, schematics, initial_round,
+        Schematic {theorem, tvars, schematics, initial_round,
                    instances, ...} =>
           if round < initial_round orelse !remaining <= 0 orelse
              length schematics > max_schematic_occurrences then next_new
@@ -309,7 +307,7 @@ struct
                  filtered below.  Instantiate only the bounded prefix that
                  can therefore contribute to this fact. *)
               val substs = if room <= 0 then [] else
-                substitutions nickname tvars schematics old fresh require_new
+                substitutions tvars schematics old fresh require_new
                   (room + length (!instances))
               val candidates = map (fn subst =>
                 (round, subst, Term.inst subst theorem))

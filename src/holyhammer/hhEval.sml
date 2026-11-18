@@ -1596,7 +1596,7 @@ fun prover_cell_entry expdir thy (name, thm) pool condition prover =
     val _ = hhExportFof.fof_export_pb directory
       (list_mk_imp goal, named_premises)
     val result = hhProver.run (hhProver.config_of prover)
-      {timeout = #timeout condition, format = "fof",
+      {timeout = #timeout condition,
        problem = join directory "atp_in", extra = [],
        debug_dir = SOME (join expdir "out")}
     val (recon_ok, recon_method, t_recon, stac_or_error) =
@@ -1969,7 +1969,7 @@ fun run_format_smoke expdir timeout options (config, slice) =
           (hhSchedule.export_problems root options goal
              [(#filter slice, premises)] [(config, slice)];
            hhProver.run config
-             {timeout = timeout, format = #format slice,
+             {timeout = timeout,
               problem = hhSchedule.problem_path root slice,
               extra = #extra_opts slice, debug_dir = #debug_dir options}))
     val (recon_ok, _, _, recon_detail) = reconstruct condition result goal
@@ -2057,7 +2057,7 @@ fun soundness_case options timeout goal (config, slice) =
           (hhSchedule.export_problems root options ([], goal)
              [(#filter slice, [])] [(config, slice)];
            hhProver.run config
-             {timeout = query_timeout, format = #format slice,
+             {timeout = query_timeout,
               problem = hhSchedule.problem_path root slice,
               extra = #extra_opts slice, debug_dir = #debug_dir options}))
   in

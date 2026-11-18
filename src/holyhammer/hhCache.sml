@@ -69,8 +69,8 @@ fun result_of_json value : hhProver.run_result =
    version = optional JSONUtil.asString (field "version" value),
    output_file = ""}
 
-fun cache_path (options : hhConfig.hh_options) parts =
-  join (#cache_dir options) (key_of parts)
+fun cache_path (options : hhConfig.hh_options) key =
+  join (#cache_dir options) key
 
 fun remove path = OS.FileSys.remove path handle OS.SysErr _ => ()
 
@@ -103,11 +103,11 @@ fun write_result path result =
     handle exn => (remove temporary; raise exn)
   end
 
-fun lookup (options : hhConfig.hh_options) parts =
+fun lookup (options : hhConfig.hh_options) key =
   if not (#cache options) then NONE
   else
     (let
-       val path = cache_path options parts
+       val path = cache_path options key
      in
        if not (OS.FileSys.access (path, [OS.FileSys.A_READ])) then NONE
        else
@@ -123,11 +123,11 @@ fun lookup (options : hhConfig.hh_options) parts =
      handle Interrupt => raise Interrupt
           | _ => NONE)
 
-fun store (options : hhConfig.hh_options) parts result =
+fun store (options : hhConfig.hh_options) key result =
   if not (#cache options) then ()
   else
     ((hhConfig.ensure_dir (#cache_dir options);
-      write_result (cache_path options parts) result)
+      write_result (cache_path options key) result)
      handle Interrupt => raise Interrupt
           | _ => ())
 

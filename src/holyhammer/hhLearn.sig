@@ -36,7 +36,6 @@ sig
   val idf_nfacts : idf_table -> int
   val document_frequency : idf_table -> int -> int option
   val idf_of : idf_table -> int -> real option
-  val idf_entries : idf_table -> (int * real) list
 
   type dep_table
   (* Explicit dependency lists are assumed complete. *)
@@ -50,8 +49,6 @@ sig
      and the original dependency count for NB training. *)
   val dependencies_of : dep_table -> mlThmData.thmid ->
     mlThmData.thmid list option
-  val dependency_entries : dep_table ->
-    (mlThmData.thmid * mlThmData.thmid list) list
 
   val pure_logic_concl : Term.term -> bool
 
@@ -74,10 +71,8 @@ sig
   val train_nb_from_thmdata :
     constants -> idf_table -> dep_table -> hhStature.statures ->
     mlThmData.thmdata -> nb_model
-  val nb_thmids : nb_model -> mlThmData.thmid list
   val nb_tfreq : nb_model -> mlThmData.thmid -> int option
   val nb_sfreq : nb_model -> mlThmData.thmid -> int -> int option
-  val nb_knows_feature : nb_model -> int -> bool
 
   (* Goal-feature weights multiply the positive and absent-feature terms.
      Features unknown to the model are discarded before scoring. *)

@@ -109,12 +109,8 @@ fun with_problem_dir parent (options : hhConfig.hh_options) f =
   case #debug_dir options of
       SOME directory => f (new_problem_dir (join directory "problems"))
     | NONE =>
-        let
-          val root = new_problem_dir parent
-          fun cleanup () = hhConfig.remove_tree root
-          val result = f root handle error => (cleanup (); raise error)
-        in
-          cleanup (); result
+        let val root = new_problem_dir parent in
+          Portable.finally (fn () => hhConfig.remove_tree root) f root
         end
 
 fun problem_dir root (slice : hhProver.slice) =
@@ -122,20 +118,19 @@ fun problem_dir root (slice : hhProver.slice) =
 
 fun problem_path root slice = join (problem_dir root slice) "atp_in"
 
-fun same_problem_key (left : hhProver.slice) (right : hhProver.slice) =
-  #prover left = #prover right andalso #filter left = #filter right andalso
-  #format left = #format right andalso
-  #type_enc left = #type_enc right andalso
-  #lam_trans left = #lam_trans right andalso #nfacts left = #nfacts right
-
-fun distinct_problem_slices slices =
+(* The schedule's entries with distinct problems, each with its config.
+   Slices with the same problem key share one problem file. *)
+fun distinct_problems schedule =
   let
     fun collect _ [] = []
-      | collect seen (slice :: rest) =
-          if List.exists (same_problem_key slice) seen then collect seen rest
-          else slice :: collect (slice :: seen) rest
+      | collect seen ((entry as (_, slice)) :: rest) =
+          let val key = problem_key slice in
+            if List.exists (fn other => other = key) seen
+            then collect seen rest
+            else entry :: collect (key :: seen) rest
+          end
   in
-    collect [] slices
+    collect [] schedule
   end
 
 (* The cap on new monomorphic instances.  The monomorphiser instantiates
@@ -154,7 +149,7 @@ fun mono_instances options config (slice : hhProver.slice) =
    thml_of_namel and the exporters touch HOL process-global state. *)
 fun export_problems root options goal rankings schedule =
   let
-    val slices = distinct_problem_slices (map #2 schedule)
+    val problems = distinct_problems schedule
     val conjecture = list_mk_imp goal
     val memo = hhProblemGen.new_export_memo ()
     val named_memo = ref []
@@ -165,7 +160,7 @@ fun export_problems root options goal rankings schedule =
             ("HolyHammer: missing premise ranking for filter '" ^
              filter ^ "'")
     (* Check every ranking before creating a directory or problem file. *)
-    val _ = List.app (ignore o ranking_for o #filter) slices
+    val _ = List.app (ignore o ranking_for o #filter o #2) problems
     fun named_for filter nfacts =
       let
         val premises = ranking_for filter
@@ -192,14 +187,8 @@ fun export_problems root options goal rankings schedule =
               named
             end
       end
-    fun config_for slice =
-      case List.find
-          (fn (config, other) => same_problem_key slice other) schedule of
-          SOME (config, _) => config
-        | NONE => raise Fail "HolyHammer: missing config for problem slice"
-    fun export slice =
+    fun export (config, slice) =
       let
-        val config = config_for slice
         val directory = problem_dir root slice
         val named = named_for (#filter slice) (#nfacts slice)
         val _ = hhConfig.ensure_dir directory
@@ -215,7 +204,7 @@ fun export_problems root options goal rankings schedule =
                 (problem_path root slice) (conjecture, named)
       end
   in
-    List.app export slices
+    List.app export problems
   end
 
 fun sorted_lemmas lemmas =
@@ -355,16 +344,17 @@ fun run_in root {options, goal, rankings, progress} =
         List.app (fn kill => kill () handle _ => ()) kills
       end
 
-    fun cache_parts config request =
+    fun cache_key config request =
       case hhProver.probe config of
           NONE => NONE
         | SOME {path, version, ...} =>
             let
               val (_, argv) = #mk_command config path request
             in
-              SOME
-                ({prover = #name config, version = version, argv = argv,
-                  problem = #problem request} : hhCache.key_parts)
+              SOME (hhCache.key_of
+                {prover = #name config, version = version, argv = argv,
+                 problem = #problem request})
+              handle Interrupt => raise Interrupt | _ => NONE
             end
 
     fun note_result slice cached result =
@@ -394,13 +384,12 @@ fun run_in root {options, goal, rankings, progress} =
         val wanted = hhSlice.slice_budget schedule_length options slice
         val budget = Real.max (0.001, Real.min (wanted, remaining))
         val request : hhProver.run_request =
-          {timeout = Real.ceil budget, format = #format slice,
+          {timeout = Real.ceil budget,
            problem = problem_path root slice, extra = #extra_opts slice,
            debug_dir = #debug_dir options}
         val _ = emit (SliceStarted slice)
-        val parts = if #cache options then cache_parts config request else NONE
-        val cached =
-          case parts of NONE => NONE | SOME key => hhCache.lookup options key
+        val key = if #cache options then cache_key config request else NONE
+        val cached = Option.mapPartial (hhCache.lookup options) key
         val result =
           case cached of
               SOME value => value
@@ -419,9 +408,8 @@ fun run_in root {options, goal, rankings, progress} =
                                (ignore (unregister_running id); raise error))
                           val cancelled = unregister_running id
                           val _ = if cancelled then () else
-                            case parts of
-                                NONE => ()
-                              | SOME key => hhCache.store options key result
+                            Option.app
+                              (fn key => hhCache.store options key result) key
                         in
                           result
                         end
