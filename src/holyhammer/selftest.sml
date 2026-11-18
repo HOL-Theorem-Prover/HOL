@@ -1311,6 +1311,28 @@ fun test_hhProblemGen () =
           (String.concat (read_lines path)) actual
       end
     val _ = List.app golden_problem golden_specs
+    (* A bound function-valued variable and one polymorphic constant used
+       at two types, against output of the unmemoised encoder. *)
+    val symbol_goal = (``(!H : num -> num. H 0 = 0) /\
+      (([] : num list) = []) /\ (([] : bool list) = [])``, [])
+    fun symbol_golden (name, format, encoding) =
+      let
+        val options =
+          {format = format, type_enc = hhTypeEnc.of_string encoding,
+           lam_trans = hhLamTrans.mode_of_string "lifting", mono_iters = 3,
+           mono_instances = 100}
+        val temporary = OS.FileSys.tmpName ()
+        val _ = export_pb options temporary symbol_goal
+        val actual = String.concat (read_lines temporary)
+        val _ = OS.FileSys.remove temporary
+        val path = join "test-data/problems" name
+      in
+        expect_equal ("hhProblemGen golden " ^ name)
+          (String.concat (read_lines path)) actual
+      end
+    val _ = List.app symbol_golden
+      [("hhproblemgen-tf0-symbols.p", tf0, "mono_native"),
+       ("hhproblemgen-tf1-symbols.p", tf1, "poly_native")]
     (* This is export-linked: the fake proof names are the exact escaped
        identifiers the fixture just emitted, including a mono copy. *)
     val roundtrip_name = "fixtureTheory.roundtrip"

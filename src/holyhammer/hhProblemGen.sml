@@ -615,25 +615,68 @@ struct
           (aiLib.sha1_string (raw_mangle_type (type_of head)), 0, 12)
     | value_symbol encoding head = encoded_symbol encoding head
 
-  fun encode_term encoding (FOHead (head, args)) =
+  fun signature_compare ((f, a, r), (f', a', r')) =
+    case Type.compare (f, f') of
+        EQUAL =>
+          (case Type.compare (a, a') of
+               EQUAL => Type.compare (r, r')
+             | order => order)
+      | order => order
+
+  (* Per-problem memo of the symbols above, shared by declarations, guard
+     axioms and formula encoding.  Entries are computed on demand; a bound
+     variable keeps its direct, uncached path. *)
+  type symbols =
+    {head : term -> string, value : term -> string,
+     app : hol_type * hol_type * hol_type -> string}
+
+  fun memoise compare f =
+    let
+      val table = ref (Redblackmap.mkDict compare)
+    in
+      fn key =>
+        case Redblackmap.peek (!table, key) of
+            SOME result => result
+          | NONE =>
+              let val result = f key in
+                table := Redblackmap.insert (!table, key, result); result
+              end
+    end
+
+  fun symbol_table encoding : symbols =
+    let
+      val head = memoise Term.compare (encoded_symbol encoding)
+      val value = memoise Term.compare (value_symbol encoding)
+    in
+      {head = fn tm => if is_bound_var tm then encoded_symbol encoding tm
+                       else head tm,
+       value = fn tm => if is_bound_var tm then encoded_symbol encoding tm
+                        else value tm,
+       app = memoise signature_compare (app_symbol encoding)}
+    end
+
+  fun encode_term (symbols : symbols) encoding (FOHead (head, args)) =
         hhTptpProblem.Tm (((if raw_symbol head = "$ite" andalso
-          length args = 3 then "$ite" else encoded_symbol encoding head),
+          length args = 3 then "$ite" else #head symbols head),
           (case encoding of
              hhTypeEnc.Native {poly = true, ...} =>
                map native_type (type_args_of_head head)
-           | _ => [])), map (encode_term encoding) args)
-    | encode_term encoding (FOValue head) =
-        hhTptpProblem.Tm ((value_symbol encoding head, []), [])
-    | encode_term encoding (FOApp {left, right, function_type,
-                                    argument_type, result_type}) =
-        hhTptpProblem.Tm ((app_symbol encoding
+           | _ => [])), map (encode_term symbols encoding) args)
+    | encode_term symbols _ (FOValue head) =
+        hhTptpProblem.Tm ((#value symbols head, []), [])
+    | encode_term symbols encoding (FOApp {left, right, function_type,
+                                           argument_type, result_type}) =
+        hhTptpProblem.Tm ((#app symbols
           (function_type, argument_type, result_type), []),
-          [encode_term encoding left, encode_term encoding right])
-    | encode_term encoding (FOPred body) =
-        hhTptpProblem.Tm (("pp_2E", []), [encode_term encoding body])
-    | encode_term encoding (FOAbs (var, body)) =
+          [encode_term symbols encoding left,
+           encode_term symbols encoding right])
+    | encode_term symbols encoding (FOPred body) =
+        hhTptpProblem.Tm (("pp_2E", []),
+          [encode_term symbols encoding body])
+    | encode_term symbols encoding (FOAbs (var, body)) =
         hhTptpProblem.TmAbs ((variable_name (fst (dest_var var)),
-          type_for encoding (type_of var)), encode_term encoding body)
+          type_for encoding (type_of var)),
+          encode_term symbols encoding body)
 
   fun type_vars_of_formula formula =
     let
@@ -679,7 +722,7 @@ struct
      guarded quantifier and gsy result to its HOL carrier; wit witnesses make
      each such carrier inhabited.  Thus each family extends a HOL model and
      cannot prove a non-theorem merely by confusing types. *)
-  fun encode_formula encoding needs formula =
+  fun encode_formula symbols encoding needs formula =
     let
       fun encode (FOQuant (all, vars, body)) =
             List.foldr (fn (var, result) =>
@@ -708,11 +751,11 @@ struct
         | encode (FOAtom (FOHead (head, [left, right]))) =
             if raw_symbol head = "$equal" then
               hhTptpProblem.Conn (hhTptpProblem.Equal,
-                [hhTptpProblem.Atom (encode_term encoding left),
-                 hhTptpProblem.Atom (encode_term encoding right)])
+                [hhTptpProblem.Atom (encode_term symbols encoding left),
+                 hhTptpProblem.Atom (encode_term symbols encoding right)])
             else hhTptpProblem.Atom
-              (encode_term encoding (FOHead (head, [left, right])))
-        | encode (FOAtom tm) = hhTptpProblem.Atom (encode_term encoding tm)
+              (encode_term symbols encoding (FOHead (head, [left, right])))
+        | encode (FOAtom tm) = hhTptpProblem.Atom (encode_term symbols encoding tm)
       val result = encode formula
       val tvars = type_vars_of_formula formula
     in
@@ -820,7 +863,7 @@ struct
                 (map mangle_type distinct))
     end
 
-  fun gsy_line encoding needs head =
+  fun gsy_line (symbols : symbols) encoding needs head =
     let
       val (domains, result) = strip_fun (type_of head)
     in
@@ -832,7 +875,7 @@ struct
                (List.tabulate (length domains, fn index => index)),
              map (type_for encoding) domains)
           val application = hhTptpProblem.Tm
-            ((encoded_symbol encoding head, []),
+            ((#head symbols head, []),
              map (fn (name, _) =>
                hhTptpProblem.Tm ((name, []), [])) variables)
           val body = guard_atom result application
@@ -840,7 +883,7 @@ struct
             (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
         in
           SOME (hhTptpProblem.FormLine
-            (aiLib.escape ("gsy." ^ encoded_symbol encoding head),
+            (aiLib.escape ("gsy." ^ #head symbols head),
              hhTptpProblem.Axiom, formula))
         end
     end
@@ -857,7 +900,7 @@ struct
   fun is_helper_name name = String.isPrefix "help." name
   fun is_lambda_name name = String.isPrefix "lam." name
 
-  fun premise_lines format encoding needs facts =
+  fun premise_lines symbols format encoding needs facts =
     let
       fun ident name copies =
         if is_lambda_name name then aiLib.escape name
@@ -875,7 +918,7 @@ struct
       fun line (name, formula, copies) =
         (hhTptpProblem.FormLine
            (ident name copies, hhTptpProblem.Axiom,
-            encode_formula encoding needs formula),
+            encode_formula symbols encoding needs formula),
          if is_lambda_name name then copies else add name copies)
       fun loop [] _ result = List.rev result
         | loop (item :: rest) copies result =
@@ -1104,13 +1147,7 @@ struct
       ({conjecture, facts, used_app, used_pp} : fo_ir) direct_helpers =
     let
       val all_formulas = conjecture :: map #2 facts
-      fun signature_compare ((f, a, r), (f', a', r')) =
-        case Type.compare (f, f') of
-            EQUAL =>
-              (case Type.compare (a, a') of
-                   EQUAL => Type.compare (r, r')
-                 | order => order)
-          | order => order
+      val symbols = symbol_table encoding
       val app_signatures = aiLib.mk_sameorder_set signature_compare
         (rev (List.foldl app_signatures_formula [] all_formulas))
       val head_arities = List.foldl head_arities_formula
@@ -1132,7 +1169,7 @@ struct
         not (String.isPrefix "$" (raw_symbol head))
       fun unique_symbols [] _ = []
         | unique_symbols (head :: rest) seen =
-            let val symbol = encoded_symbol encoding head in
+            let val symbol = #head symbols head in
               if List.exists (fn old => old = symbol) seen then
                 unique_symbols rest seen
               else head :: unique_symbols rest (symbol :: seen)
@@ -1145,8 +1182,8 @@ struct
         else
           let
             val sym_decls = map (fn head => hhTptpProblem.SymDecl
-              (aiLib.escape ("sy." ^ encoded_symbol encoding head),
-               encoded_symbol encoding head,
+              (aiLib.escape ("sy." ^ #head symbols head),
+               #head symbols head,
                declaration_type encoding (head_arity head) head))
               declaration_heads
             val app_decls =
@@ -1154,7 +1191,7 @@ struct
                   hhTypeEnc.Native {poly = false, ...} =>
                     map (fn app_signature as (function_type, argument_type,
                                               result_type) =>
-                      let val symbol = app_symbol encoding app_signature in
+                      let val symbol = #app symbols app_signature in
                         hhTptpProblem.SymDecl
                           (aiLib.escape ("sy." ^ symbol), symbol,
                            hhTptpProblem.TyFun
@@ -1176,8 +1213,8 @@ struct
               case encoding of
                   hhTypeEnc.Native {poly = false, ...} =>
                     map (fn head => hhTptpProblem.SymDecl
-                      (aiLib.escape ("sy." ^ value_symbol encoding head),
-                       value_symbol encoding head,
+                      (aiLib.escape ("sy." ^ #value symbols head),
+                       #value symbols head,
                        type_for encoding (type_of head))) value_heads
                 | _ => []
             val pp_decls = if used_pp then [hhTptpProblem.SymDecl
@@ -1189,7 +1226,7 @@ struct
             type_declarations encoding all_types @ sym_decls @ app_decls @
             value_decls @ pp_decls
           end
-      val gsy = List.mapPartial (gsy_line encoding needs) declaration_heads
+      val gsy = List.mapPartial (gsy_line symbols encoding needs) declaration_heads
       val guard_types =
         List.filter (guarded_type encoding needs) (distinct_types all_types)
       val witnesses = map (witness_line encoding) guard_types
@@ -1206,7 +1243,7 @@ struct
                   val suffix = if n = 1 then "" else "." ^ Int.toString n
                   val line = hhTptpProblem.FormLine
                     (aiLib.escape (name ^ suffix), hhTptpProblem.Axiom,
-                     encode_formula encoding needs formula)
+                     encode_formula symbols encoding needs formula)
                 in
                   loop rest ((name, n) :: seen) (line :: result)
                 end
@@ -1215,11 +1252,11 @@ struct
         end
       val conjecture' = hhTptpProblem.FormLine ("conjecture",
         hhTptpProblem.Conjecture,
-        encode_formula encoding needs conjecture)
+        encode_formula symbols encoding needs conjecture)
     in
       [("Declarations", decls @ gsy @ witnesses),
        ("Helpers", helper_lines helpers @ direct_helpers),
-       ("Facts", premise_lines format encoding needs ordinary),
+       ("Facts", premise_lines symbols format encoding needs ordinary),
        ("Conjecture", [conjecture'])]
     end
 
