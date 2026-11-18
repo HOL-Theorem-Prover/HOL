@@ -1061,15 +1061,16 @@ fun checked fname name th =
 (* Completes the pending definition name from th, a validated proof of its
    goal.  If th has suspended goals, the definition is suspended under
    name, and finalising it (markerLib.finalise_suspended_thm) completes
-   it. *)
-fun complete name ({loc, goal = (asl, _), finish, ...} : pending) th =
+   it.  If release, a failure before anything is stored releases name. *)
+fun complete release name ({loc, goal = (asl, _), finish, ...} : pending) th =
     let
       fun finalise th' = (check_proof "Finalise" name asl (concl th) th';
                           #1 (finish th'))
     in
       if boolLib.has_suspended_subgoals th then
         (boolLib.save_thm_attrs loc
-           ({thmname = name, attrs = [], reserved = [], unknown = []}, th);
+           ({thmname = name, attrs = [], reserved = [], unknown = []}, th)
+         handle e => (if release then set_pending name NONE else (); raise e);
          set_pending0 name NONE;
          markerLib.set_finaliser name (SOME finalise);
          (list_conj_gen (CONJUNCT1 th), NONE))
@@ -1090,7 +1091,7 @@ fun define_with_tactic loc stem q tac scope post =
                        {name = name, goal = goal, tac = tac})
                   handle e => (set_pending bind NONE; raise e)
             in
-              complete bind p th
+              complete true bind p th
             end
   in
     Parse.try_grammar_extension thunk ()
@@ -1103,7 +1104,8 @@ fun located_tDefine loc stem q tac =
 val tDefine = located_tDefine DB.Unknown
 
 fun complete_definition name th =
-    #1 (Lib.uncurry (complete name) (checked "complete_definition" name th))
+    #1 (Lib.uncurry (complete false name)
+          (checked "complete_definition" name th))
 
 (* ----------------------------------------------------------------------
     version of Define that allows control of options with "attributes"

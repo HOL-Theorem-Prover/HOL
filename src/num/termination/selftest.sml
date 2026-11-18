@@ -361,6 +361,19 @@ val _ = assert (rejects_with "does not prove" (fn () => ignore
     ‘rejected n = if n = 0 then 0n else rejected (n - 1) + 1’)
     (SOME assume_goal))))
 val _ = assert (no_pending "rejected_def" andalso not (stored "rejected_def"))
+val _ = Q.store_thm ("cited_thm", ‘p ==> p’,
+                     DISCH_TAC THEN markerLib.suspend "cited")
+fun cite_suspended g =
+  let val cited = #2 (valOf (markerLib.lookup_suspension "cited_thm"))
+  in
+    (Q.EXISTS_TAC ‘$<’ THEN ASSUME_TAC cited THEN markerLib.suspend "tc") g
+  end
+val _ = assert (rejects (fn () => ignore
+  (in_repl_mode (qDefine "citing_def"
+    ‘citing n = if n = 0 then 0n else citing (n - 1) + 1’)
+    (SOME cite_suspended))))
+val _ = assert (no_pending "citing_def" andalso
+                not (Option.isSome (markerLib.lookup_suspension "citing_def")))
 val _ = OK ()
 
 val _ = tprint "prepare_qDefine keeps support constants until completion"
