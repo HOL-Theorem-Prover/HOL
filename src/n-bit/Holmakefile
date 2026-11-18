@@ -6,7 +6,16 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo wordsLib.uo wordsSyntax.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe n-bit-selftest.log
+# threads: Poly/ML only
+ifdef POLY
+all: threaded_selftest.exe
+
+threaded_selftest.exe: threaded_selftest.uo blastLib.uo
+	$(HOLMOSMLC) -o $@ $<
+endif
+
+EXTRA_CLEANS = selftest.exe n-bit-selftest.log threaded_selftest.exe \
+               n-bit-threaded-selftest.log
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
@@ -39,4 +48,11 @@ all: n-bit-selftest.log
 
 n-bit-selftest.log: selftest.exe
 	$(tee ./selftest.exe,$@)
+
+ifdef POLY
+all: n-bit-threaded-selftest.log
+
+n-bit-threaded-selftest.log: threaded_selftest.exe
+	$(tee ./threaded_selftest.exe,$@)
+endif
 endif
