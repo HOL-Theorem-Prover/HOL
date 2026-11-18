@@ -1845,6 +1845,71 @@ fun test_hhProblemGen_mono_extensionality () =
 
 val _ = test_hhProblemGen_mono_extensionality ()
 
+(* Generated problems draw schematic and combinator type variables from
+   the global Type.gen_tyvar counter.  Their names, compared as strings,
+   order differently once the counter gains a digit (99 > 100), and under
+   a binding mono_instances cap that order can pick different instances.
+   So the bytes are a function of the counter state: the same export is
+   reproducible whenever its counter window stays within one digit length,
+   and always draws the same number of names. *)
+fun test_hhProblemGen_counter_window () =
+  let
+    open boolSyntax
+    val alpha = Type.alpha
+    val beta = Type.beta
+    val num = Type.mk_type ("num", [])
+    fun list_ty ty = Type.mk_type ("list", [ty])
+    fun map_at from to = Term.inst
+      (Type.match_type (Term.type_of listSyntax.map_tm)
+         (Type.--> (Type.--> (from, to), Type.--> (list_ty from, list_ty to))))
+      listSyntax.map_tm
+    fun map_eq from to =
+      let
+        val f = Term.mk_var ("f", Type.--> (from, to))
+        val l = Term.mk_var ("l", list_ty from)
+        val tm = Term.list_mk_comb (map_at from to, [f, l])
+      in mk_eq (tm, tm) end
+    val goal = list_mk_conj (map (fn (from, to) => map_eq from to)
+      [(num, Type.bool), (Type.bool, num), (num, num), (alpha, num),
+       (num, alpha), (alpha, beta)])
+    val premises = [("MAP_APPEND", DB.fetch "list" "MAP_APPEND")]
+    val options = {format = hhTypeEnc.format_of_string "tf0",
+      type_enc = hhTypeEnc.of_string "mono_native",
+      lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = 3}
+    fun counter () =
+      valOf (Int.fromString (String.extract (Type.dest_vartype
+        (Type.gen_tyvar ()), size "%%gen_tyvar%%", NONE)))
+    fun digits n = size (Int.toString n)
+    (* Advance so that the next [window] names share one digit length. *)
+    fun align window =
+      let
+        val now = counter () + 1
+        val limit = Real.round (Math.pow (10.0, Real.fromInt (digits now)))
+        fun advance n =
+          if n <= 0 then () else (Type.gen_tyvar (); advance (n - 1))
+      in
+        if now + window < limit then () else advance (limit + 10 - now)
+      end
+    fun export () =
+      let
+        val file = OS.FileSys.tmpName ()
+        val _ = align 1000
+        val first = counter ()
+        val _ = hhProblemGen.export_pb options file (goal, premises)
+        val used = counter () - first - 1
+        val text = String.concat (read_lines file)
+      in
+        OS.FileSys.remove file; (text, used)
+      end
+    val (text1, used1) = export ()
+    val (text2, used2) = export ()
+  in
+    expect "hhProblemGen counter window: same bytes and name count"
+      (text1 = text2 andalso used1 = used2 andalso used1 > 0)
+  end
+
+val _ = test_hhProblemGen_counter_window ()
+
 val prover = hhProver.config_of
 
 val sample_request : hhProver.run_request =
