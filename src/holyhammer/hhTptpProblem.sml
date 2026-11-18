@@ -101,8 +101,9 @@ struct
             ")" :: join_into " * " (str false) ("(" :: acc) tys
         | str _ acc (TyCon (name, tys)) =
             if is_higher format then
-              ")" :: join_into " @ " (str false) ("(" :: acc)
-                (TyVar name :: tys)
+              ")" ::
+              List.foldl (fn (ty, acc) => str false (" @ " :: acc) ty)
+                (name :: "(" :: acc) tys
             else
               ")" :: join_into "," (str false) ("(" :: name :: acc) tys
         | str rhs acc (TyFun (left, right)) =
@@ -169,20 +170,25 @@ struct
           else
             let
               val higher = is_higher format
+              val sep = if higher then " @ " else ","
+              fun separate first acc =
+                if first andalso not higher then acc else sep :: acc
               fun ty_into acc ty =
                 if higher then ")" :: type_into format ("(" :: acc) ty
                 else type_into format acc ty
-              val args =
-                map (fn ty => fn acc => ty_into acc ty) tys @
-                map (fn tm => fn acc => term_into format acc tm) terms
+              fun tys_into first acc [] = (first, acc)
+                | tys_into first acc (ty :: rest) =
+                    tys_into false (ty_into (separate first acc) ty) rest
+              fun tms_into first acc [] = acc
+                | tms_into first acc (tm :: rest) =
+                    tms_into false (term_into format (separate first acc) tm)
+                      rest
+              val (first, acc) =
+                tys_into true
+                  (if higher then name :: "(" :: acc
+                   else "(" :: name :: acc) tys
             in
-              ")" ::
-              (if higher then
-                 List.foldl (fn (emit, acc) => emit (" @ " :: acc))
-                   (name :: "(" :: acc) args
-               else
-                 join_into "," (fn acc => fn emit => emit acc)
-                   ("(" :: name :: acc) args)
+              ")" :: tms_into first acc terms
             end
         end
     | term_into (format as THF _) acc (TmAbs ((name, ty), body)) =
@@ -231,10 +237,6 @@ struct
             ("(" :: acc) bodies
     | formula_into format acc (Atom term) = term_into format acc term
 
-  fun string_of_fragments into x = String.concat (rev (into [] x))
-
-  fun string_of_type format ty = string_of_fragments (type_into format) ty
-
   fun nary_type 0 = TyCon ("$tType", [])
     | nary_type n = TyFun (TyCon ("$tType", []), nary_type (n - 1))
 
@@ -263,10 +265,12 @@ struct
       (")\n" :: Int.toString (length lines) :: " (" :: heading :: "% " :: acc)
       lines
 
+  fun string_of_fragments acc = String.concat (rev acc)
+
   fun string_of_problem format header sections =
-    String.concat (rev
+    string_of_fragments
       (List.foldl (fn (section, acc) => section_into format acc section)
-         ["\n", header, "% "] sections))
+         ["\n", header, "% "] sections)
 
   fun fact_name 1 fact = "thm." ^ fact
     | fact_name copy fact = "thm" ^ Int.toString copy ^ "." ^ fact
