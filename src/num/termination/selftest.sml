@@ -541,8 +541,9 @@ val _ = assert (rejects_with "finalised in their own theory: expsusp_def"
 val _ = save_thm ("occ_steps", TRUTH)
 val occ_goal = valOf (prepare_qDefine "occ_def[induction=occ_steps]"
   ‘occ n = if n = 0 then 0n else occ (n - 1) + 1’)
-val _ = assert (rejects (fn () =>
-  complete_definition "occ_def" (TAC_PROOF (occ_goal, count_goal))))
+val _ = assert ((complete_definition "occ_def"
+                   (TAC_PROOF (occ_goal, count_goal)); false)
+                handle _ => true)
 val _ = assert (rejects_with "not proved: occ_def" export_theory)
 val _ = OK ()
 
