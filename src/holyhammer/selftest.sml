@@ -1153,6 +1153,20 @@ fun test_hhProblemGen () =
     val _ = expect "hhProblemGen switches to Min_App_Op at forty-five facts"
       (occurrences "app_2E(pxy_2Ef" forty_four = 44 andalso
        occurrences "app_2E(pxy_2Ef" forty_five = 45)
+    (* The COND helpers are added after the main facts, so with 42 user
+       facts they push the total over the Min_App_Op threshold. *)
+    fun pxy_facts count = List.tabulate (count, fn index =>
+      ("f" ^ Int.toString index,
+       Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x))))
+    val cond_conjecture = mk_conj (full_formula, mk_eq (cond_tm, x))
+    val without_helpers = problem tf1 "poly_native"
+      {conjecture = full_formula, facts = pxy_facts 42}
+    val crossing_helpers = problem tf1 "poly_native"
+      {conjecture = cond_conjecture, facts = pxy_facts 42}
+    val _ = expect "hhProblemGen recomputes arities when helpers cross 45"
+      (occurrences "app_2E(pxy_2Ef" without_helpers <
+       occurrences "app_2E(pxy_2Ef" crossing_helpers andalso
+       occurrences "app_2E(pxy_2Ef" crossing_helpers = 42)
     val _ = expect "hhProblemGen inserts pp for non-FOOL boolean terms"
       (String.isSubstring "pp_2E(app_2E" bool_term andalso
        not (String.isSubstring "pp_2E(app_2E" fool_bool_term))

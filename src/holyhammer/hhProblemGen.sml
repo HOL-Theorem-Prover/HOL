@@ -222,9 +222,10 @@ struct
               else use_proxy name
     end
 
-  fun introduce_proxies format ({conjecture, facts} : formula_ir) =
+  (* The proxy transformation of one formula.  [seen] collects the proxy
+     names in first-seen order across every formula transformed with it. *)
+  fun proxy_formula format seen =
     let
-      val seen = ref []
       val transform = transform_term format seen
       (* An equation in formula position is TPTP equality.  Only equations
          below other symbols need the pxy.eq proxy. *)
@@ -239,9 +240,17 @@ struct
         | formula (HConn (conn, bodies)) = HConn (conn, map formula bodies)
         | formula (HAtom tm) = HAtom (atom tm)
     in
-      {conjecture = formula conjecture,
-       facts = map (fn (name, body) => (name, formula body)) facts,
-       proxies = !seen}
+      formula
+    end
+
+  fun introduce_proxies format ({conjecture, facts} : formula_ir) =
+    let
+      val seen = ref []
+      val formula = proxy_formula format seen
+      val conjecture' = formula conjecture
+      val facts' = map (fn (name, body) => (name, formula body)) facts
+    in
+      {conjecture = conjecture', facts = facts', proxies = !seen}
     end
 
   fun translate_front {format, type_enc, lam_trans, mono_iters,
@@ -346,7 +355,7 @@ struct
   fun arity_for head arities =
     case Redblackmap.peek (arities, head) of SOME arity => arity | NONE => 0
 
-  fun firstorderize format encoding ({conjecture, facts, ...} : proxy_ir) =
+  fun firstorderize format encoding ({conjecture, facts} : formula_ir) =
     if is_full_ho format then
       let
         fun term in_position tm =
@@ -1274,8 +1283,17 @@ struct
       val caps = {max_iters = mono_iters, max_new_instances = mono_instances}
       val main_terms = if main_is_mono then lambda_terms
                        else pass_monomorph type_enc caps lambda_terms
-      fun firstorder terms = firstorderize format type_enc
-        (introduce_proxies format (formula_skeleton terms))
+      (* firstorderize reads only the conjecture and facts, so the proxy
+         names are not collected.  The main problem is transformed once;
+         helper lists are transformed alone and appended to it. *)
+      val proxied = proxy_formula format (ref [])
+      fun proxy_facts facts = map (fn (name, tm) =>
+        (name, proxied (skeleton tm))) facts
+      val main_conjecture = proxied (skeleton (#conjecture main_terms))
+      val main_facts = proxy_facts (#facts main_terms)
+      fun firstorder helpers = firstorderize format type_enc
+        {conjecture = main_conjecture,
+         facts = main_facts @ proxy_facts helpers}
       fun heads_of ({conjecture, facts, ...} : fo_ir) =
         distinct_heads (rev (heads_of_fo_formula (conjecture,
           List.foldl (fn ((_, formula), heads) =>
@@ -1330,11 +1348,11 @@ struct
       fun combined helpers =
         {conjecture = #conjecture main_terms,
          facts = #facts main_terms @ helpers}
-      val main_fo = firstorder main_terms
+      val main_fo = firstorder []
       val initial = hol_helpers format lam_trans (#used_app main_fo)
         (heads_of main_fo)
       val preliminary_helpers = translate_helpers initial
-      val preliminary_fo = firstorder (combined preliminary_helpers)
+      val preliminary_fo = firstorder preliminary_helpers
       val proxy_source = proxy_helpers (heads_of preliminary_fo)
       val with_proxies = initial @ proxy_source
       (* EQ_EXT's only constant is equality, and app is introduced only
@@ -1364,7 +1382,7 @@ struct
               | instances => instances
           end
       val helper_terms = translate_helpers with_proxies @ extensionality
-      val final_fo = firstorder (combined helper_terms)
+      val final_fo = firstorder helper_terms
       val needs = needs_of type_enc (combined helper_terms)
     in
       generated_problem format type_enc needs final_fo
