@@ -5583,7 +5583,8 @@ fun test_schedule_pool () =
            fifth, the Vampire one with four facts, is the last prepared. *)
         val observer : hhSchedule.export_observer =
           {generated = fn slice =>
-             if #prover slice = Vampire andalso #nfacts slice = 4 then monitor_do prepared (fn () => last_prepared := true)
+             if #prover slice = Vampire andalso #nfacts slice = 4 then
+               monitor_do prepared (fn () => last_prepared := true)
              else (),
            copied = fn _ => ()}
         val result = ref NONE
