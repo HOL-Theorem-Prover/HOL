@@ -174,12 +174,17 @@ in
 end
 
 local
-   val e_tys = ref (Redblackset.empty Type.compare)
-   val cmp = ref (reduceLib.num_compset
-                  |> computeLib.add_conv (bitSyntax.bit_tm, 2, BIT_LIT_CONV)
-                  |> (fn c => computeLib.set_skip c bitSyntax.bit_tm (SOME 1))
-                  |> computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM])
-   fun cnv tm = computeLib.CBV_CONV (!cmp) tm
+   (* The types whose index theorems are in the compset, and the compset
+      itself, change together under a lock: a thread that finds a type
+      recorded is then sure the compset already has its theorems. *)
+   val state =
+      Portable.syncref
+        (Redblackset.empty Type.compare,
+         reduceLib.num_compset
+         |> computeLib.add_conv (bitSyntax.bit_tm, 2, BIT_LIT_CONV)
+         |> (fn c => computeLib.set_skip c bitSyntax.bit_tm (SOME 1))
+         |> computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM])
+   fun cnv cmp tm = computeLib.CBV_CONV cmp tm
 
    val fcp_beta_thm = fcpTheory.FCP_BETA
                       |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
@@ -200,21 +205,36 @@ local
            end
        | NONE => []
 
-   fun is_new tm =
-      case Lib.total wordsSyntax.dim_of tm of
-         SOME ty => not (Redblackset.member (!e_tys, ty)) andalso
-                    (e_tys := Redblackset.add (!e_tys, ty); true)
-       | NONE => false
+   (* the word types in tm that are not yet in tys, and tys extended by them *)
+   fun new_tys tys tm =
+      let
+         fun add (t, (s, acc)) =
+            case Lib.total wordsSyntax.dim_of t of
+               SOME ty => if Redblackset.member (s, ty) then (s, acc)
+                          else (Redblackset.add (s, ty), ty :: acc)
+             | NONE => (s, acc)
+         val (tys', acc) =
+            List.foldl add (tys, []) (HolKernel.find_terms (Lib.K true) tm)
+      in
+         (tys', List.rev acc)
+      end
 
-   val new_index_thms =
-      List.concat o List.map (mk_index_thms o wordsSyntax.dim_of) o
-      HolKernel.find_terms is_new
-
-   fun add_index_thms tm = cmp := computeLib.add_thms (new_index_thms tm) (!cmp)
+   (* returns the compset holding the index theorems for tm's word types *)
+   fun add_index_thms tm =
+      #upd state
+        (fn (tys, cmp) =>
+            let
+               val (tys', new) = new_tys tys tm
+               val cmp' =
+                  computeLib.add_thms
+                    (List.concat (List.map mk_index_thms new)) cmp
+            in
+               (cmp', (tys', cmp'))
+            end)
 in
-   fun ADD_INDEX_CONV tm = (add_index_thms tm; cnv tm)
+   fun ADD_INDEX_CONV tm = cnv (add_index_thms tm) tm
 
-   fun INDEX_CONV tm = Conv.CHANGED_CONV cnv tm
+   fun INDEX_CONV tm = Conv.CHANGED_CONV (cnv (#2 (#get state ()))) tm
                        handle HOL_ERR _ => raise Conv.UNCHANGED
 end
 
