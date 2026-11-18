@@ -1306,13 +1306,16 @@ datatype parent_source =
     FromStore  (* normal suspended theorem *)
   | FromDB     (* fallback: likely --fast, possibly already-finalised *)
 
-(* Returns (source, parent_thy, thm).  A theorem of the current theory,
-   suspended or not, comes before an ancestor's suspended one. *)
+(* Returns (source, parent_thy, thm).  A theorem of the current theory
+   comes before an ancestor's suspended one if it is suspended, or was
+   proved by the fast prover (--fast), which completes it at once. *)
 fun find_parent nm : (parent_source * string * thm) option =
     let
       val cur = Theory.current_theory ()
       fun in_db t =
           Option.map (fn th => (FromDB, t, th)) (Lib.total (DB.fetch t) nm)
+      fun fast (_, _, th) =
+          Lib.mem "fast_proof" (#1 (Tag.dest_tag (Thm.tag th)))
       fun search [] = NONE
         | search (t::rest) =
           case in_db t of NONE => search rest | found => found
@@ -1321,7 +1324,8 @@ fun find_parent nm : (parent_source * string * thm) option =
       case if own then lookup_suspension_qualified (cur, nm)
            else lookup_suspension nm of
           SOME (thy, th) =>
-          (case if thy = cur then NONE else in_db cur of
+          (case if thy = cur then NONE
+                else Option.mapPartial (Option.filter fast) (in_db cur) of
                NONE => SOME (FromStore, thy, th)
              | found => found)
         | NONE => if own then NONE else search (cur :: Theory.ancestry cur)

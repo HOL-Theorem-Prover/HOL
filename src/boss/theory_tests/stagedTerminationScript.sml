@@ -54,3 +54,24 @@ val prepared_def = TotalDefn.complete_definition "prepared_def"
 val _ =
   if ancestor_kept "prepared_def" then ()
   else raise Fail "the ancestor's suspended theorem was taken"
+
+(* A plain theorem of this theory does not hide an ancestor's suspended
+   theorem of the same name from Resume, unless --fast proved it *)
+Theorem shadowed:
+  T
+Proof
+  REWRITE_TAC []
+QED
+
+val _ =
+  case markerLib.lookup_suspension "stagedTerminationAnc.shadowed" of
+      NONE => ()
+    | SOME _ =>
+      if Theory.oracle_string_of shadowed = SOME "FAST-CHEAT" then () else
+      (markerLib.resume {suspension_name = "shadowed", label_name = "sh"}
+         (rpt strip_tac >> metis_tac []) (Context.snapshot ());
+       if null (markerLib.lookup_resumption
+                  {parent_thy = "stagedTerminationAnc",
+                   parent_name = "shadowed", label = "sh"})
+       then raise Fail "Resume missed the ancestor's suspended theorem"
+       else ())

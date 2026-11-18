@@ -368,7 +368,7 @@ fun cite_suspended g =
   in
     (Q.EXISTS_TAC ‘$<’ THEN ASSUME_TAC cited THEN markerLib.suspend "tc") g
   end
-val _ = assert (rejects (fn () => ignore
+val _ = assert (rejects_with "still-suspended" (fn () => ignore
   (in_repl_mode (qDefine "citing_def"
     ‘citing n = if n = 0 then 0n else citing (n - 1) + 1’)
     (SOME cite_suspended))))

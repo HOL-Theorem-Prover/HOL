@@ -1051,8 +1051,8 @@ fun prepare loc stem q post =
               let val def = list_conj_gen (CONJUNCT1 th)
                   val ind = CONJUNCT2 th
               in
-                delete_consts support;
                 store_at loc (stem,def,ind);
+                delete_consts support;
                 (def, SOME ind)
               end
           val saved = saved_scope ()
