@@ -4,10 +4,10 @@ Ancestors
 Libs
   imperativeLib
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 
-val _ = show_types:=true;
-val _ = show_assums:=true;
+val _ = HOLFlags.set_bflag (Parse.show_types, true);
+val _ = HOLFlags.set_bflag (Parse.show_assums, true);
 
 val _ = store_thm
         (

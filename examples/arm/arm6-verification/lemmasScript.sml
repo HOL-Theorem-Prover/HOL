@@ -24,7 +24,7 @@ val arith_ss = arith_ss ++ boolSimps.LET_ss;
 val fcp_ss   = armLib.fcp_ss;
 val SIZES_ss = wordsLib.SIZES_ss;
 
-val tt = set_trace "types";
+val tt = HOLFlags.set_trace "PP.types";
 
 (* ------------------------------------------------------------------------- *)
 

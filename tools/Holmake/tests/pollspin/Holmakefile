@@ -8,10 +8,10 @@ pollspin-selftest.log: selftest.exe chatter.exe
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-# talky/ and both/ run this; see chatter.sml for why it is a program
+# both/ runs this; see chatter.sml for why it is a program
 # rather than a shell loop.
 chatter.exe: chatter.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe chatter.exe pollspin-selftest.log \
-               quiet/hung spinner/hung talky/talky both/hung both/talky
+               spinner/hung both/hung both/talky

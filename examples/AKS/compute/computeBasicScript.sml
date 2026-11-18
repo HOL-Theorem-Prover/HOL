@@ -7,7 +7,7 @@
 Theory computeBasic
 Ancestors
   pred_set list arithmetic logroot divides gcd gcdset number
-  combinatorics prime While
+  combinatorics prime While expMod
 Libs
   jcLib
 
@@ -72,12 +72,6 @@ val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
    exp_compute_eqn     |- !m n. exp_compute m n = m ** n
 
    Modular Exponentiation:
-   exp_mod_binary_def   |- !n m a. exp_mod_binary a n m =
-                                        if m = 0 then a ** n MOD 0
-                                   else if m = 1 then 0
-                                   else if n = 0 then 1
-                                   else (let b = exp_mod_binary ((a * a) MOD m) (HALF n) m
-                                          in if EVEN n then b else (a * b) MOD m)
    exp_mod_binary_0     |- !a m. 0 < m ==> (exp_mod_binary a 0 m = if m = 1 then 0 else 1)
    exp_mod_binary_1     |- !a m. exp_mod_binary a 1 m = a MOD m
    exp_mod_binary_even  |- !m n. 0 < m /\ EVEN n ==>
@@ -85,15 +79,9 @@ val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
    exp_mod_binary_odd   |- !m n. 0 < m /\ ODD n ==>
                            !a. exp_mod_binary a n m = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m
    exp_mod_binary_suc   |- !m n. 0 < m ==> !a. exp_mod_binary a (SUC n) m = (a * exp_mod_binary a n m) MOD m
-   exp_mod_binary_eqn   |- !m n a. exp_mod_binary a n m = a ** n MOD m
    exp_mod_binary_0_n   |- !m n. exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m
 
    Fast Modular Exponentiation:
-   exp_mod_step_def     |- !r n m k. exp_mod_step m n k r = if k = 0 then (r * m ** n) MOD k
-                                     else if n = 0 then r MOD k
-                                     else exp_mod_step (SQ m MOD k) (HALF n) k
-                                                       (if EVEN n then r else (r * m) MOD k)
-   exp_mod_compute_def  |- !m n k. exp_mod_compute m n k = exp_mod_step m n k 1
    exp_mod_step_0       |- !m r k. exp_mod_step m 0 k r = r MOD k
    exp_mod_step_1       |- !m r k. exp_mod_step m 1 k r = (r * m) MOD k
    exp_mod_step_2       |- !m r k. exp_mod_step m 2 k r = (r * m * m) MOD k
@@ -101,15 +89,6 @@ val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
                            !m r. exp_mod_step m n k r = exp_mod_step (SQ m MOD k) (HALF n) k r
    exp_mod_step_odd     |- !k. 0 < k ==> !n. ODD n ==>
                            !m r. exp_mod_step m n k r = exp_mod_step (SQ m MOD k) (HALF n) k ((r * m) MOD k)
-   exp_mod_step_eqn     |- !m n k r. exp_mod_step m n k r = (r * m ** n) MOD k
-   exp_mod_compute_0    |- !m k. exp_mod_compute m 0 k = 1 MOD k
-   exp_mod_compute_1    |- !m k. exp_mod_compute m 1 k = m MOD k
-   exp_mod_compute_2    |- !m k. exp_mod_compute m 2 k = SQ m MOD k
-   exp_mod_compute_even |- !k. 0 < k ==> !n. EVEN n ==>
-                           !m. exp_mod_compute m n k = exp_mod_compute (SQ m MOD k) (HALF n) k
-   exp_mod_compute_odd  |- !k. 0 < k ==> !n. ODD n ==>
-                           !m. exp_mod_compute m n k = exp_mod_step (SQ m MOD k) (HALF n) k (m MOD k)
-   exp_mod_compute_eqn  |- !m n k. exp_mod_compute m n k = m ** n MOD k
 
    ROOT computation:
    root_compute_def     |- !r n. root_compute r n =
@@ -688,494 +667,102 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-(* Modular Exponentiation.                                                   *)
+(* Modular Exponentiation                                                    *)
 (* ------------------------------------------------------------------------- *)
-(* Pseudocode:
 
-Input: b n m
-Output: (b ** n) MOD m
+(* The implementation and correctness equations are supplied by expMod.
+   These additional identities describe its mathematical behaviour. *)
 
-Recursive version:
-if (n = 0) then return 1
-if EVEN n then return (b * b MOD m) ** (HALF n)
-else return b * ((b * b MOD m) ** (HALF n)) MOD m
-
-val EXP_MOD_EQN =
-   |- !b n m. 1 < m ==>
-          b ** n MOD m =
-          if n = 0 then 1
-          else (let result = SQ b ** HALF n MOD m
-                 in if EVEN n then result else (b * result) MOD m): thm
-*)
-
-(* Pseudocode:
-
-Input: a n m
-Output: (a ** n) MOD m
-
-Iterative version:
-
-r <- 1                  // initial result
-while (n <> 0) {
-    if (EVEN n) {       // even exponent
-       n <- HALF n      // reduce exponent by half
-       a <- a * a MOD m // update base by its square
-       r <- a           // update result by new base
-    }
-    else {              // odd exponent
-       b <- a           // save current base
-       n <- n - 1       // make exponent even
-       n <- HALF n      // reduce exponent by half
-       a <- a * a MOD m // update base by its square
-       r <- b * a MOD m // update result by multiplying with base
-    }
-}
-return r // the result
-
-Since the exponent n is decreasing by half in each iteration, the while-loop terminates.
-
-*)
-
-(* Smart definition of: a ** n (mod m) by repeated squaring *)
-(*
-val exp_mod_binary_def = Define`
-   exp_mod_binary a n m =
-          if m = 0 then (a ** n) MOD 0   (* whatever that is! *)
-     else if m = 1 then 0                (* all MOD 1 = 0 *)
-     else if n = 0 then 1                (* a ** 0 (mod m) = 1 *)
-     (* if EVEN n then a ** n (mod m) = (a * a MOD m) ** (HALF n) *)
-     else if EVEN n then exp_mod_binary ((a * a) MOD m) (HALF n) m
-     (* if ODD n then a ** n (mod m) = a * ((a * a MOD m) ** (HALF n)) MOD m *)
-     else (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m
-`;
-*)
-Definition exp_mod_binary_def:
-   exp_mod_binary a n m =
-          if m = 0 then (a ** n) MOD 0   (* whatever that is! *)
-     else if m = 1 then 0                (* all MOD 1 = 0 *)
-     else if n = 0 then 1                (* a ** 0 (mod m) = 1 *)
-     (* if EVEN n then a ** n (mod m) = (a * a MOD m) ** (HALF n) *)
-     (* if ODD n then a ** n (mod m) = a * ((a * a MOD m) ** (HALF n)) MOD m *)
-     else (let b = exp_mod_binary ((a * a) MOD m) (HALF n) m
-            in if EVEN n then b else (a * b) MOD m)
-End
-(* Note the for-all order: n m a, which is good.
-val it =
-   |- !n m a. exp_mod_binary a n m =
-     if m = 0 then a ** n MOD 0
-     else if m = 1 then 0
-     else if n = 0 then 1
-     else (let b = exp_mod_binary ((a * a) MOD m) (HALF n) m in if EVEN n then b else (a * b) MOD m): thm
-*)
-(*
-- type_of ``exp_mod_binary a n m``;
-> val it = ``:num`` : hol_type
-- type_of ``exp_mod_binary``;
-> val it = ``:num -> num -> num -> num`` : hol_type
-*)
-
-(*
-> EVAL ``exp_mod_binary 3 0 10``; --> 1
-> EVAL ``exp_mod_binary 3 1 10``; --> 3
-> EVAL ``exp_mod_binary 3 2 10``; --> 9
-> EVAL ``exp_mod_binary 3 3 10``; --> 7
-> EVAL ``exp_mod_binary 3 4 10``; --> 1
-*)
-
-
-(* Theorem: 0 < m ==> (exp_mod_binary a 0 m = if m = 1 then 0 else 1) *)
-(* Proof: by exp_mod_binary_def. *)
 Theorem exp_mod_binary_0:
-    !a m. 0 < m ==> (exp_mod_binary a 0 m = if m = 1 then 0 else 1)
+  !a m. 0 < m ==>
+    (exp_mod_binary a 0 m = if m = 1 then 0 else 1)
 Proof
-  rw[Once exp_mod_binary_def]
+  rw[exp_mod_binary_eqn] >>
+  `1 < m` by decide_tac >>
+  simp[ONE_MOD]
 QED
 
-(* Theorem: exp_mod_binary a 1 m = a MOD m *)
-(* Proof: by exp_mod_binary_def, exp_mod_binary_0. *)
 Theorem exp_mod_binary_1:
-    !a m. exp_mod_binary a 1 m = a MOD m
+  !a m. exp_mod_binary a 1 m = a MOD m
 Proof
-  rw[Once exp_mod_binary_def] >>
-  rw[exp_mod_binary_0]
+  rw[exp_mod_binary_eqn]
 QED
 
-(* Theorem: 0 < m /\ EVEN n ==> !a. exp_mod_binary a n m = exp_mod_binary ((a * a) MOD m) (HALF n) m *)
-(* Proof:
-   If n = 0,
-        exp_mod_binary a 0 m
-      = 1                                             by exp_mod_binary_0
-      = exp_mod_binary (((a * a) MOD m)) 0 m          by exp_mod_binary_0
-      = exp_mod_binary (((a * a) MOD m)) (HALF 0) m   by ZERO_MOD, 0 < 2
-   If n <> 0,
-      If m = 1,
-           exp_mod_binary a n 1
-         = 0                                          by exp_mod_binary_def
-         = exp_mod_binary ((a * a) MOD 1) (HALF n) 1  by exp_mod_binary_def
-      If m <> 1, true for EVEN n                      by exp_mod_binary_def
-*)
 Theorem exp_mod_binary_even:
-    !m n. 0 < m /\ EVEN n ==> !a. exp_mod_binary a n m = exp_mod_binary ((a * a) MOD m) (HALF n) m
+  !m n. 0 < m /\ EVEN n ==>
+    !a. exp_mod_binary a n m =
+        exp_mod_binary ((a * a) MOD m) (HALF n) m
 Proof
   rpt strip_tac >>
-  Cases_on `n = 0` >-
-  simp[exp_mod_binary_0] >>
-  rw[Once exp_mod_binary_def] >>
-  rw[Once exp_mod_binary_def]
+  rw[exp_mod_binary_eqn, EXP_MOD, GSYM EXP_EVEN]
 QED
 
-(* Theorem: 0 < m /\ ODD n ==> !a. exp_mod_binary a n m = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m *)
-(* Proof:
-   If m = 1,
-        exp_mod_binary a n 1
-      = 0                                                        by exp_mod_binary_def
-      = (a * exp_mod_binary ((a * a) MOD 1) (HALF n) 1) MOD 1    by MOD_1
-   If m <> 1,
-       and ODD n <=> ~(EVEN n)       by ODD_EVEN
-        so n <> 0                    by EVEN
-      Thus true for ~(EVEN n)        by exp_mod_binary_def
-*)
 Theorem exp_mod_binary_odd:
-    !m n. 0 < m /\ ODD n ==> !a. exp_mod_binary a n m = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m
+  !m n. 0 < m /\ ODD n ==>
+    !a. exp_mod_binary a n m =
+        (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m
 Proof
   rpt strip_tac >>
-  Cases_on `m = 1` >-
-  rw[Once exp_mod_binary_def] >>
-  rpt strip_tac >>
-  `~EVEN n` by rw[GSYM ODD_EVEN] >>
-  `n <> 0` by metis_tac[EVEN] >>
-  rw[Once exp_mod_binary_def]
+  simp[exp_mod_binary_eqn, EXP_ODD, EXP_MOD, MOD_TIMES2]
 QED
 
-(* Theorem: 0 < m ==> !a. exp_mod_binary a (SUC n) m = (a * exp_mod_binary a n m) MOD m *)
-(* Proof:
-   By complete induction on n.
-   If EVEN n,
-      Then ODD (SUC n)                                                by EVEN_ODD_SUC
-        exp_mod_binary a (SUC n) m
-      = (a * exp_mod_binary ((a * a) MOD m) (HALF (SUC n)) m) MOD m   by exp_mod_binary_odd
-      = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m         by EVEN_SUC_HALF
-      = (a * exp_mod_binary a n m) MOD m                              by exp_mod_binary_even
-   If ~(EVEN n), then ODD n.                                          by ODD_EVEN
-      Note ODD n ==> n <> 0                                           by ODD
-      Thus HALF n < n                                                 by DIV_LESS, 0 < n, 1 < 2
-       and EVEN (SUC n)                                               by EVEN_ODD_SUC
-        (a * exp_mod_binary a n m) MOD m
-      = (a * (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m) MOD m     by exp_mod_binary_odd, 0 < m
-      = (a * (a * exp_mod_binary ((a * a) MOD m) (HALF n) m)) MOD m           by MOD_MOD, MOD_TIMES2, 0 < m
-      = (a * a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m             by MULT_ASSOC
-      = (((a * a) MOD m) * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m   by MOD_MOD, MOD_TIMES2, 0 < m
-      = exp_mod_binary ((a * a) MOD m) (SUC (HALF n)) m                       by induction hypothesis
-      = exp_mod_binary ((a * a) MOD m) (HALF (SUC n)) m                       by ODD_SUC_HALF
-      = exp_mod_binary a (SUC n) m                                            by exp_mod_binary_even, 0 < m
-*)
 Theorem exp_mod_binary_suc:
-    !m n. 0 < m ==> !a. exp_mod_binary a (SUC n) m = (a * exp_mod_binary a n m) MOD m
+  !m n. 0 < m ==>
+    !a. exp_mod_binary a (SUC n) m =
+        (a * exp_mod_binary a n m) MOD m
 Proof
-  ntac 3 strip_tac >>
-  completeInduct_on `n` >>
-  rpt strip_tac >>
-  Cases_on `EVEN n` >| [
-    `ODD (SUC n)` by metis_tac[EVEN_ODD_SUC] >>
-    `exp_mod_binary a (SUC n) m = (a * exp_mod_binary ((a * a) MOD m) (HALF (SUC n)) m) MOD m` by rw[exp_mod_binary_odd] >>
-    `_ = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m` by rw[EVEN_SUC_HALF] >>
-    `_ = (a * exp_mod_binary a n m) MOD m` by rw[exp_mod_binary_even] >>
-    rw[],
-    `ODD n` by rw[ODD_EVEN] >>
-    `n <> 0` by metis_tac[ODD] >>
-    `HALF n < n` by rw[DIV_LESS] >>
-    `EVEN (SUC n)` by rw[GSYM EVEN_ODD_SUC] >>
-    `(a * exp_mod_binary a n m) MOD m = (a * (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m) MOD m` by rw[exp_mod_binary_odd] >>
-    `_ = ((a * a) MOD m * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m` by metis_tac[MOD_MOD, MOD_TIMES2, MULT_ASSOC] >>
-    `_ = exp_mod_binary ((a * a) MOD m) (SUC (HALF n)) m` by rw[] >>
-    `_ = exp_mod_binary ((a * a) MOD m) (HALF (SUC n)) m` by rw[ODD_SUC_HALF] >>
-    `_ = exp_mod_binary a (SUC n) m` by rw[exp_mod_binary_even] >>
-    rw[]
-  ]
+  rw[exp_mod_binary_eqn, EXP, MOD_TIMES2]
 QED
 
-(* Theorem: exp_mod_binary a n m = a ** n MOD m *)
-(* Proof:
-   If m = 0, true trivially                  by exp_mod_binary_def
-   If m = 1,
-        exp_mod_binary a n m
-      = 1                                    by exp_mod_binary_def
-      = (a ** n) MOD 1                       by MOD_1
-   If m <> 0 and m <> 1,
-   Then 1 < m.
-   By induction on n.
-   Base: exp_mod_binary a 0 m = a ** 0 MOD m
-        exp_mod_binary a 0 m
-      = 1                                    by exp_mod_binary_0
-      = 1 MOD m                              by ONE_MOD, 1 < m
-      = a ** 0 MOD m                         by EXP
-   Step: exp_mod_binary a n m = a ** n MOD m ==> exp_mod_binary a (SUC n) m = a ** SUC n MOD m
-        exp_mod_binary a (SUC n) m
-      = (a * exp_mod_binary a n m) MOD m     by exp_mod_binary_suc, 0 < m
-      = (a * a ** n MOD m) MOD m             by induction hypothesis
-      = (a * a ** n) MOD m                   by MOD_MOD, MOD_TIMES2, 0 < m
-      = (a ** SUC n) MOD m                   by EXP
-*)
-Theorem exp_mod_binary_eqn:
-    !m n a. exp_mod_binary a n m = a ** n MOD m
-Proof
-  rpt strip_tac >>
-  Cases_on `m = 0` >-
-  rw[Once exp_mod_binary_def] >>
-  Cases_on `m = 1` >-
-  rw[Once exp_mod_binary_def] >>
-  `1 < m /\ 0 < m` by decide_tac >>
-  Induct_on `n` >-
-  simp[exp_mod_binary_0, ONE_MOD, EXP] >>
-  metis_tac[exp_mod_binary_suc, MOD_MOD, MOD_TIMES2, EXP]
-QED
-
-(* Theorem: exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m *)
-(* Proof:
-     exp_mod_binary 0 n m
-   = (0 ** n) MOD m                          by exp_mod_binary_eqn
-   = (if n = 0 then 1 else 0) MOD m          by ZERO_EXP
-*)
 Theorem exp_mod_binary_0_n:
-    !m n. exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m
+  !m n. exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m
 Proof
   rw[exp_mod_binary_eqn, ZERO_EXP]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(* Fast Modular Exponentiation                                               *)
-(* ------------------------------------------------------------------------- *)
-
-(* Fast Modular Exponentiation -- iterative form *)
-(* Pseudo-Code:
-   (m ** n) MOD k = r <- 1
-                    loop:
-                    if (n == 0) return (r MOD k)
-                    if (ODD n) r <- (r * m) MOD k
-                    n <- HALF n
-                    m <- (SQ m) MOD k
-                    goto loop
-*)
-
-(* Define fast modulo exponentiation *)
-Definition exp_mod_step_def:
-    exp_mod_step m n k r =
-       if k = 0 then (r * m ** n) MOD k
-       else if n = 0 then (r MOD k) else
-       exp_mod_step ((SQ m) MOD k) (HALF n) k (if EVEN n then r else (r * m) MOD k)
-End
-Definition exp_mod_compute_def:
-    exp_mod_compute m n k = exp_mod_step m n k 1
-End
-
-(*
-EVAL ``exp_mod_compute 2 10 3``; --> 1024 MOD 3 = 1
-EVAL ``exp_mod_compute 3 10 17``; --> 59049 MOD 17 = 8
-EVAL ``exp_mod_compute 3 8 19 = (3 ** 8) MOD 19``; --> T
-*)
-
-(* Theorem: exp_mod_step m 0 k r = r MOD k *)
-(* Proof: by exp_mod_step_def *)
 Theorem exp_mod_step_0:
-    !m r k. exp_mod_step m 0 k r = r MOD k
+  !m r k. exp_mod_step m 0 k r = r MOD k
 Proof
-  rw[Once exp_mod_step_def]
+  rw[exp_mod_step_eqn]
 QED
 
-(* Theorem: exp_mod_step m 1 k r = (r * m) MOD k *)
-(* Proof: by exp_mod_step_def *)
 Theorem exp_mod_step_1:
-    !m r k. exp_mod_step m 1 k r = (r * m) MOD k
+  !m r k. exp_mod_step m 1 k r = (r * m) MOD k
 Proof
-  rw[Once exp_mod_step_def, Once exp_mod_step_def]
+  rw[exp_mod_step_eqn]
 QED
 
-(* Theorem: exp_mod_step m 2 k r = (r * m * m) MOD k *)
-(* Proof:
-     exp_mod_step m 2 k r
-   = exp_mod_step ((SQ m) MOD k) (HALF 2) k r   by exp_mod_step_def, EVEN 2
-   = exp_mod_step ((SQ m) MOD k) 1 r            by arithmetic
-   = (r * (SQ m) MOD k) MOD k                   by exp_mod_step_1
-   = (r * (SQ m)) MOD k                         by MOD_TIMES2, MOD_MOD
-   = (r * (m * m)) MOD k                        by EXP_2
-   = (r * m * m) MOD k                          by MULT_ASSOC
-*)
 Theorem exp_mod_step_2:
-    !m r k. exp_mod_step m 2 k r = (r * m * m) MOD k
+  !m r k. exp_mod_step m 2 k r = (r * m * m) MOD k
 Proof
-  rw[Once exp_mod_step_def, Once exp_mod_step_def, Once exp_mod_step_def]
+  REWRITE_TAC [exp_mod_step_eqn, EXP_2, MULT_ASSOC]
 QED
 
-(* Theorem: 0 < k ==> !n. EVEN n ==>
-            !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k r *)
-(* Proof:
-   if n = 0, HALF 0 = 0          by HALF_EQ_0
-      Thus LHS = r MOD k = RHS   by exp_mod_step_def
-   If n <> 0, true               by exp_mod_step_def
-*)
 Theorem exp_mod_step_even:
-    !k. 0 < k ==> !n. EVEN n ==>
-   !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k r
+  !k. 0 < k ==> !n. EVEN n ==>
+    !m r. exp_mod_step m n k r =
+          exp_mod_step ((SQ m) MOD k) (HALF n) k r
 Proof
   rpt strip_tac >>
-  Cases_on `n = 0` >-
-  metis_tac[exp_mod_step_def, HALF_EQ_0, NOT_ZERO_LT_ZERO] >>
-  rw[Once exp_mod_step_def]
+  REWRITE_TAC [exp_mod_step_eqn] >>
+  qpat_x_assum `EVEN n`
+    (fn th => ONCE_REWRITE_TAC [SPEC ``m:num`` (MATCH_MP EXP_EVEN th)]) >>
+  ONCE_REWRITE_TAC [GSYM MOD_TIMES2] >>
+  REWRITE_TAC [EXP_MOD, MOD_MOD]
 QED
 
-(* Theorem: 0 < k ==> !n. ODD n ==>
-            !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k ((r * m) MOD k) *)
-(* Proof:
-   Note ODD n ==> ~EVEN n     by ODD_EVEN
-               and m <> 0     by EVEN
-   The result follows         by exp_mod_step_def
-*)
 Theorem exp_mod_step_odd:
-    !k. 0 < k ==> !n. ODD n ==>
-   !m r. exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k ((r * m) MOD k)
+  !k. 0 < k ==> !n. ODD n ==>
+    !m r. exp_mod_step m n k r =
+          exp_mod_step ((SQ m) MOD k) (HALF n) k ((r * m) MOD k)
 Proof
   rpt strip_tac >>
-  `~EVEN n /\ n <> 0` by metis_tac[ODD_EVEN, EVEN] >>
-  rw[Once exp_mod_step_def]
-QED
-
-(* Theorem: exp_mod_step m n k r = (r * m ** n) MOD k *)
-(* Proof:
-   If k = 0, true                            by exp_mod_step_def
-   If k <> 0, 0 < k                          by NOT_ZERO_LT_ZERO
-   By complete induction on n.
-   if n = 0,
-        exp_mod_step m 0 k r
-      = r MOD k                              by exp_mod_step_0
-      = (r * 1) MOD k                        by MULT_RIGHT_1
-      = (r * m ** 0) MOD k                   by EXP_0
-   If n <> 0,
-      then HALF n < n                        by HALF_LT, 0 < n
-   If EVEN n,
-        exp_mod_step m n k r
-      = exp_mod_step ((SQ m) MOD k) (HALF n) k r     by exp_mod_step_even
-      = (r * ((SQ m) MOD k) ** (HALF n)) MOD k       by induction hypothesis, HALF n < n
-      = (r * (SQ m) ** (HALF n)) MOD k               by EXP_MOD, MOD_TIMES2, MOD_MOD, 0 < k
-      = (r * m ** n) MOD k                           by EXP_EVEN
-   If ~EVEN n,
-      then ODD n                                     by EVEN_ODD
-        exp_mod_step m n k r
-      = exp_mod_step ((SQ m) MOD k) (HALF n) k ((r * m) MOD k)     by exp_mod_step_odd
-      = (((r * m) MOD k) * (((SQ m) MOD k) ** (HALF n))) MOD k     by induction hypothesis, HALF n < n
-      = ((r * m) * (SQ m) ** (HALF n)) MOD k         by EXP_MOD, MOD_TIMES2, MOD_MOD, 0 < k
-      = (r * (m * (SQ m) ** (HALF n))) MOD k         by MULT_ASSOC
-      = (r * m ** n) MOD k                           by EXP_ODD
-*)
-Theorem exp_mod_step_eqn:
-    !m n k r. exp_mod_step m n k r = (r * m ** n) MOD k
-Proof
-  rpt strip_tac >>
-  Cases_on `k = 0` >-
-  rw[Once exp_mod_step_def] >>
-  `0 < k` by decide_tac >>
-  qid_spec_tac `r` >>
-  qid_spec_tac `n` >>
-  qid_spec_tac `m` >>
-  completeInduct_on `n` >>
-  rpt strip_tac >>
-  Cases_on `n = 0` >-
-  rw[exp_mod_step_0] >>
-  `HALF n < n` by rw[] >>
-  Cases_on `EVEN n` >| [
-    `exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k r` by rw[exp_mod_step_even] >>
-    `_ = (r * ((SQ m) MOD k) ** (HALF n)) MOD k` by rw[] >>
-    `_ = (r * (SQ m) ** (HALF n)) MOD k` by rw[Once EXP_MOD] >>
-    `_ = (r * m ** n) MOD k` by rw[GSYM EXP_EVEN] >>
-    rw[],
-    `ODD n` by rw[ODD_EVEN] >>
-    `exp_mod_step m n k r = exp_mod_step ((SQ m) MOD k) (HALF n) k (r * m) MOD k` by rw[exp_mod_step_odd] >>
-    `_ = (((r * m) MOD k) * (((SQ m) MOD k) ** (HALF n))) MOD k` by rw[] >>
-    `_ = ((r * m) * (SQ m) ** (HALF n)) MOD k` by rw[Once EXP_MOD] >>
-    `_ = (r * (m * (SQ m) ** (HALF n))) MOD k` by rw[] >>
-    `_ = (r * m ** n) MOD k` by rw[EXP_ODD] >>
-    rw[]
-  ]
-QED
-
-(* Theorem: exp_mod_compute m 0 k = 1 MOD k *)
-(* Proof:
-     exp_mod_compute m 0 k
-   = exp_mod_step m 0 k 1   by exp_mod_compute_def
-   = 1 MOD k                by exp_mod_step_0
-*)
-Theorem exp_mod_compute_0:
-    !m k. exp_mod_compute m 0 k = 1 MOD k
-Proof
-  rw[exp_mod_compute_def, exp_mod_step_0]
-QED
-
-(* Theorem: exp_mod_compute m 1 k = m MOD k *)
-(* Proof:
-     exp_mod_compute m 1 k
-   = exp_mod_step m 1 k 1   by exp_mod_compute_def
-   = (1 * m) MOD k          by exp_mod_step_1
-   = m MOD k                by MULT_LEFT_1
-*)
-Theorem exp_mod_compute_1:
-    !m k. exp_mod_compute m 1 k = m MOD k
-Proof
-  rw[exp_mod_compute_def, exp_mod_step_1]
-QED
-
-(* Theorem: exp_mod_compute m 2 k = (SQ m) MOD k *)
-(* Proof:
-     exp_mod_compute m 2 k
-   = exp_mod_step m 2 k 1   by exp_mod_compute_def
-   = (1 * n * n) MOD k      by exp_mod_step_2
-   = (SQ m) MOD k           by EXP_2
-*)
-Theorem exp_mod_compute_2:
-    !m k. exp_mod_compute m 2 k = (SQ m) MOD k
-Proof
-  rw[exp_mod_compute_def, exp_mod_step_2]
-QED
-
-(* Theorem: 0 < k ==> !n. EVEN n ==>
-            !m. exp_mod_compute m n k = exp_mod_compute ((SQ m) MOD k) (HALF n) k *)
-(* Proof:
-     exp_mod_compute m n k
-   = exp_mod_step m n k 1                       by exp_mod_compute_def
-   = exp_mod_step ((SQ m) MOD k) (HALF n) k 1   by exp_mod_step_even, EVEN n
-   = exp_mod_compute ((SQ m) MOD k) (HALF n) k  by exp_mod_compute_def
-*)
-Theorem exp_mod_compute_even:
-    !k. 0 < k ==> !n. EVEN n ==>
-   !m. exp_mod_compute m n k = exp_mod_compute ((SQ m) MOD k) (HALF n) k
-Proof
-  rw[exp_mod_compute_def, exp_mod_step_even]
-QED
-
-(* Theorem: 0 < k ==> !n. ODD n ==>
-            !m. exp_mod_compute m n k = exp_mod_step ((SQ m) MOD k) (HALF n) k (m MOD k) *)
-(* Proof:
-     exp_mod_compute m n k
-   = exp_mod_step m n k 1                                   by exp_mod_compute_def
-   = exp_mod_step ((SQ m) MOD k) (HALF n) k (1 * m MOD k)   by exp_mod_step_odd, ODD n
-   = exp_mod_step ((SQ m) MOD k) (HALF n) k (m MOD k)       by MULT_LEFT_1
-*)
-Theorem exp_mod_compute_odd:
-    !k. 0 < k ==> !n. ODD n ==>
-   !m. exp_mod_compute m n k = exp_mod_step ((SQ m) MOD k) (HALF n) k (m MOD k)
-Proof
-  rw[exp_mod_compute_def, exp_mod_step_odd]
-QED
-
-(* Theorem: exp_mod_compute m n k = (m ** n) MOD k *)
-(* Proof:
-     exp_mod_compute m n k
-   = exp_mod_step m n k 1     by exp_mod_compute_def
-   = (1 * m ** n) MOD k       by exp_mod_step_eqn
-   = (m ** n) MOD k           by MULT_LEFT_1
-*)
-Theorem exp_mod_compute_eqn:
-    !m n k. exp_mod_compute m n k = (m ** n) MOD k
-Proof
-  rw[exp_mod_compute_def, exp_mod_step_eqn]
+  REWRITE_TAC [exp_mod_step_eqn] >>
+  qpat_x_assum `ODD n`
+    (fn th => ONCE_REWRITE_TAC [SPEC ``m:num`` (MATCH_MP EXP_ODD th)]) >>
+  CONV_TAC (RAND_CONV (REWR_CONV (GSYM MOD_TIMES2))) >>
+  REWRITE_TAC [EXP_MOD, MOD_MOD] >>
+  REWRITE_TAC [MOD_TIMES2, MULT_ASSOC]
 QED
 
 (* ------------------------------------------------------------------------- *)

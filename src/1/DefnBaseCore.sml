@@ -131,6 +131,15 @@ fun register_defn {tag, thmname} =
 
 fun presentation (tag,kid) (thmnm, th) =
     {const = prim_mk_const kid,thmname = thmnm,thm = th}
+
+(* An entry can outlive its constant: TFL registers the support
+   definitions it makes on the way (the _tupled one, say) like any other
+   and then deletes their constants once the real definition is made.
+   Such an entry is skipped rather than raising. *)
+fun live_presentation k v A =
+    case total (presentation k) v of
+        NONE => A
+      | SOME p => p :: A
 fun lookup_userdef_p dstore c =
     let
       val {Name,Thy,...} =
@@ -145,7 +154,7 @@ fun lookup_userdef c = lookup_userdef_p (get_userdefs_db()) c
 
 fun current_userdefs () =
     let fun foldthis (k as (tag,kid), v) A =
-            if tag = "user" then presentation k v::A else A
+            if tag = "user" then live_presentation k v A else A
     in
       DStab.fold foldthis (get_userdefs_db()) []
     end
@@ -154,7 +163,7 @@ fun thy_userdefs {thyname} =
     let
       fun foldthis (k as (tag, kid), v) A =
           if tag = "user" andalso #Thy kid = thyname then
-            presentation k v :: A
+            live_presentation k v A
           else A
     in
       DStab.fold foldthis (get_userdefs_db()) []

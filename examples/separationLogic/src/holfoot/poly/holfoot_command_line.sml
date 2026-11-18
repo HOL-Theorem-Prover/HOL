@@ -178,17 +178,17 @@ fun web_interface_print_goals gL =
 
 
 fun holfoot_web_interface () = let
-   val _ = Feedback.set_trace "PPBackEnd use annotations" 0
+   val _ = HOLFlags.set_bflag (PPBackEnd.use_annotations, false)
    val _ = Parse.current_backend := PPBackEnd.html_terminal;
-   val _ = Feedback.set_trace "Unicode" 1
-   val _ = Feedback.set_trace "goalstack chatting" 0
+   val _ = HOLFlags.set_bflag (Parse.avoid_unicode, false)
+   val _ = HOLFlags.set_bflag (goalStack.chatting, false)
    val args = CommandLine.arguments ();
    val (unicode, args) = (false, Lib.snd (Lib.pluck (fn x => x = "-nu") args))
       handle _ => (true, args);
    val (yices, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--yices") args))
       handle _ => (false, args);
-   val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
-   val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
+   val _ = HOLFlags.set_bflag (Parse.avoid_unicode, not unicode)
+   val _ = HOLFlags.set_trace "holfoot.use_yices" (if yices then 1 else 0)
 in
    if length args = 1 then
    let
@@ -225,10 +225,10 @@ end
 
 
 fun holfoot_run (full, filemode_command) = let
-   val _ = Feedback.set_trace "PPBackEnd use annotations" 0
-   val _ = Feedback.set_trace "HolSmtLib" 0
-   val _ = Feedback.set_trace "meson" 0
-   val _ = Feedback.set_trace "metis" 0
+   val _ = HOLFlags.set_bflag (PPBackEnd.use_annotations, false)
+   val _ = HOLFlags.set_flag (Library.trace_flag, 0)
+   val _ = HOLFlags.set_flag (mesonLib.chatting, 0)
+   val _ = HOLFlags.set_flag (metisTools.metis_trace, 0)
    val _ = Globals.interactive := false;
 
    fun pluck_num_arg a =
@@ -270,12 +270,12 @@ fun holfoot_run (full, filemode_command) = let
        (if raw_output then PPBackEnd.raw_terminal
         else if html_output then PPBackEnd.html_terminal
         else PPBackEnd.vt100_terminal);
-   val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
-   val _ = Feedback.set_trace "holfoot print file"
+   val _ = HOLFlags.set_bflag (Parse.avoid_unicode, not unicode)
+   val _ = HOLFlags.set_trace "holfoot.print_file"
                               (if html_output then 0 else 1);
-   val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
-   val _ = Feedback.set_trace "holfoot verbose level" vl;
-   val _ = Feedback.set_trace "holfoot verbose level try" vlt;
+   val _ = HOLFlags.set_trace "holfoot.use_yices" (if yices then 1 else 0)
+   val _ = HOLFlags.set_trace "holfoot.verbose_level" vl;
+   val _ = HOLFlags.set_trace "holfoot.verbose_level_try" vlt;
 
    val args = ((Lib.pluck (fn x => x = "-h") orgargs);print_help full;[])
       handle _ => args;

@@ -1750,9 +1750,9 @@ end
    ------------------------------------------------------------------------ *)
 
 (*
-val () = set_trace "Goalstack.print_goal_at_top" 0
-val () = set_trace "Goalstack.print_goal_at_top" 1
-val () = set_trace "stateLib.spec" 1
+val () = HOLFlags.set_bflag (goalStack.goal_at_top, false)
+val () = HOLFlags.set_bflag (goalStack.goal_at_top, true)
+val () = HOLFlags.set_bflag (spec_debug, true)
 
 val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
      frame_thms, component_11, map_tys) =
@@ -1767,9 +1767,9 @@ val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
 
 *)
 
+val {get = get_spec_debug, flag = spec_debug, ...} =
+    HOLFlags.create_btrace ({group = "stateLib", name = "spec"}, false)
 local
-   val spec_debug = ref false
-   val () = Feedback.register_btrace ("stateLib.spec", spec_debug)
    (* Could use goalStack.print_tac "" instead for formatted goal output *)
    val PRINT_TAC =
       RULE_ASSUM_TAC (CONV_RULE PRINT_CONV) THEN CONV_TAC PRINT_CONV
@@ -1883,7 +1883,7 @@ val (thm,t) = hd thm_ts
                prove (t, tac (v, dthm))
             end
             handle e as HOL_ERR _ =>
-                   (if !spec_debug
+                   (if get_spec_debug()
                        then (proofManagerLib.set_goal ([], t); thm)
                     else raise e)
       end

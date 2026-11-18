@@ -5,7 +5,7 @@ Ancestors
 Libs
   boolSimps binderLib
 
-val _ = set_trace "Unicode" 1;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, false);
 
 val _ = hide "list"; (* from cardinalTheory *)
 

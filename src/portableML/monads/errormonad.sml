@@ -75,6 +75,7 @@ fun foldlM f a list =
 fun with_flagM (r,v) (m : ('a,'b,'c)t) : ('a,'b,'c)t = fn (s:'a) =>
   Portable.with_flag (r,v) m s
 
+fun with_Modifier f m = fn s => f m s
 
 
 end

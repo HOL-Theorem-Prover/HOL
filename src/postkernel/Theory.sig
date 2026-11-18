@@ -150,8 +150,8 @@ sig
  *)
 
   val link_parents           : string*string -> (string*string) list -> unit
-  val incorporate_types      : string -> (string*int) list -> unit
-  val incorporate_consts     : string -> (string*hol_type) list -> unit
+  val incorporate_types      : string -> (string*int) list -> bool
+  val incorporate_consts     : string -> (string*hol_type) list -> bool
   val pp_thm                 : (thm -> HOLPP.pretty) ref
   val pp_type                : (hol_type -> HOLPP.pretty) ref
 
@@ -164,4 +164,11 @@ sig
   val load_complete : string -> unit
 
   val oracle_string_of : thm -> string option
+
+  (* traces owned by this module *)
+  val debug              : HOLFlags.bflag
+  val allow_rebinds      : HOLFlags.bflag
+  val report_thy_times   : HOLFlags.bflag
+  val save_thm_reporting : HOLFlags.flag
+  val include_html_docs  : HOLFlags.bflag
 end

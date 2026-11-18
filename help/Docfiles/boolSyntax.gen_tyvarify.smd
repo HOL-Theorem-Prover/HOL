@@ -19,7 +19,7 @@ Never fails.
 ### Example
 
 ``` hol4
->> show_types := true;
+>> HOLFlags.set_bflag (Parse.show_types, true);
    gen_tyvarify “h::t”;
 ```
 
@@ -27,4 +27,4 @@ Never fails.
 
 [`Type.gen_tyvar`](#Type.gen_tyvar)
 
->>__ show_types := false
+>>__ HOLFlags.set_bflag (Parse.show_types, false)

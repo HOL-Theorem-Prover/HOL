@@ -107,8 +107,6 @@ QED
 
 val FACTOR_TWOS_ML = save_thm ("FACTOR_TWOS_ML", factor_twos_def);
 
-val MODEXP_ML = save_thm ("MODEXP_ML", modexp_def);
-
 Theorem WITNESS_TAIL_ML:
      !n a r.
        witness_tail n a r =

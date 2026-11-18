@@ -125,12 +125,17 @@ fun record_delta d =
 fun ERR f l msg = Feedback.mk_HOL_ERRloc "combinpp" f l msg
 fun cAPP l (a1, a2) = Absyn.APP(l,a1,a2)
 
+(* The tuple handed back names, in order, the whole application's
+   locn, the operator identifier's own locn, and the two arguments.
+   The operator locn matters: for the bracket forms below it is the
+   only source position the generated constant can be given, there
+   being no text in the file that spells its name. *)
 fun gen_break_binop P f a =
     case a of
         APP(l, a1, a2) =>
           (case a1 of
                APP(l1, IDENT (l1', s), a12) =>
-               if P s then SOME ((l, a12, a2), f s)
+               if P s then SOME ((l, l1', a12, a2), f s)
                else NONE
              | _ => NONE)
       | _ => NONE
@@ -140,7 +145,7 @@ fun break_binop ident a =
 
 fun break_arrow a =
     case break_binop mapsto_special a of
-        SOME(l, a1, a2) => SOME (a1,a2)
+        SOME(l, _, a1, a2) => SOME (a1,a2)
       | NONE => NONE
 
 fun islistnil a_t =
@@ -148,22 +153,44 @@ fun islistnil a_t =
         IDENT (l, nm) => nm = internal_idupd
       | _ => false
 
-fun process_updates (update_name, lookup_name_opt) f upds =
+(* The closing bracket, which the list form parses as the nil of the
+   update list and so is where the chain of conses ends. *)
+fun closing_locn a =
+    if islistnil a then locn_of_absyn a
+    else case break_binop internal_consupd a of
+             SOME (_, _, _, rest) => closing_locn rest
+           | NONE => locn.Loc_None
+
+(* Where to say the generated constant is.  `f<|k -> v|>' names
+   FUPDATE and FAPPLY nowhere, so the brackets are what a reader
+   pointing at the constant would be pointing at -- and the only
+   span an error about it can be reported against.  Spanning the pair
+   rather than just the opening bracket means hovering either end
+   answers; the keys and values inside have spans of their own, which
+   are shorter, so they still win where they overlap. *)
+fun bracket_locn lbr upds =
+    case closing_locn upds of
+        locn.Loc_None => lbr
+      | rbr => locn.between lbr rbr
+
+(* `brLocn' is the bracket pair, `formLocn' the whole `f<|...|>'. *)
+fun process_updates (update_name, lookup_name_opt) (formLocn, brLocn) f upds =
     if islistnil upds then f
     else
       case break_binop internal_consupd upds of
-          SOME (l, arg1, arg2) =>
+          SOME (l, _, arg1, arg2) =>
           let
           in
             case break_arrow arg1 of
                 SOME (d,r) =>
                 let
-                  val t = process_updates (update_name, lookup_name_opt) f arg2
+                  val t = process_updates (update_name, lookup_name_opt)
+                                          (formLocn, brLocn) f arg2
                 in
                   cAPP l (
                     cAPP (locn.between(locn_of_absyn d)(locn_of_absyn r)) (
                       cAPP (locn_of_absyn d) (
-                        IDENT (locn.Loc_None, update_name),
+                        IDENT (brLocn, update_name),
                         d
                       ),
                       r
@@ -177,7 +204,10 @@ fun process_updates (update_name, lookup_name_opt) f upds =
                       NONE => raise ERR "upd_processor" (locn_of_absyn upds)
                                     "Malformed update argument"
                     | SOME ln =>
-                      cAPP l (cAPP l (IDENT (locn.Loc_None, ln), f), arg1)
+                      cAPP formLocn (
+                        cAPP formLocn (IDENT (brLocn, ln), f),
+                        arg1
+                      )
                 else
                   raise ERR "upd_processor" (locn_of_absyn arg1)
                         "Update list element should be update but isn't"
@@ -197,17 +227,18 @@ fun upd_processor0 (DB:pppdb) a =
               a
          of
             NONE => APP(l, upd_processor0 DB a1, upd_processor0 DB a2)
-          | SOME ((_, arg10, arg20), left) =>
+          | SOME ((formLocn, lbrLocn, arg10, arg20), left) =>
             let
               val arg1 = upd_processor0 DB arg10
               val arg2 = upd_processor0 DB arg20
+              val brLocn = bracket_locn lbrLocn arg20
             in
               case Symtab.lookup(#parse DB) left of
                   NONE => raise ERR "upd_processor" (locn_of_absyn a)
                                 ("No stored info for " ^ left)
                 | SOME (DD {lookup_term_name, upd_term_name = (_, unm), ...}) =>
                   process_updates (unm, Option.map #2 lookup_term_name)
-                                  arg1 arg2
+                                  (formLocn, brLocn) arg1 arg2
              end)
       | _ => a
 
@@ -222,7 +253,7 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm
     =
     let
       open term_pp_utils term_pp_types smpp
-      val avoid_unicode = get_tracefn "PP.avoid_unicode" () = 1
+      val avoid_unicode = HOLFlags.get_bflag Parse.avoid_unicode
       val oinfo = term_grammar.overload_info tmg
       fun oi_strip t =
           case Overload.oi_strip_comb oinfo t of
@@ -302,7 +333,7 @@ val _ = term_grammar.userSyntaxFns.register_userPP
 fun seln_printer  (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     let
       open term_pp_utils term_pp_types smpp
-      val avoid_unicode = get_tracefn "PP.avoid_unicode" () = 1
+      val avoid_unicode = HOLFlags.get_bflag Parse.avoid_unicode
       val oinfo = term_grammar.overload_info tmg
       fun oi_strip t =
           case Overload.oi_strip_comb oinfo t of

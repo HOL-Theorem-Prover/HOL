@@ -24,8 +24,12 @@ have not yet been translated.
 ``` hol4
 >>__ load "cv_transLib";
 
->> cv_transLib.cv_trans arithmeticTheory.FACT;
->> cv_transLib.cv_eval “FACT 50”;
+>> Definition sum_squares_def:
+    sum_squares [] = 0n ∧
+    sum_squares (x::xs) = x * x + sum_squares xs
+  End
+>> cv_transLib.cv_trans sum_squares_def;
+>> cv_transLib.cv_eval “sum_squares [1; 2; 3; 4]”;
 ```
 
 ### See also

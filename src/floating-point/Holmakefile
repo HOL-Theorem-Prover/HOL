@@ -10,11 +10,11 @@ TABLE_UID = $(dprot $(SIGOBJ)/Table.ui)
 # filter, so the table lives here rather than in binary_ieeeLib.sml,
 # which contains HOL quotations.
 
-TwmTab.uo: TwmTab.sml $(TABLE_UID) $(dprot $(SIGOBJ)/HolKernel.ui)
-	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
-
 all: $(DEFAULT_TARGETS)
 .PHONY: all
+
+TwmTab.uo: TwmTab.sml $(TABLE_UID) $(dprot $(SIGOBJ)/HolKernel.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<
 
 ifdef HOLBUILD
 all: link-to-sigobj

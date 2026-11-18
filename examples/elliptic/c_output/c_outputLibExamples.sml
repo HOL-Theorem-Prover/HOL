@@ -10,7 +10,7 @@ loadPath :=
             !loadPath;
 
 map load ["elliptic_exampleTheory", "c_outputLib"];
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 *)
 
 open HolKernel Parse boolLib bossLib;

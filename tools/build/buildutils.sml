@@ -91,11 +91,18 @@ fun startup_check() = (
 val OS = Systeml.OS;
 val HOLDIR = Systeml.HOLDIR
 val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
-val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
 val DYNLIB = Systeml.DYNLIB
 
-fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
+(* Pass the artifact layout as bin/build resolved it, so that children
+   in other directories agree on relative roots. *)
+fun SYSTEML clist =
+    Process.isSuccess
+      (case Holmake_tools.layout_exports () of
+           "" => Systeml.systeml clist
+         | exports =>
+           Systeml.system_ps
+             (exports ^ String.concatWith " " (map Systeml.protect clist)))
 
 val dfltbuildseq = fullPath [HOLDIR, "tools", "build", "build-sequence"]
 val dfltjobnum = 4
@@ -518,6 +525,7 @@ fun hmakefile_data HOLDIR =
             base_environment()
               |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
               |> env_extend ("KERNELID", [LIT "stdknl"])
+              |> extend_with_layout_vars (HOLFileSys.getDir())
         val (env, _, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
         val envlist = Holmake_types.envlist qdiags env
       in
@@ -544,7 +552,10 @@ fun cleanAll0 HOLDIR = let
   val {includes,extra_cleans,...} = hmakefile_data HOLDIR
   open Holmake_tools
 in
-  clean_dir default_ofns {extra_cleans = extra_cleans @ [".hol/"]};
+  case HFS_NameMunge.artifact_dirs_for (HOLFileSys.getDir()) of
+      [] => clean_dir default_ofns {extra_cleans = extra_cleans @ [".hol/"]}
+    | dirs => (clean_dir default_ofns {extra_cleans = extra_cleans};
+               clean_artifact_dirs default_ofns dirs);
   includes
 end
 
@@ -554,8 +565,8 @@ fun cleanForReloc0 HOLDIR =
     open Holmake_tools
   in
     clean_forReloc {holheap = holheap};
-    clean_depdir {depdirname = Systeml.DEPDIR};
-    clean_depdir {depdirname = Systeml.LOGDIR};
+    clean_depdir {depdirname = HFS_NameMunge.depdir_for (HOLFileSys.getDir())};
+    clean_depdir {depdirname = HFS_NameMunge.logdir_for (HOLFileSys.getDir())};
     includes
   end
 
@@ -831,10 +842,9 @@ handle OS.SysErr(s, erropt) =>
 
 val theorygraph_dir = fullPath [HOLDIR, "help", "theorygraph"]
 
-(* Scan sigobj/ for the production theories — anything matching *Theory.sig
-   except "FinalTheory.sig" and *_emitTheory.sig.  Each entry is a symlink
-   to <src>/.hol/objs/<thy>Theory.sig; rewriting the extension gives us the
-   .dat file paths to feed theorytool via --paths-from. *)
+(* Find production theories in sigobj: *Theory.sig except FinalTheory.sig
+   and *_emitTheory.sig.  Convert each symlink target to a logical .dat
+   path for theorytool's --paths-from option. *)
 fun list_sigobj_dats () =
   let
     val sigobj = fullPath [HOLDIR, "sigobj"]
@@ -849,9 +859,8 @@ fun list_sigobj_dats () =
           end
         else false
     fun dat_of_link sigobj_path =
-        (* sigobj/<thy>Theory.sig → <src>/.hol/objs/<thy>Theory.sig.
-           Return the *logical* "<src>/<thy>Theory.dat" path; HFS_NameMunge
-           routes that back through .hol/objs at access time. *)
+        (* Convert the physical symlink target to a logical path before
+           changing its extension.  HFS_NameMunge maps it back on access. *)
         let val tgt =
                 if OS.FileSys.isLink sigobj_path
                 then SOME (OS.FileSys.readLink sigobj_path)
@@ -859,10 +868,12 @@ fun list_sigobj_dats () =
         in case tgt of
                NONE => NONE
              | SOME t =>
-               let val {dir, file} = OS.Path.splitDirFile t
-                   val src = OS.Path.dir (OS.Path.dir dir)
-                   val {base, ...} = OS.Path.splitBaseExt file
-               in SOME (OS.Path.concat (src, base ^ ".dat")) end
+               Option.map
+                 (fn logical =>
+                     OS.Path.joinBaseExt
+                       {base = #base (OS.Path.splitBaseExt logical),
+                        ext = SOME "dat"})
+                 (HFS_NameMunge.FStoHOL t)
         end handle OS.SysErr _ => NONE
     fun loop acc =
         case HOLFileSys.readDir ds of
@@ -948,6 +959,7 @@ fun write_theory_graph () =
           val () = write_lines (pathsfile, list_sigobj_dats ())
           val protect = Systeml.protect
           val cmd =
+              Holmake_tools.layout_exports () ^
               String.concatWith " " [
                 "cd", protect HOLDIR, "&&",
                 protect theorytool, "--quiet", "--thygraph",
@@ -1417,16 +1429,16 @@ fun dirchildren d =
     handle e => die ("build.dirchildren(" ^ d ^ "): " ^ General.exnMessage e)
 end
 
+(* f d says whether to descend into d. *)
 fun preorder_directory_recurse f d =
     let
       fun recurse worklist =
           case worklist of
               [] => ()
             | []::ds => recurse ds
-            | (d::ds)::ds' => (
-                f d;
-                recurse (dirchildren d :: ds :: ds')
-              )
+            | (d::ds)::ds' =>
+              if f d then recurse (dirchildren d :: ds :: ds')
+              else recurse (ds :: ds')
     in
       recurse [[d]]
     end handle e => die ("build.preorder_directory_recurse: " ^
@@ -1435,19 +1447,34 @@ fun preorder_directory_recurse f d =
 fun remove_holmkdir parent =
     let
       open OS.FileSys
-      val dir = parent ++ ".hol" ++ "make-deps"
+      (* Under an artifact root, a dependency directory holds those of
+         its source directory's children, which are removed when the
+         recursion reaches them; keep the directory while they remain. *)
+      fun remove dir =
+          if access (dir, [A_READ, A_EXEC]) andalso not (isLink dir) andalso
+             isDir dir
+          then
+            (map_dir (fn (d,f) => let val p = OS.Path.concat(d,f)
+                                  in
+                                    if isDir p then () else rem_file p
+                                  end) dir;
+             HOLFileSys.rmDir dir handle OS.SysErr _ => ())
+          else ()
+      val legacy = parent ++ ".hol" ++ "make-deps"
+      val depdir = HFS_NameMunge.depdir_for parent
     in
-      if access (dir, [A_READ, A_EXEC]) andalso not (isLink dir) andalso
-         isDir dir
-      then
-        (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) dir;
-         HOLFileSys.rmDir dir)
-      else ()
+      remove legacy;
+      if depdir <> legacy then remove depdir else ()
     end handle e => die ("build.remove_holmkdir(" ^ parent ^ "): " ^
                          General.exnMessage e)
 
+(* Skip an artifact root inside HOLDIR: it holds products, not sources,
+   and its dependency directories are removed through their sources. *)
 fun remove_all_holmkdirs () =
-    preorder_directory_recurse remove_holmkdir HOLDIR
+    preorder_directory_recurse
+      (fn d => if HFS_NameMunge.in_objroot d then false
+               else (remove_holmkdir d; true))
+      HOLDIR
 
 
 val logdir = Systeml.build_log_dir

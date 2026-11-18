@@ -137,6 +137,8 @@ signature Refute_Core = sig
   val change_mf : mf_update -> mf_config -> mf_config
   val bounded_rewrites : thm list
   val normal_rewrites : thm list
+  (* The rewrites and the unwinding conversions together. *)
+  val normal_conv : term -> thm
   val has_bounded_quantifier : term -> bool
   val normalize : term -> term
   val has_unexpanded_binder : term -> bool
@@ -186,6 +188,9 @@ signature Refute_Core = sig
 
   val publish_counterexamples : counterexample list -> unit
   val publish_models : counterexample list -> unit
+  (* Retain current backend diagnostics across an outer deadline. *)
+  val set_backend_diagnostics :
+    (unit -> string list) -> (outcome -> outcome) -> unit
   val search_context_for : config -> search_context
   val with_search_context : config -> ('a -> 'b) -> 'a -> 'b
   val search_expired : config -> bool
@@ -199,5 +204,6 @@ signature Refute_Core = sig
     val enabled : int -> bool
     val say : int -> string -> unit
     val warn : string -> string -> string -> unit
+    val trace : HOLFlags.flag
   end
 end

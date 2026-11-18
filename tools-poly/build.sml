@@ -12,6 +12,10 @@ datatype phase = Initial | Bare | Full
 
   fun main () = let
 
+    (* Read the layout before changing directory, so that relative
+       HOLOBJROOT and HOLSRCROOT are resolved against the directory
+       bin/build started in; children get the resolved roots. *)
+    val layout = HFS_NameMunge.current_layout ()
     val _ = startup_check()
     val phase = ref Initial
 
@@ -43,8 +47,15 @@ fun phase_extras () =
 
 fun aug_systeml proc args = let
   open Posix.Process
-  val env' =
-      "SELFTESTLEVEL="^Int.toString selftest_level :: Posix.ProcEnv.environ()
+  fun not_layout s = not (String.isPrefix "HOLOBJROOT=" s orelse
+                         String.isPrefix "HOLSRCROOT=" s)
+  val env0 =
+      case layout of
+          NONE => Posix.ProcEnv.environ()
+        | SOME {objroot, srcroot} =>
+          "HOLOBJROOT=" ^ objroot :: "HOLSRCROOT=" ^ srcroot ::
+          List.filter not_layout (Posix.ProcEnv.environ())
+  val env' = "SELFTESTLEVEL="^Int.toString selftest_level :: env0
 in
   case fork() of
     NONE => (exece(proc,proc::args,env')

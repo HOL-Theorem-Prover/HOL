@@ -95,14 +95,16 @@ val skew = ref 3;;              (* Skew proof bias (one side is <= n / skew) *)
 
 val cache = ref true;;          (* Cache continuations                       *)
 
-val chatting = ref (if !Globals.interactive then 1 else 0);
-                                (* Gives intermediate info as proof runs.
-                                   When the number is 1, then minimal output
-                                   is given. When the number is 0, no output
-                                   is given. Otherwise, jrh's original output
-                                   is given.                                 *)
-val _ = register_trace("meson", chatting, 2);
+(* Gives intermediate info as proof runs.
+   When the number is 1, then minimal output is given.
+   When the number is 0, no output is given.
+   Otherwise, jrh's original output is given.                                 *)
+val {flag = chatting,...} = HOLFlags.create_trace(
+      {group = "meson", name = "chatting"},
+      {max = 2, initial = if !Globals.interactive then 1 else 0}
+    )
 
+fun chatlvl() = HOLFlags.get_flag chatting
 
 
 (* ------------------------------------------------------------------------- *)
@@ -585,7 +587,7 @@ val state = (g,([],2 * offinc,maxinf))
 (* ------------------------------------------------------------------------- *)
 
 fun chat infs n =
-  case !chatting
+  case chatlvl()
    of 0 => ()
     | 1 => say "."
     | _ => say (String.concat[Int.toString infs, " inferences so far. ",
@@ -605,7 +607,7 @@ fun solve_goal infs rules incdepth min max incsize =
       else let val _ = chat (Uref.!infs) n
                val gi = if incdepth then expand_goal infs rules g n 100000 I
                                     else expand_goal infs rules g 100000 n I
-               val _ = say_solved (Uref.!infs) (!chatting)
+               val _ = say_solved (Uref.!infs) (chatlvl())
            in
              gi
            end
@@ -963,11 +965,11 @@ fun PURE_MESON_TAC infs min max inc gl =
 
 
 fun inform tac g =
-  let val _ = if (!chatting = 1) then say "Meson search level: " else ()
+  let val _ = if (chatlvl() = 1) then say "Meson search level: " else ()
       val infs = Uref.new 0
       val res = tac infs g
-      val _ = if (!chatting = 0) then ()
-         else if (!chatting = 1) then say"\n"
+      val _ = if (chatlvl() = 0) then ()
+         else if (chatlvl() = 1) then say"\n"
               else say  ("  solved with " ^ Int.toString (Uref.!infs) ^
                          " MESON inferences.\n")
   in  res  end;

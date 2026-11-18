@@ -64,10 +64,10 @@ fun date() = "<UNSPECIFIED DATE>"
 (*****************************************************************************)
 
 fun term2string tm =
- let val saved_val = !show_types
-     val _ = (show_types := true)
+ let val saved_val = HOLFlags.get_bflag Parse.show_types
+     val _ = (HOLFlags.set_bflag (Parse.show_types, true))
      val s = Parse.term_to_string tm
-     val _ = (show_types := saved_val)
+     val _ = (HOLFlags.set_bflag (Parse.show_types, saved_val))
  in
   s
  end;

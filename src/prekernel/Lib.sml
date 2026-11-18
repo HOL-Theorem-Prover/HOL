@@ -10,7 +10,7 @@
 structure Lib :> Lib =
 struct
 
-open Feedback;
+open Feedback HOLFlags;
 
 val ERR = mk_HOL_ERR "Lib"
 

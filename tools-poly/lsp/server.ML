@@ -7,6 +7,16 @@ sig
      the wire. *)
   val claimStdout : unit -> TextIO.StreamIO.outstream
 
+  (* Start working out which git revision the run-time sources are at.
+     The `initialize' reply quotes it, and arriving at it means two
+     `git' subprocesses, one of which walks the whole work tree.  Call
+     this as early as there is anything to overlap it with --
+     `tools-poly/hol.ML' does, before compiling the startup files --
+     and the handshake finds the answer already waiting.  Optional:
+     not calling it only means `initialize' pays for it inline, as it
+     always used to. *)
+  val beginStamp : unit -> unit
+
   (* `warnings' are things that went wrong before the server could
      speak -- a heap the directory asked for that would not load, say.
      They are shown to the user once the handshake is done, because a
@@ -291,11 +301,15 @@ val loadedFrom : (string, string) Binarymap.dict ref =
 
 (* Every file the loader uses, keyed by the module it belongs to.  The
    plan covers transitive dependencies too, so this ends up knowing
-   where more theories came from than the header names. *)
-fun noteLoadedFrom path =
-  (loadedFrom :=
-     Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path))
-  handle _ => ()
+   where more theories came from than the header names.  A plan names
+   files with path variables such as $(HOLDIR), or a project's own,
+   which only the loader expands. *)
+fun noteLoadedFrom path0 =
+  let val path = holpathdb.subst_pathvars path0
+  in
+    loadedFrom :=
+      Binarymap.insert (!loadedFrom, OS.Path.base (OS.Path.file path), path)
+  end handle _ => ()
 
 (* Holmake writes `d/fooTheory.uo' as `d/.hol/objs/fooTheory.uo' and
    presents it as if it were the former; the script is beside the
@@ -315,18 +329,17 @@ fun scriptBeside path = let
   end handle _ => NONE
 
 (* Where a logical object path really is.  Holmake keeps a directory's
-   objects in `.hol/objs' and presents them as if they sat beside the
-   source, so the path the loader reports is the presented one and
-   stat-ing it answers "absent" for every built directory.  Try the
-   path as given -- an unmunged tree, or sigobj -- then the munged
-   one. *)
+   objects in `.hol/objs', or under an artifact root, and presents them
+   as if they sat beside the source, so the path the loader reports is
+   the presented one and stat-ing it answers "absent" for every built
+   directory.  Try the path as given -- an unmunged tree, or sigobj --
+   then the munged one. *)
 fun physicalArtifact path =
   (if OS.FileSys.access (path, []) then SOME path
-   else let
-     val p = OS.Path.concat
-               (OS.Path.concat (OS.Path.dir path, ".hol"),
-                OS.Path.concat ("objs", OS.Path.file path))
-     in if OS.FileSys.access (p, []) then SOME p else NONE end)
+   else case HFS_NameMunge.HOLtoFS path of
+          SOME {fullfile, ...} =>
+            if OS.FileSys.access (fullfile, []) then SOME fullfile else NONE
+        | NONE => NONE)
   handle _ => NONE
 
 (* Of the modules named, those whose script is newer than the artifact
@@ -1421,7 +1434,61 @@ in
                then sha else sha ^ "-dirty"
 end
 val builtFrom = gitStamp ()
-fun sourcesNow () = gitStamp ()
+
+(* `sourcesNow' off the handshake.  The sha half is a ref read; the
+   `-dirty' half is `git status' walking the work tree, which on a
+   tree a build has just rewritten measured 1.4-3.7s here -- and
+   0.03-0.15s for every caller after, the first one having left a
+   refreshed index behind.  Either way it is not work to do between
+   receiving `initialize' and answering it, which is where it sat:
+   `initialize' is the one request that timed out when the protocol
+   suite, which starts ~300 servers, ran beside a parallel build on
+   2026-11-17.
+
+   So compute it on its own thread, started by `beginStamp' before the
+   init files load -- ~0.4s to hide behind -- and collect here.
+   `sourcesNow' starts it itself if nobody did, so a path that forgets
+   is slow rather than wrong, and gives up after 20s rather than
+   blocking the handshake for ever: `unknown' in a field nothing reads
+   but a log beats a server that never answers.  Interrupts are
+   deferred on that thread for the same reason -- a client interrupt
+   landing in the middle of `git' must not leave the answer unpublished. *)
+local
+  val cell : string option ref = ref NONE
+  val started = ref false
+  val slock = Mutex.mutex ()
+  val scond = ConditionVar.conditionVar ()
+  fun publish s =
+    Multithreading.synchronized "stamp.publish" slock (fn () => (
+      cell := SOME s; ConditionVar.broadcast scond))
+  fun compute () = publish (gitStamp () handle _ => "")
+in
+  fun beginStamp () = let
+    val fresh = Multithreading.synchronized "stamp.begin" slock (fn () =>
+                  (not (!started)) before (started := true))
+  in
+    if not fresh then ()
+    else (ignore (Thread.fork
+                    (compute, [Thread.InterruptState Thread.InterruptDefer]))
+          handle _ => compute ())
+  end
+  (* The deadline is tested here rather than read off `waitUntil's
+     result, which keeps this correct whichever way that flag runs --
+     same reasoning as `Conn.drain' above. *)
+  fun sourcesNow () = let
+    val () = beginStamp ()
+    val deadline = Time.now () + Time.fromSeconds 20
+  in
+    Multithreading.synchronized "stamp.collect" slock (fn () => let
+      fun loop () =
+        case !cell of
+            SOME s => s
+          | NONE => if Time.>= (Time.now (), deadline) then ""
+                    else (ConditionVar.waitUntil (scond, slock, deadline);
+                          loop ())
+    in loop () end)
+  end
+end
 
 fun encBuildInfo print = let
   val now = sourcesNow ()
@@ -2638,18 +2705,69 @@ fun start {diag, dbg, warnings} = let
       PolyML.PrettyBreak(1, 3),
       PolyML.PrettyString "raised"])
 
-  fun exnToReport i e = Error {hard = true,
-    pos = case PolyML.Exception.exceptionLocation e of
-      (* A HOL kernel exception (raised from Theory.new_theory or
-         similar) carries a location inside the HOL source that
-         raised it — mapping its byte offset via the current file's
-         `lines` table produces a nonsense line.  Trust the
-         location only when its `file` field is empty (meaning
-         "the anonymous compile unit we're currently feeding to
-         PolyML.compiler"). *)
-      SOME (l as {file = "", ...}) => locToRange l
-    | _ => (i, i),
-    msg = encPretty textWidth (exceptionMessage e)}
+  (* An exception escaping a declaration, as a diagnostic.
+
+     `i' is where the declaration begins, and used to be the whole
+     answer for anything HOL raised: a type error in a `Theorem' goal
+     landed as a zero-width squiggle on the `Theorem' keyword.  It is
+     still the fallback, and still the only answer for an exception
+     that knows nothing about the file.
+
+     `bounds' is the window a claimed position has to fall inside --
+     the declaration's start byte and the end of the text being
+     compiled.  A `HOL_ERR' is a chain of origins and only the
+     innermost speaks about the user's term; `exnReport' picks that
+     one, and this is the check that it did.  Rejecting a position
+     below `#1 bounds' is what keeps a span merged across two
+     different quotations from painting a whole declaration red.
+
+     `linesOpt' is NONE where there is no file to be positioned in --
+     the `$/eval' channel -- which is also how that caller keeps the
+     behaviour it had before any of this. *)
+  fun exnToReportIn linesOpt bounds i e = let
+    val fallback =
+      case PolyML.Exception.exceptionLocation e of
+        (* A HOL kernel exception (raised from Theory.new_theory or
+           similar) carries a location inside the HOL source that
+           raised it — mapping its byte offset via the current file's
+           `lines` table produces a nonsense line.  Trust the
+           location only when its `file` field is empty (meaning
+           "the anonymous compile unit we're currently feeding to
+           PolyML.compiler"). *)
+        SOME (l as {file = "", ...}) => locToRange l
+      | _ => (i, i)
+    val {range, message} = !LSPExtension.exnReport e
+    (* `locn' columns count bytes, so the conversion out of them does
+       too; `encDiagAt' turns the byte offsets back into whatever the
+       client negotiated.  Going through the client's units here would
+       agree under utf-8 and skew every position on a line holding a
+       non-ASCII character under utf-16. *)
+    val pos =
+      case (linesOpt, range) of
+        (SOME lines, SOME (p1, p2)) => let
+          val (lo, hi) = bounds
+          val s = LSPExtension.fromLineColBytes lines p1
+          (* `p2' names the last character, and the byte after it is
+             what a range ends at.  Widening here rather than in the
+             column keeps a region ending at a line's last character
+             from collapsing: that column is past the line, and
+             `fromLineColBytes' clamps it back. *)
+          val t = LSPExtension.fromLineColBytes lines p2 + 1
+        in
+          if lo <= s andalso s < t andalso t <= hi then (s, t)
+          else fallback
+        end
+      | _ => fallback
+    (* The message is about rendering, not about position, so it
+       stands even where the position above was refused. *)
+    val msg = case message of
+                  SOME m => encString m
+                | NONE => encPretty textWidth (exceptionMessage e)
+  in
+    Error {hard = true, pos = pos, msg = msg}
+  end
+
+  fun exnToReport i e = exnToReportIn NONE (0, 0) i e
 
   fun mergeInto msg buf =
     case (msg, DArray.last buf) of
@@ -2719,6 +2837,16 @@ fun start {diag, dbg, warnings} = let
 
   fun compileForReport uri code startByte stopAfter lastPos builtTree
                        onDecStarted' onDecCompleted report = let
+    (* The line table for `code', for turning a HOL exception's
+       `locn.LocA' line/column back into a byte offset.  Built on first
+       use and not before: a compile that raises nothing never pays for
+       the scan, and most compiles raise nothing. *)
+    val codeLinesRef = ref (NONE : LSPExtension.lines option)
+    fun codeLines () =
+      case !codeLinesRef of
+          SOME ls => ls
+        | NONE => let val ls = LSPExtension.mkLineCounter code
+                  in codeLinesRef := SOME ls; ls end
     (* A deferred proof belongs to the declaration being compiled when it
        is enqueued, so record that declaration's start as each one
        begins.  Elaboration is single-threaded, so a plain ref is
@@ -2779,7 +2907,12 @@ fun start {diag, dbg, warnings} = let
       progress = fn i => (lastPos := i; report (Progress i)),
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
-      runtimeExn = fn e => report (exnToReport (!lastPos) e),
+      (* The declaration's own start as the floor for a claimed
+         position, so an exception cannot squiggle something above the
+         declaration that raised it. *)
+      runtimeExn = fn e => report (exnToReportIn (SOME (codeLines ()))
+                                                 (!lastPos, size code)
+                                                 (!lastPos) e),
       builtTree = builtTree,
       onDecStarted = onDecStarted,
       onDecCompleted = onDecCompleted,

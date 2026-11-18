@@ -120,7 +120,7 @@ Theorem G2M_relates[transfer_rule] =
         MATCH_MP HK_thm2 (CONJ G2M (CONJ G2M_def Rtt))
 
 (*
-val _ = show_assums := true
+val _ = HOLFlags.set_bflag (Parse.show_assums, true)
 val rdb = global_ruledb()
 val cleftp = false
 val cfg = {force_imp = false, cleftp = cleftp,

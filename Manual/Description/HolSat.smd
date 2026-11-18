@@ -34,7 +34,7 @@ proving propositional tautologies:
 >>__ val oldwidth = !linewidth;
 >>__ linewidth := 70;
 
->> show_tags := true;
+>> HOLFlags.set_bflag(HOLFlags.show_tags, true);
 
 >> SAT_PROVE ``(a ==> b) /\ (b ==> a) <=> (a=b)``;
 
@@ -64,7 +64,7 @@ to `HolSatLib`.
 
 >> SAT_PROVE ``~(a /\ ~a)``;
 >>__ linewidth := oldwidth;
->>__ show_tags := false;
+>>__ HOLFlags.set_bflag(HOLFlags.show_tags, false);
 ```
 
 As expected, if the target term is unsatisfiable we get a theorem
