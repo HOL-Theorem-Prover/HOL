@@ -37,14 +37,17 @@ val _ =
    ancestor's suspended theorem *)
 val prepared_goal = valOf (TotalDefn.prepare_qDefine "prepared_def"
   ‘prepared n = if n = 0 then 0n else prepared (n - 1) + 1’)
-fun fails f = (ignore (f ()); false) handle HOL_ERR _ => true
+fun fails_with s f =
+  (ignore (f ()); false)
+  handle HOL_ERR e => String.isSubstring s (message_of e)
 val _ =
-  if fails (fn () => markerLib.resume
-                       {suspension_name = "prepared_def", label_name = "tc"}
-                       (TRY markerLib.RESUME_TAC >> metis_tac [])
-                       (Context.snapshot ())) andalso
-     fails (fn () => markerLib.finalise_suspended_thm DB.Unknown
-                       "prepared_def")
+  if fails_with "No suspended theorem named prepared_def"
+       (fn () => markerLib.resume
+                   {suspension_name = "prepared_def", label_name = "tc"}
+                   (TRY markerLib.RESUME_TAC >> metis_tac [])
+                   (Context.snapshot ())) andalso
+     fails_with "No such suspended theorem: prepared_def"
+       (fn () => markerLib.finalise_suspended_thm DB.Unknown "prepared_def")
   then () else raise Fail "Resume or Finalise reached the ancestor"
 val prepared_def = TotalDefn.complete_definition "prepared_def"
   (TAC_PROOF (prepared_goal, WF_REL_TAC ‘$<’))
