@@ -980,9 +980,10 @@ fun is_suspended name =
         SOME (thy, _) => thy = current_theory ()
       | NONE => false
 
-(* th proves the goal (asl, w) of name's termination, or what that proof
-   gives, from the goal's assumptions and suspended goals only *)
-fun check_proof fname name asl th =
+(* th proves w, the goal of name's termination or what proving it gives,
+   from the goal's assumptions asl and suspended goals only *)
+fun check_proof fname name asl w th =
+    aconv (concl th) w andalso
     List.all (fn h => tmem h asl orelse
                       Option.isSome (boolLib.dest_suspended h)) (hyp th)
     andalso Theory.uptodate_thm th orelse
@@ -1051,21 +1052,19 @@ fun complete fname name th =
         NONE => raise ERR fname ("No pending definition " ^ Lib.quote name)
       | SOME {loc, goal = (asl, w), validate, finish} =>
         let
-          val _ = aconv (concl th) w orelse
-                  raise ERR fname ("Theorem does not prove the termination \
-                                   \goal of " ^ Lib.quote name)
-          val _ = check_proof fname name asl th
+          val _ = check_proof fname name asl w th
           val th = validate th
+          fun finalise th' = (check_proof "Finalise" name asl (concl th) th';
+                              #1 (finish th'))
         in
           if boolLib.has_suspended_subgoals th then
             (boolLib.save_thm_attrs loc
                ({thmname = name, attrs = [], reserved = [], unknown = []}, th);
-             markerLib.set_finaliser name
-               (fn th => (check_proof "Finalise" name asl th; #1 (finish th)));
+             markerLib.set_finaliser name finalise;
              set_pending name NONE;
              (list_conj_gen (CONJUNCT1 th), NONE))
           else
-            (set_pending name NONE; finish th)
+            finish th before set_pending name NONE
         end
 
 fun define_with_tactic loc stem q tac scope post =

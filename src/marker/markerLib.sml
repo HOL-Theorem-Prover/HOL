@@ -1261,24 +1261,24 @@ datatype parent_source =
     FromStore  (* normal suspended theorem *)
   | FromDB     (* fallback: likely --fast, possibly already-finalised *)
 
-(* Returns (source, parent_thy, thm) *)
+(* Returns (source, parent_thy, thm).  A theorem of the current theory,
+   suspended or not, comes before an ancestor's suspended one. *)
 fun find_parent nm : (parent_source * string * thm) option =
-    case lookup_suspension nm of
-        SOME (thy, th) => SOME (FromStore, thy, th)
-      | NONE =>
-          let
-            val cur = Theory.current_theory ()
-            val thys = cur :: Theory.ancestry cur
-            fun search [] = NONE
-              | search (t::rest) =
-                (case Lib.total (DB.fetch t) nm of
-                     SOME th => SOME (t, th)
-                   | NONE => search rest)
-          in
-            case search thys of
-                NONE => NONE
-              | SOME (t, th) => SOME (FromDB, t, th)
-          end
+    let
+      val cur = Theory.current_theory ()
+      fun in_db t =
+          Option.map (fn th => (FromDB, t, th)) (Lib.total (DB.fetch t) nm)
+      fun search [] = NONE
+        | search (t::rest) =
+          case in_db t of NONE => search rest | found => found
+    in
+      case lookup_suspension nm of
+          SOME (thy, th) =>
+          (case if thy = cur then NONE else in_db cur of
+               NONE => SOME (FromStore, thy, th)
+             | found => found)
+        | NONE => search (cur :: Theory.ancestry cur)
+    end
 
 (* ----------------------------------------------------------------------
     resume : save one (or more) resumption proofs
@@ -1524,7 +1524,21 @@ val _ = Theory.register_hook
                      ("These suspended theorems must be finalised in \
                       \their own theory: " ^
                       String.concatWith ", " (map #1 fs)))
-    | TheoryDelta.NewTheory _ => Context.Data.write finaliser_slot []
+    | TheoryDelta.NewTheory {newseg, ...} =>
+        (Context.Data.write finaliser_slot [];
+         (* A restarted theory starts again without its suspensions *)
+         update_susp_global
+           (fn tab => KNametab.fold
+                        (fn (k, th) => fn acc =>
+                            if #Thy k = newseg then acc
+                            else KNametab.update (k, th) acc)
+                        tab empty_susp_table);
+         update_res_global
+           (fn dict => ResTab.fold
+                         (fn (k as (t, _, _), v) => fn acc =>
+                             if t = newseg then acc
+                             else ResTab.update (k, v) acc)
+                         dict empty_res_dict))
     | _ => ())
 
 fun finalise_suspended_thm loc nm0 =

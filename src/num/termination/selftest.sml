@@ -496,6 +496,21 @@ val _ = assert (not (stored "xhyp_def") andalso not (stored "xhyp_ind") andalso
                 not (Option.isSome (DefnBase.lookup_indn “xhyp”)))
 val _ = OK ()
 
+val _ = tprint "a replaced suspension is not finalised as the definition"
+val _ = located_qDefine DB.Unknown "swap_def"
+  ‘swap_fun n = if n = 0 then 0n else swap_fun (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "swapdef"))
+  (Context.snapshot ())
+val _ = Q.store_thm ("swap_def", ‘p ==> p’,
+                     DISCH_TAC THEN markerLib.suspend "swap")
+val _ = markerLib.resume {suspension_name = "swap_def", label_name = "swap"}
+          (ASM_REWRITE_TAC []) (Context.snapshot ())
+val _ = assert (rejects_with "does not prove" (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "swap_def"))
+val _ = assert (not (stored "swap_def") andalso
+                not (Option.isSome (DefnBase.lookup_indn “swap_fun”)))
+val _ = OK ()
+
 val _ = tprint "mutual definitions complete through prepare_qDefine"
 val mutual_goal = valOf (prepare_qDefine "mev_def[induction=mev_steps]"
   ‘(mev n = if n = 0 then T else mod (n - 1)) /\
@@ -523,6 +538,12 @@ val _ = located_qDefine DB.Unknown "expsusp_def"
   (Context.snapshot ())
 val _ = assert (rejects_with "finalised in their own theory: expsusp_def"
                   export_theory)
+val _ = save_thm ("occ_steps", TRUTH)
+val occ_goal = valOf (prepare_qDefine "occ_def[induction=occ_steps]"
+  ‘occ n = if n = 0 then 0n else occ (n - 1) + 1’)
+val _ = assert (rejects (fn () =>
+  complete_definition "occ_def" (TAC_PROOF (occ_goal, count_goal))))
+val _ = assert (rejects_with "not proved: occ_def" export_theory)
 val _ = OK ()
 
 val _ = tprint "a discarded or restarted theory leaves nothing pending"
@@ -534,7 +555,16 @@ val _ = located_qDefine DB.Unknown "expsusp_def"
 val _ = assert (stored "expsusp_def")
 val _ = prepare_qDefine "restart_def"
   ‘restart n = if n = 0 then 0n else restart (n - 1) + 1’
+val _ = located_qDefine DB.Unknown "rsusp_def"
+  ‘rsusp n = if n = 0 then 0n else rsusp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "rsusp"))
+  (Context.snapshot ())
 val _ = new_theory "staged_other"
+val _ = located_qDefine DB.Unknown "rsusp_def"
+  ‘rsusp n = if n = 0 then 0n else rsusp (n - 1) + 1’ (SOME count_goal)
+  (Context.snapshot ())
+val _ = assert (stored "rsusp_def" andalso
+                not (Option.isSome (markerLib.lookup_suspension "rsusp_def")))
 val restart_goal = valOf (prepare_qDefine "restart_def"
   ‘restart n = if n = 0 then 0n else restart (n - 1) + 1’)
 val _ = complete_definition "restart_def" (TAC_PROOF (restart_goal, count_goal))
