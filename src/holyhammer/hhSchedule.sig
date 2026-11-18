@@ -29,6 +29,14 @@ sig
   val with_problem_dir :
     string -> hhConfig.hh_options -> (string -> 'a) -> 'a
   val problem_path : string -> hhProver.slice -> string
+  val copy_file : string -> string -> int
+  (* generated and copied report each exported or byte-copied problem. *)
+  type export_observer =
+    {generated : hhProver.slice -> unit,
+     copied : hhProver.slice * int -> unit}
+  val export_problems_observed : export_observer -> string ->
+    hhConfig.hh_options -> goal -> (string * string list) list ->
+    (hhProver.prover_config * hhProver.slice) list -> unit
   val default_progress : event -> unit
   val export_problems : string -> hhConfig.hh_options -> goal ->
     (string * string list) list ->

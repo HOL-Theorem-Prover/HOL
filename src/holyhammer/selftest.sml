@@ -4401,6 +4401,143 @@ fun test_schedule_export_wiring () =
     remove_tree root
   end
 
+fun list_directory directory =
+  let
+    val stream = OS.FileSys.openDir directory
+    fun loop acc =
+      case OS.FileSys.readDir stream of
+          NONE => acc
+        | SOME entry => loop (entry :: acc)
+    val entries = loop []
+      handle error => (OS.FileSys.closeDir stream; raise error)
+  in
+    OS.FileSys.closeDir stream;
+    Portable.sort (fn a => fn b => String.compare (a, b) <> GREATER) entries
+  end
+
+fun test_schedule_legacy_sharing () =
+  let
+    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val e = prover Eprover
+    val vampire = prover Vampire
+    fun options max_facts : hhConfig.hh_options =
+      {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+       cores = 1, filter = "none", max_facts = max_facts, format = "",
+       type_enc = "", lam_trans = "", mono_iters = 3, mono_instances = NONE,
+       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
+       cache = false, cache_dir = "", cache_max_entries = 100,
+       debug_dir = NONE, preplay_drop_one = false, verbose = false}
+    fun slice prover filter nfacts : hhProver.slice =
+      {prover = prover, format = "fof", type_enc = "", lam_trans = "",
+       nfacts = nfacts, filter = filter, extra_opts = [], slice_size = 1}
+    fun names facts = map (fn fact => "listTheory." ^ fact) facts
+    val ranking = names ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND",
+                         "REVERSE_APPEND"]
+    val other_ranking = rev ranking
+    val goal = ([], boolSyntax.T)
+    val generated = ref 0
+    val copied = ref 0
+    val copy_bytes = ref 0
+    val observer : hhSchedule.export_observer =
+      {generated = fn _ => generated := !generated + 1,
+       copied = fn (_, bytes) =>
+         (copied := !copied + 1; copy_bytes := !copy_bytes + bytes)}
+    fun run options rankings schedule =
+      (generated := 0; copied := 0; copy_bytes := 0;
+       smlRedirect.hidef (hhSchedule.export_problems_observed observer root
+         options goal rankings) schedule)
+    fun text slice =
+      String.concat (read_lines (hhSchedule.problem_path root slice))
+    fun direct ranking count =
+      let
+        val dir = OS.FileSys.tmpName ()
+        val _ = OS.FileSys.remove dir
+        val _ = mkdir dir
+        val named = smlRedirect.hidef mlThmData.thml_of_namel
+          (aiLib.first_n count ranking)
+        val _ = hhExportFof.fof_export_pb dir
+          (boolSyntax.list_mk_imp goal,
+           List.filter (null o Thm.hyp o #2) named)
+        val result = String.concat (read_lines (join dir "atp_in"))
+      in
+        (remove_tree dir; result)
+      end
+    (* kNN occurs under several slice keys, one selection (length 4). *)
+    val knn_a = slice Eprover "knn" 3
+    val knn_b = slice Vampire "knn" 3
+    val knn_c = slice Eprover "knn" 4
+    val knn_long = slice Vampire "knn" 100
+    val mepo = slice Eprover "mepo" 4
+    val _ = run (options NONE) [("knn", ranking), ("mepo", other_ranking)]
+      [(e, knn_a), (vampire, knn_b), (e, knn_c), (vampire, knn_long),
+       (e, mepo)]
+    val _ = expect "legacy problems with one selection are generated once"
+      (!generated = 3 andalso !copied = 2 andalso !copy_bytes > 0)
+    val _ = expect "equal-length selections of different filters stay apart"
+      (text knn_c <> text mepo andalso
+       text mepo = direct other_ranking 4)
+    val _ = expect "copied legacy bytes equal a direct export"
+      (text knn_c = direct ranking 4 andalso text knn_long = text knn_c andalso
+       text knn_a = direct ranking 3 andalso text knn_b = text knn_a andalso
+       text knn_a <> text knn_c)
+    val _ = expect "copies are separate files at their own paths"
+      (hhSchedule.problem_path root knn_a <>
+       hhSchedule.problem_path root knn_b andalso
+       OS.FileSys.fileSize (hhSchedule.problem_path root knn_b) =
+         Position.fromInt (String.size (text knn_a)))
+    (* filter none: the whole ranking, up to the optional cap. *)
+    val none_a = slice Eprover "none" 0
+    val none_b = slice Vampire "none" 7
+    val _ = run (options NONE) [("none", ranking)]
+      [(e, none_a), (vampire, none_b)]
+    val _ = expect "filter none shares the whole ranking"
+      (!generated = 1 andalso !copied = 1 andalso
+       text none_a = direct ranking 4 andalso text none_b = text none_a)
+    val _ = run (options (SOME 2)) [("none", ranking)]
+      [(e, none_a), (vampire, none_b)]
+    val _ = expect "filter none honours max_facts and still shares"
+      (!generated = 1 andalso !copied = 1 andalso
+       text none_a = direct ranking 2 andalso text none_b = text none_a)
+    (* A retry on the same root re-exports one former duplicate. *)
+    val _ = run (options NONE) [("knn", ranking)]
+      [(e, knn_a), (vampire, knn_b)]
+    val before_a = text knn_a
+    val _ = run (options NONE) [("knn", other_ranking)] [(vampire, knn_b)]
+    val _ = expect "a retry changes one former duplicate only"
+      (!generated = 1 andalso !copied = 0 andalso
+       text knn_a = before_a andalso
+       text knn_b = direct other_ranking 3 andalso text knn_a <> text knn_b)
+    val _ = run (options NONE) [("knn", other_ranking)]
+      [(e, knn_a), (vampire, knn_b)]
+    val _ = expect "a retry re-copies over the former duplicate"
+      (!generated = 1 andalso !copied = 1 andalso
+       text knn_a = text knn_b andalso
+       text knn_a = direct other_ranking 3)
+    (* A failed copy leaves neither a temporary nor a changed target. *)
+    val source = hhSchedule.problem_path root knn_a
+    val parent = join root "copy_failure"
+    val _ = mkdir parent
+    val blocked = join parent "atp_in"
+    val _ = mkdir blocked
+    val _ = write_file (join blocked "occupied") "x"
+    val raised = (hhSchedule.copy_file source blocked; false)
+      handle OS.SysErr _ => true
+    val missing = join (join parent "absent") "atp_in"
+    val raised_missing = (hhSchedule.copy_file source missing; false)
+      handle IO.Io _ => true
+    val good = join parent "good"
+    val _ = write_file good "old"
+    val size = hhSchedule.copy_file source good
+    val _ = expect "a failed copy raises and leaves no temporary file"
+      (raised andalso raised_missing andalso
+       is_dir blocked andalso
+       list_directory parent = ["atp_in", "good"] andalso
+       size = String.size (text knn_a) andalso
+       String.concat (read_lines good) = text knn_a)
+  in
+    remove_tree root
+  end
+
 fun test_hhSchedule () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       SOME _ => ()
@@ -4427,6 +4564,7 @@ fun test_hhSchedule () =
 
 val _ = test_with_problem_dir ()
 val _ = test_schedule_export_wiring ()
+val _ = test_schedule_legacy_sharing ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
 val _ = test_hhSchedule ()

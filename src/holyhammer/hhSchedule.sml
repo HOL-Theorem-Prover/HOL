@@ -145,14 +145,52 @@ fun mono_instances options config (slice : hhProver.slice) =
       SOME cap => cap
     | NONE => Int.max (#mono_instances config, #nfacts slice)
 
+(* Copy source to destination through a fresh sibling temporary renamed
+   on success, so that an existing destination is replaced whole and no
+   temporary survives an error or an interrupt.  Returns the byte count.
+   Hard links are not an option: opening an old path for writing would
+   truncate every other path linked to it. *)
+fun copy_file source destination =
+  let
+    val input = BinIO.openIn source
+    val bytes = BinIO.inputAll input
+      handle error => (BinIO.closeIn input; raise error)
+    val _ = BinIO.closeIn input
+    val temporary = destination ^ "." ^ Portable.unique_tmp_suffix () ^
+      ".copy"
+    val output = BinIO.openOut temporary
+  in
+    (BinIO.output (output, bytes);
+     BinIO.closeOut output;
+     OS.FileSys.rename {old = temporary, new = destination};
+     Word8Vector.length bytes)
+    handle error =>
+      (BinIO.closeOut output handle _ => ();
+       OS.FileSys.remove temporary handle _ => ();
+       raise error)
+  end
+
+type export_observer =
+  {generated : hhProver.slice -> unit,
+   copied : hhProver.slice * int -> unit}
+
+val silent_observer : export_observer =
+  {generated = fn _ => (), copied = fn _ => ()}
+
 (* This function is called before any scheduler thread is created.  Both
-   thml_of_namel and the exporters touch HOL process-global state. *)
-fun export_problems root options goal rankings schedule =
+   thml_of_namel and the exporters touch HOL process-global state.
+   Besides the public problem key, the legacy problems share an
+   invocation-local key, the named selection (filter and actual prefix
+   length): the conjecture and the legacy printer are fixed, so the first
+   occurrence is exported and the later ones are byte copies. *)
+fun export_problems_observed (observer : export_observer) root options goal
+    rankings schedule =
   let
     val problems = distinct_problems schedule
     val conjecture = list_mk_imp goal
     val memo = hhProblemGen.new_export_memo ()
     val named_memo = ref []
+    val legacy_done = ref []
     fun ranking_for filter =
       case List.find (fn (name, _) => name = filter) rankings of
           SOME (_, ranking) => ranking
@@ -161,51 +199,64 @@ fun export_problems root options goal rankings schedule =
              filter ^ "'")
     (* Check every ranking before creating a directory or problem file. *)
     val _ = List.app (ignore o ranking_for o #filter o #2) problems
-    fun named_for filter nfacts =
+    fun selection filter nfacts =
       let
         val premises = ranking_for filter
-        val count =
+        val wanted =
           if filter = "none" then
             (case #max_facts options of
                  NONE => length premises
-               | SOME maximum => Int.min (maximum, length premises))
+               | SOME maximum => maximum)
           else nfacts
       in
-      case List.find (fn ((old_filter, old_nfacts), _) =>
-          old_filter = filter andalso old_nfacts = nfacts)
-          (!named_memo) of
+        (filter, Int.max (0, Int.min (wanted, length premises)))
+      end
+    fun named_for (key as (filter, count)) =
+      case List.find (fn (old, _) => old = key) (!named_memo) of
           SOME (_, named) => named
         | NONE =>
             let
-              val selected = first_n count premises
+              val selected = first_n count (ranking_for filter)
               (* Theorems with hypotheses are no premises (see hhLearn);
                  explicit hh_pb lists bypass premise selection. *)
               val named = List.filter (null o hyp o #2)
                 (smlRedirect.hidef mlThmData.thml_of_namel selected)
             in
-              named_memo := ((filter, nfacts), named) :: !named_memo;
+              named_memo := (key, named) :: !named_memo;
               named
             end
+    fun export_legacy slice key directory =
+      let val path = join directory "atp_in" in
+        case List.find (fn (old, _) => old = key) (!legacy_done) of
+            SOME (_, first) =>
+              #copied observer (slice, copy_file first path)
+          | NONE =>
+              (#generated observer slice;
+               hhExportFof.fof_export_pb directory
+                 (conjecture, named_for key);
+               legacy_done := (key, path) :: !legacy_done)
       end
     fun export (config, slice) =
       let
         val directory = problem_dir root slice
-        val named = named_for (#filter slice) (#nfacts slice)
+        val key = selection (#filter slice) (#nfacts slice)
         val _ = hhConfig.ensure_dir directory
       in
         case hhSlice.encoding_of slice of
-            hhSlice.Legacy =>
-              hhExportFof.fof_export_pb directory (conjecture, named)
+            hhSlice.Legacy => export_legacy slice key directory
           | hhSlice.Generated {format, type_enc, lam_trans} =>
-              hhProblemGen.export_pb_in memo
+              (#generated observer slice;
+               hhProblemGen.export_pb_in memo
                 {format = format, type_enc = type_enc, lam_trans = lam_trans,
                  mono_iters = #mono_iters options,
                  mono_instances = mono_instances options config slice}
-                (problem_path root slice) (conjecture, named)
+                (problem_path root slice) (conjecture, named_for key))
       end
   in
     List.app export problems
   end
+
+val export_problems = export_problems_observed silent_observer
 
 fun sorted_lemmas lemmas =
   Portable.sort
