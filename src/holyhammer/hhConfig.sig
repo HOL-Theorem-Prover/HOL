@@ -49,7 +49,6 @@ sig
     string -> ('a -> 'b) -> string * 'b
   val commit : {temporary : string, final : string} -> unit
   val remove_quietly : string -> unit
-  val temp_path : string -> string
   val directory_names : string -> string list
   val trim : string -> string
   val trim_left : string -> string

@@ -194,8 +194,9 @@ fun selection options rankings filter nfacts =
   end
 
 datatype kind =
-    Legacy of string option
-  | Generated of hhProblemGen.problem_options
+    ExportLegacy
+  | CopyLegacy of string
+  | ExportGenerated of hhProblemGen.problem_options
 
 type work =
   {index : int, config : hhProver.prover_config, slice : hhProver.slice,
@@ -220,10 +221,10 @@ fun ordered_work root options rankings schedule =
         case hhSlice.encoding_of slice of
             hhSlice.Legacy =>
               (case List.find (fn (old, _) => old = key) firsts of
-                   SOME (_, first) => (work (Legacy (SOME first)), firsts)
-                 | NONE => (work (Legacy NONE), (key, path) :: firsts))
+                   SOME (_, first) => (work (CopyLegacy first), firsts)
+                 | NONE => (work ExportLegacy, (key, path) :: firsts))
           | hhSlice.Generated {format, type_enc, lam_trans} =>
-              (work (Generated
+              (work (ExportGenerated
                  {format = format, type_enc = type_enc,
                   lam_trans = lam_trans, mono_iters = #mono_iters options,
                   mono_instances = mono_instances options config slice}),
@@ -238,42 +239,73 @@ fun ordered_work root options rankings schedule =
     build 0 [] problems
   end
 
-(* The staged pipeline over ordered work.  prepare runs in order and may
-   touch HOL state and draw fresh names; finish and publish touch neither,
-   and publish runs in order.  A failed stage stops admission, the work
-   prepared before the failing index is resolved, the successful prefix is
-   published and the exception of the earliest failing index is raised.
-   finish removes whatever it staged when it fails and publish whatever it
-   was given when it fails; discard releases prepared work that is dropped.
-   Up to window prepared items wait while later ones are prepared (0
-   resolves each item at once).  An interrupt drops the waiting work. *)
-fun run_staged {window} {prepare, finish, publish, discard} works =
+(* The staged pipeline over ordered work.  Per item:
+     prepare w         on the caller, in order; may touch HOL state and draw
+                       fresh names;
+     submit (w, p)     at admission: start the item's finishing work and
+                       return it as a pending item;
+     await q           at resolution, in order: wait for the pending item
+                       and return what it staged;
+     publish (w, f)    in order, on the caller.
+   Finishing work touches no HOL state.  submit and await must be
+   interchangeable in timing: an implementation may run the finishing work
+   inside await (deferred, window 0) or on a worker started by submit.
+   submit cleans up what it was given when it fails, await what it staged
+   when it fails and publish what it was given when it fails.  abandon q
+   cancels a pending item (waiting for its work to stop) and removes
+   whatever it staged, release f removes whatever a finished item staged;
+   both are idempotent and are applied to every item that is dropped.
+
+   A failed stage stops admission, the work admitted before the failing
+   index is resolved, the successful prefix is published and the exception
+   of the earliest failing index is raised.  An interrupt drops all waiting
+   work and propagates.
+
+   Up to window admitted items wait while later ones are prepared.  With
+   window 0 each item is prepared, awaited and published before the next is
+   prepared; window > 0 exists for the bounded workers of TASK_17 (the
+   finishing work of up to window items overlaps later prepares).  An
+   observer sees the effects in stage order: a generated event fires in
+   prepare and a copied event in publish, so with a window the copies are
+   reported after later generated events. *)
+fun run_staged {window}
+    {prepare, submit, await, publish, abandon, release} works =
   let
     val queue = ref []
     val failure = ref NONE
     val stopped = ref NONE
     fun forget () =
-      (List.app (fn (_, p) => (discard p handle _ => ())) (!queue);
+      (List.app (fn (_, q) => (abandon q handle _ => ())) (!queue);
        queue := [])
+    (* The head stays queued until it is published, so that forget covers
+       it whenever an exception leaves resolve. *)
     fun resolve () =
       case !queue of
           [] => ()
-        | (w, p) :: rest =>
-            (queue := rest;
-             publish (w, finish (w, p))
-             handle Interrupt => (forget (); raise Interrupt)
-                  | exn => (failure := SOME exn; forget ()))
+        | (w, q) :: rest =>
+            let val finished = ref NONE in
+              (finished := SOME (await q);
+               publish (w, valOf (!finished));
+               queue := rest)
+              handle exn =>
+                ((case !finished of
+                      SOME f => (release f handle _ => ())
+                    | NONE => ());
+                 raise exn)
+            end
+            handle Interrupt => (forget (); raise Interrupt)
+                 | exn => (failure := SOME exn; forget ())
     fun settle limit =
       while List.length (!queue) > limit andalso not (isSome (!failure)) do
         resolve ()
     fun admit [] = ()
       | admit (w :: rest) =
-          case (SOME (prepare w)
+          case (SOME (submit (w, prepare w))
                 handle Interrupt => (forget (); raise Interrupt)
                      | exn => (stopped := SOME exn; NONE)) of
               NONE => ()
-            | SOME p =>
-                (queue := !queue @ [(w, p)];
+            | SOME q =>
+                (queue := !queue @ [(w, q)];
                  settle window;
                  if isSome (!failure) then () else admit rest)
     val _ = admit works
@@ -292,6 +324,10 @@ datatype prepared =
 
 datatype finished = Temp of string | Copying of string
 
+(* A pending item keeps its prepared state for abandon next to the
+   deferred finishing work that await forces. *)
+type pending = prepared * (unit -> finished)
+
 (* Prepare runs on the caller and the legacy exporter stages its file
    here too: it opens its output before collecting arities, and it closes
    the stream on every exception, so a failure leaves nothing behind. *)
@@ -299,16 +335,14 @@ fun prepare_work (observer : export_observer) conjecture memo named_for
     ({path, key, kind, slice, ...} : work) =
   let val _ = hhConfig.ensure_dir (OS.Path.dir path) in
     case kind of
-        Legacy (SOME first) => Copy first
-      | Legacy NONE =>
-          let val temporary = hhConfig.temp_path path in
-            #generated observer slice;
-            hhExportFof.fof_export_pbfile temporary
-              (conjecture, named_for key)
-            handle exn => (hhConfig.remove_quietly temporary; raise exn);
-            Written temporary
-          end
-      | Generated options =>
+        CopyLegacy first => Copy first
+      | ExportLegacy =>
+          (#generated observer slice;
+           Written (#1 (hhConfig.stage_write
+             {open_out = fn temporary => temporary, close_out = ignore} path
+             (fn temporary => hhExportFof.fof_export_pbfile temporary
+                (conjecture, named_for key)))))
+      | ExportGenerated options =>
           (#generated observer slice;
            Problem (options,
              hhProblemGen.prepare_pb memo options
@@ -325,6 +359,13 @@ fun finish_work ({path, ...} : work, prepared) =
     | Written temporary => Temp temporary
     | Copy first => Copying first
 
+(* The inline implementation: the finishing work is deferred and runs on
+   the caller when await forces it. *)
+fun submit_inline (work, prepared) : pending =
+  (prepared, fn () => finish_work (work, prepared))
+
+fun await_inline ((_, run) : pending) = run ()
+
 fun publish_work (observer : export_observer)
     ({path, slice, ...} : work, finished) =
   case finished of
@@ -333,8 +374,14 @@ fun publish_work (observer : export_observer)
          handle exn => (hhConfig.remove_quietly temporary; raise exn))
     | Copying first => #copied observer (slice, copy_file first path)
 
-fun discard_prepared (Written temporary) = hhConfig.remove_quietly temporary
-  | discard_prepared _ = ()
+(* Written files are the staged temporaries of the legacy exporter, which
+   finishing turns into Temp; both are removed here (idempotently). *)
+fun abandon_pending ((Written temporary, _) : pending) =
+      hhConfig.remove_quietly temporary
+  | abandon_pending _ = ()
+
+fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
+  | release_finished (Copying _) = ()
 
 (* This function is called before any scheduler thread is created.  Both
    thml_of_namel and the exporters touch HOL process-global state. *)
@@ -362,8 +409,9 @@ fun export_problems_observed (observer : export_observer) root options goal
   in
     run_staged {window = 0}
       {prepare = prepare_work observer conjecture memo named_for,
-       finish = finish_work, publish = publish_work observer,
-       discard = discard_prepared} works
+       submit = submit_inline, await = await_inline,
+       publish = publish_work observer, abandon = abandon_pending,
+       release = release_finished} works
   end
 
 val export_problems = export_problems_observed silent_observer

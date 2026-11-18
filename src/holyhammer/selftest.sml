@@ -4686,97 +4686,141 @@ fun test_schedule_staged () =
           ("knn", 3)])
     val _ = expect "work kinds mark legacy sharing and generated jobs"
       (case map #kind work of
-           [hhSchedule.Legacy NONE, hhSchedule.Legacy (SOME one),
-            hhSchedule.Generated g1, hhSchedule.Legacy NONE,
-            hhSchedule.Legacy (SOME two), hhSchedule.Generated g2] =>
+           [hhSchedule.ExportLegacy, hhSchedule.CopyLegacy one,
+            hhSchedule.ExportGenerated g1, hhSchedule.ExportLegacy,
+            hhSchedule.CopyLegacy two, hhSchedule.ExportGenerated g2] =>
              one = first andalso two = fourth andalso
              #mono_instances g1 = Int.max (#mono_instances e, 2) andalso
              #mono_instances g2 = Int.max (#mono_instances e, 3) andalso
              #mono_iters g1 = 3
          | _ => false)
-    val _ = expect "ordered_work rejects a missing ranking up front"
-      (((hhSchedule.ordered_work root (options NONE) [] schedule; false)
-         handle Fail _ => true) andalso null (list_directory root))
-    (* run_staged over fake stages: failures at every stage and index. *)
+    val _ = expect "ordered_work rejects a missing ranking"
+      ((hhSchedule.ordered_work root (options NONE) [] schedule; false)
+       handle Fail _ => true)
+    val _ = expect "export_problems rejects a missing ranking up front"
+      (((quiet (fn () => hhSchedule.export_problems root (options NONE)
+          goal [] schedule)); false) handle Fail _ => true andalso
+       null (list_directory root))
+    (* run_staged over fake stages: failures at every stage and index.
+       failing lists the (stage, index) pairs that raise; boom builds the
+       exception. *)
     datatype stage = Prepare | Finish | Publish
-    fun scenario window failing =
+    fun scenario_with boom window failing =
       let
         val log = ref []
         val published = ref []
         fun note s = log := s :: !log
-        fun hit stage i = failing = SOME (stage, i)
+        fun name word i = word ^ " " ^ Int.toString i
+        fun hit stage i = List.exists (fn f => f = (stage, i)) failing
         fun prepare i =
-          (note ("prepare " ^ Int.toString i);
-           if hit Prepare i then raise Fail ("prepare " ^ Int.toString i)
-           else i)
-        fun finish (_, i) =
-          (note ("finish " ^ Int.toString i);
-           if hit Finish i then raise Fail ("finish " ^ Int.toString i)
-           else i)
+          (note (name "prepare" i);
+           if hit Prepare i then raise boom (name "prepare" i) else i)
+        fun submit (_, i) = (note (name "submit" i); i)
+        fun await i =
+          (note (name "finish" i);
+           if hit Finish i then raise boom (name "finish" i) else i)
         fun publish (_, i) =
-          (note ("publish " ^ Int.toString i);
-           if hit Publish i then
-             (note ("clean " ^ Int.toString i);
-              raise Fail ("publish " ^ Int.toString i))
+          (note (name "publish" i);
+           if hit Publish i then raise boom (name "publish" i)
            else published := i :: !published)
-        fun discard i = note ("discard " ^ Int.toString i)
+        fun abandon i = note (name "abandon" i)
+        fun release i = note (name "release" i)
         val outcome = (hhSchedule.run_staged {window = window}
-          {prepare = prepare, finish = finish, publish = publish,
-           discard = discard} [0, 1, 2, 3, 4, 5]; "ok")
+          {prepare = prepare, submit = submit, await = await,
+           publish = publish, abandon = abandon, release = release}
+          [0, 1, 2, 3, 4, 5]; "ok")
           handle Fail message => message
+               | Interrupt => "interrupt"
       in
         (outcome, rev (!published), rev (!log))
       end
-    fun prepared log =
-      List.mapPartial (fn s => if String.isPrefix "prepare" s then
-        SOME (valOf (Int.fromString (String.extract (s, 8, NONE))))
+    fun scenario window failing =
+      scenario_with (fn message => Fail message) window failing
+    fun numbered word log =
+      List.mapPartial (fn s => if String.isPrefix (word ^ " ") s then
+        SOME (valOf (Int.fromString
+          (String.extract (s, String.size word + 1, NONE))))
         else NONE) log
-    val (ok0, pub0, log0) = scenario 0 NONE
+    val (ok0, pub0, log0) = scenario 0 []
     val _ = expect "staged export publishes everything in order"
       (ok0 = "ok" andalso pub0 = [0, 1, 2, 3, 4, 5] andalso
-       prepared log0 = [0, 1, 2, 3, 4, 5])
-    val (ok3, pub3, log3) = scenario 3 NONE
-    val _ = expect "a window defers finish and publish but not order"
+       numbered "prepare" log0 = [0, 1, 2, 3, 4, 5])
+    val _ = expect "window 0 resolves each item before preparing the next"
+      (List.take (log0, 6) =
+         ["prepare 0", "submit 0", "finish 0", "publish 0",
+          "prepare 1", "submit 1"])
+    val (ok3, pub3, log3) = scenario 3 []
+    val _ = expect "a window submits at admission and awaits at resolution"
       (ok3 = "ok" andalso pub3 = [0, 1, 2, 3, 4, 5] andalso
-       List.take (log3, 4) =
-         ["prepare 0", "prepare 1", "prepare 2", "prepare 3"] andalso
-       List.nth (log3, 4) = "finish 0")
+       List.take (log3, 9) =
+         ["prepare 0", "submit 0", "prepare 1", "submit 1", "prepare 2",
+          "submit 2", "prepare 3", "submit 3", "finish 0"])
     fun check message window failing error prefix =
-      let val (outcome, pub, _) = scenario window (SOME failing) in
+      let val (outcome, pub, _) = scenario window failing in
         expect message (outcome = error andalso pub = prefix)
       end
     val _ = check "prepare failure: earlier work is published" 0
-      (Prepare, 3) "prepare 3" [0, 1, 2]
+      [(Prepare, 3)] "prepare 3" [0, 1, 2]
     val _ = check "prepare failure with a window publishes the prefix" 3
-      (Prepare, 4) "prepare 4" [0, 1, 2, 3]
+      [(Prepare, 4)] "prepare 4" [0, 1, 2, 3]
     val _ = check "finish failure raises its index and publishes the prefix"
-      0 (Finish, 2) "finish 2" [0, 1]
+      0 [(Finish, 2)] "finish 2" [0, 1]
     val _ = check "publish failure raises its index and publishes the prefix"
-      0 (Publish, 1) "publish 1" [0]
+      0 [(Publish, 1)] "publish 1" [0]
     val _ = check "a windowed finish failure drops later work" 3
-      (Finish, 1) "finish 1" [0]
+      [(Finish, 1)] "finish 1" [0]
     val _ = check "a windowed publish failure is earliest" 3
-      (Publish, 0) "publish 0" []
-    val (_, _, windowed) = scenario 3 (SOME (Finish, 1))
-    val _ = expect "after a failure later prepared work is discarded"
-      (List.filter (String.isPrefix "discard") windowed =
-         ["discard 2", "discard 3", "discard 4"] andalso
+      [(Publish, 0)] "publish 0" []
+    val _ = check "an earlier finish failure beats a later prepare failure" 3
+      [(Prepare, 4), (Finish, 2)] "finish 2" [0, 1]
+    val _ = check "an earlier publish failure beats a later prepare failure"
+      3 [(Prepare, 2), (Publish, 1)] "publish 1" [0]
+    val _ = check "an earlier finish failure beats a later publish failure"
+      3 [(Publish, 3), (Finish, 1)] "finish 1" [0]
+    val (_, pub_two, log_two) = scenario 3 [(Prepare, 4), (Finish, 2)]
+    val _ = expect "two failures: later work is abandoned, never published"
+      (List.filter (String.isPrefix "abandon") log_two =
+         ["abandon 2", "abandon 3"] andalso not (List.exists
+           (fn i => i >= 2) pub_two) andalso
+       not (List.exists (fn s => s = "prepare 5" orelse s = "finish 3")
+         log_two))
+    val (_, _, windowed) = scenario 3 [(Finish, 1)]
+    val _ = expect "after a failure later admitted work is abandoned"
+      (List.filter (String.isPrefix "abandon") windowed =
+         ["abandon 1", "abandon 2", "abandon 3", "abandon 4"] andalso
        not (List.exists (fn s => s = "prepare 5") windowed))
-    val (_, _, immediate) = scenario 0 (SOME (Finish, 2))
+    val (_, _, immediate) = scenario 0 [(Finish, 2)]
     val _ = expect "no work is admitted after a failure"
-      (prepared immediate = [0, 1, 2])
-    val (_, _, drained) = scenario 3 (SOME (Prepare, 4))
+      (numbered "prepare" immediate = [0, 1, 2])
+    val (_, _, drained) = scenario 3 [(Prepare, 4)]
     val _ = expect "a prepare failure resolves the earlier indices first"
-      (List.filter (String.isPrefix "publish") drained =
-         ["publish 0", "publish 1", "publish 2", "publish 3"] andalso
-       prepared drained = [0, 1, 2, 3, 4])
+      (numbered "publish" drained = [0, 1, 2, 3] andalso
+       numbered "prepare" drained = [0, 1, 2, 3, 4])
+    val (_, _, failed_publish) = scenario 0 [(Publish, 1)]
+    val _ = expect "a failed publish releases what it was given"
+      (List.filter (String.isPrefix "release") failed_publish = ["release 1"]
+       andalso List.exists (fn s => s = "abandon 1") failed_publish)
+    fun interrupted window failing =
+      scenario_with (fn _ => Interrupt) window failing
+    val (outcome, pub, log) = interrupted 3 [(Finish, 2)]
+    val _ = expect "an interrupt propagates and abandons the waiting work"
+      (outcome = "interrupt" andalso pub = [0, 1] andalso
+       List.filter (String.isPrefix "abandon") log =
+         ["abandon 2", "abandon 3", "abandon 4", "abandon 5"] andalso
+       numbered "prepare" log = [0, 1, 2, 3, 4, 5])
+    val (outcome, pub, log) = interrupted 3 [(Prepare, 4)]
+    val _ = expect "an interrupt in prepare abandons the waiting work"
+      (outcome = "interrupt" andalso pub = [0] andalso
+       List.filter (String.isPrefix "abandon") log =
+         ["abandon 1", "abandon 2", "abandon 3"])
     (* The real stages: a fetch failure at a later index. *)
-    val good_rank = [("knn", bad_ranking)]
+    val bad_rank = [("knn", bad_ranking)]
     val failing = [(e, legacy Eprover "knn" 2), (e, generated Eprover "knn" 2),
                    (vampire, generated Vampire "knn" 4),
                    (vampire, legacy Vampire "knn" 4)]
     val raised = (quiet (fn () => hhSchedule.export_problems root
-      (options NONE) goal good_rank failing); false) handle _ => true
+      (options NONE) goal bad_rank failing); false)
+      handle Feedback.HOL_ERR _ => true
     val _ = expect "a fetch failure publishes the prefix and nothing else"
       (raised andalso
        List.all (fn (_, slice) => not (OS.FileSys.access
@@ -4787,17 +4831,38 @@ fun test_schedule_staged () =
          (hhSchedule.problem_path root (#2 (hd (tl failing))), [])
        andalso List.all (not o String.isSuffix ".tmp") (root_files root))
     val _ = remove_tree root
+    (* A publish failure at a later index: the final path of the third
+       problem is a non-empty directory, so its commit fails. *)
+    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val blocked = hhSchedule.problem_path root (#2 (List.nth (failing, 2)))
+    val _ = hhConfig.ensure_dir (OS.Path.dir blocked)
+    val _ = mkdir blocked
+    val _ = write_file (join blocked "occupied") "x"
+    val raised = (quiet (fn () => hhSchedule.export_problems root
+      (options NONE) goal [("knn", ranking)] failing); false)
+      handle OS.SysErr _ => true
+    val _ = expect "a failing commit publishes the prefix and leaves no temp"
+      (raised andalso
+       OS.FileSys.access
+         (hhSchedule.problem_path root (#2 (hd failing)), []) andalso
+       OS.FileSys.access
+         (hhSchedule.problem_path root (#2 (hd (tl failing))), []) andalso
+       is_dir blocked andalso
+       not (OS.FileSys.access (hhSchedule.problem_path root
+         (#2 (List.nth (failing, 3))), [])) andalso
+       List.all (not o String.isSuffix ".tmp") (root_files root))
+    val _ = remove_tree root
     (* A legacy failure before the first write leaves no staging file. *)
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val raised = (quiet (fn () => hhSchedule.export_problems root
       (options NONE) ([], ``\x:num. x``) [("knn", ranking)]
-      [(e, legacy Eprover "knn" 2)]); false) handle _ => true
+      [(e, legacy Eprover "knn" 2)]); false) handle Feedback.HOL_ERR _ => true
     val _ = expect "a failing legacy export leaves no staged or final file"
       (raised andalso null (root_files root))
     val file = join root "direct"
     val raised_direct =
       (hhExportFof.fof_export_pbfile file (``\x:num. x``, []); false)
-      handle _ => true
+      handle Feedback.HOL_ERR _ => true
     val _ = expect "a direct legacy failure raises before the first write"
       (raised_direct andalso String.size (String.concat (read_lines file)) = 0)
     val _ = remove_tree root
@@ -4808,7 +4873,7 @@ fun test_schedule_staged () =
       (fn root =>
         (seen := root;
          quiet (fn () => hhSchedule.export_problems root (options NONE)
-           goal good_rank failing))); false) handle _ => true
+           goal bad_rank failing))); false) handle Feedback.HOL_ERR _ => true
     val _ = expect "with_problem_dir removes the root after a failed export"
       (raised andalso !seen <> "" andalso not (is_dir (!seen)) andalso
        null (list_directory parent))
