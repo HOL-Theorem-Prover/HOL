@@ -348,13 +348,23 @@ val _ = assert (not (Option.isSome
 val _ = assert (stored "staged_abbrev2_def")
 val _ = OK ()
 
-val _ = tprint "a failed termination proof leaves nothing pending"
+val _ = tprint "a failed or rejected termination proof leaves nothing pending"
 val _ = assert (rejects (fn () => ignore
   (in_repl_mode (qDefine "bad_staged_def"
     ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’)
     (SOME ALL_TAC))))
 val _ = assert (no_pending "bad_staged_def" andalso
                 not (stored "bad_staged_def"))
+fun assume_goal (g as (_, w)) = ACCEPT_TAC (ASSUME w) g
+val _ = assert (rejects (fn () => ignore
+  (in_repl_mode (qDefine "bad_staged_def"
+    ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’)
+    (SOME assume_goal))))
+val _ = assert (no_pending "bad_staged_def")
+val _ = qDefine "bad_staged_def"
+  ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’
+  (SOME (WF_REL_TAC ‘$<’))
+val _ = assert (stored "bad_staged_def")
 val _ = OK ()
 
 val _ = tprint "prepare_qDefine keeps support constants until completion"
