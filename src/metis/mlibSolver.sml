@@ -27,9 +27,7 @@ val op ::> = mlibSubst.::>;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibSolver";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+val chatting = chatting_at 0;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -136,7 +134,8 @@ type form =
   {slice : meter Uref.t,                   (* A meter to stop after each slice *)
    units : units Uref.t,                   (* mlibSolvers share a unit cache *)
    thms  : thm list,                    (* Context, assumed consistent *)
-   hyps  : thm list};                   (* Hypothesis, no assumptions *)
+   hyps  : thm list,                    (* Hypothesis, no assumptions *)
+   chat  : int};                        (* How loud to be *)
 
 (* ------------------------------------------------------------------------- *)
 (* mlibSolver nodes also incorporate a name.                                     *)
@@ -215,23 +214,24 @@ in
     "[" ^ seq (subnode_info verbose) subnodes ^ "]--u=" ^ U.info units ^ "--";
 end;
 
-fun schedule check slice read stat =
+fun schedule ch check slice read stat =
   let
     fun sched nodes =
-      (chatting 3 andalso chat (stat false nodes);
+      (chatting ch 3 andalso chat (stat false nodes);
        if not (check ()) then
-         (chatting 1 andalso chat "?\n"; S.CONS (NONE, fn () => sched nodes))
+         (chatting ch 1 andalso chat "?\n";
+          S.CONS (NONE, fn () => sched nodes))
        else
          case choose_subnode nodes of
-           NONE => (chatting 1 andalso chat "!\n"; S.NIL)
+           NONE => (chatting ch 1 andalso chat "!\n"; S.NIL)
          | SOME n =>
            let
              val Subnode {name, used, solns, cost} = List.nth (nodes,n)
-             val _ = chatting 1 andalso chat name
+             val _ = chatting ch 1 andalso chat name
              val () = slice cost
              val seq = (Option.valOf solns) ()
              val r = read ()
-             val _ = chatting 3 andalso
+             val _ = chatting ch 3 andalso
                      chat ("--t=" ^ time_to_string (#time r) ^ "\n")
              val used = add_readings used r
              val (res, solns) =
@@ -241,22 +241,23 @@ fun schedule check slice read stat =
              val nodes = update_nth (K node) n nodes
            in
              if not (Option.isSome res) then sched nodes else
-               (chatting 3 andalso chat (stat true nodes);
-                chatting 1 andalso chat "#\n";
+               (chatting ch 3 andalso chat (stat true nodes);
+                chatting ch 1 andalso chat "#\n";
                 S.CONS (res, fn () => sched nodes))
            end)
   in
     sched
   end;
 
-fun combine_solvers n csolvers {slice, units, thms, hyps} =
+fun combine_solvers n csolvers {slice, units, thms, hyps, chat = ch} =
   let
-    val _ = chatting 3 andalso chat
+    val _ = chatting ch 3 andalso chat
       (n ^ "--initializing--#thms=" ^ int_to_string (length thms)
        ^ "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
     val meter = Uref.new (new_meter expired)
     fun f (mlibSolver_node {name, solver_con}) =
-      (name, solver_con {slice=meter, units=units, thms=thms, hyps=hyps})
+      (name, solver_con {slice = meter, units = units, thms = thms,
+                         hyps = hyps, chat = ch})
     val cnodes = map (I ## f) csolvers
     fun check () = check_meter (Uref.!slice)
     fun slce cost =
@@ -266,7 +267,8 @@ fun combine_solvers n csolvers {slice, units, thms, hyps} =
     fun read () = read_meter (Uref.!meter)
     fun stat v s = status_info v s (Uref.!units)
   in
-    fn goal => schedule check slce read stat (map (C init_subnode goal) cnodes)
+    fn goal =>
+       schedule ch check slce read stat (map (C init_subnode goal) cnodes)
   end;
 
 fun combine csolvers =
@@ -282,9 +284,9 @@ type sos_filter = {name : string, filter : thm -> bool};
 
 fun apply_sos_filter {name = sos, filter} (mlibSolver_node {name, solver_con}) =
   let
-    fun solver_con' {slice, units, thms, hyps} =
+    fun solver_con' {slice, units, thms, hyps, chat = ch} =
       let
-        val _ = chatting 3 andalso chat
+        val _ = chatting ch 3 andalso chat
           (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
            "--#hyps=" ^ int_to_string (length hyps) ^
            "--apply sos (" ^ sos ^ ").\n")
@@ -292,7 +294,8 @@ fun apply_sos_filter {name = sos, filter} (mlibSolver_node {name, solver_con}) =
           if String.isPrefix "?" sos andalso not (null thms) then (hyps,thms)
           else List.partition filter (hyps @ thms)
       in
-        solver_con {slice = slice, units = units, thms = thms', hyps = hyps'}
+        solver_con {slice = slice, units = units, thms = thms',
+                    hyps = hyps', chat = ch}
       end
   in
     mlibSolver_node {name = name, solver_con = solver_con'}
@@ -321,9 +324,9 @@ val all_positive : sos_filter =
 (* Initializing a solver node makes it ready for action.                     *)
 (* ------------------------------------------------------------------------- *)
 
-type init_data = {limit : limit, thms : thm list, hyps : thm list}
+type init_data = {limit : limit, thms : thm list, hyps : thm list, chat : int}
 
-fun initialize (mlibSolver_node {solver_con, ...}) {limit, thms, hyps} =
+fun initialize (mlibSolver_node {solver_con, ...}) {limit, thms, hyps, chat} =
   case List.find is_contradiction (thms @ hyps) of SOME th
     => contradiction_solver th
   | NONE =>
@@ -331,7 +334,8 @@ fun initialize (mlibSolver_node {solver_con, ...}) {limit, thms, hyps} =
       val meter = Uref.new (new_meter expired)
       val units = Uref.new U.empty
       val solver =
-        solver_con {slice = meter, units = units, thms = thms, hyps = hyps}
+        solver_con {slice = meter, units = units, thms = thms, hyps = hyps,
+                    chat = chat}
     in
       fn g =>
       let open Uref

@@ -1,7 +1,7 @@
 CLINE_OPTIONS = --no_prereqs
 INCLUDES = ../..
 
-all: $(DEFAULT_TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe harvest.exe
 .PHONY: all
 
 selftest.exe: selftest.uo
@@ -10,11 +10,17 @@ selftest.exe: selftest.uo
 	  'exit 0' > $@
 	@chmod +x $@
 
+# No static Refute dependency: the check loads Refute after the fixture.
+harvest.exe: harvest.uo refuteHarvestEarlyAbsTheory.uo
+	@printf '%s\n' '#!/bin/sh' 'set -e' \
+	  '$(HOLDIR)/bin/hol --gcthreads=1 run harvest' > $@
+	@chmod +x $@
+
 ifdef HOLSELFTESTLEVEL
 all: loading-selftest.log
 .PHONY: loading-selftest.log
-loading-selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1,$@)
+loading-selftest.log: selftest.exe harvest.exe
+	$(tee { ./selftest.exe && ./harvest.exe ; } 2>&1,$@)
 endif
 
-EXTRA_CLEANS = selftest.exe loading-selftest.log
+EXTRA_CLEANS = selftest.exe harvest.exe loading-selftest.log

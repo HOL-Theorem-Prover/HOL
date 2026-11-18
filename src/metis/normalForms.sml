@@ -17,7 +17,6 @@ open Parse
 (* Tracing.                                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val trace_level = ref 0;
 val _ = HOLFlags.create_trace(
       {group = "metis", name = "normalForms_trace"},
       {max = 10, initial = 0}

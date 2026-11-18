@@ -35,9 +35,9 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibRewrite";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+(* HOL's alignment table never listed this module, so its output only
+   ever appeared at MAX_LEVEL; ~1 says exactly that. *)
+val chatting = chatting_at ~1;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -61,14 +61,15 @@ datatype rewrs = REWRS of
    known    : (thm * orient) intmap,
    rewrites : (int * bool) termnet,
    subterms : (int * int list) termnet,
-   waiting  : intset};
+   waiting  : intset,
+   chat     : int};   (* how loud to be: handed in by whoever built us *)
 
 fun update_waiting waiting rw =
   let
-    val REWRS {order, known, rewrites, subterms, waiting = _} = rw
+    val REWRS {order, known, rewrites, subterms, waiting = _, chat} = rw
   in
     REWRS {order = order, known = known, rewrites = rewrites,
-           subterms = subterms, waiting = waiting}
+           subterms = subterms, waiting = waiting, chat = chat}
   end;
 
 fun waiting_del i (rw as REWRS {waiting, ...}) =
@@ -78,11 +79,13 @@ fun waiting_del i (rw as REWRS {waiting, ...}) =
 (* Basic operations                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-fun empty order =
+fun empty ch order =
   REWRS {order = order, known = M.empty (), rewrites = T.empty {fifo = false},
-         subterms = T.empty {fifo = false}, waiting = S.empty};
+         subterms = T.empty {fifo = false}, waiting = S.empty, chat = ch};
 
-fun reset (REWRS {order, ...}) = empty order;
+fun reset (REWRS {order, chat, ...}) = empty chat order;
+
+fun chatlevel (REWRS {chat, ...}) = chat;
 
 fun peek (REWRS {known, ...}) i = M.peek (known,i);
 
@@ -115,13 +118,14 @@ local
 
   val complicated = pp_map kws pp_kws;
 in
-  fun pp_rewrs pp = (if chatting 3 then complicated else simple) pp;
+  fun pp_rewrs rw =
+    (if chatting (chatlevel rw) 3 then complicated else simple) rw;
 end;
 
 fun rewrs_to_string rw = PP.pp_to_string (!LINE_LENGTH) pp_rewrs rw;
 
 fun chatrewrs s rw =
-  chat (module ^ "." ^ s ^ ":\n" ^ rewrs_to_string rw ^ "\n");
+  chat ("mlibRewrite." ^ s ^ ":\n" ^ rewrs_to_string rw ^ "\n");
 
 (* ------------------------------------------------------------------------- *)
 (* Add an equation into the system                                           *)
@@ -145,7 +149,7 @@ fun add_rewrite i (th,ort) rewrites =
 fun add (i,th) (rw as REWRS {known, ...}) =
   if Option.isSome (M.peek (known,i)) then rw else
     let
-      val REWRS {order, rewrites, subterms, waiting, ...} = rw
+      val REWRS {order, rewrites, subterms, waiting, chat, ...} = rw
       val ort =
         case orient (order (dest_unit_eq th)) of SOME x => x
         | NONE => raise Bug "mlibRewrite.add: can't add reflexive eqns"
@@ -153,8 +157,8 @@ fun add (i,th) (rw as REWRS {known, ...}) =
       val rewrites = add_rewrite i (th,ort) rewrites
       val waiting = S.add (waiting,i)
       val rw = REWRS {order = order, known = known, rewrites = rewrites,
-                      subterms = subterms, waiting = waiting}
-      val _ = chatting 1 andalso chatrewrs "add" rw
+                      subterms = subterms, waiting = waiting, chat = chat}
+      val _ = chatting chat 1 andalso chatrewrs "add" rw
     in
       rw
     end;
@@ -205,7 +209,7 @@ local
     val compile_neqs = List.mapPartial compile_neq;
   end;
 
-  fun rewr known rewrites order i =
+  fun rewr ch known rewrites order i =
     let
       fun rewr_lit neqs =
         let
@@ -230,7 +234,7 @@ local
             | NONE => (case neq_conv tm of SOME x => x
                        | NONE => raise Error "rewrite: no matching rewrites")
         in
-          DEPTH1 conv
+          DEPTH1 ch conv
         end
 
       fun orient_neq neq = orient (order (dest_eq (negate neq)))
@@ -266,7 +270,7 @@ local
         end
     in
       fn th =>
-      if not (chatting 2) then rewr' th else
+      if not (chatting ch 2) then rewr' th else
         let
           val th' = rewr' th
           val m = thm_match known order (i,th')
@@ -278,8 +282,8 @@ local
         end
     end;
 in
-  fun rewrite (REWRS {known,rewrites,...}) order (i,th) =
-    rewr known rewrites order i th;
+  fun rewrite (REWRS {known,rewrites,chat,...}) order (i,th) =
+    rewr chat known rewrites order i th;
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -335,7 +339,7 @@ fun find_rws order known subterms i =
 
 fun reduce1 new i (rpl,spl,todo,rw) =
   let
-    val REWRS {order, known, rewrites, subterms, waiting} = rw
+    val REWRS {order, known, rewrites, subterms, waiting, chat} = rw
     val (th0,ort0) = M.retrieve (known,i)
     val eq0 = dest_unit th0
     val th = rewrite rw order (i,th0)
@@ -349,7 +353,8 @@ fun reduce1 new i (rpl,spl,todo,rw) =
       NONE =>
       (rpl, spl, todo,
        REWRS {order = order, known = fst (M.remove (known,i)),
-              rewrites = rewrites, subterms = subterms, waiting = waiting})
+              rewrites = rewrites, subterms = subterms, waiting = waiting,
+              chat = chat})
     | SOME ort =>
       let
         val known = if identical then known else M.insert (known,i,(th,ort))
@@ -364,7 +369,7 @@ fun reduce1 new i (rpl,spl,todo,rw) =
       in
         (rpl, spl, todo,
          REWRS {order = order, known = known, rewrites = rewrites,
-                subterms = subterms, waiting = waiting})
+                subterms = subterms, waiting = waiting, chat = chat})
       end
   end;
 
@@ -378,7 +383,7 @@ fun add_stms known (i,stms) =
 
 fun rebuild rpl spl rw =
   let
-    val REWRS {order, known, rewrites, subterms, waiting} = rw
+    val REWRS {order, known, rewrites, subterms, waiting, chat} = rw
     val rewrites =
       if S.isEmpty rpl then rewrites
       else T.filter (fn (i,_) => not (S.member (rpl,i))) rewrites
@@ -389,7 +394,7 @@ fun rebuild rpl spl rw =
     val subterms = S.foldl (add_stms known) subterms spl
   in
     REWRS {order = order, known = known, rewrites = rewrites,
-           subterms = subterms, waiting = waiting}
+           subterms = subterms, waiting = waiting, chat = chat}
   end;
 
 fun pick known s =
@@ -417,7 +422,7 @@ fun reduce_newr rw =
   end;
 
 fun reduce' rw =
-  if not (chatting 2) then reduce_newr rw else
+  if not (chatting (chatlevel rw) 2) then reduce_newr rw else
     let
       val REWRS {known, order, ...} = rw
       val res as (rw',_) = reduce_newr rw
@@ -443,7 +448,7 @@ local
   fun f (th,(n,rw)) = (n + 1, add (n, FRESH_VARS th) rw);
 in
   fun ORD_REWRITE ord ths =
-    let val (_,rw) = foldl f (0, empty ord) ths
+    let val (_,rw) = foldl f (0, empty 0 ord) ths   (* a quiet derived rule *)
     in rewrite rw ord o pair ~1
     end;
 end;

@@ -18,11 +18,13 @@ type vars     = term list * hol_type list
 (* Mapping parameters *)
 type parameters =
   {higher_order : bool,       (* Application is a first-order function *)
-   with_types   : bool};      (* First-order terms include HOL type info *)
+   with_types   : bool,       (* First-order terms include HOL type info *)
+   chat         : int};       (* How loud to be: per call, not tuning *)
 
 val defaults            : parameters
 val update_higher_order : (bool -> bool) -> parameters -> parameters
 val update_with_types   : (bool -> bool) -> parameters -> parameters
+val update_chat         : (int -> int) -> parameters -> parameters
 
 (* Mapping HOL literals to FOL (need to pass in variables) *)
 val hol_literals_to_fol : parameters -> vars * term list -> formula1 list

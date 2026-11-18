@@ -137,6 +137,8 @@ signature Refute_Core = sig
   val change_mf : mf_update -> mf_config -> mf_config
   val bounded_rewrites : thm list
   val normal_rewrites : thm list
+  (* The rewrites and the unwinding conversions together. *)
+  val normal_conv : term -> thm
   val has_bounded_quantifier : term -> bool
   val normalize : term -> term
   val has_unexpanded_binder : term -> bool

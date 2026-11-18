@@ -23,13 +23,14 @@ val pp_subst      = mlibSubst.pp_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibThm";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+(* HOL's alignment table never listed this module, so its output only
+   ever appeared at MAX_LEVEL; ~1 says exactly that. *)
+val chatting = chatting_at ~1;
 fun chat s = (trace s; true)
 
-fun chattrans n s a b pp =
-  if not (chatting n) then ()
+(* `ch' is the level in force, handed in by the caller. *)
+fun chattrans ch n s a b pp =
+  if not (chatting ch n) then ()
   else (chat (s ^ ": " ^ pp a ^ " --> " ^ pp b ^ "\n"); ());
 
 (* ------------------------------------------------------------------------- *)
@@ -485,7 +486,7 @@ fun REWR (rw,lr) (th,lit,p) =
   in fst (fst (REWR' (rw,r,lr) ((th,lit), literal_subterm p lit) p))
   end;
 
-fun DEPTH1 conv =
+fun DEPTH1 ch conv =
   let
     fun rewr_top (thl_tm as (_,tm)) p =
       (case total conv tm of NONE => thl_tm
@@ -494,14 +495,14 @@ fun DEPTH1 conv =
     fun rewr new thl tm_orig p =
       let
         val (thl,tm) = rewr_top (thl,tm_orig) p
-        val () = chattrans 2 "rewr" tm_orig tm term_to_string
+        val () = chattrans ch 2 "rewr" tm_orig tm term_to_string
       in
         if new orelse tm <> tm_orig then rewr_sub thl tm p else (thl,tm)
       end
     and rewr_sub thl tm_orig p =
       let
         val (thl,tm) = rewr_below thl tm_orig p
-        val () = chattrans 3 "rewr_sub" tm_orig tm term_to_string
+        val () = chattrans ch 3 "rewr_sub" tm_orig tm term_to_string
       in
         if tm <> tm_orig then rewr false thl tm p else (thl,tm)
       end
@@ -522,24 +523,24 @@ fun DEPTH1 conv =
     let
       val () = assert (mem lit (clause th)) (Bug "DEPTH1: no such literal")
       val (th',lit') = rewr_lit th lit
-      val () = chattrans 3 "DEPTH1 (thm)" th th' thm_to_string
-      val () = chattrans 2 "DEPTH1 (lit)" lit lit' formula_to_string
+      val () = chattrans ch 3 "DEPTH1 (thm)" th th' thm_to_string
+      val () = chattrans ch 2 "DEPTH1 (lit)" lit lit' formula_to_string
     in
       (th',lit')
     end
     handle Error _ => raise Bug "DEPTH1: shouldn't fail"
   end;
 
-fun DEPTH conv =
+fun DEPTH ch conv =
   let
     fun rewr_lit (lit,th) =
-      if mem lit (clause th) then fst (DEPTH1 conv (th,lit))
+      if mem lit (clause th) then fst (DEPTH1 ch conv (th,lit))
       else (assert (is_eq (negate lit)) (Bug "DEPTH: vanished"); th)
   in
     fn th =>
     let
       val th' = foldl rewr_lit th (clause th)
-      val () = chattrans 1 "DEPTH" th th' thm_to_string
+      val () = chattrans ch 1 "DEPTH" th th' thm_to_string
     in
       th'
     end

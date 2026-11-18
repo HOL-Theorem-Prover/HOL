@@ -28,9 +28,7 @@ type clause = C.clause;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibSupport";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+val chatting = chatting_at 0;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -257,7 +255,7 @@ in
       val lit = Math.pow (clause_lits cl, literal_power)
       val sat = Math.pow (1.0 + clsat, model_power)
       val w = siz * lit * sat * (1.0 + dist) + priority id
-      val _ = chatting 5 andalso
+      val _ = chatting (C.chat_level cl) 5 andalso
               chat ("clause_weight: " ^ clause_to_string cl ^ " -> " ^
                     real_to_string w ^ "\n")
     in
@@ -326,18 +324,20 @@ local
     chat ("{" ^ join "," (map (percent_to_string o fst) wmods) ^ "}");
 in
   fun new_models _ _ _ _ [] = []
-    | new_models seed fms p n mps =
+    | new_models seed fms p n (mps as mp :: _) =
     let
+      (* the models' own level: the solver set it when it built them *)
+      val ch = #chat mp
       (* one stream per slot, so two models of a problem do not sample
          in lockstep *)
-      val _ = chatting 2 andalso
+      val _ = chatting ch 2 andalso
               chat ("seed: " ^ int_to_string seed ^ "\n")
       val mods = map (fn (i,mp) => M.new mp (slot_seed seed i))
                      (enumerate 0 mps)
       val tms = new_test_models ()
       val fms = List.filter (not o is_prob_taut tms n) fms
       val wmods = pert_models fms p n mods
-      val _ = chatting 2 andalso chatmods wmods
+      val _ = chatting ch 2 andalso chatmods wmods
     in
       wmods
     end;

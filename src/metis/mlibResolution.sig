@@ -25,8 +25,11 @@ val update_sos_parm    : mlibSupport.parameters parmupdate
 
 (* mlibResolution *)
 type resolution
-val new       : parameters * units * thm list * thm list -> resolution
-val dest      : resolution -> {set : mlibClauseset.clauseset, sos : mlibSupport.sos}
+(* The int is the chatting level in force. *)
+val new       : parameters * int * units * thm list * thm list -> resolution
+val dest      : resolution ->
+                {set : mlibClauseset.clauseset, sos : mlibSupport.sos,
+                 chat : int}
 val size      : resolution -> {used : int, waiting : int, rewrites : int}
 val units     : resolution -> units
 val new_units : units -> resolution -> resolution

@@ -38,6 +38,16 @@ fun reraise e = raise e
 
 fun display_exn f e = (f e; raise e)
 
+(* [release] runs however [body] exits; there are no thread interrupts
+   to mask here. *)
+fun bracket acquire release body =
+  let
+    val a = acquire ()
+    val r = body a handle e => (release a; raise e)
+  in
+    release a; r
+  end
+
 fun make_counter {inc,init} =
   let
     val n = ref init
