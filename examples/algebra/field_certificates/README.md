@@ -13,6 +13,8 @@ come from `namedPrimesTheory`.
   `pairingDegree12Fields`: checked irreducibility and degree-twelve fields.
 * `pairingFieldEmbeddings`: injective quadratic-to-degree-twelve field maps.
 * `certificateComputeLib`: bounded arithmetic and shared modular powering.
+* `polynomialSyntax`: grammar-independent field, polynomial and record-operation
+  constructors shared by polynomial, quotient and curve certificate libraries.
 * `polynomialCertificateLib`, `pairingFieldCertificateLib`: checked polynomial
   remainders, modular powers, irreducibility and quotient arithmetic.
 
@@ -22,6 +24,8 @@ Extension elements are ascending-coefficient polynomial lists with residue
 coefficients and no trailing zeros; zero is `[]`, not `[0]`.
 The certificate libraries kernel-check arithmetic witnesses. See their
 signatures for conversion contracts.
+Both libraries construct algebra terms from theory-qualified constants, without
+parsing quotations or depending on the caller's algebra overloads.
 
 Certificate contexts require a closed primality theorem and the documented
 literal modulus. Mixed fields/moduli and invalid coefficients are rejected.
@@ -36,5 +40,6 @@ With Poly/ML and a CV-capable standard or experimental kernel, run here:
 ./selftest.exe
 ```
 
-Level-1 selftests cover named/quadratic fields and converter regressions.
+Level-1 selftests cover named/quadratic fields and converter regressions,
+including polynomial, quotient and no-roots checks with rebound algebra syntax.
 Normal builds and levels 2+ also build the expensive degree-twelve certificates.

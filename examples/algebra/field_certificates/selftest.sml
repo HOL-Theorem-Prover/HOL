@@ -76,4 +76,44 @@ val _ = reject "Reject a noncanonical modulus"
   (fn tm => polynomialCertificateLib.REMAINDER_CONV prime ``[1n;0;1;0]`` tm)
   ``poly_mod (GF 3) [2n;0;1] [1n;0;1;0]``;
 
+(* Construct the converters after rebinding algebra syntax. Their input terms
+   retain the original constants, and their results must not depend on parsing. *)
+val _ =
+  let
+    val grammars = Parse.current_grammars ()
+    val rem = ``poly_mod (GF 3) [2n;0;1] [1n;0;1]``
+    val pow =
+      ``poly_mod (GF 3) ((PolyRing (GF 3)).prod.exp [0n;1] 4) [1n;0;1]``
+    val mult =
+      ``(PolyModRing (GF 3) [1n;0;1]).prod.op [1n;1] [1n;2]``
+    val exp = ``(PolyModRing (GF 3) [1n;0;1]).prod.exp [1n;1] 5``
+    val one = ``[1n]``
+    val two = ``[2n]``
+    val twice = ``[2n;2]``
+    val no_roots = ``poly_roots (GF 3) [1n;0;1] = {}``
+    fun run () =
+      (List.app
+         (fn name =>
+           (Parse.temp_clear_overloads_on name;
+            Parse.temp_overload_on (name,boolSyntax.T)))
+         ["GF", "Poly", "poly_monic", "poly_deg", "poly_mod",
+          "PolyRing", "PolyModRing"];
+       conversion_test "Polynomial remainder with rebound algebra syntax"
+         (polynomialCertificateLib.REMAINDER_CONV prime modulus) rem one;
+       conversion_test "Polynomial power with rebound algebra syntax"
+         (polynomialCertificateLib.MODPOW_CONV prime modulus) pow one;
+       conversion_test "Quotient product with rebound algebra syntax"
+         (pairingFieldCertificateLib.QUOTIENT_CONV prime modulus) mult two;
+       conversion_test "Quotient power with rebound algebra syntax"
+         (pairingFieldCertificateLib.QUOTIENT_CONV prime modulus) exp twice;
+       tprint "Checked no-roots certificate with rebound algebra syntax";
+       require_msg
+         (check_result (fn th => null (hyp th) andalso
+           aconv (concl th) no_roots))
+         thm_to_string (polynomialCertificateLib.NO_ROOTS_RULE prime) modulus)
+  in
+    (run () handle e => (Parse.temp_set_grammars grammars; raise e));
+    Parse.temp_set_grammars grammars
+  end;
+
 val _ = exit_count0 failures;

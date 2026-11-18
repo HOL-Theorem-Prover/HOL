@@ -53,6 +53,68 @@ val _ = proof_test "Scalar operations retain residuals across chunks"
 val quadratic_prime = groupTheory.PRIME_7;
 val quadratic = ``PolyModRing (GF 7) [1n;0;1]``;
 val quadratic_field = certificate_GF49_field;
+
+(* Rebind algebra names before constructing the converters. In particular,
+   initialize the quadratic arithmetic cache here, not before the rebinding. *)
+val _ =
+  let
+    val grammars = Parse.current_grammars ()
+    val scalar_goal =
+      ``(sw_group (GF 5) 0 1).exp (ECAffine 2 2) 3 = ECAffine 4 0``
+    val certificate_goal =
+      ``f (ECAffine 4 0) ==>
+        f ((sw_group (GF 5) 0 1).exp (ECAffine 2 2) 3)``
+    val inverse_goal = ``^quadratic.prod.inv [1n;1] = [4n;3]``
+    val quadratic_goal =
+      ``(sw_group ^quadratic [] [1n]).exp (ECAffine [0n;1] [3n;1]) 2 =
+        ECAffine [2n] [3n]``
+    val quadratic_certificate_goal =
+      ``f (ECAffine [2n] [3n]) ==>
+        f ((sw_group ^quadratic [] [1n]).exp (ECAffine [0n;1] [3n;1]) 2)``
+    fun run () =
+      let
+        val _ = List.app
+          (fn name =>
+            (Parse.temp_clear_overloads_on name;
+             Parse.temp_overload_on (name,boolSyntax.T)))
+          ["GF", "Field", "PolyModRing", "poly_monic", "poly_deg",
+           "Poly", "poly_mod", "prime", "ECInfinity", "ECAffine",
+           "sw_group", "sw_add", "sw_points", "ShortWeierstrassCurve"]
+        val scalar = ellipticCertificateLib.SCALAR_CONV prime curve member
+        val _ = proof_test "Prime scalar with rebound algebra syntax"
+          (CONV_TAC (LAND_CONV scalar) THEN REFL_TAC) scalar_goal
+        val _ = proof_test "Prime milestones with rebound algebra syntax"
+          (DISCH_TAC THEN
+           ellipticCertificateLib.SCALAR_CERTIFICATE_TAC
+             2 prime curve member THENL
+             [ellipticCertificateLib.SCALAR_STEP_TAC prime curve member,
+              asm_rewrite_tac []]) certificate_goal
+        val arithmetic =
+          pairingCurveCertificateLib.FIELD_CONV quadratic_prime quadratic_field
+        val _ = proof_test "Quadratic inverse with rebound algebra syntax"
+          (CONV_TAC arithmetic) inverse_goal
+        val scalar = pairingCurveCertificateLib.SCALAR_CONV
+          quadratic_prime quadratic_field
+          certificate_GF49_curve certificate_GF49_member
+        val _ = proof_test "Quadratic scalar with rebound algebra syntax"
+          (CONV_TAC (LAND_CONV scalar) THEN REFL_TAC) quadratic_goal
+        val step = pairingCurveCertificateLib.SCALAR_STEP_TAC
+          quadratic_prime quadratic_field
+          certificate_GF49_curve certificate_GF49_member
+      in
+        proof_test "Quadratic milestones with rebound algebra syntax"
+          (DISCH_TAC THEN
+           pairingCurveCertificateLib.SCALAR_CERTIFICATE_TAC
+             quadratic_prime quadratic_field
+             certificate_GF49_curve certificate_GF49_member THENL
+             [step, step, step, asm_rewrite_tac []])
+          quadratic_certificate_goal
+      end
+  in
+    (run () handle e => (Parse.temp_set_grammars grammars; raise e));
+    Parse.temp_set_grammars grammars
+  end;
+
 val quadratic_arithmetic =
   pairingCurveCertificateLib.FIELD_CONV quadratic_prime quadratic_field;
 val quadratic_curve = certificate_GF49_curve;

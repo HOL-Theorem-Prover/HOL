@@ -12,6 +12,7 @@ structure polynomialCertificateLib :> polynomialCertificateLib =
 struct
 
 open HolKernel boolLib bossLib Conv
+open polynomialSyntax
 
 val ERR = mk_HOL_ERR "polynomialCertificateLib"
 val numeral = numSyntax.mk_numeral o Arbnum.fromString
@@ -19,6 +20,7 @@ fun integer tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
 fun literal n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
 fun coefficients tm = map integer (#1 (listSyntax.dest_list tm))
 fun polynomial xs = listSyntax.mk_list (map literal xs,numSyntax.num)
+val indeterminate = polynomial [0,1]
 
 (* Candidate arithmetic: none of these ML functions constructs a theorem. *)
 fun trim (xs:IntInf.int list) =
@@ -104,18 +106,23 @@ fun context prime f =
     fun checked tm = EQT_ELIM (bounded_conv tm)
     val pterm = rand (concl prime)
     val p = integer pterm
-    val r = ``GF ^pterm``
+    val r = mk_GF pterm
+    val remainder_prefix = mk_icomb (poly_mod_tm,r)
+    fun remainder a = list_mk_comb (remainder_prefix,[a,f])
+    val polynomial_ring = mk_poly_ring r
+    val polynomial_power = mk_monoid_exp (mk_ring_prod polynomial_ring)
+    val polynomial_sum = mk_monoid_op (mk_ring_sum polynomial_ring)
     val ring = MATCH_MP fieldTheory.field_is_ring
       (MATCH_MP fieldInstancesTheory.GF_field prime)
     val finite = MATCH_MP fieldInstancesTheory.GF_finite_field prime
-    val monic = checked ``poly_monic ^r ^f``
-    val positive = checked ``0 < poly_deg ^r ^f``
+    val monic = checked (mk_poly_monic (r,f))
+    val positive = checked
+      (numSyntax.mk_less (numSyntax.zero_tm,mk_poly_deg (r,f)))
     val fcs = coefficients f
-    val remainder_head = rator ``poly_mod ^r``
     fun dest_remainder origin tm =
       case strip_comb tm of
         (head,[r',a,f']) =>
-          if not (same_const head remainder_head) then
+          if not (same_const head poly_mod_tm) then
             raise ERR origin "Expected polynomial remainder"
           else if aconv r r' andalso aconv f f' then a
           else raise ERR origin "Mixed coefficient ring or modulus"
@@ -125,7 +132,7 @@ fun context prime f =
         val a = dest_remainder "REMAINDER_CONV" tm
         val value = bounded_conv a
         val at = rhs (concl value)
-        val aproof = checked ``Poly ^r ^at``
+        val aproof = checked (mk_Poly (r,at))
         val acs = coefficients at
         val (q,b) = divide p (acs,fcs)
         val qt = polynomial q
@@ -133,7 +140,7 @@ fun context prime f =
         val rule = SPECL [at,f,qt,bt]
           (MATCH_MP polynomialCertificateTheory.polynomial_certificate_remainder ring)
         val premise = fst (dest_imp (concl rule))
-        val transport = AP_THM (AP_TERM ``poly_mod ^r`` value) f
+        val transport = AP_THM (AP_TERM remainder_prefix value) f
         val proof = EQT_ELIM
           ((REWRITE_CONV [aproof] THENC bounded_conv) premise)
       in TRANS transport (MP rule proof) end
@@ -145,7 +152,7 @@ fun context prime f =
             SOME (partial,e) =>
               (case total dest_comb partial of
                  SOME (head,a) =>
-                   if aconv head ``(PolyRing ^r).prod.exp`` then (a,e)
+                   if aconv head polynomial_power then (a,e)
                    else raise ERR "MODPOW_CONV" "Expected polynomial power"
                | NONE => raise ERR "MODPOW_CONV" "Expected polynomial power")
           | NONE => raise ERR "MODPOW_CONV" "Expected polynomial power"
@@ -153,20 +160,20 @@ fun context prime f =
           case total numSyntax.dest_numeral e of
             SOME k => k
           | NONE => raise ERR "MODPOW_CONV" "Expected closed natural exponent"
-        val aproof = checked ``Poly ^r ^a``
+        val aproof = checked (mk_Poly (r,a))
         val props = LIST_CONJ [aproof,monic,positive]
-        val base = reduce ``poly_mod ^r ^a ^f``
+        val base = reduce (remainder a)
         val expnorm =
           RATOR_CONV (RAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV))
         fun recurse n =
           let
             val nt = numSyntax.mk_numeral n
-            val target = ``poly_mod ^r ((PolyRing ^r).prod.exp ^a ^nt) ^f``
+            val target = remainder (list_mk_comb (polynomial_power,[a,nt]))
           in
             if n = Arbnum.zero then
               let val value = bounded_conv (rand (rator target))
-              in TRANS (AP_THM (AP_TERM ``poly_mod ^r`` value) f)
-                   (reduce ``poly_mod ^r ^(rhs (concl value)) ^f``) end
+              in TRANS (AP_THM (AP_TERM remainder_prefix value) f)
+                   (reduce (remainder (rhs (concl value)))) end
             else
               let
                 val (half,bit) = Arbnum.divmod (n,Arbnum.fromInt 2)
@@ -184,7 +191,8 @@ fun context prime f =
       in recurse k end
     fun pow n =
       let val nt = literal n
-      in power ``poly_mod ^r ((PolyRing ^r).prod.exp [0n;1] ^nt) ^f`` end
+      in power (remainder
+        (list_mk_comb (polynomial_power,[indeterminate,nt]))) end
     fun difference powerproof =
       let
         val b = sub p (coefficients (rhs (concl powerproof)),[0,1])
@@ -192,7 +200,8 @@ fun context prime f =
         val (u,v) = bezout p (fcs,b)
         val ut = polynomial u
         val vt = polynomial v
-        val sum = bounded_conv ``(PolyRing ^r).sum.op [0n;1] ^bt``
+        val sum = bounded_conv
+          (list_mk_comb (polynomial_sum,[indeterminate,bt]))
         val result = TRANS powerproof (SYM sum)
       in (bt,ut,vt,result) end
   in (p,r,ring,finite,monic,power,pow,difference,reduce) end

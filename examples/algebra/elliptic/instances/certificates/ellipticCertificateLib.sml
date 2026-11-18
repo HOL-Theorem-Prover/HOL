@@ -14,31 +14,24 @@ struct
 open HolKernel boolLib bossLib boolSyntax
 open shortWeierstrassTheory shortWeierstrassGroupTheory ellipticTorsionTheory
 open ellipticCertificatesTheory fieldInstancesTheory
+open shortWeierstrassSyntax
 
 val ERR = mk_HOL_ERR "ellipticCertificateLib" "SCALAR_CONV"
 
 fun integer tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
 
 fun numeral n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
-val infinity = ``ECInfinity:num sw_point``
-val affine = ``ECAffine:num->num->num sw_point``
-val scalar_pattern =
-  ``(sw_group (GF p) (a:num) (b:num)).exp (P:num sw_point) n``
-val scalar_head = fst (strip_comb scalar_pattern)
-val curve_group_head = ``sw_group``
-val inverse_head = fst (strip_comb ``(GF (p:num)).prod.inv (x:num)``)
+val infinity = mk_ECInfinity numSyntax.num
+val affine = Term.inst [alpha |-> numSyntax.num] ECAffine_tm
+val scalar_pattern = mk_sw_scalar
+  (polynomialSyntax.mk_GF (mk_var ("p",numSyntax.num)),
+   mk_var ("a",numSyntax.num),mk_var ("b",numSyntax.num),
+   mk_var ("P",type_of infinity),mk_var ("n",numSyntax.num))
+val inverse_head = polynomialSyntax.monoid_inv_tm
+val prime_head = prim_mk_const {Thy = "divides", Name = "prime"}
 
 fun scalar_key tm =
-  case strip_comb tm of
-    (head,[group,_,_]) =>
-      if is_const head andalso same_const head scalar_head then
-        (case strip_comb group of
-           (head,[_,_,_]) =>
-             if is_const head andalso same_const head curve_group_head
-             then SOME tm else NONE
-         | _ => NONE)
-      else NONE
-  | _ => NONE
+  (dest_sw_scalar tm; SOME tm) handle HOL_ERR _ => NONE
 
 
 fun point tm =
@@ -64,22 +57,16 @@ fun inverse p x =
    kernel equalities, so alternative concrete field representations share it. *)
 fun binary_scalar_conv_from seed add_conv curve member tm =
   let
-    val (theta,types) = match_term
-      ``(sw_group (r:'a field) a b).exp P n`` tm
-    fun value t = Term.subst theta (Term.inst types t)
-    val r = value ``r:'a field``
-    val a = value ``a:'a``
-    val b = value ``b:'a``
-    val P = value ``P:'a sw_point``
-    val n = integer (value ``n:num``)
+    val (r,a,b,P,nt) = dest_sw_scalar tm
+    val n = integer nt
     val premises = CONJ curve member
     val _ =
       if aconv (concl premises)
-        ``ShortWeierstrassCurve ^r ^a ^b /\ ^P IN sw_points ^r ^a ^b``
+        (mk_conj (mk_ShortWeierstrassCurve (r,a,b),
+          pred_setSyntax.mk_in (P,mk_sw_points (r,a,b))))
       then () else raise ERR "Mismatched curve or point certificate"
     fun scalar k =
-      let val expression =
-        ``(sw_group ^r ^a ^b).exp ^P ^(numeral k)``
+      let val expression = mk_comb (rator tm,numeral k)
       in
         case seed expression of
           SOME th => th
@@ -90,7 +77,7 @@ fun binary_scalar_conv_from seed add_conv curve member tm =
             val half = IntInf.div(k,2)
             val even = IntInf.mod(k,2)=0
             val previous = if even then NONE else seed
-              ``(sw_group ^r ^a ^b).exp ^P ^(numeral (k-1))``
+              (mk_comb (rator tm,numeral (k-1)))
           in
             case previous of
               SOME prev =>
@@ -98,10 +85,11 @@ fun binary_scalar_conv_from seed add_conv curve member tm =
                   (* An operation milestone supplies the preceding even
                      scalar, so this odd transition checks only one add. *)
                   val law = MP (PART_MATCH (lhs o rand) sw_scalar_add
-                    ``(sw_group ^r ^a ^b).exp ^P (1 + ^(numeral (k-1)))``)
+                    (mk_comb (rator tm,
+                      numSyntax.mk_plus (numeral 1,numeral (k-1)))))
                     premises
                   val one = MP (PART_MATCH (lhs o rand) sw_scalar_one
-                    ``(sw_group ^r ^a ^b).exp ^P 1``) premises
+                    (mk_comb (rator tm,numeral 1))) premises
                   val normalized = CONV_RULE
                     (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) law
                   val substituted = CONV_RULE
@@ -139,22 +127,17 @@ fun scalar_certificate_tac operations width candidate curve member (asl,w) _ =
   let
     val _ = if width > 0 then () else raise ERR "Nonpositive scalar window"
     val scalar = find_term (fn t => isSome (scalar_key t)) w
-    val (theta,types) = match_term
-      ``(sw_group (r:'a field) a b).exp P n`` scalar
-    fun value t = Term.subst theta (Term.inst types t)
-    val r = value ``r:'a field``
-    val a = value ``a:'a``
-    val b = value ``b:'a``
-    val P = value ``P:'a sw_point``
-    val n = integer (value ``n:num``)
+    val (r,a,b,P,nt) = dest_sw_scalar scalar
+    val n = integer nt
     val _ =
       if aconv (concl (CONJ curve member))
-        ``ShortWeierstrassCurve ^r ^a ^b /\ ^P IN sw_points ^r ^a ^b``
+        (mk_conj (mk_ShortWeierstrassCurve (r,a,b),
+          pred_setSyntax.mk_in (P,mk_sw_points (r,a,b))))
       then () else raise ERR "Mismatched curve or point certificate"
-    val zero = Term.inst [alpha |-> type_of a] ``ECInfinity:'a sw_point``
-    (* Parse the typed prefixes once, not once per proposed operation. The
+    val zero = mk_ECInfinity (type_of a)
+    (* Construct the typed prefixes once, not once per proposed operation. The
        trajectory still constructs only untrusted terms, never proofs. *)
-    val add_prefix = ``sw_add ^r ^a ^b``
+    val add_prefix = list_mk_icomb (sw_add_tm,[r,a,b])
     val add_P = mk_comb (add_prefix,P)
     val scalar_prefix = rator scalar
     fun add U V = candidate (mk_comb (mk_comb (add_prefix,U),V))
@@ -289,30 +272,31 @@ fun BINARY_SCALAR_CONV add_conv curve member =
 fun gf_specialize th =
   REWRITE_RULE [GF_eval, GF_sum_inv, monoidTheory.monoid_exp_def,
                 numeralTheory.numeral_funpow]
-    (Q.INST [`r` |-> `GF (p:num)`]
-      (INST_TYPE [alpha |-> ``:num``] (SPEC_ALL th)))
+    (INST [mk_var ("r",polynomialSyntax.mk_ring_type numSyntax.num) |->
+             polynomialSyntax.mk_GF (mk_var ("p",numSyntax.num))]
+      (INST_TYPE [alpha |-> numSyntax.num] (SPEC_ALL th)))
 
 val gf_addition_rules = map gf_specialize
   [sw_add_def, sw_slope_def, sw_add_x_def, sw_add_y_def]
 
-val gf_program_heads = ``GF`` ::
+val gf_program_heads = polynomialSyntax.GF_tm ::
   map (fst o strip_comb o lhs o concl o hd o BODY_CONJUNCTS) gf_addition_rules
 
 fun gf_scalar_tools prime curve member tm =
   let
     val (theta,_) = match_term scalar_pattern tm
     fun value t = Term.subst theta t
-    val p = value ``p:num``
-    val a = value ``a:num``
-    val b = value ``b:num``
-    val P = value ``P:num sw_point``
+    val p = value (mk_var ("p",numSyntax.num))
+    val a = value (mk_var ("a",numSyntax.num))
+    val b = value (mk_var ("b",numSyntax.num))
+    val P = value (mk_var ("P",type_of infinity))
     val modulus = integer p
     val _ = integer a
     val _ = integer b
     val _ = point P
-    val r = ``GF ^p``
+    val r = polynomialSyntax.mk_GF p
     val _ =
-      if aconv (concl prime) ``prime ^p`` then ()
+      if aconv (concl prime) (mk_comb (prime_head,p)) then ()
       else raise ERR "Mismatched prime certificate"
     val arithmetic = certificateComputeLib.EVAL_CONV ()
     (* Recompile the program into this compset: copied default rules retain
@@ -327,8 +311,12 @@ fun gf_scalar_tools prime curve member tm =
         val xt = numeral x
         val y = numeral (inverse modulus x)
         val rule = SPECL [p,xt,y] sw_GF_prod_inv_witness
-        val numeric = arithmetic
-          ``^xt < ^p /\ ^xt <> 0 /\ ^y < ^p /\ (^xt * ^y) MOD ^p = 1``
+        val numeric = arithmetic (list_mk_conj
+          [numSyntax.mk_less (xt,p),
+           mk_neg (mk_eq (xt,numSyntax.zero_tm)),
+           numSyntax.mk_less (y,p),
+           mk_eq (numSyntax.mk_mod (numSyntax.mk_mult (xt,y),p),
+                  numeral 1)])
       in MP rule (CONJ prime (EQT_ELIM numeric)) end
 
     (* Only the current addition's checked witness is needed. Appending every
@@ -343,14 +331,14 @@ fun gf_scalar_tools prime curve member tm =
 
     val addition_cs = computeLib.add_thms
       (numeralTheory.numeral_funpow :: gf_addition_rules) addition_cs
-    val add_pattern =
-      ``sw_add ^r ^a ^b (U:num sw_point) (V:num sw_point)``
+    val add_pattern = mk_sw_add
+      (r,a,b,mk_var ("U",type_of infinity),mk_var ("V",type_of infinity))
 
     fun candidate expression =
       let
         val (substitution,_) = match_term add_pattern expression
-        val U = Term.subst substitution ``U:num sw_point``
-        val V = Term.subst substitution ``V:num sw_point``
+        val U = Term.subst substitution (mk_var ("U",type_of P))
+        val V = Term.subst substitution (mk_var ("V",type_of P))
         fun affine_point (x,y) = list_mk_comb (affine,[numeral x,numeral y])
         fun residue x = IntInf.mod (x,modulus)
       in
@@ -373,8 +361,8 @@ fun gf_scalar_tools prime curve member tm =
     fun add_conv expression =
       let
         val (substitution,_) = match_term add_pattern expression
-        val U = Term.subst substitution ``U:num sw_point``
-        val V = Term.subst substitution ``V:num sw_point``
+        val U = Term.subst substitution (mk_var ("U",type_of P))
+        val V = Term.subst substitution (mk_var ("V",type_of P))
         val _ = inverse_witness :=
           case (point U,point V) of
             (SOME(x1,y1),SOME(x2,y2)) =>

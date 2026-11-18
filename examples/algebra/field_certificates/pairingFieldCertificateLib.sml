@@ -10,35 +10,40 @@ structure pairingFieldCertificateLib :> pairingFieldCertificateLib =
 struct
 
 open HolKernel boolLib bossLib Conv
+open polynomialSyntax
 
 fun QUOTIENT_CONV prime modulus =
   let
     val p = rand (concl prime)
-    val base = ``GF ^p``
-    val r = ``PolyModRing ^base ^modulus``
+    val base = mk_GF p
+    val r = mk_poly_mod_ring (base,modulus)
     val ring = MATCH_MP fieldTheory.field_is_ring
       (MATCH_MP fieldInstancesTheory.GF_field prime)
     val bounded = polynomialCertificateLib.BOUNDED_CONV ()
-    val monic = EQT_ELIM (bounded ``poly_monic ^base ^modulus``)
+    val monic = EQT_ELIM (bounded (mk_poly_monic (base,modulus)))
     val ulead = MATCH_MP (MATCH_MP polyMonicTheory.poly_monic_ulead ring) monic
     val power = MATCH_MP
       (ISPECL [base,modulus] polyModuloRingTheory.poly_mod_ring_exp)
       (CONJ ring ulead)
     val remainder = polynomialCertificateLib.REMAINDER_CONV prime modulus
     val modpow = polynomialCertificateLib.MODPOW_CONV prime modulus
-    val remainder_head = fst (strip_comb ``poly_mod ^base [] ^modulus``)
-    val sumop = ``^r.sum.op``
-    val prodop = ``^r.prod.op``
-    val powop = ``^r.prod.exp``
-    val zero = ``^r.sum.id``
-    val one = ``^r.prod.id``
+    val sum = mk_ring_sum r
+    val prod = mk_ring_prod r
+    val sumop = mk_monoid_op sum
+    val prodop = mk_monoid_op prod
+    val powop = mk_monoid_exp prod
+    val zero = mk_monoid_id sum
+    val one = mk_monoid_id prod
+    val carrier = mk_ring_carrier r
+    val x = mk_var ("x",listSyntax.mk_list_type numSyntax.num)
+    val y = mk_var ("y",type_of x)
     val add_rule = SIMP_CONV (srw_ss()) [polyModuloRingTheory.poly_mod_ring_def]
-      ``^r.sum.op (x:num list) y``
+      (list_mk_comb (sumop,[x,y]))
     val mult_rule = SIMP_CONV (srw_ss()) [polyModuloRingTheory.poly_mod_ring_def]
-      ``^r.prod.op (x:num list) y``
+      (list_mk_comb (prodop,[x,y]))
     fun member x = EQT_ELIM
       ((REWRITE_CONV [polyModuloRingTheory.poly_mod_ring_element] THENC bounded)
-       ``^x IN ^r.carrier``)
+       (pred_setSyntax.mk_in (x,carrier)))
     fun literal_polynomial tm =
       case total listSyntax.dest_list tm of
         SOME (xs,ty) => ty = numSyntax.num andalso List.all numSyntax.is_numeral xs
@@ -51,7 +56,7 @@ fun QUOTIENT_CONV prime modulus =
     fun primitive tm =
       case strip_comb tm of
         (head,[_,_,_]) =>
-          if is_const head andalso same_const head remainder_head then remainder tm
+          if is_const head andalso same_const head poly_mod_tm then remainder tm
           else identity tm
       | _ => identity tm
     and identity tm =

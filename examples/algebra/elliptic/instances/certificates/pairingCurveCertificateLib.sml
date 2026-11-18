@@ -14,6 +14,13 @@ struct
 open HolKernel boolLib bossLib Conv
 open fieldTheory fieldInstancesTheory polyModuloRingTheory
 open ellipticCertificatesTheory shortWeierstrassTheory shortWeierstrassGroupTheory
+open polynomialSyntax
+
+val coefficient_type = listSyntax.mk_list_type numSyntax.num
+val infinity = shortWeierstrassSyntax.mk_ECInfinity coefficient_type
+val affine = inst [alpha |-> coefficient_type]
+  shortWeierstrassSyntax.ECAffine_tm
+val prime_tm = prim_mk_const {Thy = "divides", Name = "prime"}
 
 val ERR = mk_HOL_ERR "pairingCurveCertificateLib"
 fun integer tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
@@ -38,40 +45,43 @@ fun field_conv prime field =
       orelse raise ERR "FIELD_CONV" "Expected closed certificates"
     val pterm = rand (concl prime)
     val p = integer pterm
-    val f = ``[1n;0;1]``
-    val r = ``PolyModRing (GF ^pterm) ^f``
-    val _ = aconv (concl field) ``Field ^r``
+    val f = polynomial [1,0,1]
+    val base = mk_GF pterm
+    val r = mk_poly_mod_ring (base,f)
+    val _ = aconv (concl field) (mk_Field r)
       orelse raise ERR "FIELD_CONV" "Expected the numeric quadratic quotient field"
     val remainder = polynomialCertificateLib.REMAINDER_CONV prime f
     val bounded = polynomialCertificateLib.BOUNDED_CONV ()
     val coefficient_ring = MATCH_MP field_is_ring (MATCH_MP GF_field prime)
-    val monic = EQT_ELIM (bounded ``poly_monic (GF ^pterm) ^f``)
+    val monic = EQT_ELIM (bounded (mk_poly_monic (base,f)))
     val leading = MP
       (SPEC f (MATCH_MP polyMonicTheory.poly_monic_ulead coefficient_ring))
       monic
-    val degree = bounded ``poly_deg (GF ^pterm) ^f``
+    val degree = bounded (mk_poly_deg (base,f))
     (* A sum (or a constant product) is already below the modulus degree.
        Its checked reduction needs no quotient witness or polynomial product. *)
-    val short_remainder_rule = GEN ``x:num list``
+    val xvar = mk_var ("x",listSyntax.mk_list_type numSyntax.num)
+    val short_remainder_rule = GEN xvar
       (CONV_RULE
         (LAND_CONV (REWRITE_CONV [leading,degree]))
-        (SPECL [``x:num list``,f]
+        (SPECL [xvar,f]
           (MATCH_MP polyDivisionTheory.poly_mod_less coefficient_ring)))
+    val sum_monoid = mk_ring_sum r
+    val prod_monoid = mk_ring_prod r
+    val sumop = mk_monoid_op sum_monoid
+    val prodop = mk_monoid_op prod_monoid
+    val negop = mk_monoid_inv sum_monoid
+    val invop = mk_monoid_inv prod_monoid
+    val powop = mk_monoid_exp prod_monoid
+    val sumpow = mk_monoid_exp sum_monoid
+    val zero = mk_monoid_id sum_monoid
+    val one = mk_monoid_id prod_monoid
+    val carrier = mk_ring_carrier r
+    val yvar = mk_var ("y",type_of xvar)
     val add_rule = SIMP_CONV (srw_ss()) [poly_mod_ring_def]
-      ``^r.sum.op (x:num list) y``
+      (list_mk_comb (sumop,[xvar,yvar]))
     val mult_rule = SIMP_CONV (srw_ss()) [poly_mod_ring_def]
-      ``^r.prod.op (x:num list) y``
-    val sumop = ``^r.sum.op``
-    val prodop = ``^r.prod.op``
-    val negop = ``^r.sum.inv``
-    val invop = ``^r.prod.inv``
-    val powop = ``^r.prod.exp``
-    val sumpow = ``^r.sum.exp``
-    val zero = ``^r.sum.id``
-    val one = ``^r.prod.id``
-    val sum_monoid = ``^r.sum``
-    val prod_monoid = ``^r.prod``
-    val carrier = ``^r.carrier``
+      (list_mk_comb (prodop,[xvar,yvar]))
     val zero_rule = (REWRITE_CONV [poly_mod_ring_ids] THENC bounded) zero
     val one_rule = (REWRITE_CONV [poly_mod_ring_ids] THENC bounded) one
     val exp_one_rule = MATCH_MP field_exp_1 field
@@ -85,8 +95,9 @@ fun field_conv prime field =
        branches or let bodies before their operands have been evaluated. *)
     val curve_rules = List.concat (map
       (fn th => BODY_CONJUNCTS
-        (INST [``r:num list field`` |-> r]
-          (INST_TYPE [alpha |-> ``:num list``] (SPEC_ALL th))))
+        (INST [mk_var ("r",type_of r) |-> r]
+          (INST_TYPE [alpha |-> listSyntax.mk_list_type numSyntax.num]
+            (SPEC_ALL th))))
       [sw_add_def,sw_slope_def,sw_add_x_def,sw_add_y_def])
     val curve_program = map
       (fn th => let val (head,args) = strip_comb (lhs (concl th))
@@ -217,8 +228,11 @@ fun field_conv prime field =
                 val y = inv_candidate x
                 val rule = SPECL [x,y] prod_inverse_rule
                 val premise = CONJ field (LIST_CONJ
-                  [member x,checked ``^x <> ^r.sum.id``,member y,
-                   checked ``^r.prod.op ^x ^y = ^r.prod.id``])
+                  [member x,
+                   checked (boolSyntax.mk_neg (boolSyntax.mk_eq (x,zero))),
+                   member y,
+                   checked (boolSyntax.mk_eq
+                     (list_mk_comb (prodop,[x,y]),one))])
               in MP rule premise end
             else if aconv h powop andalso length args = 2 then
               power (hd args) (integer (List.nth(args,1)))
@@ -301,8 +315,7 @@ val FIELD_CONV =
 fun SCALAR_CONV prime field curve member =
   let
     val arithmetic = FIELD_CONV prime field
-    val addition = ``sw_add:num field->num->num->num sw_point->
-      num sw_point->num sw_point``
+    val addition = shortWeierstrassSyntax.sw_add_tm
     fun add expression =
       let
         val (head,args) = strip_comb expression
@@ -310,8 +323,6 @@ fun SCALAR_CONV prime field curve member =
           orelse raise ERR "SCALAR_CONV" "Expected a full curve addition"
       in arithmetic expression end
     val scalar = ellipticCertificateLib.BINARY_SCALAR_CONV add curve member
-    val infinity = ``ECInfinity:num list sw_point``
-    val affine = ``ECAffine:num list->num list->num list sw_point``
     fun finish expression =
       let
         val result = scalar expression
@@ -350,8 +361,6 @@ fun addition_candidate prime =
     fun inv (a,b) =
       let val d = inverse p (residue(a*a+b*b))
       in (residue(a*d),residue(~b*d)) end
-    val infinity = ``ECInfinity:num list sw_point``
-    val affine = ``ECAffine:num list->num list->num list sw_point``
     type point_value =
       ((IntInf.int * IntInf.int) * (IntInf.int * IntInf.int)) option
     (* Candidate-only caches retain decoded inputs, never theorems. The first
@@ -428,12 +437,16 @@ fun power_setup prime field =
       orelse raise ERR "POWER_CERTIFICATE_TAC" "Expected closed certificates"
     val pterm = rand (concl prime)
     val p = integer pterm
-    val r = ``PolyModRing (GF ^pterm) [1n;0;1]``
-    val _ = aconv (concl prime) ``prime ^pterm`` andalso
-            aconv (concl field) ``Field ^r``
+    val f = polynomial [1,0,1]
+    val base = mk_GF pterm
+    val r = mk_poly_mod_ring (base,f)
+    val _ = aconv (concl prime) (mk_comb (prime_tm,pterm)) andalso
+            aconv (concl field) (mk_Field r)
       orelse raise ERR "POWER_CERTIFICATE_TAC" "Mismatched field certificates"
     val arithmetic = FIELD_CONV prime field
-  in (r,p,arithmetic,``^r.prod.exp``,``^r.prod.op``) end
+    val prod_monoid = mk_ring_prod r
+  in (mk_ring_carrier r,p,arithmetic,
+      mk_monoid_exp prod_monoid,mk_monoid_op prod_monoid) end
 
 fun power_arguments powop tm =
   if is_comb tm andalso is_comb (rator tm) andalso
@@ -457,11 +470,12 @@ fun quadratic_pair p tm =
 
 fun POWER_CERTIFICATE_TAC prime field (asl,w) _ =
   let
-    val (r,p,arithmetic,powop,_) = power_setup prime field
+    val (carrier,p,arithmetic,powop,_) = power_setup prime field
     val power = find_term (can (power_arguments powop)) w
     val (x,n) = power_arguments powop power
     val base = quadratic_pair p x
-    val _ = EQT_ELIM (arithmetic ``^x IN ^r.carrier``)
+    val _ = EQT_ELIM
+      (arithmetic (pred_setSyntax.mk_in (x,carrier)))
     val prefix = rator power
     fun bits 0 acc = acc
       | bits k acc = bits (IntInf.div(k,2)) (IntInf.mod(k,2)::acc)
@@ -560,11 +574,12 @@ fun POWER_STEP_TAC prime field =
   REPEAT DISCH_TAC THEN
   (fn (asl,w) =>
     let
-      val (r,p,arithmetic,powop,_) = power_setup prime field
+      val (carrier,p,arithmetic,powop,_) = power_setup prime field
       val power = lhs w
       val (x,k) = power_arguments powop power
       val _ = quadratic_pair p x
-      val member = EQT_ELIM (arithmetic ``^x IN ^r.carrier``)
+      val member = EQT_ELIM
+        (arithmetic (pred_setSyntax.mk_in (x,carrier)))
       fun seed n =
         let val expression = list_mk_comb (powop,[x,numeral n]) in
           case List.find (fn a => is_eq a andalso aconv (lhs a) expression) asl of

@@ -7,6 +7,8 @@ See the library signatures for APIs and tactic subgoal layouts.
 ## Libraries
 
 * `ellipticCertificates`: inverse witnesses, binary scalar laws and order rules.
+* `shortWeierstrassSyntax`: grammar-independent point, curve, addition and scalar
+  constructors, plus scalar decomposition.
 * `ellipticCertificateLib`: field-independent binary scalar checking and a
   prime-field specialization.
 * `pairingCurveCertificateLib`: quadratic-field arithmetic and scalar checking
@@ -16,6 +18,9 @@ Certificate tactics expose bounded milestone or operation goals, discharged
 by matching step tactics. A residual goal remains when scalar replacement
 does not close the original conclusion. Curve and membership hypotheses
 are preserved.
+Both certificate libraries construct terms without parsing quotations.
+They share `shortWeierstrassSyntax` and reuse the field, polynomial and record
+constructors in `polynomialSyntax` from the field certificates.
 
 ## Dependencies and tests
 
@@ -30,3 +35,5 @@ They cover prime-field scalar certificates and arithmetic over
 powers. Scalar and power cases use exponent 65537 to cross the sixteen-bit
 chunk boundary and check continuation, residual goals, exact conclusions,
 and absence of unexpected hypotheses.
+Additional regressions rebind the algebra and curve syntax before constructing
+converters and checking prime/quadratic scalar, inverse and milestone proofs.
