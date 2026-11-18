@@ -883,6 +883,9 @@ structure Refute_Cert_Model :> Refute_Cert_Model = struct
                     "structural case combination" depth
                     (fn () => Tactical.TAC_PROOF
                       (([], boolSyntax.mk_neg formula), tactic)) ()
+                    handle Feedback.HOL_ERR _ => no_proof
+                      "structural case combination" depth
+                      "the case proof did not combine its branches"
                 in
                   require_theorem "structural case combination" depth
                     (SOME (boolSyntax.mk_neg formula)) theorem

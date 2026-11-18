@@ -42,6 +42,8 @@ structure Refute_QC :> Refute_QC = struct
     List.foldr (fn (variable, plan) => guarded_gen variable plan)
       continuation variables
 
+  val max_fixed_length = 64
+
   fun fresh_variables avoids types =
     let
       val avoid_variables = List.concat (List.map Term.free_vars_lr avoids)
@@ -781,7 +783,46 @@ structure Refute_QC :> Refute_QC = struct
                   (Guard {condition = assumption, smart = false,
                           cont = continuation ()})
 
-              fun try_equality (lhs, rhs) =
+              (* [LENGTH v = k], [k] a numeral up to [max_fixed_length]: [v]
+                 is built from [k] fresh element variables rather than
+                 generated whole and filtered, which almost never meets a
+                 length like 32. *)
+              fun fixed_length (lhs, rhs) =
+                if listSyntax.is_length lhs andalso
+                   numSyntax.is_numeral rhs andalso
+                   (* compared as a numeral first: a huge one overflows
+                      [int] *)
+                   Arbnum.<= (numSyntax.dest_numeral rhs,
+                              Arbnum.fromInt max_fixed_length)
+                then
+                  let
+                    val v = listSyntax.dest_length lhs
+                    val count = numSyntax.int_of_term rhs
+                  in
+                    if Term.is_var v andalso not (member v bound) andalso
+                       genspec_available
+                         (listSyntax.dest_list_type (Term.type_of v))
+                    then
+                      let
+                        val element =
+                          listSyntax.dest_list_type (Term.type_of v)
+                        val elements = fresh_variables
+                          (conclusion :: assumptions @ bound)
+                          (List.tabulate (count, fn _ => element))
+                        (* The elements are bound from here on, so a later
+                           premise's fresh variables avoid them. *)
+                        val rest_plan = compile conclusion
+                          (union_terms elements next_bound) rest
+                      in
+                        SOME (gen_all elements
+                          (Bind (v, listSyntax.mk_list (elements, element),
+                                 NONE, rest_plan)))
+                      end
+                    else NONE
+                  end
+                else NONE
+
+              fun variable_equality (lhs, rhs) =
                 if Term.is_var rhs andalso
                    not (member rhs (Term.free_vars_lr lhs)) andalso
                    not (member rhs bound)
@@ -815,6 +856,11 @@ structure Refute_QC :> Refute_QC = struct
                         SOME (gen_all lhs_variables
                           (Split (lhs, [(constructor, variables, branch)])))
                       end
+
+              fun try_equality (lhs, rhs) =
+                case fixed_length (lhs, rhs) of
+                    SOME plan => SOME plan
+                  | NONE => variable_equality (lhs, rhs)
 
               fun ordinary () =
                 if #optimise_equality (#qc config) then
@@ -1298,86 +1344,6 @@ structure Refute_QC :> Refute_QC = struct
       Selected of string * compiled_test
     | SelectionFailed of string list
 
-  (* A smart-gate compilation owns backend resources, so it is held in
-     the call's own session: the run-release hook then closes exactly this
-     call's selection, and none outlives its call. *)
-  val smart_gate_cache =
-    Refute_Session.local_state "smart_gate"
-      (NONE : (plan list * selected_compile) option)
-
-  (* Swaps in [entry] and returns the call's previous selection. *)
-  fun exchange_smart_gate_selection entry =
-    case Refute_Session.current () of
-        SOME _ =>
-          Refute_Session.transact smart_gate_cache (fn old => (old, entry))
-      | NONE => raise Fail "Refute_QC: no active Refute call"
-
-  fun same_terms left right =
-    length left = length right andalso
-    ListPair.allEq (fn (left, right) => Term.aconv left right)
-      (left, right)
-
-  fun same_plan (Test left, Test right) = Term.aconv left right
-    | same_plan (Gen (left_var, left_next),
-                 Gen (right_var, right_next)) =
-        Term.aconv left_var right_var andalso
-        same_plan (left_next, right_next)
-    | same_plan
-        (Bind (left_var, left_rhs, left_fallback, left_next),
-         Bind (right_var, right_rhs, right_fallback, right_next)) =
-        Term.aconv left_var right_var andalso
-        Term.aconv left_rhs right_rhs andalso
-        (case (left_fallback, right_fallback) of
-             (NONE, NONE) => true
-           | (SOME left, SOME right) => same_plan (left, right)
-           | _ => false) andalso
-        same_plan (left_next, right_next)
-    | same_plan (Split (left_tm, left_branches),
-                 Split (right_tm, right_branches)) =
-        let
-          fun same_branch
-                ((left_constructor, left_vars, left_next),
-                 (right_constructor, right_vars, right_next)) =
-            Term.aconv left_constructor right_constructor andalso
-            same_terms left_vars right_vars andalso
-            same_plan (left_next, right_next)
-        in
-          Term.aconv left_tm right_tm andalso
-          length left_branches = length right_branches andalso
-          ListPair.allEq same_branch (left_branches, right_branches)
-        end
-    | same_plan (Guard {condition = left_tm, smart = left_smart,
-                        cont = left_next},
-                 Guard {condition = right_tm, smart = right_smart,
-                        cont = right_next}) =
-        Term.aconv left_tm right_tm andalso left_smart = right_smart andalso
-        same_plan (left_next, right_next)
-    | same_plan
-        (SmartGuard {predicate = left_predicate, version = left_version,
-                     cont = left_next},
-         SmartGuard {predicate = right_predicate, version = right_version,
-                     cont = right_next}) =
-        Term.aconv left_predicate right_predicate andalso
-        SmartGen.same_program_version (left_version, right_version) andalso
-        same_plan (left_next, right_next)
-    | same_plan
-        (Enum {rel = left_rel, mode = left_mode, version = left_version,
-               ins = left_ins, outs = left_outs, cont = left_next},
-         Enum {rel = right_rel, mode = right_mode, version = right_version,
-               ins = right_ins, outs = right_outs, cont = right_next}) =
-        SmartGen.same_relation left_rel right_rel andalso
-        SmartGen.eq_mode (left_mode, right_mode) andalso
-        SmartGen.same_program_version (left_version, right_version) andalso
-        same_terms left_ins right_ins andalso
-        same_terms left_outs right_outs andalso
-        same_plan (left_next, right_next)
-    | same_plan (Prune, Prune) = true
-    | same_plan _ = false
-
-  fun same_plans left right =
-    length left = length right andalso
-    ListPair.allEq same_plan (left, right)
-
   (* Substrate cleanup runs on its own masked thread; the caller stops
      waiting after [cleanup_timeout] and reports [CleanupAbandoned] instead
      of a search result.  A cleanup that finishes wins however long it
@@ -1442,22 +1408,6 @@ structure Refute_QC :> Refute_QC = struct
     | close_selection (Selected (_, test)) =
         Exn.release (bounded_close (#close test))
 
-  fun clear_smart_gate_cache () =
-    case exchange_smart_gate_selection NONE of
-        NONE => ()
-      | SOME (_, selection) => close_selection selection
-
-  fun store_smart_gate_selection plans selection =
-    Option.app (close_selection o #2)
-      (exchange_smart_gate_selection (SOME (plans, selection)))
-
-  fun take_smart_gate_selection plans =
-    case exchange_smart_gate_selection NONE of
-        NONE => NONE
-      | SOME (cached_plans, selection) =>
-          if same_plans cached_plans plans then SOME selection
-          else (close_selection selection; NONE)
-
   datatype substrate_candidates =
       Candidates of {explicit : bool, substrates : substrate list}
     | CandidatesUnavailable of string list
@@ -1490,9 +1440,8 @@ structure Refute_QC :> Refute_QC = struct
        (if null reasons then "no reason supplied"
         else String.concatWith "; " reasons) ^ "\n")
 
-  (* Gate preflight and execution must walk this same registry snapshot and
-     apply the same Auto fallthrough.  In particular, a higher-priority
-     custom substrate cannot be skipped while a built-in opens the gate. *)
+  (* Smart-generator preflight and ordinary compilation use the same
+     substrate order, including higher-priority custom substrates. *)
   fun select_registered config report problem attempt =
     case ordered_substrate_candidates config of
         CandidatesUnavailable reasons => SelectionFailed reasons
@@ -1550,44 +1499,26 @@ structure Refute_QC :> Refute_QC = struct
     select_registered config report (Plans plans) (fn substrate =>
       preflight_substrate substrate config strategy plans evals)
 
-  fun smart_gate_override_with select (config : Refute_Core.config)
-        instances =
+  (* Admission checks only plan eligibility.
+     Substrate compilation belongs to the backend's run budget, or it can
+     exhaust the call before random testing or narrowing even starts. *)
+  fun smart_gate_override (config : Refute_Core.config) instances =
+    #smart_generators (#qc config) andalso
     let
-      val _ = clear_smart_gate_cache ()
       val cache = new_plan_cache ()
-      val plans = map (fn (instance : Refute_Core.instance) =>
-        compile_plan_with cache config (#goal instance)) instances
       val gated_plans = List.mapPartial
-        (fn (instance, plan) =>
-          case #qc_gate instance of NONE => NONE | SOME _ => SOME plan)
-        (ListPair.zip (instances, plans))
-      val evals = List.concat
-        (map (fn (instance : Refute_Core.instance) => #evals instance)
-          instances)
-      val eligible =
-        #smart_generators (#qc config) andalso
-        not (null gated_plans) andalso
-        List.all Refute_Eval.plan_uses_smart gated_plans
+        (fn (instance : Refute_Core.instance) =>
+          case #qc_gate instance of
+              NONE => NONE
+            | SOME _ => SOME (compile_plan_with cache config (#goal instance)))
+        instances
     in
-      if not eligible then false
-      else
-        case select config Exhaustive plans evals of
-            SelectionFailed _ => false
-          | selection as Selected _ =>
-              (store_smart_gate_selection plans selection; true)
+      not (null gated_plans) andalso
+      List.all Refute_Eval.plan_uses_smart gated_plans
     end
-    handle Interrupt =>
-             (ignore (Exn.capture clear_smart_gate_cache ()); raise Interrupt)
-         | e as Refute_RegistrationData.Invalid _ =>
-             (ignore (Exn.capture clear_smart_gate_cache ()); raise e)
-         | _ =>
-             (ignore (Exn.capture clear_smart_gate_cache ()); false)
-
-  fun smart_gate_override config instances =
-    smart_gate_override_with
-      (fn config => fn strategy => fn plans => fn evals =>
-        compile_smart_selected config true strategy plans evals)
-      config instances
+    handle Interrupt => raise Interrupt
+         | e as Refute_RegistrationData.Invalid _ => raise e
+         | _ => false
 
   fun bounded_size size = Int.max (0, size)
 
@@ -1626,22 +1557,8 @@ structure Refute_QC :> Refute_QC = struct
           Refute_Core.upd_smart_generators false config
         else config
       val cache = new_plan_cache ()
-      val plans =
-        (List.map (fn instance =>
-           compile_plan_with cache plan_config (#goal instance)) instances
-         handle e as Refute_RegistrationData.Invalid _ =>
-           (if strategy = Exhaustive then
-              ignore (Exn.capture clear_smart_gate_cache ())
-            else ();
-            raise e)
-              | error =>
-           (if strategy = Exhaustive then
-              ignore (Exn.capture clear_smart_gate_cache ())
-            else ();
-            raise error))
-      val cached_selection =
-        if strategy = Exhaustive then take_smart_gate_selection plans
-        else NONE
+      val plans = List.map (fn instance =>
+        compile_plan_with cache plan_config (#goal instance)) instances
       val _ =
         if not (Refute_Core.Private.enabled 3) then ()
         else List.app (fn (instance, plan) =>
@@ -1664,12 +1581,9 @@ structure Refute_QC :> Refute_QC = struct
         (map (fn (instance : Refute_Core.instance) => #evals instance)
           instances)
       val smart_selection =
-        case cached_selection of
-            SOME selection => SOME selection
-          | NONE =>
-              if can_preflight then
-                SOME (compile_smart_selected config true strategy plans evals)
-              else NONE
+        if can_preflight then
+          SOME (compile_smart_selected config true strategy plans evals)
+        else NONE
       val preflight_reasons =
         case smart_selection of
             SOME (SelectionFailed reasons) => reasons
@@ -1908,10 +1822,9 @@ structure Refute_QC :> Refute_QC = struct
   val exhaustive_backend : Refute_Core.backend =
     { name = "exhaustive",
       family = Refute_Core.QuickcheckFamily,
-      weight = 20,
+      weight = 30,
       configured = fn () => true,
-      (* Exhaustive SmartGen can discharge an ordinary executability gate
-         by compiling every gated quantifier through an Enum substrate. *)
+      (* Enum-capable compilation discharges the gate during the run. *)
       requires = Refute_Core.ExecutableGoalUnless smart_gate_override,
       input = Refute_Core.MonoInstances,
       certainty_ceiling = fn _ => fn _ => Refute_Core.Genuine,
@@ -1921,7 +1834,7 @@ structure Refute_QC :> Refute_QC = struct
   val random_backend : Refute_Core.backend =
     { name = "random",
       family = Refute_Core.QuickcheckFamily,
-      weight = 30,
+      weight = 20,
       configured = fn () => true,
       requires = Refute_Core.ExecutableGoal,
       input = Refute_Core.MonoInstances,
@@ -1936,7 +1849,5 @@ structure Refute_QC :> Refute_QC = struct
         extract = Refute_Extract.extract_problem};
      Refute_EvalCompute.register_substrate ();
      Refute_Core.register_backend exhaustive_backend;
-     Refute_Core.register_backend random_backend;
-     Refute_Core.register_run_release "qc-smart-gate-cache"
-       clear_smart_gate_cache)
+     Refute_Core.register_backend random_backend)
 end

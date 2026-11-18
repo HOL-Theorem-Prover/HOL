@@ -261,6 +261,14 @@ Bugs fixed
     Unless `HOL4_SCRATCH` names a directory, each process now uses a subdirectory of its own there, which is removed when the process exits.
     When `HOL4_TACTICTOE_CACHE` is set, those subdirectories go under its `tmp/scratch` directory, as was intended; before, that setting was ignored whenever `XDG_CACHE_HOME` or `HOME` was set.
 
+-   An interrupt arriving while `with_flag`, `genwith_flag`, `finally` or `HOLFlags.with_traces` was putting things back could cut the restore short and leave the flag or trace changed.
+    With `Timeout.apply`, a tactic that returned just before its deadline could leave a slow restore half done.
+    The restores (and the matching ones in `Context.with_context`, `Context.in_proof` and `Context.Data.with_slot_value`) now run with interrupts deferred, on the new `Portable.bracket`; an interrupt that arrives meanwhile is delivered once the restore is done.
+
+-   The arithmetic decision procedure (`ARITH_CONV`, `ARITH_ss`) and `congLib` caught `Interrupt` in their catch-all failure handlers.
+    Under `Timeout.apply`, whose timer interrupts once, the interrupt became an ordinary `HOL_ERR`, or the search carried on past the deadline.
+    The handlers now catch only the exceptions they expect (mostly `HOL_ERR`), so `Interrupt` passes through.
+
 New theories
 ------------
 

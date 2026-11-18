@@ -14,7 +14,8 @@ type rewrs
 datatype orient = LtoR | RtoL | Both
 
 (* Basic operations *)
-val empty : (term * term -> order option) -> rewrs
+(* The leading int is the chatting level in force. *)
+val empty : int -> (term * term -> order option) -> rewrs
 val reset : rewrs -> rewrs
 val peek  : rewrs -> int -> (thm * orient) option
 val size  : rewrs -> int

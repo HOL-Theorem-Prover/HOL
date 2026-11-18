@@ -27,9 +27,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibMeson";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+val chatting = chatting_at 0;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -460,12 +458,13 @@ end;
 
 fun swivelp m n = update_proof (swivel m n);
 
-fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
+fun meson_expand {parm : parameters, rules, cut, meter, saturated,
+                  chat = ch} =
   let
     val {ancestor_pruning, ancestor_cutting, state_simplify,
          divide_conquer, sort_literals, ...} = parm
     fun expand ancestors g cont (state as {env, ...}) =
-      (chatting 5 andalso
+      (chatting ch 5 andalso
        chat ("meson: "^formula_to_string (formula_subst env g)^".\n");
        if meter_expired (Uref.!meter) then
          (NONE, CHOICE (fn () => expand ancestors g cont state))
@@ -499,7 +498,8 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
         val (th,asms,env) = next_state state_simplify env r' g
         val asms = if 2 <= sort_literals then sort_lits asms else asms
         val () = record_infs (!meter) 1
-        val _ = chatting 6 andalso chat ("meson rule: "^rule_to_string r^"\n")
+        val _ = chatting ch 6 andalso
+                chat ("meson rule: "^rule_to_string r^"\n")
       in
         expands (g :: ancestors) asms (cont o modus_ponens th asms)
         {env = env, depth = depth, proof = proof, offset = offset}
@@ -526,12 +526,12 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
 (* Full meson procedure.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-fun meson_finally g ({env, proof, ...} : state) =
+fun meson_finally ch g ({env, proof, ...} : state) =
   let
     val () = assert (length proof = length g) (Bug "meson: bad final state")
     val g' = map (formula_subst env) g
     val proof' = map (INST env) (rev proof)
-    val _ = chatting 4 andalso chat
+    val _ = chatting ch 4 andalso chat
       (foldl (fn (h,t)=>t^"  "^thm_to_string h^"\n") "meson_finally:\n" proof')
     val () =
       assert (List.all (uncurry thm_proves) (zip proof' g'))
@@ -540,10 +540,10 @@ fun meson_finally g ({env, proof, ...} : state) =
     (SOME (FRESH_VARSL proof'), CHOICE no_choice)
   end;
 
-fun raw_meson system goals depth =
+fun raw_meson (system as {chat = ch, ...}) goals depth =
   choice_stream
   (fn () =>
-   foldl (uncurry (meson_expand system)) (meson_finally goals) (rev goals)
+   foldl (uncurry (meson_expand system)) (meson_finally ch goals) (rev goals)
    {env = |<>|, depth = depth, proof = [], offset = 0});
 
 (* ------------------------------------------------------------------------- *)
@@ -551,12 +551,13 @@ fun raw_meson system goals depth =
 (* ------------------------------------------------------------------------- *)
 
 type 'a system =
-  {parm : parameters, rules : rules, meter : meter Uref.t, saturated : bool Uref.t,
+  {parm : parameters, rules : rules, meter : meter Uref.t,
+   saturated : bool Uref.t, chat : int,
    cut :
      (formula list -> formula -> (state -> 'a) -> state -> 'a) ->
       formula list -> formula -> (state -> 'a) -> state -> 'a};
 
-fun mk_system parm units meter rules : 'a system =
+fun mk_system parm ch units meter rules : 'a system =
   let
     val {cache_cutting = caching, unit_lemmaizing = lemmaizing, ...} = parm
   in
@@ -564,6 +565,7 @@ fun mk_system parm units meter rules : 'a system =
      rules     = rules,
      meter     = meter,
      saturated = Uref.new false,
+     chat      = ch,
      cut       = unit_cut lemmaizing units o cache_cut caching}
   end;
 
@@ -571,19 +573,19 @@ fun meson' (name,parm) =
   mk_solver_node
   {name = name,
    solver_con =
-   fn {slice, units, thms, hyps} =>
+   fn {slice, units, thms, hyps, chat = ch} =>
    let
      val ruls = meson_rules parm thms hyps
-     val _ = chatting 3 andalso chat
+     val _ = chatting ch 3 andalso chat
        (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#initial_rules=" ^ int_to_string (num_initial_rules ruls) ^ ".\n")
-     val system as {saturated = b, ...} = mk_system parm units slice ruls
+     val system as {saturated = b, ...} = mk_system parm ch units slice ruls
      fun d n = if Uref.!b then S.NIL
                else (Uref.:=(b, true); S.CONS (n, fn () => d (n + 1))) (* OK *)
      fun f q d =
-       (chatting 1 andalso chat ("-" ^ int_to_string d);
+       (chatting ch 1 andalso chat ("-" ^ int_to_string d);
         raw_meson system q d)
      fun unit_check goals NONE = U.prove (Uref.!units) goals | unit_check _ s = s
    in
@@ -598,25 +600,25 @@ fun delta' (name,parm) =
   mk_solver_node
   {name = name,
    solver_con =
-   fn {slice, units, thms, hyps} =>
+   fn {slice, units, thms, hyps, chat = ch} =>
    let
      open Uref
      val ruls = meson_rules parm thms hyps
      val dgoals = thms_to_delta_goals hyps
-     val _ = chatting 3 andalso chat
+     val _ = chatting ch 3 andalso chat
        (name ^ "--initializing--#thms=" ^ int_to_string (length thms) ^
         "--#hyps=" ^ int_to_string (length hyps) ^
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#delta_goals=" ^ int_to_string (length dgoals) ^ ".\n")
-     val system as {saturated = b, ...} = mk_system parm units slice ruls
+     val system as {saturated = b, ...} = mk_system parm ch units slice ruls
      val delta_goals = S.from_list dgoals
      fun d n = if !b then S.NIL
                else (b := true; S.CONS (n, fn () => d (n + 1))) (* OK *)
      fun f d g =
-       (chatting 1 andalso chat "+";
+       (chatting ch 1 andalso chat "+";
         S.map (K NONE) (raw_meson system [g] d))
      fun g d =
-       (chatting 1 andalso chat (int_to_string d);
+       (chatting ch 1 andalso chat (int_to_string d);
         S.flatten (S.map (f d) delta_goals))
      fun h () = S.flatten (S.map g (d 0))
      fun unit_check goals NONE = U.prove (!units) goals | unit_check _ s = s
@@ -633,14 +635,14 @@ fun prolog' (name,parm) =
   mk_solver_node
   {name = name,
    solver_con =
-   fn {slice, units, thms, hyps} =>
+   fn {slice, units, thms, hyps, chat = ch} =>
    let
-     val system = mk_system parm units slice (prolog_rules parm thms hyps)
+     val system = mk_system parm ch units slice (prolog_rules parm thms hyps)
      fun comment S.NIL = "!\n"
        | comment (S.CONS (NONE, _)) = "-"
        | comment (S.CONS (SOME _, _)) = "$\n"
      fun f S.NIL = S.NIL | f (S.CONS (x,xs)) = S.CONS (x, fn () => g (xs ()))
-     and g x = (chatting 1 andalso chat (comment x); f x)
+     and g x = (chatting ch 1 andalso chat (comment x); f x)
    in
      fn goals => g (raw_meson system goals prolog_depth)
    end};

@@ -356,9 +356,10 @@ fun exceptions record = let
   val _ = expect_exception record "public foreign payload"
     (fn Stop r => Portable.pointer_eq (r,token) | _ => false)
     (fn () => SIMP_CONV ss [] atom)
-  val _ = check "cong total catches foreign exception at legacy boundary"
-    (same (congLib.CONGRUENCE_SIMP_CONV boolSyntax.equality
-      (congLib.mk_congset []) ss [] atom) (REFL atom))
+  val _ = expect_exception record "cong total foreign payload"
+    (fn Stop r => Portable.pointer_eq (r,token) | _ => false)
+    (fn () => congLib.CONGRUENCE_SIMP_CONV boolSyntax.equality
+      (congLib.mk_congset []) ss [] atom)
   val _ = check "foreign callback frequency" (!calls = 3)
   val rule = ASSUME
     ``lifetime_condition ==> ((lifetime_result:bool) = T)``

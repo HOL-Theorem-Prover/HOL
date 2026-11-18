@@ -21,7 +21,8 @@ Libs
   tacticToe
 
 
-(* mlibUseful.trace_level := 0; HOLFlags.set_flag (mesonLib.chatting, 0); *)
+(* HOLFlags.set_flag (metisTools.metis_trace, 0);
+   HOLFlags.set_flag (mesonLib.chatting, 0); *)
 
 (* --------------------------------------------------------------------------
    Example 1: equations

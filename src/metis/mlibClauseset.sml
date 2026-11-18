@@ -34,9 +34,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibClauseset";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+val chatting = chatting_at 0;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -205,6 +203,9 @@ fun empty (cparm,parm) =
 
 fun parm (SET {parm, ...}) = parm;
 
+(* How loud to be: the clause parameters carry it. *)
+fun set_chat (SET {parm = (cparm,_), ...}) = #chat cparm;
+
 fun ssize (SET {size, ...}) = size;
 
 fun units (SET {units, ...}) = units;
@@ -272,9 +273,10 @@ local
 
   fun split_clause cl comps =
     let
-      val _ = chatting 2 andalso chat "%"
+      val ch = mlibClause.chat_level cl
+      val _ = chatting ch 2 andalso chat "%"
       val cls = spl cl [] comps
-      val _ = chatting 5 andalso chat
+      val _ = chatting ch 5 andalso chat
         ("\nsplit: components of clause " ^ clause_to_string cl ^ ":\n"
          ^ PP.pp_to_string (!LINE_LENGTH) (pp_list pp_clause) cls ^ "\n")
     in
@@ -318,7 +320,7 @@ fun add_rewr cl set =
       val SET {rewrites = r, ...} = set
       val cl = mlibClause.drop_order cl
       val r = mlibClause.add cl r
-      val _ = chatting 5 andalso
+      val _ = chatting (set_chat set) 5 andalso
               chat ("\nrewrite set now:\n" ^ rewrs_to_string r ^ "\n")
       val set = update_rewrites r set
     in
@@ -341,12 +343,12 @@ fun add cl set =
     val set = update_subterms (foldl g p (largest_tms cl)) set
     val SET {size = n, units = u, clauses = c, subsumers = s, literals = l,
              equalities = e, subterms = p, ...} = set
-    val _ = chatting 7 andalso
+    val _ = chatting (set_chat set) 7 andalso
             chat ("\nlargest_lits cl:\n" ^
                   (PP.pp_to_string (!LINE_LENGTH)
                    (pp_list (pp_maplet (pp_pair pp_clause pp_int) pp_formula))
                    (largest_lits cl)) ^ "\n")
-    val _ = chatting 6 andalso
+    val _ = chatting (set_chat set) 6 andalso
             chat ("\nliteral set now:\n" ^ literals_to_string l ^ "\n")
   in
     set
@@ -456,7 +458,7 @@ local
     end;
 
   fun reducibles set l =
-    if not (chatting 4) then
+    if not (chatting (set_chat set) 4) then
       if ssize set <= length l then clause_reducibles set
       else rewr_reducibles set l
     else
@@ -502,12 +504,14 @@ in
   fun purge_reducibles (set as SET {rewrites = r, ...}) =
     if reduced r then ([],set) else
       let
-        val _ = chatting 2 andalso chat "="
-        val _ = chatting 4 andalso chat "\ninter-reducing the clause set\n"
+        val _ = chatting (set_chat set) 2 andalso chat "="
+        val _ = chatting (set_chat set) 4 andalso
+                chat "\ninter-reducing the clause set\n"
         val (r,l) = mlibClause.reduce r
         val set = update_rewrites r set
         val i = reducibles set l
-        val _ = chatting 2 andalso chat (int_to_string (Intset.numItems i))
+        val _ = chatting (set_chat set) 2 andalso
+                chat (int_to_string (Intset.numItems i))
       in
         if Intset.numItems i = 0 then ([],set) else
           let
@@ -578,9 +582,11 @@ local
 in
   fun factor cls set =
     let
-      val _ = chatting 2 andalso chat ("-" ^ int_to_string (length cls))
+      val _ = chatting (set_chat set) 2 andalso
+              chat ("-" ^ int_to_string (length cls))
       val res as (cls,_) = factor' [] set cls
-      val _ = chatting 1 andalso chat ("+" ^ int_to_string (length cls))
+      val _ = chatting (set_chat set) 1 andalso
+              chat ("+" ^ int_to_string (length cls))
     in
       res
     end

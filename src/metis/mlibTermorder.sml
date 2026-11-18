@@ -32,9 +32,9 @@ val term_subst    = mlibSubst.term_subst;
 (* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibTermorder";
-val () = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+(* HOL's alignment table never listed this module, so its output only
+   ever appeared at MAX_LEVEL; ~1 says exactly that. *)
+val chatting = chatting_at ~1;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -44,7 +44,8 @@ fun chat s = (trace s; true)
 type parameters =
   {weight     : string * int -> int,
    precedence : (string * int) * (string * int) -> order,
-   precision  : int};
+   precision  : int,
+   chat       : int};   (* how loud: a per-call value, not tuning *)
 
 (* Default weight = uniform *)
 
@@ -63,11 +64,17 @@ val arity : (string * int) * (string * int) -> order =
 val defaults =
   {weight     = uniform,
    precedence = arity,
-   precision  = 3};
+   precision  = 3,
+   chat       = 0};
 
 fun update_precision f (parm : parameters) : parameters =
-  let val {weight = w, precedence = p, precision = r} = parm
-  in {weight = w, precedence = p, precision = f r}
+  let val {weight = w, precedence = p, precision = r, chat = c} = parm
+  in {weight = w, precedence = p, precision = f r, chat = c}
+  end;
+
+fun update_chat f (parm : parameters) : parameters =
+  let val {weight = w, precedence = p, precision = r, chat = c} = parm
+  in {weight = w, precedence = p, precision = r, chat = f c}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -253,8 +260,8 @@ local
     if M.all (fn ("",_) => true | (v,_) => mem v vars) eqn then ()
     else raise Bug ("wf_eqn: malformed equation: " ^ q2s eqn);
 in
-  fun chatto n s (to as TO (_,vars,eqns,_)) =
-    if not (chatting n) then () else
+  fun chatto n s (to as TO (parm,vars,eqns,_)) =
+    if not (chatting (#chat parm) n) then () else
       (chat (s ^ ":\n" ^ termorder_to_string to ^ "\n");
        app (wf_eqn vars) eqns);
 end;
@@ -354,7 +361,7 @@ local
       val vars1 = "" :: vars
       val vars2 = "" :: new_vars vars mapl
       val tab = mk_table parm vars1 vars2 mapl
-      val _ = chatting 1 andalso
+      val _ = chatting (#chat parm) 1 andalso
               chat ("subst table:\n"^table_to_string vars1 vars2 tab)
       val eqns' = map (new_eqn vars1 vars2 tab) eqns
       val to = TON parm eqns'
@@ -485,11 +492,11 @@ in
   fun compare (to as TO (parm,_,eqns,_)) lr =
     let
       val () = chatto 1 "compare input" to
-      val _ = chatting 1 andalso
+      val _ = chatting (#chat parm) 1 andalso
               chat ("comparing " ^ term_to_string (fst lr) ^
                     " and " ^ term_to_string (snd lr) ^ "\n")
       val res = cmp parm eqns (mk_eqn parm lr)
-      val _ = chatting 1 andalso
+      val _ = chatting (#chat parm) 1 andalso
               chat ("compare result = " ^ partialorder_to_string res ^ "\n")
     in
       res

@@ -18,7 +18,8 @@ type parameters =
   {term_order       : bool,
    literal_order    : bool,
    order_stickiness : int,       (* Stickiness of ordering constraints: 0..3 *)
-   termorder_parm   : mlibTermorder.parameters}
+   termorder_parm   : mlibTermorder.parameters,
+   chat             : int}       (* How loud to be: per call, not tuning *)
 
 type 'a parmupdate = ('a -> 'a) -> parameters -> parameters
 val defaults                : parameters
@@ -26,6 +27,7 @@ val update_term_order       : bool parmupdate
 val update_literal_order    : bool parmupdate
 val update_order_stickiness : int parmupdate
 val update_termorder_parm   : mlibTermorder.parameters parmupdate
+val update_chat             : int parmupdate
 
 type clause
 
@@ -33,6 +35,7 @@ type clause
 type bits = {parm : parameters, id : int, thm : thm, order : termorder}
 val mk_clause   : parameters -> thm -> clause
 val dest_clause : clause -> bits
+val chat_level  : clause -> int   (* how loud this clause's search is *)
 val literals    : clause -> formula list
 val is_empty    : clause -> bool
 val dest_rewr   : clause -> int * thm

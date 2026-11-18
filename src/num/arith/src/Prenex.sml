@@ -71,10 +71,10 @@ fun is_prenex tm =
           else (let val (f,x) = dest_comb tm
                 in  (contains_quant f) orelse (contains_quant x)
                 end)
-               handle _ => (contains_quant (body tm))
-               handle _ => false
-   in  is_prenex (snd (dest_forall tm)) handle _ =>
-       is_prenex (snd (dest_exists tm)) handle _ =>
+               handle HOL_ERR _ => (contains_quant (body tm))
+               handle HOL_ERR _ => false
+   in  is_prenex (snd (dest_forall tm)) handle HOL_ERR _ =>
+       is_prenex (snd (dest_exists tm)) handle HOL_ERR _ =>
        not (contains_quant tm)
    end;
 

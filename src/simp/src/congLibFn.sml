@@ -162,7 +162,7 @@ fun is_match_binop binop term =
     val operator = rator (rator (term));
   in
     same_const operator binop
-  end handle _ => false;
+  end handle HOL_ERR _ => false;
 
 
 local
@@ -190,7 +190,7 @@ in
       val result = tryfind (fn (boundvars, thm) => cong_rewrite_internal preorder term boundvars thm) matches
     in
       result
-    end) handle _ => NO_CONV term;
+    end) handle HOL_ERR _ => NO_CONV term;
 end
 
 
@@ -210,7 +210,7 @@ val cong_reducer =
               val boundvars_set = FVL (hyp thm) empty_varset;
             in
               Ho_Net.enter (boundvars, concl, (boundvars_set, thm)) net
-            end) handle _ => net
+            end) handle HOL_ERR _ => net
         in
           (List.foldr insert_one net flatThms)
         end
@@ -331,7 +331,9 @@ fun CONGRUENCE_SIMP_CONV relation (cs as (CS csdata)) ss =
     val qconv = CONGRUENCE_SIMP_QCONV relation cs ss
     val preorder = find_relation relation (#relations csdata);
     val refl = extract_preorder_refl preorder
-    fun conv thms tm = qconv thms tm handle _ => refl {Rinst=relation,arg=tm}
+    fun conv thms tm = qconv thms tm
+      handle HOL_ERR _ => refl {Rinst=relation,arg=tm}
+           | Conv.UNCHANGED => refl {Rinst=relation,arg=tm}
   in
     conv
   end;

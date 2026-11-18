@@ -216,13 +216,36 @@ in
 end
 
 
-fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
+(* Building the splitter walks all of the grammar's tokens and constants,
+   so keep the one built for the last grammar printed with *)
+local
+  val last : (term_grammar.grammar * bool * (string -> string * string))
+               option ref = ref NONE
+in
+fun grammar_splitter G = let
   open term_grammar
+  val octal = !base_tokens.allow_octal_input
+  fun build () = let
+    val keywords = #endbinding (specials G) :: grammar_tokens G @
+                   known_constants G
+    val split = term_tokens.user_split_ident keywords
+  in
+    last := SOME (G, octal, split);
+    split
+  end
+in
+  case !last of
+    SOME (G', octal', split) =>
+      if Portable.pointer_eq (G, G') andalso octal = octal' then split
+      else build ()
+  | NONE => build ()
+end
+end
+
+fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
   val op>> = smpp.>>
   infix >>
-  val keywords = #endbinding (specials G) :: grammar_tokens G @
-                 known_constants G
-  val split = term_tokens.user_split_ident keywords
+  val split = grammar_splitter G
   fun bad_merge (s1, s2) = let
     val combined = s1 ^ s2
     val (x,y) = split combined

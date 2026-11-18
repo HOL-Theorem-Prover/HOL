@@ -14,10 +14,12 @@ type subst = mlibSubst.subst
 type parameters =
   {weight     : string * int -> int,
    precedence : (string * int) * (string * int) -> order,
-   precision  : int}      (* How closely we approximate the term order: 0..3 *)
+   precision  : int,      (* How closely we approximate the term order: 0..3 *)
+   chat       : int}      (* How loud to be: per call, not tuning *)
 
 val defaults          : parameters
 val update_precision  : (int -> int) -> parameters -> parameters
+val update_chat       : (int -> int) -> parameters -> parameters
 
 (* The termorder type *)
 type termorder

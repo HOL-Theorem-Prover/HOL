@@ -234,7 +234,7 @@ fun var_to_elim coeffsl =
                           then (name,min)
                           else (name1,increase)
                       end)
-                     handle _ => (name1,increase)
+                     handle Empty => (name1,increase)
                  end)
              else if (name1 << name2) then min_increase (tl bind1) bind2
              else min_increase bind1 (tl bind2)
@@ -245,7 +245,8 @@ fun var_to_elim coeffsl =
       val (occsl,occsr) = (merge ## merge) (split occs)
   in  fst (min_increase occsl occsr)
   end
- ) handle _ => failwith "var_to_elim";
+ ) handle HOL_ERR _ => failwith "var_to_elim"
+        | Empty => failwith "var_to_elim";
 
 (*---------------------------------------------------------------------------*)
 (* VAR_ELIM : (int * (string * int) list) list -> (int list * (unit -> thm)) *)
@@ -369,7 +370,8 @@ fun VAR_ELIM coeffsl =
            in  (Lib.mk_set (these_indexl' @ prev_indexl'),thf')
            end
   end
- ) handle _ => failwith "VAR_ELIM"
+ ) handle HOL_ERR _ => failwith "VAR_ELIM"
+        | Match => failwith "VAR_ELIM"
  end;
 
 end
