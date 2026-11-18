@@ -1439,12 +1439,38 @@ fun test_hhProblemGen () =
         "combs_and_lifting"),
        ("hhproblemgen-tx0-combs.p", tx0, "mono_native_fool", "combs"),
        ("hhproblemgen-fof-guards-query.p", fof, "mono_guards??", "lifting")]
-    fun golden_problem exported (name, format, encoding, mode) =
+    (* Type order fixture.  Types are collected from the last premise
+       back to the conjecture.  The last premise is a curried application
+       of a constant, whose first application introduces fresh, deeply
+       nested types (no variable binds them first), and the other premises
+       add further fresh types, so the visit order of types (function,
+       argument, result) and of formulas shows in the type declarations
+       and the guard witnesses.  One mono instance keeps the extensionality
+       helper, which visits every application type first, off these. *)
+    fun opt_ty ty = Type.mk_type ("option", [ty])
+    fun fun_ty (domain, range) = Type.mk_type ("fun", [domain, range])
+    fun at_type ty tm = Term.inst [{redex = alpha, residue = ty}] tm
+    val elem_ty = opt_ty (list_ty (opt_ty num))
+    val in_op = at_type elem_ty ``$IN``
+    val membership = Term.list_mk_comb (in_op,
+      [at_type (list_ty (opt_ty num)) ``NONE``,
+       Term.inst [{redex = alpha, residue = fun_ty (elem_ty, Type.bool)}]
+         ``ARB``])
+    val k = Term.mk_var ("K",
+      fun_ty (num, opt_ty (list_ty (list_ty Type.bool))))
+    (* A bound variable of IN's type makes its applications partial. *)
+    val bound_in = Term.mk_var ("V", Term.type_of in_op)
+    val order_exported =
+      (p,
+       [("k", Thm.REFL (Term.mk_comb (k, y))),
+        ("v", Thm.REFL (mk_forall (bound_in, p))),
+        ("m", Thm.SPEC membership (DB.fetch "bool" "EXCLUDED_MIDDLE"))])
+    fun golden_problem_of exported instances (name, format, encoding, mode) =
       let
         val options =
           {format = format, type_enc = hhTypeEnc.of_string encoding,
            lam_trans = hhLamTrans.mode_of_string mode, mono_iters = 3,
-           mono_instances = 100}
+           mono_instances = instances}
         val temporary = OS.FileSys.tmpName ()
         val _ = export_pb options temporary exported
         val actual = String.concat (read_lines temporary)
@@ -1454,12 +1480,12 @@ fun test_hhProblemGen () =
         expect_equal ("hhProblemGen golden " ^ name)
           (String.concat (read_lines path)) actual
       end
-    val _ = List.app (golden_problem golden_exported) golden_specs
+    val _ = List.app (golden_problem_of golden_exported 100) golden_specs
     (* A bound function-valued variable and one polymorphic constant used
        at two types, against output of the unmemoised encoder. *)
     val symbol_goal = (``(!H : num -> num. H 0 = 0) /\
       (([] : num list) = []) /\ (([] : bool list) = [])``, [])
-    val _ = List.app (golden_problem symbol_goal)
+    val _ = List.app (golden_problem_of symbol_goal 100)
       [("hhproblemgen-tf0-symbols.p", tf0, "mono_native", "lifting"),
        ("hhproblemgen-tf1-symbols.p", tf1, "poly_native", "lifting")]
     (* Repeated ordinary names (thm, thm2, thm3), repeated helper names
@@ -1472,9 +1498,12 @@ fun test_hhProblemGen () =
       [copy_fact "a" 1, copy_fact "b" 2, copy_fact "a" 3, copy_fact "a" 4,
        copy_fact "help.h" 5, copy_fact "lam.1" 6, copy_fact "help.h" 7,
        copy_fact "lam.1" 8, copy_fact "b" 9, copy_fact "help.h" 10])
-    val _ = List.app (golden_problem copies_goal)
+    val _ = List.app (golden_problem_of copies_goal 100)
       [("hhproblemgen-tf0-copies.p", tf0, "mono_native", "lifting"),
        ("hhproblemgen-tf1-copies.p", tf1, "poly_native", "lifting")]
+    val _ = List.app (golden_problem_of order_exported 1)
+      [("hhproblemgen-tf0-type-order.p", tf0, "mono_native", "lifting"),
+       ("hhproblemgen-fof-type-order.p", fof, "mono_guards", "lifting")]
     (* This is export-linked: the fake proof names are the exact escaped
        identifiers the fixture just emitted, including a mono copy. *)
     val roundtrip_name = "fixtureTheory.roundtrip"

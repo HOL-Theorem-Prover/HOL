@@ -452,9 +452,11 @@ struct
   fun same_value left right = left = right
   (* Distinct types in first-occurrence order.  The state is a membership
      set and the reversed list of first occurrences; types of one formula
-     are visited in occurrence order, nested arguments after their type. *)
+     are visited in occurrence order, nested arguments after their type.
+     Skipping a seen type together with its arguments is sound: a type's
+     arguments are always added when the type is. *)
   fun add_type ty (seen, firsts) =
-    if Redblackmap.peek (seen, ty) <> NONE then (seen, firsts)
+    if Redblackmap.inDomain (seen, ty) then (seen, firsts)
     else
       let
         val state = (Redblackmap.insert (seen, ty, ()), ty :: firsts)
@@ -857,6 +859,8 @@ struct
         | _ => ty
     end
 
+  (* [distinct] must be the first-occurrence distinct type list (see
+     distinct_formula_types): the declarations keep first-occurrence order. *)
   fun type_declarations encoding distinct =
     let
       fun native_op ty =
