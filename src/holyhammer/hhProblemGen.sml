@@ -755,7 +755,8 @@ struct
                  hhTptpProblem.Atom (encode_term symbols encoding right)])
             else hhTptpProblem.Atom
               (encode_term symbols encoding (FOHead (head, [left, right])))
-        | encode (FOAtom tm) = hhTptpProblem.Atom (encode_term symbols encoding tm)
+        | encode (FOAtom tm) =
+            hhTptpProblem.Atom (encode_term symbols encoding tm)
       val result = encode formula
       val tvars = type_vars_of_formula formula
     in
@@ -1226,7 +1227,8 @@ struct
             type_declarations encoding all_types @ sym_decls @ app_decls @
             value_decls @ pp_decls
           end
-      val gsy = List.mapPartial (gsy_line symbols encoding needs) declaration_heads
+      val gsy = List.mapPartial (gsy_line symbols encoding needs)
+        declaration_heads
       val guard_types =
         List.filter (guarded_type encoding needs) (distinct_types all_types)
       val witnesses = map (witness_line encoding) guard_types
