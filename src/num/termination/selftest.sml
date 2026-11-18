@@ -479,6 +479,31 @@ val _ = assert (not (has_snest_aux ()) andalso null (hyp snest_def) andalso
                 null (hyp (DB.fetch "-" "snest_steps")))
 val _ = OK ()
 
+val _ = tprint "a termination tactic's settings apply when stored at once"
+val support_trace = "Definition.delete_support_defs"
+fun has_aux nm = List.exists (fn t => is_const t andalso
+                                      fst (dest_const t) = nm)
+                             (thy_consts (current_theory ()))
+val nest_tac = WF_REL_TAC ‘$<’
+fun keep_support g = (HOLFlags.set_trace support_trace 0; ALL_TAC g)
+val _ = qDefine "keep_def"
+  ‘keep n = if n = 0 then 0n else keep (keep (n - 1) MOD n)’
+  (SOME (keep_support THEN nest_tac))
+val _ = assert (has_aux "keep_aux" andalso
+                HOLFlags.current_trace support_trace = 0)
+val _ = HOLFlags.set_trace support_trace 1
+val _ = OK ()
+
+val _ = tprint "a definition completed later is stored under its settings"
+val later_goal = valOf (prepare_qDefine "later_def"
+  ‘later n = if n = 0 then 0n else later (later (n - 1) MOD n)’)
+val _ = assert (has_aux "later_aux")
+val _ = HOLFlags.set_trace support_trace 0
+val _ = complete_definition "later_def" (TAC_PROOF (later_goal, nest_tac))
+val _ = assert (not (has_aux "later_aux"))
+val _ = HOLFlags.set_trace support_trace 1
+val _ = OK ()
+
 val _ = tprint "a definition prepared and completed in ML finalises in ML"
 val mlfin_goal = valOf (prepare_qDefine "mlfin_def[induction=mlfin_steps]"
   ‘mlfin n = if n = 0 then 0n else mlfin (n - 1) + 1’)

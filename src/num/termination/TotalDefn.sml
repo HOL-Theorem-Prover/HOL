@@ -928,24 +928,31 @@ end
 (* cannot be exported.                                                       *)
 (*---------------------------------------------------------------------------*)
 
-(* The settings a definition is made and stored under: their values when
-   it is prepared *)
+(* Settings a definition is made under: the suffixes, and the flags its
+   attributes set *)
 type scope = {def_suffix : string, ind_suffix : string,
               bflags : (HOLFlags.bflag * bool) list}
 
 fun in_scope ({def_suffix, ind_suffix, bflags} : scope) f =
-    HOLFlags.with_bflags bflags
+    (if null bflags then I else HOLFlags.with_bflags bflags)
       (with_flag (Defn.def_suffix, def_suffix)
          (with_flag (Defn.ind_suffix, ind_suffix) f))
 
 fun current_scope () : scope =
+    {def_suffix = !Defn.def_suffix, ind_suffix = !Defn.ind_suffix,
+     bflags = []}
+
+(* The settings in force, which a definition completed later is stored
+   under *)
+fun saved_scope () : scope =
     {def_suffix = !Defn.def_suffix, ind_suffix = !Defn.ind_suffix,
      bflags = map (fn f => (f, HOLFlags.get_bflag f))
                   [computeLib.auto_import_definitions, allow_schema_definition,
                    Theory.allow_rebinds, delete_support_defs]}
 
 type pending = {loc : DB.thm_src_location, goal : goal,
-                validate : thm -> thm, finish : thm -> thm * thm option}
+                validate : thm -> thm, store : thm -> thm * thm option,
+                finish : thm -> thm * thm option}
 
 (* The current theory's definitions whose termination is not yet proved,
    by their equations' name *)
@@ -1008,8 +1015,10 @@ fun delete_consts cs =
                         else ()) cs
     else ()
 
-(* Makes the definition, in scope; post runs after it is stored, outside *)
-fun prepare loc stem q scope post =
+(* Makes the definition, in its scope.  store stores it under the settings
+   in force when it is called; finish under those in force now, then runs
+   post *)
+fun prepare loc stem q post =
   let open Defn
       val bind = stem ^ !Defn.def_suffix
       val _ = not (Option.isSome (pending_definition bind) orelse
@@ -1042,11 +1051,12 @@ fun prepare loc stem q scope post =
                 store_at loc (stem,def,ind);
                 (def, SOME ind)
               end
-          fun finish th = let val r = in_scope scope store th
+          val saved = saved_scope ()
+          fun finish th = let val r = in_scope saved store th
                           in post r; r end
       in
         set_pending bind (SOME {loc = loc, goal = goal, validate = validate,
-                                finish = finish});
+                                store = store, finish = finish});
         Goal {bind = bind, name = name, goal = goal}
       end
   end
@@ -1078,21 +1088,28 @@ fun complete release name ({loc, goal = (asl, _), finish, ...} : pending) th =
         finish th before set_pending name NONE
     end
 
+(* Proves the termination goal with tac and, unless suspended, stores the
+   definition in the same scope, so settings the tactic changes apply *)
 fun define_with_tactic loc stem q tac scope post =
-  let fun thunk () =
-        case in_scope scope (fn () => prepare loc stem q scope post) () of
-            Made r => (post r; r)
+  let fun make () =
+        case prepare loc stem q post of
+            Made r => (r, true)
           | Goal {bind, name, goal} =>
             let
               val (p, th) =
                   checked "tDefine" bind
-                    (in_scope scope
-                       (fn g => boolLib.prove_named (Context.snapshot ()) g)
+                    (boolLib.prove_named (Context.snapshot ())
                        {name = name, goal = goal, tac = tac})
                   handle e => (set_pending bind NONE; raise e)
             in
-              complete true bind p th
+              if boolLib.has_suspended_subgoals th then
+                (complete true bind p th, false)
+              else (#store p th before set_pending bind NONE, true)
             end
+      fun thunk () =
+          case in_scope scope make () of
+              (r, true) => (post r; r)
+            | (r, false) => r
   in
     Parse.try_grammar_extension thunk ()
     handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
@@ -1151,17 +1168,13 @@ fun definition_options stem =
               raise ERR "Definition"
                     ("Unknown attributes: " ^
                      String.concatWith ", " (map #1 unknown))
-      val flag = HOLFlags.get_bflag
-      val auto_import = computeLib.auto_import_definitions
+      fun set (b, fl) = if b then [fl] else []
       val scope =
           {def_suffix = "",
            ind_suffix = case indopt of NONE => "" | SOME s => " " ^ s,
-           bflags = [(auto_import, not nocomp andalso flag auto_import),
-                     (allow_schema_definition,
-                      svarsok orelse flag allow_schema_definition),
-                     (Theory.allow_rebinds,
-                      rebindok orelse flag Theory.allow_rebinds),
-                     (delete_support_defs, flag delete_support_defs)]}
+           bflags = set (nocomp, (computeLib.auto_import_definitions, false)) @
+                    set (svarsok, (allow_schema_definition, true)) @
+                    set (rebindok, (Theory.allow_rebinds, true))}
       fun post (thm, indopt) =
         let
           fun proc_attr (k,vs) =
@@ -1213,7 +1226,7 @@ fun prepare_qDefine stem q =
       val _ = not tailrecp orelse
               raise ERR "prepare_qDefine"
                     "Tail-recursive definitions have no termination proof"
-      fun prep () = prepare DB.Unknown corename q scope post
+      fun prep () = prepare DB.Unknown corename q post
       fun thunk () =
           case in_scope scope prep () of
               Made r => (post r; NONE)
