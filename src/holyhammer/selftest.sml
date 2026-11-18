@@ -1083,11 +1083,22 @@ fun test_hhProblemGen () =
       (formula_skeleton (input logical_argument))
     val _ = expect "hhProblemGen records used proxies"
       (#proxies proxy_ir = ["not"])
+    (* The conjecture uses the not proxy and a later fact the eq proxy, so
+       the recorded list must be in first-seen order across both. *)
+    val proxy_order_input : named_terms =
+      {conjecture = applied_not, facts = [("eq_fact", applied_eq)]}
+    val _ = expect "hhProblemGen records proxies in first-seen order"
+      (#proxies (introduce_proxies fof
+         (formula_skeleton proxy_order_input)) = ["not", "eq"])
     val _ = expect "hhProblemGen composes its front-end passes"
       (#proxies (translate_front
         {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
          lam_trans = hhLamTrans.Lifting, mono_iters = 3, mono_instances = 100}
-        (input logical_argument)) = ["not"])
+        (input logical_argument)) = ["not"] andalso
+       #proxies (translate_front
+        {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
+         lam_trans = hhLamTrans.Lifting, mono_iters = 3, mono_instances = 100}
+        proxy_order_input) = ["not", "eq"])
     fun problem format encoding terms =
       string_of_problem format "hhProblemGen pass 6--8"
         (generate_problem
@@ -1153,20 +1164,45 @@ fun test_hhProblemGen () =
     val _ = expect "hhProblemGen switches to Min_App_Op at forty-five facts"
       (occurrences "app_2E(pxy_2Ef" forty_four = 44 andalso
        occurrences "app_2E(pxy_2Ef" forty_five = 45)
-    (* The COND helpers are added after the main facts, so with 42 user
-       facts they push the total over the Min_App_Op threshold. *)
+    (* The COND conjecture adds six helpers (if_True, if_False, bool_cases,
+       pxy.true, pxy.false, eq_ext) after the main facts, so 38 user facts
+       give 44 facts at firstorderize and 39 give 45.  The helpers alone then
+       decide whether Min_App_Op applies. *)
     fun pxy_facts count = List.tabulate (count, fn index =>
       ("f" ^ Int.toString index,
        Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x))))
     val cond_conjecture = mk_conj (full_formula, mk_eq (cond_tm, x))
-    val without_helpers = problem tf1 "poly_native"
-      {conjecture = full_formula, facts = pxy_facts 42}
-    val crossing_helpers = problem tf1 "poly_native"
-      {conjecture = cond_conjecture, facts = pxy_facts 42}
+    val below_threshold = problem tf1 "poly_native"
+      {conjecture = cond_conjecture, facts = pxy_facts 38}
+    val crossing_threshold = problem tf1 "poly_native"
+      {conjecture = cond_conjecture, facts = pxy_facts 39}
     val _ = expect "hhProblemGen recomputes arities when helpers cross 45"
-      (occurrences "app_2E(pxy_2Ef" without_helpers <
-       occurrences "app_2E(pxy_2Ef" crossing_helpers andalso
-       occurrences "app_2E(pxy_2Ef" crossing_helpers = 42)
+      (occurrences "app_2E(pxy_2Ef" below_threshold = 1 andalso
+       occurrences "app_2E(pxy_2Ef" crossing_threshold = 39)
+    val z = Term.mk_var ("Z", num)
+    val ternary_num = Type.mk_type ("fun", [num, binary_num])
+    (* pxy.s and pxy.t take three arguments; pxy.t is over-applied, so the main
+       problem uses app and gets the eq_ext helper. *)
+    val pxy_s = Term.mk_var ("pxy.s", ternary_num)
+    val pxy_t = Term.mk_var ("pxy.t", ternary_num)
+    val pred_unary = Term.mk_var ("PU", Type.mk_type ("fun",
+      [unary_num, Type.bool]))
+    val pred_binary = Term.mk_var ("PB", Type.mk_type ("fun",
+      [binary_num, Type.bool]))
+    val helper_arity_goal = boolSyntax.list_mk_conj
+      [Term.mk_comb (pred_unary, Term.list_mk_comb (pxy_s, [x, y])),
+       mk_eq (Term.list_mk_comb (pxy_s, [x, y, z]), x),
+       Term.mk_comb (pred_binary, Term.mk_comb (pxy_t, x)),
+       mk_eq (Term.list_mk_comb (pxy_t, [x, y, z]), x)]
+    val helper_arity = problem tf0 "mono_native" (input helper_arity_goal)
+    (* Only the eq_ext helper quantifies over a function of type
+       num -> num -> num, which is the result type of pxy.s after one
+       argument.  Its presence lowers the application arity of the main
+       symbol pxy.s from two to one. *)
+    val _ = expect "hhProblemGen lets helper variables lower main arities"
+      (String.isSubstring "pxy_2Es : ty_2Enum_2Enum > " helper_arity andalso
+       String.isSubstring "pxy_2Es(X)" helper_arity andalso
+       not (String.isSubstring "pxy_2Es(X,Y)" helper_arity))
     val _ = expect "hhProblemGen inserts pp for non-FOOL boolean terms"
       (String.isSubstring "pp_2E(app_2E" bool_term andalso
        not (String.isSubstring "pp_2E(app_2E" fool_bool_term))

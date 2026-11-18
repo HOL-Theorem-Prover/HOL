@@ -192,16 +192,14 @@ struct
   fun builtin_head name head = mk_var (name, type_of head)
   fun is_cond_head head = same_const head conditional
 
-  fun transform_term format seen tm =
+  fun transform_term format record tm =
     let
       val (head, args) = strip_comb tm
-      val args' = map (transform_term format seen) args
+      val args' = map (transform_term format record) args
       val argc = length args
       val {with_ite, ...} = syntax_of format
       fun use_proxy name =
-        (if List.exists (fn old => old = name) (!seen) then ()
-         else seen := !seen @ [name];
-         rebuild (proxy_head name head) args')
+        (record name; rebuild (proxy_head name head) args')
       fun use_builtin name = rebuild (builtin_head name head) args'
     in
       if is_cond_head head andalso with_ite andalso argc >= 3 then
@@ -211,10 +209,10 @@ struct
             NONE =>
               if is_abs tm then
                 let val (var, body) = dest_abs tm in
-                  mk_abs (var, transform_term format seen body)
+                  mk_abs (var, transform_term format record body)
                 end
               else if null args then head
-              else rebuild (transform_term format seen head) args'
+              else rebuild (transform_term format record head) args'
           | SOME (name, card, builtin) =>
               if (name = "true" orelse name = "false") andalso
                  (is_full_ho format orelse is_fool format) then
@@ -222,11 +220,11 @@ struct
               else use_proxy name
     end
 
-  (* The proxy transformation of one formula.  [seen] collects the proxy
-     names in first-seen order across every formula transformed with it. *)
-  fun proxy_formula format seen =
+  (* The proxy transformation of one formula.  [record] is called with
+     the name of each proxy as it is introduced. *)
+  fun proxy_formula format record =
     let
-      val transform = transform_term format seen
+      val transform = transform_term format record
       (* An equation in formula position is TPTP equality.  Only equations
          below other symbols need the pxy.eq proxy. *)
       fun atom tm =
@@ -246,7 +244,10 @@ struct
   fun introduce_proxies format ({conjecture, facts} : formula_ir) =
     let
       val seen = ref []
-      val formula = proxy_formula format seen
+      fun record name =
+        if List.exists (fn old => old = name) (!seen) then ()
+        else seen := !seen @ [name]
+      val formula = proxy_formula format record
       val conjecture' = formula conjecture
       val facts' = map (fn (name, body) => (name, formula body)) facts
     in
@@ -1284,9 +1285,9 @@ struct
       val main_terms = if main_is_mono then lambda_terms
                        else pass_monomorph type_enc caps lambda_terms
       (* firstorderize reads only the conjecture and facts, so the proxy
-         names are not collected.  The main problem is transformed once;
+         names are not recorded.  The main problem is transformed once;
          helper lists are transformed alone and appended to it. *)
-      val proxied = proxy_formula format (ref [])
+      val proxied = proxy_formula format (fn _ => ())
       fun proxy_facts facts = map (fn (name, tm) =>
         (name, proxied (skeleton tm))) facts
       val main_conjecture = proxied (skeleton (#conjecture main_terms))
