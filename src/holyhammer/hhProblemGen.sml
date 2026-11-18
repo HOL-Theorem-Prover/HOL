@@ -910,33 +910,29 @@ struct
   fun is_helper_name name = String.isPrefix "help." name
   fun is_lambda_name name = String.isPrefix "lam." name
 
+  (* Number of the next copy of a name, given the copies seen so far. *)
+  fun next_copy name copies =
+    case Redblackmap.peek (copies, name) of NONE => 1 | SOME n => n + 1
+
   fun premise_lines symbols format encoding needs facts =
     let
       fun ident name copies =
         if is_lambda_name name then aiLib.escape name
         else
-          let
-            val count = case List.find (fn (old, _) => old = name) copies of
-                NONE => 1 | SOME (_, n) => n + 1
-          in
-            aiLib.escape (hhTptpProblem.fact_name count name)
-          end
-      fun add name [] = [(name, 1)]
-        | add name ((old, n) :: rest) =
-            if name = old then (old, n + 1) :: rest
-            else (old, n) :: add name rest
+          aiLib.escape (hhTptpProblem.fact_name (next_copy name copies) name)
       fun line (name, formula, copies) =
         (hhTptpProblem.FormLine
            (ident name copies, hhTptpProblem.Axiom,
             encode_formula symbols encoding needs formula),
-         if is_lambda_name name then copies else add name copies)
+         if is_lambda_name name then copies
+         else Redblackmap.insert (copies, name, next_copy name copies))
       fun loop [] _ result = List.rev result
         | loop (item :: rest) copies result =
             let val (output, copies') = line (#1 item, #2 item, copies) in
               loop rest copies' (output :: result)
             end
     in
-      loop facts [] []
+      loop facts (Redblackmap.mkDict String.compare) []
     end
 
   fun helper_tm name args = hhTptpProblem.Tm ((aiLib.escape name, []), args)
@@ -1180,11 +1176,13 @@ struct
       fun unique_symbols [] _ = []
         | unique_symbols (head :: rest) seen =
             let val symbol = #head symbols head in
-              if List.exists (fn old => old = symbol) seen then
+              if Redblackset.member (seen, symbol) then
                 unique_symbols rest seen
-              else head :: unique_symbols rest (symbol :: seen)
+              else head ::
+                unique_symbols rest (Redblackset.add (seen, symbol))
             end
-      val declaration_heads = unique_symbols (List.filter declared heads) []
+      val declaration_heads = unique_symbols (List.filter declared heads)
+        (Redblackset.empty String.compare)
       val all_types = List.foldl (fn (formula, result) =>
         types_of_formula formula @ result) [] all_formulas
       val decls =
@@ -1244,22 +1242,20 @@ struct
       val (helpers, ordinary) = List.partition (is_helper_name o #1) facts
       fun helper_lines facts =
         let
-          fun count name [] = 1
-            | count name ((old, n) :: rest) =
-                if name = old then n + 1 else count name rest
           fun loop [] _ result = List.rev result
             | loop ((name, formula) :: rest) seen result =
                 let
-                  val n = count name seen
+                  val n = next_copy name seen
                   val suffix = if n = 1 then "" else "." ^ Int.toString n
                   val line = hhTptpProblem.FormLine
                     (aiLib.escape (name ^ suffix), hhTptpProblem.Axiom,
                      encode_formula symbols encoding needs formula)
                 in
-                  loop rest ((name, n) :: seen) (line :: result)
+                  loop rest (Redblackmap.insert (seen, name, n))
+                    (line :: result)
                 end
         in
-          loop facts [] []
+          loop facts (Redblackmap.mkDict String.compare) []
         end
       val conjecture' = hhTptpProblem.FormLine ("conjecture",
         hhTptpProblem.Conjecture,

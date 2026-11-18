@@ -1423,6 +1423,18 @@ fun test_hhProblemGen () =
     val _ = List.app (golden_problem symbol_goal)
       [("hhproblemgen-tf0-symbols.p", tf0, "mono_native", "lifting"),
        ("hhproblemgen-tf1-symbols.p", tf1, "poly_native", "lifting")]
+    (* Repeated ordinary names (thm, thm2, thm3), repeated helper names
+       (help.h, help.h.2) and the lam. exception (never numbered), against
+       output of the list-based copy counters. *)
+    fun copy_fact name n =
+      (name, Thm.mk_thm ([], ``(P : num -> bool) ^(numSyntax.term_of_int n)``))
+    val copies_goal = (``(x : num) = x``,
+      [copy_fact "a" 1, copy_fact "b" 2, copy_fact "a" 3, copy_fact "a" 4,
+       copy_fact "help.h" 5, copy_fact "lam.1" 6, copy_fact "help.h" 7,
+       copy_fact "lam.1" 8, copy_fact "b" 9, copy_fact "help.h" 10])
+    val _ = List.app (golden_problem copies_goal)
+      [("hhproblemgen-tf0-copies.p", tf0, "mono_native", "lifting"),
+       ("hhproblemgen-tf1-copies.p", tf1, "poly_native", "lifting")]
     (* This is export-linked: the fake proof names are the exact escaped
        identifiers the fixture just emitted, including a mono copy. *)
     val roundtrip_name = "fixtureTheory.roundtrip"
