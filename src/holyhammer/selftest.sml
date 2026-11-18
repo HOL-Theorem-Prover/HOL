@@ -921,17 +921,34 @@ fun test_hhMonomorph () =
       ("downstream", downstream)]
     val late = hhMonomorph.monomorph
       {max_iters = 3, max_new_instances = 100} goal late_facts
-    (* A fact entering on round 2 sees the goal's grounds (initial table)
-       merged with the round 1 instances of a privileged fact. *)
-    val join = conjs [eq_nil (list_ty alpha),
+    (* Round 2 joins the goal's grounds (initial table) with the round 1
+       instances of a privileged fact: 'a comes from the goal, 'b from the
+       seed.  Using only the new or only the known table loses one. *)
+    fun none_tm ty = Term.inst [{redex = alpha, residue = ty}] ``NONE``
+    fun eq_none ty = mk_eq (none_tm ty, none_tm ty)
+    val goal2 = conjs [eq_nil (list_ty num), eq_none Type.bool]
+    val filler2 = List.tabulate (9, fn index =>
+      ("filler" ^ Int.toString index, goal2))
+    val join_seed = conjs [eq_nil (list_ty alpha),
       eq_nil (list_ty (pair_ty alpha alpha))]
-    val join_facts = [("seed", eq_nil (list_ty (pair_ty num num)))] @
-      filler @ [("join", join)]
+    val join = conjs [eq_none beta, eq_nil (list_ty (pair_ty alpha alpha))]
+    val join_facts = [("seed", join_seed)] @ filler2 @ [("join", join)]
     val joined = hhMonomorph.monomorph
-      {max_iters = 2, max_new_instances = 100} goal join_facts
-    val joined_expected = Term.inst [{redex = alpha, residue = num}] join
+      {max_iters = 2, max_new_instances = 100} goal2 join_facts
+    val joined_expected = Term.inst [{redex = alpha, residue = num},
+                                     {redex = beta, residue = Type.bool}] join
     val early_join = hhMonomorph.monomorph
-      {max_iters = 1, max_new_instances = 100} goal join_facts
+      {max_iters = 1, max_new_instances = 100} goal2 join_facts
+    (* Round 3 reads the table merged in round 2 as its known grounds. *)
+    val goal3 = goal2
+    val filler3 = List.tabulate (10, fn index =>
+      ("filler" ^ Int.toString index, goal3))
+    val chain3 = conjs [eq_nil (list_ty alpha),
+      eq_nil (list_ty (pair_ty alpha num))]
+    val down3 = conjs [eq_nil (list_ty (pair_ty beta num)), eq_none Type.gamma]
+    val handoff = hhMonomorph.monomorph
+      {max_iters = 3, max_new_instances = 100} goal3
+      (filler3 @ [("chain", chain3), ("down", down3)])
     val ordinary = hhMonomorph.monomorph
       {max_iters = 2, max_new_instances = 100} goal
       (filler @ [("chain", chain), ("downstream", downstream)])
@@ -1015,6 +1032,8 @@ fun test_hhMonomorph () =
     val _ = expect "round 2 facts match the merged initial and round 1 table"
       (List.exists (fn (_, tm) => Term.aconv tm joined_expected)
          (named "join" joined) andalso null (named "join" early_join))
+    val _ = expect "round 3 facts match the table merged in round 2"
+      (not (null (named "down" handoff)))
     val _ = expect "monomorphization output order is deterministic"
       (same_output per_fact again)
     val _ = expect
