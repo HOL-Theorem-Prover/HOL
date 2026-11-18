@@ -41,7 +41,8 @@ fun fails f = (ignore (f ()); false) handle HOL_ERR _ => true
 val _ =
   if fails (fn () => markerLib.resume
                        {suspension_name = "prepared_def", label_name = "tc"}
-                       ALL_TAC (Context.snapshot ())) andalso
+                       (TRY markerLib.RESUME_TAC >> metis_tac [])
+                       (Context.snapshot ())) andalso
      fails (fn () => markerLib.finalise_suspended_thm DB.Unknown
                        "prepared_def")
   then () else raise Fail "Resume or Finalise reached the ancestor"

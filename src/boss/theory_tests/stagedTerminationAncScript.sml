@@ -11,7 +11,7 @@ Proof
 QED
 
 Theorem prepared_def:
-  p ==> p
+  p /\ q ==> p
 Proof
   suspend "tc"
 QED
