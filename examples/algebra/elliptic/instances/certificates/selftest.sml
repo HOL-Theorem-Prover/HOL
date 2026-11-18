@@ -1,7 +1,7 @@
 open HolKernel boolLib bossLib testutils;
 open shortWeierstrassTheory shortWeierstrassGroupTheory
      shortWeierstrassSmallTheory ellipticCertificatesTheory
-     fieldInstancesTheory;
+     fieldInstancesTheory ellipticCertificateFixturesTheory;
 
 val _ = new_theory "scratch";
 val failures = ref 0;
@@ -9,14 +9,8 @@ val _ = diemode := Remember failures;
 
 val prime = groupTheory.PRIME_5;
 val curve = sw_GF5_curve;
-val member = prove
-  (``ECAffine 2 2 IN sw_points (GF 5) 0 1``,
-   SIMP_TAC bool_ss
-     [sw_GF5_points, pred_setTheory.IN_INSERT, pred_setTheory.NOT_IN_EMPTY]);
-val inverses = prove
-  (``(GF 5).prod.inv 1 = 1 /\ (GF 5).prod.inv 2 = 3 /\
-     (GF 5).prod.inv 3 = 2 /\ (GF 5).prod.inv 4 = 4``,
-   rpt conj_tac THEN irule sw_GF_prod_inv_witness THEN simp[prime]);
+val member = certificate_GF5_member;
+val inverses = certificate_GF5_inverses;
 val addition = SIMP_CONV (srw_ss())
   [sw_add_def, sw_slope_def, sw_add_x_def, sw_add_y_def,
    GF_eval, GF_sum_inv, inverses, monoidTheory.monoid_exp_def,
@@ -58,33 +52,11 @@ val _ = proof_test "Scalar operations retain residuals across chunks"
    not results obtained from the converters under test. *)
 val quadratic_prime = groupTheory.PRIME_7;
 val quadratic = ``PolyModRing (GF 7) [1n;0;1]``;
-val quadratic_field = prove
-  (``Field ^quadratic``,
-   metis_tac
-     [fieldTheory.FiniteField_def,
-      polyFieldModuloTheory.poly_mod_irreducible_finite_field,
-      GF_finite_field, quadratic_prime,
-      pairingQuadraticFieldsTheory.prime_3mod4_quadratic_irreducible,
-      EQT_ELIM (EVAL ``7 MOD 4 = 3``)]);
+val quadratic_field = certificate_GF49_field;
 val quadratic_arithmetic =
   pairingCurveCertificateLib.FIELD_CONV quadratic_prime quadratic_field;
-val quadratic_char = prove
-  (``ring$char ^quadratic = 7``,
-   simp[polyFieldModuloTheory.poly_mod_ring_char_alt, GF_field,
-        quadratic_prime, GF_prime_char,
-        pairingQuadraticFieldsTheory.prime_3mod4_quadratic_monic,
-        pairingQuadraticFieldsTheory.prime_3mod4_quadratic_degree]);
-val quadratic_curve = prove
-  (``ShortWeierstrassCurve ^quadratic [] [1n]``,
-   SIMP_TAC bool_ss
-     [ShortWeierstrassCurve_def, quadratic_field, quadratic_char] THEN
-   CONV_TAC (REWRITE_CONV [sw_discriminant_def] THENC
-     quadratic_arithmetic));
-val quadratic_member = prove
-  (``ECAffine [0n;1] [3n;1] IN sw_points ^quadratic [] [1n]``,
-   CONV_TAC (REWRITE_CONV
-     [sw_points_member, sw_on_curve_def, sw_curve_rhs_def] THENC
-     quadratic_arithmetic));
+val quadratic_curve = certificate_GF49_curve;
+val quadratic_member = certificate_GF49_member;
 
 val _ = proof_test "Quadratic inverse has a nonzero imaginary component"
   (CONV_TAC quadratic_arithmetic)
