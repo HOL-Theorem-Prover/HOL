@@ -647,17 +647,16 @@ struct
     let
       val head = memoise Term.compare (encoded_symbol encoding)
       val value = memoise Term.compare (value_symbol encoding)
+      fun unless_bound memo tm =
+        if is_bound_var tm then encoded_symbol encoding tm else memo tm
     in
-      {head = fn tm => if is_bound_var tm then encoded_symbol encoding tm
-                       else head tm,
-       value = fn tm => if is_bound_var tm then encoded_symbol encoding tm
-                        else value tm,
+      {head = unless_bound head, value = unless_bound value,
        app = memoise signature_compare (app_symbol encoding)}
     end
 
   fun encode_term (symbols : symbols) encoding (FOHead (head, args)) =
-        hhTptpProblem.Tm (((if raw_symbol head = "$ite" andalso
-          length args = 3 then "$ite" else #head symbols head),
+        hhTptpProblem.Tm (((if is_var head andalso raw_symbol head = "$ite"
+          andalso length args = 3 then "$ite" else #head symbols head),
           (case encoding of
              hhTypeEnc.Native {poly = true, ...} =>
                map native_type (type_args_of_head head)
