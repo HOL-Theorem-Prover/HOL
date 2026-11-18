@@ -450,30 +450,44 @@ struct
   fun add_once equal value values =
     if List.exists (equal value) values then values else values @ [value]
   fun same_value left right = left = right
-  fun types_of_type ty =
-    if is_vartype ty then [ty]
+  (* Distinct types in first-occurrence order.  The state is a membership
+     set and the reversed list of first occurrences; types of one formula
+     are visited in occurrence order, nested arguments after their type. *)
+  fun add_type ty (seen, firsts) =
+    if Redblackmap.peek (seen, ty) <> NONE then (seen, firsts)
     else
-      let val {Args, ...} = Type.dest_thy_type ty in
-        ty :: List.concat (map types_of_type Args)
+      let
+        val state = (Redblackmap.insert (seen, ty, ()), ty :: firsts)
+      in
+        if is_vartype ty then state
+        else List.foldl (fn (arg, st) => add_type arg st) state
+               (#Args (Type.dest_thy_type ty))
       end
-  fun types_of_term tm = types_of_type (type_of tm) @
-    List.concat (map types_of_term (snd (strip_comb tm)))
-  fun types_of_formula (FOQuant (_, vars, body)) =
-        List.concat (map (types_of_type o type_of) vars) @ types_of_formula body
-    | types_of_formula (FOConn (_, bodies)) =
-        List.concat (map types_of_formula bodies)
-    | types_of_formula (FOAtom tm) = types_of_fo_term tm
-  and types_of_fo_term (FOHead (head, args)) =
-        types_of_type (type_of head) @ List.concat (map types_of_fo_term args)
-    | types_of_fo_term (FOValue head) = types_of_type (type_of head)
-    | types_of_fo_term (FOApp {left, right, function_type, argument_type,
-                               result_type}) =
-        types_of_type function_type @ types_of_type argument_type @
-        types_of_type result_type @ types_of_fo_term left @
-        types_of_fo_term right
-    | types_of_fo_term (FOPred body) = types_of_fo_term body
-    | types_of_fo_term (FOAbs (var, body)) =
-        types_of_type (type_of var) @ types_of_fo_term body
+  fun add_formula_types (FOQuant (_, vars, body)) state =
+        add_formula_types body
+          (List.foldl (fn (var, st) => add_type (type_of var) st) state vars)
+    | add_formula_types (FOConn (_, bodies)) state =
+        List.foldl (fn (body, st) => add_formula_types body st) state bodies
+    | add_formula_types (FOAtom tm) state = add_fo_term_types tm state
+  and add_fo_term_types (FOHead (head, args)) state =
+        List.foldl (fn (arg, st) => add_fo_term_types arg st)
+          (add_type (type_of head) state) args
+    | add_fo_term_types (FOValue head) state = add_type (type_of head) state
+    | add_fo_term_types (FOApp {left, right, function_type, argument_type,
+                                result_type}) state =
+        add_fo_term_types right (add_fo_term_types left
+          (add_type result_type (add_type argument_type
+            (add_type function_type state))))
+    | add_fo_term_types (FOPred body) state = add_fo_term_types body state
+    | add_fo_term_types (FOAbs (var, body)) state =
+        add_fo_term_types body (add_type (type_of var) state)
+
+  (* Same as distinct_types of the occurrences of all the formulas, the
+     last formula's types first. *)
+  fun distinct_formula_types formulas =
+    rev (#2 (List.foldr (fn (formula, state) =>
+      add_formula_types formula state)
+      (Redblackmap.mkDict Type.compare, []) formulas))
 
   fun raw_mangle_type ty =
     if is_vartype ty then "var." ^ dest_vartype ty
@@ -843,11 +857,8 @@ struct
         | _ => ty
     end
 
-  fun type_declarations encoding types =
+  fun type_declarations encoding distinct =
     let
-      (* Each declaration's first occurrence among the distinct types is
-         its first occurrence among all of them. *)
-      val distinct = distinct_types types
       fun native_op ty =
         if is_vartype ty then NONE
         else
@@ -1184,8 +1195,7 @@ struct
             end
       val declaration_heads = unique_symbols (List.filter declared heads)
         (Redblackset.empty String.compare)
-      val all_types = List.foldl (fn (formula, result) =>
-        types_of_formula formula @ result) [] all_formulas
+      val all_types = distinct_formula_types all_formulas
       val decls =
         if format = hhTptpProblem.FOF then []
         else
@@ -1238,7 +1248,7 @@ struct
       val gsy = List.mapPartial (gsy_line symbols encoding needs)
         declaration_heads
       val guard_types =
-        List.filter (guarded_type encoding needs) (distinct_types all_types)
+        List.filter (guarded_type encoding needs) all_types
       val witnesses = map (witness_line encoding) guard_types
       val (helpers, ordinary) = List.partition (is_helper_name o #1) facts
       fun helper_lines facts =
