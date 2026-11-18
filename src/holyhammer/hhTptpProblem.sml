@@ -80,32 +80,53 @@ struct
            | _ => ty)
     | uncurry ty = ty
 
-  fun string_of_type format ty =
+  (* Printers build the text as reversed fragment lists: each takes the
+     fragments emitted so far and returns them extended, in one left to
+     right traversal; string_of_problem concatenates once. *)
+
+  fun join_into sep emit acc [] = acc
+    | join_into sep emit acc (x :: xs) =
+        let
+          fun loop acc [] = acc
+            | loop acc (x :: xs) = loop (emit (sep :: acc) x) xs
+        in
+          loop (emit acc x) xs
+        end
+
+  fun type_into format acc ty =
     let
-      fun str rhs (TyCon (name, [])) = name
-        | str _ (TyVar name) = name
-        | str _ (TyCon ("*", tys)) =
-            "(" ^ join " * " (map (str false) tys) ^ ")"
-        | str _ (TyCon (name, tys)) =
+      fun str rhs acc (TyCon (name, [])) = name :: acc
+        | str _ acc (TyVar name) = name :: acc
+        | str _ acc (TyCon ("*", tys)) =
+            ")" :: join_into " * " (str false) ("(" :: acc) tys
+        | str _ acc (TyCon (name, tys)) =
             if is_higher format then
-              "(" ^ join " @ " (name :: map (str false) tys) ^ ")"
-            else name ^ "(" ^ join "," (map (str false) tys) ^ ")"
-        | str rhs (TyFun (left, right)) =
-            let val text = str false left ^ " > " ^ str true right in
-              if rhs then text else "(" ^ text ^ ")"
+              ")" :: join_into " @ " (str false) ("(" :: acc)
+                (TyVar name :: tys)
+            else
+              ")" :: join_into "," (str false) ("(" :: name :: acc) tys
+        | str rhs acc (TyFun (left, right)) =
+            let
+              val acc = if rhs then acc else "(" :: acc
+              val acc = str true (" > " :: str false acc left) right
+            in
+              if rhs then acc else ")" :: acc
             end
-        | str _ (TyPi (vars, body)) =
-            "!>[" ^ join ", " (map (fn name => name ^ " : $tType") vars) ^
-            "]: " ^ str false body
+        | str _ acc (TyPi (vars, body)) =
+            str false
+              ("]: " ::
+               join_into ", " (fn acc => fn name => " : $tType" :: name :: acc)
+                 ("!>[" :: acc) vars)
+              body
     in
-      str true (if is_higher format then ty else uncurry ty)
+      str true acc (if is_higher format then ty else uncurry ty)
     end
 
-  fun string_of_bound_var format (name, NONE) =
-        if is_typed format then name ^ " : $i" else name
-    | string_of_bound_var format (name, SOME ty) =
-        if is_typed format then name ^ " : " ^ string_of_type format ty
-        else name
+  fun bound_var_into format acc (name, NONE) =
+        if is_typed format then " : $i" :: name :: acc else name :: acc
+    | bound_var_into format acc (name, SOME ty) =
+        if is_typed format then type_into format (" : " :: name :: acc) ty
+        else name :: acc
 
   fun check_special format name =
     let val {with_ite, with_let} = syntax_of format in
@@ -118,47 +139,57 @@ struct
       else ()
     end
 
-  fun string_of_application format head args =
-    if null args then head
-    else if is_higher format then
-      "(" ^ join " @ " (head :: args) ^ ")"
-    else
-      head ^ "(" ^ join "," args ^ ")"
-
-  fun string_of_term format (Tm ((name, tys), terms)) =
+  fun term_into format acc (Tm ((name, tys), terms)) =
         let
           val _ = check_special format name
         in
           if name = "$ite" then
             (case terms of
                [cond, then_tm, else_tm] =>
-                 "$ite(" ^ string_of_term format cond ^ "," ^
-                 string_of_term format then_tm ^ "," ^
-                 string_of_term format else_tm ^ ")"
+                 let
+                   val acc = term_into format ("$ite(" :: acc) cond
+                   val acc = term_into format ("," :: acc) then_tm
+                 in
+                   ")" :: term_into format ("," :: acc) else_tm
+                 end
              | _ => fail "$ite needs exactly three term arguments")
           else if name = "$let" then
             (case terms of
                [value, TmAbs ((var, ty), body)] =>
-                 "$let(" ^ var ^ " : " ^ string_of_type format ty ^ ", " ^
-                 var ^ " := " ^ string_of_term format value ^ ", " ^
-                 string_of_term format body ^ ")"
+                 let
+                   val acc = type_into format
+                     (" : " :: var :: "$let(" :: acc) ty
+                   val acc = term_into format
+                     (" := " :: var :: ", " :: acc) value
+                 in
+                   ")" :: term_into format (", " :: acc) body
+                 end
              | _ => fail "$let needs a value and a lambda abstraction")
+          else if null tys andalso null terms then name :: acc
           else
             let
-              val types = map (string_of_type format) tys
-              val types' =
-                if is_higher format then
-                  map (fn ty => "(" ^ ty ^ ")") types
-                else types
-              val args = types' @ map (string_of_term format) terms
+              val higher = is_higher format
+              fun ty_into acc ty =
+                if higher then ")" :: type_into format ("(" :: acc) ty
+                else type_into format acc ty
+              val args =
+                map (fn ty => fn acc => ty_into acc ty) tys @
+                map (fn tm => fn acc => term_into format acc tm) terms
             in
-              string_of_application format name args
+              ")" ::
+              (if higher then
+                 List.foldl (fn (emit, acc) => emit (" @ " :: acc))
+                   (name :: "(" :: acc) args
+               else
+                 join_into "," (fn acc => fn emit => emit acc)
+                   ("(" :: name :: acc) args)
             end
         end
-    | string_of_term (format as THF _) (TmAbs ((name, ty), body)) =
-        "(^[" ^ name ^ " : " ^ string_of_type format ty ^ "]: " ^
-        string_of_term format body ^ ")"
-    | string_of_term _ (TmAbs _) =
+    | term_into (format as THF _) acc (TmAbs ((name, ty), body)) =
+        ")" :: term_into format
+          (": " :: "]" :: type_into format (" : " :: name :: "(^[" :: acc) ty)
+          body
+    | term_into _ _ (TmAbs _) =
         fail "lambda abstraction in a first-order format"
 
   fun conn_name Not = "~"
@@ -168,57 +199,74 @@ struct
     | conn_name Iff = "<=>"
     | conn_name Equal = "="
 
-  fun string_of_formula format (Quant (all, vars, body)) =
-        "(" ^ (if all then "!" else "?") ^ "[" ^
-        join ", " (map (string_of_bound_var format) vars) ^ "]: " ^
-        string_of_formula format body ^ ")"
-    | string_of_formula format (TyQuant (all, vars, body)) =
+  fun formula_into format acc (Quant (all, vars, body)) =
+        ")" :: formula_into format
+          ("]: " ::
+           join_into ", " (bound_var_into format)
+             ((if all then "![" else "?[") :: "(" :: acc) vars)
+          body
+    | formula_into format acc (TyQuant (all, vars, body)) =
         if is_poly format then
-          "(" ^ (if all then "!>" else "?>") ^ "[" ^
-          join ", " (map (fn name => name ^ " : $tType") vars) ^ "]: " ^
-          string_of_formula format body ^ ")"
+          ")" :: formula_into format
+            ("]: " ::
+             join_into ", " (fn acc => fn name => " : $tType" :: name :: acc)
+               ((if all then "!>[" else "?>[") :: "(" :: acc) vars)
+            body
         else fail "type quantifier in a monomorphic format"
-    | string_of_formula format
+    | formula_into format acc
         (Conn (Not, [Conn (Equal, [Atom left, Atom right])])) =
-        "(" ^ string_of_term format left ^ " != " ^
-        string_of_term format right ^ ")"
-    | string_of_formula format (Conn (Not, [body])) =
-        "(~ " ^ string_of_formula format body ^ ")"
-    | string_of_formula format (Conn (Equal, [Atom left, Atom right])) =
-        "(" ^ string_of_term format left ^ " = " ^
-        string_of_term format right ^ ")"
-    | string_of_formula format (Conn (conn, bodies)) =
+        ")" :: term_into format
+          (" != " :: term_into format ("(" :: acc) left) right
+    | formula_into format acc (Conn (Not, [body])) =
+        ")" :: formula_into format ("(~ " :: acc) body
+    | formula_into format acc (Conn (Equal, [Atom left, Atom right])) =
+        ")" :: term_into format
+          (" = " :: term_into format ("(" :: acc) left) right
+    | formula_into format acc (Conn (conn, bodies)) =
         if null bodies then fail "connective has no operands"
         else if conn = Not orelse conn = Equal then
           fail "connective has the wrong number of operands"
-        else "(" ^ join (" " ^ conn_name conn ^ " ")
-          (map (string_of_formula format) bodies) ^ ")"
-    | string_of_formula format (Atom term) = string_of_term format term
+        else
+          ")" :: join_into (" " ^ conn_name conn ^ " ") (formula_into format)
+            ("(" :: acc) bodies
+    | formula_into format acc (Atom term) = term_into format acc term
+
+  fun string_of_fragments into x = String.concat (rev (into [] x))
+
+  fun string_of_type format ty = string_of_fragments (type_into format) ty
 
   fun nary_type 0 = TyCon ("$tType", [])
     | nary_type n = TyFun (TyCon ("$tType", []), nary_type (n - 1))
 
-  fun string_of_line format (TypeDecl (ident, tyop, arity)) =
+  fun line_into format acc (TypeDecl (ident, tyop, arity)) =
         if is_typed format then
-          format_name format ^ "(" ^ ident ^ ", type,\n    " ^ tyop ^ " : " ^
-          string_of_type format (nary_type arity) ^ ").\n"
+          ").\n" :: type_into format
+            (" : " :: tyop :: ", type,\n    " :: ident :: "(" ::
+             format_name format :: acc)
+            (nary_type arity)
         else fail "type declaration in FOF"
-    | string_of_line format (SymDecl (ident, symbol, ty)) =
+    | line_into format acc (SymDecl (ident, symbol, ty)) =
         if is_typed format then
-          format_name format ^ "(" ^ ident ^ ", type,\n    " ^ symbol ^ " : " ^
-          string_of_type format ty ^ ").\n"
+          ").\n" :: type_into format
+            (" : " :: symbol :: ", type,\n    " :: ident :: "(" ::
+             format_name format :: acc)
+            ty
         else fail "symbol declaration in FOF"
-    | string_of_line format (FormLine (ident, role, formula)) =
-        format_name format ^ "(" ^ ident ^ ", " ^ role_name role ^ ",\n    (" ^
-        string_of_formula format formula ^ ")).\n"
+    | line_into format acc (FormLine (ident, role, formula)) =
+        ")).\n" :: formula_into format
+          (",\n    (" :: role_name role :: ", " :: ident :: "(" ::
+           format_name format :: acc)
+          formula
 
-  fun string_of_section format (heading, lines) =
-    "% " ^ heading ^ " (" ^ Int.toString (length lines) ^ ")\n" ^
-    String.concat (map (string_of_line format) lines)
+  fun section_into format acc (heading, lines) =
+    List.foldl (fn (line, acc) => line_into format acc line)
+      (")\n" :: Int.toString (length lines) :: " (" :: heading :: "% " :: acc)
+      lines
 
   fun string_of_problem format header sections =
-    "% " ^ header ^ "\n" ^
-    String.concat (map (string_of_section format) sections)
+    String.concat (rev
+      (List.foldl (fn (section, acc) => section_into format acc section)
+         ["\n", header, "% "] sections))
 
   fun fact_name 1 fact = "thm." ^ fact
     | fact_name copy fact = "thm" ^ Int.toString copy ^ "." ^ fact

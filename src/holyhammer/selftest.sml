@@ -524,6 +524,46 @@ fun test_hhTptpProblem () =
     val _ = expect "choice printing is rejected"
       (raises (fn () => string_of_problem th0 "choice"
         [("Facts", [FormLine ("fact", Axiom, Atom choice)])]))
+    val nested_decls =
+      [SymDecl ("s", "s",
+         TyPi (["A", "B"],
+           TyFun (TyFun (TyVar "A", bool),
+             TyCon ("list", [TyVar "B",
+               TyCon ("*", [ind, TyFun (ind, ind)])])))),
+       SymDecl ("u", "u",
+         TyFun (TyFun (ind, bool),
+           TyFun (ind, TyCon ("m", [TyFun (ind, ind), ind]))))]
+    val _ = expect_equal "nested types print in TFF"
+      (String.concat
+        ["% n\n%  (2)\ntff(s, type,\n    s : !>[A : $tType, B : $tType]: ",
+         "((A > $o) > list(B,($i * ($i > $i))))).\ntff(u, type,\n    ",
+         "u : ($i > $o) > $i > m(($i > $i),$i)).\n"])
+      (string_of_problem tf1 "n" [("", nested_decls)])
+    val _ = expect_equal "nested types print in THF"
+      (String.concat
+        ["% n\n%  (2)\nthf(s, type,\n    s : !>[A : $tType, B : $tType]: ",
+         "((A > $o) > (list @ B @ ($i * ($i > $i))))).\nthf(u, type,\n    ",
+         "u : ($i > $o) > $i > (m @ ($i > $i) @ $i)).\n"])
+      (string_of_problem th1 "n" [("", nested_decls)])
+    fun fails_with fragment thunk =
+      (thunk (); false) handle Fail message =>
+        String.isSubstring fragment message
+    val bad_ite = Tm (("$ite", []), [a])
+    val _ = expect "the first invalid term in a formula is reported"
+      (fails_with "$ite needs exactly three"
+        (fn () => string_of_problem tx0 "order"
+          [("", [FormLine ("f", Axiom,
+            Conn (And, [Atom x, Atom bad_ite, Atom choice]))])]))
+    val _ = expect "a disabled $let precedes a later choice"
+      (fails_with "$let is not enabled"
+        (fn () => string_of_problem tf0 "order"
+          [("", [FormLine ("f", Axiom,
+            Conn (And, [Atom let_term, Atom choice]))])]))
+    val _ = expect "the first invalid line of a problem is reported"
+      (fails_with "choice is not supported"
+        (fn () => string_of_problem th0 "order"
+          [("A", [FormLine ("f", Axiom, Atom choice)]),
+           ("B", [FormLine ("g", Axiom, Atom let_term)])]))
     val sections = string_of_problem FOF "sections"
       [("First", [FormLine ("one", Axiom, Atom a)]),
        ("Second", [FormLine ("two", Hypothesis, Atom x),
