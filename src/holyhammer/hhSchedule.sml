@@ -156,18 +156,11 @@ fun copy_file source destination =
     val bytes = BinIO.inputAll input
       handle error => (BinIO.closeIn input; raise error)
     val _ = BinIO.closeIn input
-    val temporary = destination ^ "." ^ Portable.unique_tmp_suffix () ^
-      ".copy"
-    val output = BinIO.openOut temporary
   in
-    (BinIO.output (output, bytes);
-     BinIO.closeOut output;
-     OS.FileSys.rename {old = temporary, new = destination};
-     Word8Vector.length bytes)
-    handle error =>
-      (BinIO.closeOut output handle _ => ();
-       OS.FileSys.remove temporary handle _ => ();
-       raise error)
+    hhConfig.write_atomically
+      {open_out = BinIO.openOut, close_out = BinIO.closeOut} destination
+      (fn output => BinIO.output (output, bytes));
+    Word8Vector.length bytes
   end
 
 type export_observer =
@@ -226,7 +219,7 @@ fun export_problems_observed (observer : export_observer) root options goal
               named
             end
     fun export_legacy slice key directory =
-      let val path = join directory "atp_in" in
+      let val path = problem_path root slice in
         case List.find (fn (old, _) => old = key) (!legacy_done) of
             SOME (_, first) =>
               #copied observer (slice, copy_file first path)

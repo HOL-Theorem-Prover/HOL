@@ -72,6 +72,35 @@ fun ensure_dir path =
         if is_dir path then () else raise Fail ("cannot create " ^ path)
     end
 
+val temp_counter = Portable.make_counter {init = 0, inc = 1}
+
+fun remove_quietly path = OS.FileSys.remove path handle OS.SysErr _ => ()
+
+(* The PID alone is not fresh under Poly, hence the counter. *)
+fun temp_path path =
+  path ^ "." ^ Portable.unique_tmp_suffix () ^ "." ^
+  Int.toString (temp_counter ()) ^ ".tmp"
+
+fun commit {temporary, final} =
+  OS.FileSys.rename {old = temporary, new = final}
+  handle OS.SysErr _ =>
+    (remove_quietly final;
+     OS.FileSys.rename {old = temporary, new = final})
+
+fun write_atomically {open_out, close_out} path write =
+  let
+    val temporary = temp_path path
+    val output = open_out temporary
+    fun abort exn =
+      ((close_out output handle _ => ()); remove_quietly temporary;
+       raise exn)
+    val result = (write output before close_out output)
+      handle exn => abort exn
+  in
+    (commit {temporary = temporary, final = path}; result)
+    handle exn => (remove_quietly temporary; raise exn)
+  end
+
 (* Best effort: errors are ignored, and a symbolic link is removed rather
    than followed, so only files below path itself are deleted. *)
 fun remove_tree path =

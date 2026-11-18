@@ -76,32 +76,10 @@ fun remove path = OS.FileSys.remove path handle OS.SysErr _ => ()
 
 fun read_result path = result_of_json (JSONParser.parseFile path)
 
-val temp_counter = Portable.make_counter {init = 0, inc = 1}
-
-fun temp_path path =
-  path ^ "." ^ Portable.unique_tmp_suffix () ^ "." ^
-  Int.toString (temp_counter ()) ^ ".tmp"
-
-fun commit {temporary, final} =
-  OS.FileSys.rename {old = temporary, new = final}
-  handle OS.SysErr _ =>
-    (remove final; OS.FileSys.rename {old = temporary, new = final})
-
 fun write_result path result =
-  let
-    val temporary = temp_path path
-    val output = TextIO.openOut temporary
-    fun abort exn =
-      ((TextIO.closeOut output handle _ => ()); remove temporary;
-       raise exn)
-    val _ =
-      (JSONPrinter.print (output, result_json result);
-       TextIO.closeOut output)
-      handle exn => abort exn
-  in
-    commit {temporary = temporary, final = path}
-    handle exn => (remove temporary; raise exn)
-  end
+  hhConfig.write_atomically
+    {open_out = TextIO.openOut, close_out = TextIO.closeOut} path
+    (fn output => JSONPrinter.print (output, result_json result))
 
 fun lookup (options : hhConfig.hh_options) key =
   if not (#cache options) then NONE

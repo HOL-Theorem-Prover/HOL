@@ -4534,6 +4534,14 @@ fun test_schedule_legacy_sharing () =
        list_directory parent = ["atp_in", "good"] andalso
        size = String.size (text knn_a) andalso
        String.concat (read_lines good) = text knn_a)
+    (* A writer that fails midway leaves the old target and no temporary. *)
+    val failed = (hhConfig.write_atomically
+      {open_out = TextIO.openOut, close_out = TextIO.closeOut} good
+      (fn out => (TextIO.output (out, "partial"); raise Div)); false)
+      handle Div => true
+    val _ = expect "a failing atomic writer keeps the target and cleans up"
+      (failed andalso list_directory parent = ["atp_in", "good"] andalso
+       String.concat (read_lines good) = text knn_a)
   in
     remove_tree root
   end

@@ -35,6 +35,13 @@ sig
   val is_dir : string -> bool
   val ensure_dir : string -> unit
   val remove_tree : string -> unit
+  (* write_atomically {open_out, close_out} path f opens a fresh sibling
+     temporary of path, runs f on it, closes it and renames it over path
+     (replacing an existing file whole).  On any error or interrupt the
+     stream is closed, the temporary removed and the exception re-raised. *)
+  val write_atomically :
+    {open_out : string -> 'a, close_out : 'a -> unit} ->
+    string -> ('a -> 'b) -> 'b
   val directory_names : string -> string list
   val trim : string -> string
   val trim_left : string -> string
