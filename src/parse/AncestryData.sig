@@ -81,6 +81,21 @@ sig
                  } ->
                  ('delta,'value) fullresult
 
+  (* fullmake, except that updates to the global value are delayed until
+     it is read; every update function must then be pure. *)
+  val fullmake_lazy_global :
+               { adinfo : ('delta, 'value) adata_info,
+                 uptodate_delta : 'delta -> bool,
+                 sexps : { dec : 'delta ThyDataSexp.dec,
+                           enc : 'delta ThyDataSexp.enc },
+                 globinfo : {
+                   apply_to_global : 'delta -> 'value -> 'value,
+                   thy_finaliser : ({thyname:string} -> 'delta list ->
+                                    'value -> 'value) option,
+                   initial_value : 'value}
+               } ->
+               ('delta,'value) fullresult
+
 end
 
 (* ----------------------------------------------------------------------

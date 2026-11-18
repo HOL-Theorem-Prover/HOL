@@ -431,8 +431,13 @@ type ('delta,'value) fullresult =
        update_global_value_of : ('value -> 'value) -> Context.t ->
                                 Context.t }
 
-fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo,
-              uptodate_delta} =
+(* With lazy_global, the global value is a suspension: each update is
+   delayed and the first read applies the delayed updates in order, so
+   every function given to update_global_value must depend only on the
+   value it is given.  The lock keeps two threads from applying the same
+   update. *)
+fun fullmake0 lazy_global {adinfo:('delta,'value)adata_info, sexps, globinfo,
+                           uptodate_delta} =
     let
       open ThyDataSexp
       val {dec,enc} = sexps
@@ -440,15 +445,23 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo,
       val {initial_values, tag, apply_delta, ...} = adinfo
 
       (* single global value *)
-      val global_slot : 'value Context.Data.slot =
+      val force_lock = Lock.new ("ancestry." ^ tag ^ ".global")
+      val global_slot : 'value Susp.susp Context.Data.slot =
           Context.Data.new
             {name = "ancestry." ^ tag ^ ".global",
-             empty = initial_value,
+             empty = now initial_value,
              pp = fn _ => "<ancestry." ^ tag ^ ".global>"}
-      fun get_global_value_of ctxt = Context.Data.get global_slot ctxt
+      fun get_global_value_of ctxt =
+          if lazy_global then
+            Lock.synchronized force_lock
+              (fn () => Susp.force (Context.Data.get global_slot ctxt))
+          else Susp.force (Context.Data.get global_slot ctxt)
       fun get_global_value () = get_global_value_of (Context.snapshot())
-      val update_global_value = Context.Data.modify global_slot
-      val update_global_value_of = Context.Data.update global_slot
+      fun step f s =
+          if lazy_global then Susp.delay (fn () => f (Susp.force s))
+          else now (f (Susp.force s))
+      fun update_global_value f = Context.Data.modify global_slot (step f)
+      fun update_global_value_of f = Context.Data.update global_slot (step f)
 
       (* table of values per theory *)
       val value_table : 'value Susp.susp Symtab.table Context.Data.slot =
@@ -548,6 +561,9 @@ fun fullmake {adinfo:('delta,'value)adata_info, sexps, globinfo,
        update_global_value = update_global_value,
        update_global_value_of = update_global_value_of}
     end
+
+fun fullmake args = fullmake0 false args
+fun fullmake_lazy_global args = fullmake0 true args
 
 fun with_temp_value (fr:('delta,'value)fullresult) v =
     Portable.genwith_flag ({ get = #get_global_value fr,

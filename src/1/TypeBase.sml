@@ -105,8 +105,11 @@ in
 end;
 
 fun apply_delta tyi tyb = TypeBasePure.insert tyb (tweak_tyi tyi)
-fun apply_to_global tyi tyb =
-    TypeBasePure.insert tyb (apply_update_fns $ tweak_tyi tyi)
+(* The update functions run when the update is made, in load order; only
+   the insertion into the global TypeBase is delayed until it is read. *)
+fun apply_to_global tyi =
+    let val tyi' = apply_update_fns (tweak_tyi tyi)
+    in fn tyb => TypeBasePure.insert tyb tyi' end
 val initial_tydb = TypeBasePure.empty
                      |> rev_itlist apply_delta [bool_info, itself_info]
 
@@ -116,7 +119,7 @@ val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
                    merge = merge_typebases, update_global_value, ...} =
     let open TypeBasePure
     in
-      AncestryData.fullmake{
+      AncestryData.fullmake_lazy_global{
         adinfo = {tag = "TypeBase", initial_values = [("min", initial_tydb)],
                   apply_delta = apply_delta
                  },
@@ -128,7 +131,13 @@ val fullresult as {DB = thy_typebase, get_global_value = theTypeBase,
       }
     end
 
-fun write tyis = update_global_value (rev_itlist apply_to_global tyis)
+(* All entries' update functions run before the batch is inserted, in one
+   update, so none sees another entry of the batch and a failure leaves
+   the TypeBase as it was. *)
+fun write tyis =
+    let val inserts = map apply_to_global tyis
+    in update_global_value (fn tyb => rev_itlist (fn ins => ins) inserts tyb)
+    end
 fun export tyis = (write tyis; List.app record_delta tyis)
 
 (* various ways to access the global value *)
