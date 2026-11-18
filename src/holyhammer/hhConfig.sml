@@ -87,7 +87,7 @@ fun commit {temporary, final} =
     (remove_quietly final;
      OS.FileSys.rename {old = temporary, new = final})
 
-fun write_atomically {open_out, close_out} path write =
+fun stage_write {open_out, close_out} path write =
   let
     val temporary = temp_path path
     val output = open_out temporary
@@ -97,6 +97,11 @@ fun write_atomically {open_out, close_out} path write =
     val result = (write output before close_out output)
       handle exn => abort exn
   in
+    (temporary, result)
+  end
+
+fun write_atomically io path write =
+  let val (temporary, result) = stage_write io path write in
     (commit {temporary = temporary, final = path}; result)
     handle exn => (remove_quietly temporary; raise exn)
   end

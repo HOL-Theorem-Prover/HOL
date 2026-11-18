@@ -342,16 +342,15 @@ fun fof_axdef oc (name,thm) =
   end
 
 fun fof_export_pbfile file (cj,namethml) =
-  let
-    val oc = TextIO.openOut file
-    val cval = collect_arity_pb (cj,namethml)
-  in
-    (fof_thmdef_extra oc;
-     app (fof_arityeq oc) (mk_sameorder_set tma_compare (cval_extra @ cval));
-     app (fof_axdef oc) namethml;
-     fof_cjdef oc cj;
-     TextIO.closeOut oc)
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  let val oc = TextIO.openOut file in
+    (let val cval = collect_arity_pb (cj,namethml) in
+       fof_thmdef_extra oc;
+       app (fof_arityeq oc) (mk_sameorder_set tma_compare (cval_extra @ cval));
+       app (fof_axdef oc) namethml;
+       fof_cjdef oc cj;
+       TextIO.closeOut oc
+     end)
+    handle exn => ((TextIO.closeOut oc handle _ => ()); raise exn)
   end
 
 fun fof_export_pb dir (cj,namethml) =

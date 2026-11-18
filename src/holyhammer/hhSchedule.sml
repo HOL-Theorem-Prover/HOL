@@ -170,46 +170,187 @@ type export_observer =
 val silent_observer : export_observer =
   {generated = fn _ => (), copied = fn _ => ()}
 
+fun ranking_for rankings filter =
+  case List.find (fn (name, _) => name = filter) rankings of
+      SOME (_, ranking) => ranking
+    | NONE => raise Fail
+        ("HolyHammer: missing premise ranking for filter '" ^
+         filter ^ "'")
+
+(* The named selection of a slice (filter and actual prefix length): the
+   conjecture and the legacy printer are fixed, so slices with the same
+   selection share one legacy problem. *)
+fun selection options rankings filter nfacts =
+  let
+    val premises = ranking_for rankings filter
+    val wanted =
+      if filter = "none" then
+        (case #max_facts options of
+             NONE => length premises
+           | SOME maximum => maximum)
+      else nfacts
+  in
+    (filter, Int.max (0, Int.min (wanted, length premises)))
+  end
+
+datatype kind =
+    Legacy of string option
+  | Generated of hhProblemGen.problem_options
+
+type work =
+  {index : int, config : hhProver.prover_config, slice : hhProver.slice,
+   path : string, key : string * int, kind : kind}
+
+(* The ordered work of one export: one item per distinct problem, in
+   distinct_problems order.  The first legacy item of a selection is
+   exported, the later ones copy its published file.  Every ranking is
+   checked before the caller creates a directory or problem file. *)
+fun ordered_work root options rankings schedule =
+  let
+    val problems = distinct_problems schedule
+    val _ = List.app (ignore o ranking_for rankings o #filter o #2) problems
+    fun item index (config, slice) firsts =
+      let
+        val path = problem_path root slice
+        val key = selection options rankings (#filter slice) (#nfacts slice)
+        fun work kind =
+          {index = index, config = config, slice = slice, path = path,
+           key = key, kind = kind}
+      in
+        case hhSlice.encoding_of slice of
+            hhSlice.Legacy =>
+              (case List.find (fn (old, _) => old = key) firsts of
+                   SOME (_, first) => (work (Legacy (SOME first)), firsts)
+                 | NONE => (work (Legacy NONE), (key, path) :: firsts))
+          | hhSlice.Generated {format, type_enc, lam_trans} =>
+              (work (Generated
+                 {format = format, type_enc = type_enc,
+                  lam_trans = lam_trans, mono_iters = #mono_iters options,
+                  mono_instances = mono_instances options config slice}),
+               firsts)
+      end
+    fun build _ _ [] = []
+      | build index firsts (entry :: rest) =
+          let val (w, firsts') = item index entry firsts in
+            w :: build (index + 1) firsts' rest
+          end
+  in
+    build 0 [] problems
+  end
+
+(* The staged pipeline over ordered work.  prepare runs in order and may
+   touch HOL state and draw fresh names; finish and publish touch neither,
+   and publish runs in order.  A failed stage stops admission, the work
+   prepared before the failing index is resolved, the successful prefix is
+   published and the exception of the earliest failing index is raised.
+   finish removes whatever it staged when it fails and publish whatever it
+   was given when it fails; discard releases prepared work that is dropped.
+   Up to window prepared items wait while later ones are prepared (0
+   resolves each item at once).  An interrupt drops the waiting work. *)
+fun run_staged {window} {prepare, finish, publish, discard} works =
+  let
+    val queue = ref []
+    val failure = ref NONE
+    val stopped = ref NONE
+    fun forget () =
+      (List.app (fn (_, p) => (discard p handle _ => ())) (!queue);
+       queue := [])
+    fun resolve () =
+      case !queue of
+          [] => ()
+        | (w, p) :: rest =>
+            (queue := rest;
+             publish (w, finish (w, p))
+             handle Interrupt => (forget (); raise Interrupt)
+                  | exn => (failure := SOME exn; forget ()))
+    fun settle limit =
+      while List.length (!queue) > limit andalso not (isSome (!failure)) do
+        resolve ()
+    fun admit [] = ()
+      | admit (w :: rest) =
+          case (SOME (prepare w)
+                handle Interrupt => (forget (); raise Interrupt)
+                     | exn => (stopped := SOME exn; NONE)) of
+              NONE => ()
+            | SOME p =>
+                (queue := !queue @ [(w, p)];
+                 settle window;
+                 if isSome (!failure) then () else admit rest)
+    val _ = admit works
+    val _ = settle 0
+  in
+    case (!failure, !stopped) of
+        (SOME exn, _) => raise exn
+      | (NONE, SOME exn) => raise exn
+      | (NONE, NONE) => ()
+  end
+
+datatype prepared =
+    Problem of hhProblemGen.problem_options * hhTptpProblem.problem
+  | Written of string
+  | Copy of string
+
+datatype finished = Temp of string | Copying of string
+
+(* Prepare runs on the caller and the legacy exporter stages its file
+   here too: it opens its output before collecting arities, and it closes
+   the stream on every exception, so a failure leaves nothing behind. *)
+fun prepare_work (observer : export_observer) conjecture memo named_for
+    ({path, key, kind, slice, ...} : work) =
+  let val _ = hhConfig.ensure_dir (OS.Path.dir path) in
+    case kind of
+        Legacy (SOME first) => Copy first
+      | Legacy NONE =>
+          let val temporary = hhConfig.temp_path path in
+            #generated observer slice;
+            hhExportFof.fof_export_pbfile temporary
+              (conjecture, named_for key)
+            handle exn => (hhConfig.remove_quietly temporary; raise exn);
+            Written temporary
+          end
+      | Generated options =>
+          (#generated observer slice;
+           Problem (options,
+             hhProblemGen.prepare_pb memo options
+               (conjecture, named_for key)))
+  end
+
+fun finish_work ({path, ...} : work, prepared) =
+  case prepared of
+      Problem (options, problem) =>
+        Temp (#1 (hhConfig.stage_write
+          {open_out = TextIO.openOut, close_out = TextIO.closeOut} path
+          (fn output => TextIO.output
+             (output, hhProblemGen.format_pb options problem))))
+    | Written temporary => Temp temporary
+    | Copy first => Copying first
+
+fun publish_work (observer : export_observer)
+    ({path, slice, ...} : work, finished) =
+  case finished of
+      Temp temporary =>
+        (hhConfig.commit {temporary = temporary, final = path}
+         handle exn => (hhConfig.remove_quietly temporary; raise exn))
+    | Copying first => #copied observer (slice, copy_file first path)
+
+fun discard_prepared (Written temporary) = hhConfig.remove_quietly temporary
+  | discard_prepared _ = ()
+
 (* This function is called before any scheduler thread is created.  Both
-   thml_of_namel and the exporters touch HOL process-global state.
-   Besides the public problem key, the legacy problems share an
-   invocation-local key, the named selection (filter and actual prefix
-   length): the conjecture and the legacy printer are fixed, so the first
-   occurrence is exported and the later ones are byte copies. *)
+   thml_of_namel and the exporters touch HOL process-global state. *)
 fun export_problems_observed (observer : export_observer) root options goal
     rankings schedule =
   let
-    val problems = distinct_problems schedule
+    val works = ordered_work root options rankings schedule
     val conjecture = list_mk_imp goal
     val memo = hhProblemGen.new_export_memo ()
     val named_memo = ref []
-    val legacy_done = ref []
-    fun ranking_for filter =
-      case List.find (fn (name, _) => name = filter) rankings of
-          SOME (_, ranking) => ranking
-        | NONE => raise Fail
-            ("HolyHammer: missing premise ranking for filter '" ^
-             filter ^ "'")
-    (* Check every ranking before creating a directory or problem file. *)
-    val _ = List.app (ignore o ranking_for o #filter o #2) problems
-    fun selection filter nfacts =
-      let
-        val premises = ranking_for filter
-        val wanted =
-          if filter = "none" then
-            (case #max_facts options of
-                 NONE => length premises
-               | SOME maximum => maximum)
-          else nfacts
-      in
-        (filter, Int.max (0, Int.min (wanted, length premises)))
-      end
     fun named_for (key as (filter, count)) =
       case List.find (fn (old, _) => old = key) (!named_memo) of
           SOME (_, named) => named
         | NONE =>
             let
-              val selected = first_n count (ranking_for filter)
+              val selected = first_n count (ranking_for rankings filter)
               (* Theorems with hypotheses are no premises (see hhLearn);
                  explicit hh_pb lists bypass premise selection. *)
               val named = List.filter (null o hyp o #2)
@@ -218,35 +359,11 @@ fun export_problems_observed (observer : export_observer) root options goal
               named_memo := (key, named) :: !named_memo;
               named
             end
-    fun export_legacy slice key directory =
-      let val path = problem_path root slice in
-        case List.find (fn (old, _) => old = key) (!legacy_done) of
-            SOME (_, first) =>
-              #copied observer (slice, copy_file first path)
-          | NONE =>
-              (#generated observer slice;
-               hhExportFof.fof_export_pb directory
-                 (conjecture, named_for key);
-               legacy_done := (key, path) :: !legacy_done)
-      end
-    fun export (config, slice) =
-      let
-        val directory = problem_dir root slice
-        val key = selection (#filter slice) (#nfacts slice)
-        val _ = hhConfig.ensure_dir directory
-      in
-        case hhSlice.encoding_of slice of
-            hhSlice.Legacy => export_legacy slice key directory
-          | hhSlice.Generated {format, type_enc, lam_trans} =>
-              (#generated observer slice;
-               hhProblemGen.export_pb_in memo
-                {format = format, type_enc = type_enc, lam_trans = lam_trans,
-                 mono_iters = #mono_iters options,
-                 mono_instances = mono_instances options config slice}
-                (problem_path root slice) (conjecture, named_for key))
-      end
   in
-    List.app export problems
+    run_staged {window = 0}
+      {prepare = prepare_work observer conjecture memo named_for,
+       finish = finish_work, publish = publish_work observer,
+       discard = discard_prepared} works
   end
 
 val export_problems = export_problems_observed silent_observer

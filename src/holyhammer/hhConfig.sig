@@ -42,6 +42,14 @@ sig
   val write_atomically :
     {open_out : string -> 'a, close_out : 'a -> unit} ->
     string -> ('a -> 'b) -> 'b
+  (* stage_write is write_atomically without the rename: it returns the
+     closed temporary, which the caller must commit or remove_quietly. *)
+  val stage_write :
+    {open_out : string -> 'a, close_out : 'a -> unit} ->
+    string -> ('a -> 'b) -> string * 'b
+  val commit : {temporary : string, final : string} -> unit
+  val remove_quietly : string -> unit
+  val temp_path : string -> string
   val directory_names : string -> string list
   val trim : string -> string
   val trim_left : string -> string

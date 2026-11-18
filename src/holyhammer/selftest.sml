@@ -4639,9 +4639,187 @@ fun test_hhSchedule () =
             (Time.toReal (Time.- (Time.now (), started)) < 60.0)
         end
 
+fun test_schedule_staged () =
+  let
+    val e = prover Eprover
+    val vampire = prover Vampire
+    fun options max_facts : hhConfig.hh_options =
+      {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+       cores = 1, filter = "none", max_facts = max_facts, format = "",
+       type_enc = "", lam_trans = "", mono_iters = 3, mono_instances = NONE,
+       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
+       cache = false, cache_dir = "", cache_max_entries = 100,
+       debug_dir = NONE, preplay_drop_one = false, verbose = false}
+    fun legacy prover filter nfacts : hhProver.slice =
+      {prover = prover, format = "fof", type_enc = "", lam_trans = "",
+       nfacts = nfacts, filter = filter, extra_opts = [], slice_size = 1}
+    fun generated prover filter nfacts : hhProver.slice =
+      {prover = prover, format = "tx0-", type_enc = "mono_native_fool",
+       lam_trans = "lifting", nfacts = nfacts, filter = filter,
+       extra_opts = [], slice_size = 1}
+    val ranking = map (fn fact => "listTheory." ^ fact)
+      ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND"]
+    val bad_ranking = ranking @ ["listTheory.NO_SUCH_THEOREM"]
+    val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = 3n``)
+    fun quiet f = smlRedirect.hidef f ()
+    fun root_files root =
+      List.concat (map (fn directory =>
+        map (fn name => join directory name)
+          (list_directory (join root directory)))
+        (list_directory root))
+    (* The ordered work description. *)
+    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val schedule =
+      [(e, legacy Eprover "knn" 2), (vampire, legacy Vampire "knn" 2),
+       (e, generated Eprover "knn" 2), (e, legacy Eprover "knn" 3),
+       (vampire, legacy Vampire "knn" 100), (e, generated Eprover "knn" 3)]
+    val work = hhSchedule.ordered_work root (options NONE)
+      [("knn", ranking)] schedule
+    fun path_of (_, slice) = hhSchedule.problem_path root slice
+    val first = path_of (hd schedule)
+    val fourth = path_of (List.nth (schedule, 3))
+    val _ = expect "work follows the schedule with index, path and key"
+      (map #index work = [0, 1, 2, 3, 4, 5] andalso
+       map #path work = map path_of schedule andalso
+       map #key work =
+         [("knn", 2), ("knn", 2), ("knn", 2), ("knn", 3), ("knn", 3),
+          ("knn", 3)])
+    val _ = expect "work kinds mark legacy sharing and generated jobs"
+      (case map #kind work of
+           [hhSchedule.Legacy NONE, hhSchedule.Legacy (SOME one),
+            hhSchedule.Generated g1, hhSchedule.Legacy NONE,
+            hhSchedule.Legacy (SOME two), hhSchedule.Generated g2] =>
+             one = first andalso two = fourth andalso
+             #mono_instances g1 = Int.max (#mono_instances e, 2) andalso
+             #mono_instances g2 = Int.max (#mono_instances e, 3) andalso
+             #mono_iters g1 = 3
+         | _ => false)
+    val _ = expect "ordered_work rejects a missing ranking up front"
+      (((hhSchedule.ordered_work root (options NONE) [] schedule; false)
+         handle Fail _ => true) andalso null (list_directory root))
+    (* run_staged over fake stages: failures at every stage and index. *)
+    datatype stage = Prepare | Finish | Publish
+    fun scenario window failing =
+      let
+        val log = ref []
+        val published = ref []
+        fun note s = log := s :: !log
+        fun hit stage i = failing = SOME (stage, i)
+        fun prepare i =
+          (note ("prepare " ^ Int.toString i);
+           if hit Prepare i then raise Fail ("prepare " ^ Int.toString i)
+           else i)
+        fun finish (_, i) =
+          (note ("finish " ^ Int.toString i);
+           if hit Finish i then raise Fail ("finish " ^ Int.toString i)
+           else i)
+        fun publish (_, i) =
+          (note ("publish " ^ Int.toString i);
+           if hit Publish i then
+             (note ("clean " ^ Int.toString i);
+              raise Fail ("publish " ^ Int.toString i))
+           else published := i :: !published)
+        fun discard i = note ("discard " ^ Int.toString i)
+        val outcome = (hhSchedule.run_staged {window = window}
+          {prepare = prepare, finish = finish, publish = publish,
+           discard = discard} [0, 1, 2, 3, 4, 5]; "ok")
+          handle Fail message => message
+      in
+        (outcome, rev (!published), rev (!log))
+      end
+    fun prepared log =
+      List.mapPartial (fn s => if String.isPrefix "prepare" s then
+        SOME (valOf (Int.fromString (String.extract (s, 8, NONE))))
+        else NONE) log
+    val (ok0, pub0, log0) = scenario 0 NONE
+    val _ = expect "staged export publishes everything in order"
+      (ok0 = "ok" andalso pub0 = [0, 1, 2, 3, 4, 5] andalso
+       prepared log0 = [0, 1, 2, 3, 4, 5])
+    val (ok3, pub3, log3) = scenario 3 NONE
+    val _ = expect "a window defers finish and publish but not order"
+      (ok3 = "ok" andalso pub3 = [0, 1, 2, 3, 4, 5] andalso
+       List.take (log3, 4) =
+         ["prepare 0", "prepare 1", "prepare 2", "prepare 3"] andalso
+       List.nth (log3, 4) = "finish 0")
+    fun check message window failing error prefix =
+      let val (outcome, pub, _) = scenario window (SOME failing) in
+        expect message (outcome = error andalso pub = prefix)
+      end
+    val _ = check "prepare failure: earlier work is published" 0
+      (Prepare, 3) "prepare 3" [0, 1, 2]
+    val _ = check "prepare failure with a window publishes the prefix" 3
+      (Prepare, 4) "prepare 4" [0, 1, 2, 3]
+    val _ = check "finish failure raises its index and publishes the prefix"
+      0 (Finish, 2) "finish 2" [0, 1]
+    val _ = check "publish failure raises its index and publishes the prefix"
+      0 (Publish, 1) "publish 1" [0]
+    val _ = check "a windowed finish failure drops later work" 3
+      (Finish, 1) "finish 1" [0]
+    val _ = check "a windowed publish failure is earliest" 3
+      (Publish, 0) "publish 0" []
+    val (_, _, windowed) = scenario 3 (SOME (Finish, 1))
+    val _ = expect "after a failure later prepared work is discarded"
+      (List.filter (String.isPrefix "discard") windowed =
+         ["discard 2", "discard 3", "discard 4"] andalso
+       not (List.exists (fn s => s = "prepare 5") windowed))
+    val (_, _, immediate) = scenario 0 (SOME (Finish, 2))
+    val _ = expect "no work is admitted after a failure"
+      (prepared immediate = [0, 1, 2])
+    val (_, _, drained) = scenario 3 (SOME (Prepare, 4))
+    val _ = expect "a prepare failure resolves the earlier indices first"
+      (List.filter (String.isPrefix "publish") drained =
+         ["publish 0", "publish 1", "publish 2", "publish 3"] andalso
+       prepared drained = [0, 1, 2, 3, 4])
+    (* The real stages: a fetch failure at a later index. *)
+    val good_rank = [("knn", bad_ranking)]
+    val failing = [(e, legacy Eprover "knn" 2), (e, generated Eprover "knn" 2),
+                   (vampire, generated Vampire "knn" 4),
+                   (vampire, legacy Vampire "knn" 4)]
+    val raised = (quiet (fn () => hhSchedule.export_problems root
+      (options NONE) goal good_rank failing); false) handle _ => true
+    val _ = expect "a fetch failure publishes the prefix and nothing else"
+      (raised andalso
+       List.all (fn (_, slice) => not (OS.FileSys.access
+         (hhSchedule.problem_path root slice, []))) (List.drop (failing, 2))
+       andalso OS.FileSys.access
+         (hhSchedule.problem_path root (#2 (hd failing)), [])
+       andalso OS.FileSys.access
+         (hhSchedule.problem_path root (#2 (hd (tl failing))), [])
+       andalso List.all (not o String.isSuffix ".tmp") (root_files root))
+    val _ = remove_tree root
+    (* A legacy failure before the first write leaves no staging file. *)
+    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val raised = (quiet (fn () => hhSchedule.export_problems root
+      (options NONE) ([], ``\x:num. x``) [("knn", ranking)]
+      [(e, legacy Eprover "knn" 2)]); false) handle _ => true
+    val _ = expect "a failing legacy export leaves no staged or final file"
+      (raised andalso null (root_files root))
+    val file = join root "direct"
+    val raised_direct =
+      (hhExportFof.fof_export_pbfile file (``\x:num. x``, []); false)
+      handle _ => true
+    val _ = expect "a direct legacy failure raises before the first write"
+      (raised_direct andalso String.size (String.concat (read_lines file)) = 0)
+    val _ = remove_tree root
+    (* with_problem_dir removes the root, staged files included. *)
+    val parent = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val seen = ref ""
+    val raised = (hhSchedule.with_problem_dir parent (options NONE)
+      (fn root =>
+        (seen := root;
+         quiet (fn () => hhSchedule.export_problems root (options NONE)
+           goal good_rank failing))); false) handle _ => true
+    val _ = expect "with_problem_dir removes the root after a failed export"
+      (raised andalso !seen <> "" andalso not (is_dir (!seen)) andalso
+       null (list_directory parent))
+  in
+    remove_tree parent
+  end
+
 val _ = test_with_problem_dir ()
 val _ = test_schedule_export_wiring ()
 val _ = test_schedule_legacy_sharing ()
+val _ = test_schedule_staged ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
 val _ = test_hhSchedule ()

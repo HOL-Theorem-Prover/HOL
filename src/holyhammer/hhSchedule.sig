@@ -31,6 +31,30 @@ sig
   val problem_path : string -> hhProver.slice -> string
   val copy_file : string -> string -> int
   (* generated and copied report each exported or byte-copied problem. *)
+  (* The ordered work of one export, derived from distinct_problems:
+     index, problem path, share key (filter, selected prefix length) and
+     kind.  The first legacy item of a share key exports; later ones copy
+     the published file named in Legacy (SOME path). *)
+  datatype kind =
+      Legacy of string option
+    | Generated of hhProblemGen.problem_options
+  type work =
+    {index : int, config : hhProver.prover_config, slice : hhProver.slice,
+     path : string, key : string * int, kind : kind}
+  val ordered_work : string -> hhConfig.hh_options ->
+    (string * string list) list ->
+    (hhProver.prover_config * hhProver.slice) list -> work list
+  (* run_staged {window} {prepare, finish, publish, discard} works runs
+     prepare in order on the caller, then finish and publish in order,
+     keeping at most window prepared items waiting.  On failure it stops
+     admitting work, publishes the successful prefix and raises the
+     exception of the earliest failing index.  finish and publish clean up
+     what they staged when they fail; discard releases dropped prepared
+     items. *)
+  val run_staged :
+    {window : int} ->
+    {prepare : 'w -> 'p, finish : 'w * 'p -> 'f, publish : 'w * 'f -> unit,
+     discard : 'p -> unit} -> 'w list -> unit
   type export_observer =
     {generated : hhProver.slice -> unit,
      copied : hhProver.slice * int -> unit}

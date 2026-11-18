@@ -75,6 +75,13 @@ sig
   val new_export_memo : unit -> export_memo
   val memo_lambda_runs : export_memo -> int
 
+  (* export_pb_in writes format_pb of prepare_pb.  prepare_pb runs on the
+     caller (theorem data, memo, fresh names) and returns the fully
+     materialized AST; format_pb touches no HOL state. *)
+  val prepare_pb : export_memo -> problem_options
+    -> term * (string * thm) list -> hhTptpProblem.problem
+  val format_pb : problem_options -> hhTptpProblem.problem -> string
+
   val export_pb_in : export_memo -> problem_options -> string
     -> term * (string * thm) list
     -> unit

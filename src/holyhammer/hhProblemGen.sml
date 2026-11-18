@@ -1475,7 +1475,9 @@ struct
       handle error => (TextIO.closeOut output handle _ => (); raise error)
     end
 
-  fun export_pb_in memo options file (conjecture, named) =
+  (* The caller-side stage: everything that resolves HOL terms or draws
+     fresh names, up to the TPTP AST. *)
+  fun prepare_pb memo options (conjecture, named) =
     let
       val input = presimp (#format options) {conjecture = conjecture,
         facts = map (fn (name, theorem) =>
@@ -1490,11 +1492,18 @@ struct
       val lambda_terms = if pre_mono then
         pass_lambda (#format options) lam_trans lambda_input
         else memoized_lambda memo (#format options) lam_trans lambda_input
-      val problem = make_problem pre_mono options lambda_terms
     in
-      write_problem file (hhTptpProblem.string_of_problem (#format options)
-        (header options) problem)
+      make_problem pre_mono options lambda_terms
     end
+
+  (* The AST-only stage: no HOL terms, no fresh names. *)
+  fun format_pb options problem =
+    hhTptpProblem.string_of_problem (#format options) (header options)
+      problem
+
+  fun export_pb_in memo options file input =
+    write_problem file
+      (format_pb options (prepare_pb memo options input))
 
   fun export_pb options file input =
     export_pb_in (new_export_memo ()) options file input
