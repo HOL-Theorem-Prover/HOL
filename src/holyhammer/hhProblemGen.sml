@@ -916,16 +916,17 @@ struct
 
   fun premise_lines symbols format encoding needs facts =
     let
-      fun ident name copies =
+      fun ident name n =
         if is_lambda_name name then aiLib.escape name
-        else
-          aiLib.escape (hhTptpProblem.fact_name (next_copy name copies) name)
+        else aiLib.escape (hhTptpProblem.fact_name n name)
       fun line (name, formula, copies) =
-        (hhTptpProblem.FormLine
-           (ident name copies, hhTptpProblem.Axiom,
-            encode_formula symbols encoding needs formula),
-         if is_lambda_name name then copies
-         else Redblackmap.insert (copies, name, next_copy name copies))
+        let val n = next_copy name copies in
+          (hhTptpProblem.FormLine
+             (ident name n, hhTptpProblem.Axiom,
+              encode_formula symbols encoding needs formula),
+           if is_lambda_name name then copies
+           else Redblackmap.insert (copies, name, n))
+        end
       fun loop [] _ result = List.rev result
         | loop (item :: rest) copies result =
             let val (output, copies') = line (#1 item, #2 item, copies) in

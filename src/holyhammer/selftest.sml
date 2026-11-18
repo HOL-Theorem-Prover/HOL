@@ -1425,9 +1425,10 @@ fun test_hhProblemGen () =
        ("hhproblemgen-tf1-symbols.p", tf1, "poly_native", "lifting")]
     (* Repeated ordinary names (thm, thm2, thm3), repeated helper names
        (help.h, help.h.2) and the lam. exception (never numbered), against
-       output of the list-based copy counters. *)
+       pre-change output. *)
     fun copy_fact name n =
-      (name, Thm.mk_thm ([], ``(P : num -> bool) ^(numSyntax.term_of_int n)``))
+      (name, Thm.mk_oracle_thm "hhProblemGen_selftest"
+              ([], ``(P : num -> bool) ^(numSyntax.term_of_int n)``))
     val copies_goal = (``(x : num) = x``,
       [copy_fact "a" 1, copy_fact "b" 2, copy_fact "a" 3, copy_fact "a" 4,
        copy_fact "help.h" 5, copy_fact "lam.1" 6, copy_fact "help.h" 7,
