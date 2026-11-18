@@ -356,15 +356,11 @@ val _ = assert (rejects (fn () => ignore
 val _ = assert (no_pending "bad_staged_def" andalso
                 not (stored "bad_staged_def"))
 fun assume_goal (g as (_, w)) = ACCEPT_TAC (ASSUME w) g
-val _ = assert (rejects (fn () => ignore
-  (in_repl_mode (qDefine "bad_staged_def"
-    ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’)
+val _ = assert (rejects_with "does not prove" (fn () => ignore
+  (in_repl_mode (qDefine "rejected_def"
+    ‘rejected n = if n = 0 then 0n else rejected (n - 1) + 1’)
     (SOME assume_goal))))
-val _ = assert (no_pending "bad_staged_def")
-val _ = qDefine "bad_staged_def"
-  ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’
-  (SOME (WF_REL_TAC ‘$<’))
-val _ = assert (stored "bad_staged_def")
+val _ = assert (no_pending "rejected_def" andalso not (stored "rejected_def"))
 val _ = OK ()
 
 val _ = tprint "prepare_qDefine keeps support constants until completion"
