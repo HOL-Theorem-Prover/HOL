@@ -287,7 +287,7 @@ struct
     List.foldl (fn ((_, _, theorem), result) =>
       add_grounds rigid theorem result) table instances
 
-  fun process_fact rigid round known new remaining fact next_new =
+  fun process_fact rigid round merged known new remaining fact next_new =
     case fact of
         Schematic {theorem, tvars, schematics, initial_round,
                    instances, ...} =>
@@ -297,7 +297,7 @@ struct
             let
               val (old, fresh, require_new) =
                 if round = initial_round then
-                  ([], merge_grounds known new, false)
+                  ([], merged, false)
                 else (known, new, true)
               val room = Int.min (max_thm_instances - length (!instances),
                 !remaining)
@@ -341,12 +341,15 @@ struct
         if round > Int.max (0, max_iters) orelse !remaining <= 0 then ()
         else
           let
+            (* Known and new are immutable during the round: merge once,
+               for the facts entering now and for the next round. *)
+            val merged = merge_grounds known new
             val next = List.foldl
               (fn (fact, result) =>
-                process_fact rigid round known new remaining fact result)
-                names infos
+                process_fact rigid round merged known new remaining fact
+                  result) names infos
           in
-            rounds (round + 1) (merge_grounds known new) next
+            rounds (round + 1) merged next
           end
 
       val _ = rounds 1 names initial

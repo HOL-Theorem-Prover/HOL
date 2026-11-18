@@ -917,6 +917,21 @@ fun test_hhMonomorph () =
       [("chain", chain), ("downstream", downstream)]
     val filler = List.tabulate (10, fn index =>
       ("filler" ^ Int.toString index, goal))
+    val late_facts = filler @ [("chain", chain),
+      ("downstream", downstream)]
+    val late = hhMonomorph.monomorph
+      {max_iters = 3, max_new_instances = 100} goal late_facts
+    (* A fact entering on round 2 sees the goal's grounds (initial table)
+       merged with the round 1 instances of a privileged fact. *)
+    val join = conjs [eq_nil (list_ty alpha),
+      eq_nil (list_ty (pair_ty alpha alpha))]
+    val join_facts = [("seed", eq_nil (list_ty (pair_ty num num)))] @
+      filler @ [("join", join)]
+    val joined = hhMonomorph.monomorph
+      {max_iters = 2, max_new_instances = 100} goal join_facts
+    val joined_expected = Term.inst [{redex = alpha, residue = num}] join
+    val early_join = hhMonomorph.monomorph
+      {max_iters = 1, max_new_instances = 100} goal join_facts
     val ordinary = hhMonomorph.monomorph
       {max_iters = 2, max_new_instances = 100} goal
       (filler @ [("chain", chain), ("downstream", downstream)])
@@ -995,6 +1010,11 @@ fun test_hhMonomorph () =
     val _ = expect "privileged facts advance pair/list chains by one round"
       (not (null (named "downstream" privileged)) andalso
        null (named "downstream" ordinary))
+    val _ = expect "ordinary facts advance by one round per round"
+      (not (null (named "downstream" late)))
+    val _ = expect "round 2 facts match the merged initial and round 1 table"
+      (List.exists (fn (_, tm) => Term.aconv tm joined_expected)
+         (named "join" joined) andalso null (named "join" early_join))
     val _ = expect "monomorphization output order is deterministic"
       (same_output per_fact again)
     val _ = expect
