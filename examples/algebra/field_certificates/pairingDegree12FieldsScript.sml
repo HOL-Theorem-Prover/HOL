@@ -22,8 +22,7 @@ Theory pairingDegree12Fields
 Ancestors
   namedPrimes namedPrimeFields bn254Degree12Certificate bls12381Degree12Certificate
   polyFieldModulo polyModuloRing polyMonic polyWeak fieldInstances
-
-open fieldTheory ringTheory polynomialTheory
+  field ring polynomial
 
 Definition bn254_fp12_def:
   bn254_fp12 = PolyModRing (GF bn254_p) bn254_fp12_poly

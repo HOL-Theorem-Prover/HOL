@@ -29,11 +29,10 @@ Ancestors
   pairingQuadraticFields pairingTwistInstances ellipticCertificates
   ellipticCardinality ellipticCMMap ellipticCMCertificates ellipticTorsion
   shortWeierstrass shortWeierstrassGroup
+  arithmetic divides pred_set group monoid
+  field ring fieldInstances prime number gcd
 Libs
   certificateComputeLib
-
-open arithmeticTheory dividesTheory pred_setTheory groupTheory monoidTheory
-     fieldTheory ringTheory fieldInstancesTheory primeTheory numberTheory gcdTheory
 
 (* Expensive scalar and field-power computations are checked in the ancestor
    certificate theory; this theory contains the cardinality argument itself. *)

@@ -22,10 +22,7 @@
 
 Theory ellipticCMCertificates
 Ancestors
-  group number cardinal prime ring
-
-open arithmeticTheory pred_setTheory cardinalTheory dividesTheory
-     numberTheory groupTheory monoidTheory primeTheory ringTheory gcdTheory
+  arithmetic pred_set cardinal divides number group monoid prime ring gcd
 
 (* In comments, [n]P = g.exp P n and <P> is the generated subgroup. *)
 

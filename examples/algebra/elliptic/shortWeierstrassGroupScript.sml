@@ -32,12 +32,10 @@
 Theory shortWeierstrassGroup
 Ancestors
   shortWeierstrass
-  ringLib
   swAssocAlgebra
+  field ring ringLib
 Libs
   ringLib
-
-open fieldTheory ringTheory ringLibTheory
 
 (* ASCII notation in the comments below:
    F = r.carrier, E = sw_points r a b, O = ECInfinity,

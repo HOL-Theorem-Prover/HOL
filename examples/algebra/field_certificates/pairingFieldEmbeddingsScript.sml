@@ -24,13 +24,11 @@ Ancestors
   namedPrimes namedPrimeFields fieldInstances
   pairingQuadraticFields pairingDegree12Fields
   bn254Degree12Certificate bls12381Degree12Certificate
-  polyRingModulo polyRing polyMap polyEval polyDivision polyMonic fieldMap
+  polyRingModulo polyMap fieldMap
+  field ring polynomial group monoid pred_set
+  polyDivision polyEval polyModuloRing polyMonic polyRing
 Libs
   polynomialCertificateLib pairingFieldCertificateLib
-
-open fieldTheory ringTheory polynomialTheory groupTheory monoidTheory
-     pred_setTheory polyDivisionTheory polyEvalTheory polyModuloRingTheory
-     polyMonicTheory polyRingTheory
 
 (* Substitution descends through a polynomial quotient precisely when the
    defining polynomial vanishes.  This proves preservation of operations for

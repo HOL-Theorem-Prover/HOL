@@ -27,8 +27,6 @@ Ancestors
 Libs
   ringLib
 
-open ringLibTheory
-
 Overload "+"[local] = ``ring_add (r:'a Ring)``
 Overload "-"[local] = ``ring_sub (r:'a Ring)``
 Overload "*"[local] = ``ring_mul (r:'a Ring)``

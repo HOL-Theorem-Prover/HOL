@@ -31,10 +31,9 @@ Theory shortWeierstrassProjective
 Ancestors
   shortWeierstrass
   shortWeierstrassGroup
+  field ring
 Libs
   ringLib
-
-open fieldTheory ringTheory
 
 (* Arithmetic below uses the field record r. Subtraction expands directly
    to addition of the additive inverse, preserving the underlying terms. *)

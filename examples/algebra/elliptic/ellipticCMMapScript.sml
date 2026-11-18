@@ -21,12 +21,11 @@
 
 Theory ellipticCMMap
 Ancestors
-  ellipticMorphisms ringLib
+  ellipticMorphisms
   shortWeierstrass shortWeierstrassGroup ellipticTorsion
+  field ring group pred_set ringLib
 Libs
   ringLib
-
-open fieldTheory ringTheory groupTheory pred_setTheory ringLibTheory
 
 Definition sw_cm_map_def:
   (sw_cm_map (r:'a field) beta ECInfinity = ECInfinity) /\

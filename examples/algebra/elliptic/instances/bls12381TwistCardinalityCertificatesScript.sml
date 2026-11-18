@@ -30,14 +30,12 @@ Theory bls12381TwistCardinalityCertificates
 Ancestors
   namedPrimes bls12381TwistCofactorPrimes
   pairingTwistInstances ellipticCardinality ellipticCMMap ellipticCMCertificates
-  prime number gcd ring
-  namedPrimeFields pairingQuadraticFields fieldInstances ellipticCertificates
+  namedPrimeFields pairingQuadraticFields ellipticCertificates
   shortWeierstrass shortWeierstrassGroup ellipticTorsion
+  arithmetic divides pred_set group monoid
+  field ring fieldInstances prime number gcd
 Libs
   pairingCurveCertificateLib
-
-open arithmeticTheory dividesTheory pred_setTheory groupTheory monoidTheory
-     fieldTheory ringTheory fieldInstancesTheory primeTheory numberTheory gcdTheory
 
 (* This is the full twist cofactor, not the effective hash-to-curve cofactor.
    Certificate discovery in PARI uses the actual curve y^2=x^3+4+4*i,

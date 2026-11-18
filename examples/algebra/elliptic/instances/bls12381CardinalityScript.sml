@@ -26,14 +26,12 @@ Theory bls12381Cardinality
 Ancestors
   namedPrimes bls12381CofactorPrimes
   bls12381G1Instance ellipticCardinality ellipticCMMap ellipticCMCertificates
-  prime number gcd ring
-  namedPrimeFields fieldInstances shortWeierstrass shortWeierstrassGroup
+  namedPrimeFields shortWeierstrass shortWeierstrassGroup
   ellipticTorsion
+  arithmetic divides pred_set group monoid
+  field ring fieldInstances prime number gcd
 Libs
   ellipticCertificateLib Grobner Omega
-
-open arithmeticTheory dividesTheory pred_setTheory groupTheory monoidTheory
-     fieldTheory ringTheory fieldInstancesTheory primeTheory numberTheory gcdTheory
 
 (* The full cofactor is 3*d^2, not the effective hash-to-curve cofactor.
    Two cyclic factors are necessary: a point of order h*r or h*r/3

@@ -35,8 +35,7 @@
 Theory ellipticTorsion
 Ancestors
   shortWeierstrass shortWeierstrassGroup
-
-open groupTheory monoidTheory pred_setTheory arithmeticTheory dividesTheory
+  group monoid pred_set arithmetic divides
 
 Theorem sw_scalar_zero[simp]:
   (sw_group (r:'a field) a b).exp P 0 = ECInfinity

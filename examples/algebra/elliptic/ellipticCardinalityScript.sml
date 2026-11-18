@@ -29,10 +29,8 @@
 
 Theory ellipticCardinality
 Ancestors
-  shortWeierstrass shortWeierstrassGroup ellipticTorsion cardinal prime
-
-open arithmeticTheory pred_setTheory cardinalTheory dividesTheory
-     groupTheory monoidTheory fieldTheory ringTheory primeTheory
+  shortWeierstrass shortWeierstrassGroup ellipticTorsion
+  arithmetic pred_set cardinal divides group monoid field ring prime
 
 (* A finite set with a fixed-point-free involution f
    (f(f(x))=x and f(x)<>x) has even cardinality.

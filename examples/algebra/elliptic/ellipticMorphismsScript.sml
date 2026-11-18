@@ -26,9 +26,8 @@
 
 Theory ellipticMorphisms
 Ancestors
-  shortWeierstrass shortWeierstrassGroup ellipticTorsion fieldMap
-
-open fieldTheory fieldMapTheory ringTheory groupTheory pred_setTheory
+  shortWeierstrass shortWeierstrassGroup ellipticTorsion
+  field fieldMap ring group pred_set
 
 Definition sw_map_point_def:
   (sw_map_point f ECInfinity = ECInfinity) /\

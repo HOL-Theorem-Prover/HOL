@@ -23,14 +23,13 @@ Ancestors
   namedPrimes
   namedPrimeFields fieldInstances pairingQuadraticFields pairingDegree12Fields
   bn254Degree12Certificate bls12381Degree12Certificate
-  pairingFieldEmbeddings pairingTwistInstances ellipticScaling
-  ellipticMorphisms polyMonic
+  pairingFieldEmbeddings pairingTwistInstances
+  polyMonic
+  field fieldMap ring group pred_set
+  polyModuloRing shortWeierstrass shortWeierstrassGroup
+  ellipticMorphisms ellipticScaling
 Libs
   polynomialCertificateLib pairingFieldCertificateLib
-
-open fieldTheory fieldMapTheory ringTheory groupTheory pred_setTheory
-     polyModuloRingTheory shortWeierstrassTheory shortWeierstrassGroupTheory
-     ellipticMorphismsTheory ellipticScalingTheory
 
 Theorem injective_group_homo_order[local]:
   Group (g:'a group) /\ Group (h:'b group) /\ GroupHomo f g h /\

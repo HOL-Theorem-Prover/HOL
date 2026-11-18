@@ -23,10 +23,9 @@ Ancestors
   secp256k1Instance p256Instance bn254G1Instance ellipticCardinality
   ellipticTorsion namedPrimeFields fieldInstances shortWeierstrass
   shortWeierstrassGroup polyRoot polyWeak polynomial
+  field
 Libs
   polynomialCertificateLib
-
-open fieldTheory
 
 Theorem sw_cubic_polynomial_eval[local]:
   !(r:'a field) a b x.

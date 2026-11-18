@@ -27,12 +27,10 @@ Ancestors
   namedPrimes bn254CofactorPrimes
   pairingTwistInstances pairingQuadraticFields namedPrimeFields
   ellipticCardinality ellipticCertificates ellipticTorsion shortWeierstrass
-  prime
+  arithmetic divides pred_set group monoid
+  field ring prime
 Libs
   pairingCurveCertificateLib
-
-open arithmeticTheory dividesTheory pred_setTheory groupTheory monoidTheory
-     fieldTheory ringTheory primeTheory
 
 (* The coefficient is the standard 3/(9+i), as proved by
    bn254_g2_twist_coefficient. These coordinates and Lucas witnesses are

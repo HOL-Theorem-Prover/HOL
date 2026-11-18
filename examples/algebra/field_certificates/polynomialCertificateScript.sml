@@ -24,8 +24,7 @@ Theory polynomialCertificate
 Ancestors
   ffMaster polyIrreducible polyDivides polyDivision polyRoot
   polyMonic polyRing polyRingModulo ffPoly fieldInstances arithmetic divides
-
-open fieldTheory ringTheory polynomialTheory polyWeakTheory pred_setTheory
+  field ring polynomial polyWeak pred_set
 
 (* Only bounded polynomial identities are computed by the certificate library.
    The quotient/remainder operations themselves are specified abstractly in HOL. *)

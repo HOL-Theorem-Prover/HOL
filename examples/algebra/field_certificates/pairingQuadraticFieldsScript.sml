@@ -22,8 +22,7 @@ Theory pairingQuadraticFields
 Ancestors
   namedPrimes namedPrimeFields fieldInstances polyFieldModulo polyIrreducible
   polyModuloRing polyMonic polyRoot polyWeak arithmetic divides
-
-open fieldTheory ringTheory polynomialTheory pred_setTheory
+  field ring polynomial pred_set
 
 (* HOL polynomial lists have ascending coefficient order: [1;0;1]
    represents 1 + 0*X + X^2, not X^2 + 0*X + 1 by a descending

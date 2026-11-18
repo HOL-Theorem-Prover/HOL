@@ -17,10 +17,9 @@
 Theory bn254Degree12Certificate
 Ancestors
   namedPrimes namedPrimeFields polynomialCertificate
+  field ring polynomial
 Libs
   polynomialCertificateLib
-
-open fieldTheory ringTheory polynomialTheory
 
 (* X^12 - 18 X^6 + 82; ascending coefficients in the named prime field.
    ML supplies candidates; HOL checks all remainder and Bezout identities. *)

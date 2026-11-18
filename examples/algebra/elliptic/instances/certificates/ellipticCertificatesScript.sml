@@ -23,9 +23,8 @@
 
 Theory ellipticCertificates
 Ancestors
-  shortWeierstrass shortWeierstrassGroup ellipticTorsion fieldInstances
-
-open fieldTheory fieldInstancesTheory groupTheory ringTheory
+  shortWeierstrass shortWeierstrassGroup ellipticTorsion
+  field fieldInstances group ring
 
 Theorem sw_field_sum_inv_witness:
   !(r:'a field) x y.

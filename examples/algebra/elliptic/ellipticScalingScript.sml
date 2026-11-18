@@ -21,12 +21,11 @@
 
 Theory ellipticScaling
 Ancestors
-  ellipticMorphisms ringLib
+  ellipticMorphisms
   shortWeierstrass shortWeierstrassGroup ellipticTorsion
+  field ring group pred_set ringLib
 Libs
   ringLib
-
-open fieldTheory ringTheory groupTheory pred_setTheory ringLibTheory
 
 Definition sw_scale_point_def:
   (sw_scale_point (r:'a field) u ECInfinity = ECInfinity) /\
