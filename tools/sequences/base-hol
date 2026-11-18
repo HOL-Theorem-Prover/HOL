@@ -34,6 +34,7 @@ src/num/theories/cv_compute
 
 src/num/reduce/src
 src/num/arith/src
+[poly]!src/num/arith/timeout_test
 src/num
 !src/num/theories/cv_compute/soundness_check
 src/num/termination

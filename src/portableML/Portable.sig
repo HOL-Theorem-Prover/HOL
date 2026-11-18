@@ -43,6 +43,11 @@ sig
   val finally : (unit -> unit) -> ('a -> 'b) -> ('a -> 'b)
      (* first argument (the finally finisher) must terminate, and preferably
         quickly, or you may mask/hide user-generated Interrupt exceptions *)
+  val bracket : (unit -> 'a) -> ('a -> unit) -> ('a -> 'b) -> 'b
+     (* [bracket acquire release body] runs [body] on what [acquire]
+        returned, then [release] on it however [body] exits.  Under
+        Poly/ML, [acquire] and [release] run with interrupts deferred: an
+        interrupt arriving then is delivered once [release] is done. *)
 
   val list_of_singleton : 'a -> 'a list
   val single : 'a -> 'a list (* synonym of list_of_singleton *)
