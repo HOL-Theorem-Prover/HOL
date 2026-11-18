@@ -22,7 +22,8 @@ local
     {equality = false,
      boolean = false,
      combinator = false,
-     mapping_parm = {higher_order = false, with_types = true}};
+     mapping_parm = {higher_order = false, with_types = true, chat = 0},
+     chat = 0};   (* quiet: this is a decision procedure, not a prover *)
 in
   val prolog = fn ths =>
     let

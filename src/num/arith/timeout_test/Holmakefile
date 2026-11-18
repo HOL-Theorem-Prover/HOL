@@ -1,0 +1,12 @@
+INCLUDES = ../src
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+
+ifdef HOLSELFTESTLEVEL
+arith-timeout-selftest.log: selftest.exe
+	$(tee ./selftest.exe,$@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+endif
+
+EXTRA_CLEANS = selftest.exe arith-timeout-selftest.log

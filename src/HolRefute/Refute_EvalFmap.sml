@@ -1,14 +1,14 @@
 (* Compset fragment deciding equality of ground finite maps.
 
-   [finite_mapLib]'s compset rules cover FLOOKUP/FDOM/FUNION/DOMSUB but
-   not [=] at :'a |-> 'b, and FUPDATE_EQ/FUPDATE_COMMUTES/
-   NOT_EQ_FEMPTY_FUPDATE are simp-only.  computeLib therefore decides
-   [fm = fm'] only when the two chains are literally identical (T), and
-   any other pair is stuck -- so a Test node whose conclusion is such an
-   equality can never reach a genuine counterexample on the compute
-   substrate, and equal-but-permuted chains surface as spurious
-   Potential reports.  [FMAP_EQ_DECIDE_CONV] closes both gaps for
-   FEMPTY-rooted chains of literal pairs.
+   [finite_mapTheory]'s persistent compset rules cover
+   FLOOKUP/FDOM/FAPPLY/DOMSUB but not [=] at :'a |-> 'b, and
+   FUPDATE_EQ/FUPDATE_COMMUTES/NOT_EQ_FEMPTY_FUPDATE are simp-only.
+   computeLib therefore decides [fm = fm'] only when the two chains are
+   literally identical (T), and any other pair is stuck -- so a Test
+   node whose conclusion is such an equality can never reach a genuine
+   counterexample on the compute substrate, and equal-but-permuted
+   chains surface as spurious Potential reports.  [FMAP_EQ_DECIDE_CONV]
+   closes both gaps for FEMPTY-rooted chains of literal pairs.
 
    F: a key from either chain where computeLib decides the two FLOOKUPs
    unequal; [f = g] yields [FLOOKUP f k = FLOOKUP g k] by congruence, so
@@ -139,7 +139,19 @@ structure Refute_EvalFmap :> Refute_EvalFmap = struct
       [Type.alpha |-> finite_mapSyntax.mk_fmap_ty (Type.alpha, Type.beta)]
       boolSyntax.equality
 
+  (* FUNION, FEVERY, FCARD, DRESTRICT and SUBMAP by recursion on the
+     chain, as the finite_map compset has FLOOKUP, FDOM, FAPPLY and
+     DOMSUB. *)
+  val chain_rules =
+    let open finite_mapTheory in
+      [FUNION_FEMPTY_1, FUNION_FUPDATE_1, FEVERY_FEMPTY,
+       refuteTheory.fevery_fupdate_domsub,
+       FCARD_FEMPTY, FCARD_FUPDATE, DRESTRICT_FEMPTY, DRESTRICT_FUPDATE,
+       SUBMAP_FEMPTY, SUBMAP_FUPDATE]
+    end
+
   fun register () =
-    computeLib.add_convs [(fmap_eq_tm, 2, FMAP_EQ_DECIDE_CONV)]
+    (computeLib.add_convs [(fmap_eq_tm, 2, FMAP_EQ_DECIDE_CONV)];
+     computeLib.add_funs chain_rules)
 
 end

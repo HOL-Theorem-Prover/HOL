@@ -29,8 +29,8 @@ local
   open mlibUseful;
   val module = "folMapping";
 in
-  val () = add_trace {module = module, alignment = I}
-  fun chatting l = tracing {module = module, level = l};
+  (* HOL aligns this module's output three levels in. *)
+  val chatting = chatting_at 3;
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
   fun BUG f m = Bug (f ^ ": " ^ m);
@@ -42,20 +42,27 @@ end;
 
 type parameters =
   {higher_order : bool,       (* Application is a first-order function *)
-   with_types   : bool};      (* First-order terms include HOL type info *)
+   with_types   : bool,       (* First-order terms include HOL type info *)
+   chat         : int};       (* How loud to be: per call, not tuning *)
 
 val defaults =
   {higher_order = false,
-   with_types   = false};
+   with_types   = false,
+   chat         = 0};
 
 fun update_higher_order f (parm : parameters) : parameters =
-  let val {higher_order, with_types} = parm
-  in {higher_order = f higher_order, with_types = with_types}
+  let val {higher_order, with_types, chat} = parm
+  in {higher_order = f higher_order, with_types = with_types, chat = chat}
   end;
 
 fun update_with_types f (parm : parameters) : parameters =
-  let val {higher_order, with_types} = parm
-  in {higher_order = higher_order, with_types = f with_types}
+  let val {higher_order, with_types, chat} = parm
+  in {higher_order = higher_order, with_types = f with_types, chat = chat}
+  end;
+
+fun update_chat f (parm : parameters) : parameters =
+  let val {higher_order, with_types, chat} = parm
+  in {higher_order = higher_order, with_types = with_types, chat = f chat}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -556,8 +563,8 @@ fun fol_term_to_hol' ({higher_order, with_types = true, ...} : parameters) =
     tm_to_hol
   end;
 
-fun fol_term_to_hol parm fol_tm =
-  if not (chatting 1) then fol_term_to_hol' parm fol_tm else
+fun fol_term_to_hol (parm : parameters) fol_tm =
+  if not (chatting (#chat parm) 1) then fol_term_to_hol' parm fol_tm else
     let
       fun cmp (mlibTerm.Var v) (mlibTerm.Var w) =
         possibly dest_prime v = dest_prefix FOL_PREFIX (possibly dest_prime w)
@@ -581,7 +588,7 @@ fun fol_atom_to_hol parm (mlibTerm.Atom (mlibTerm.Fn ("=", [x, y]))) =
   | fol_atom_to_hol parm fm =
   (cast_to bool o fol_term_to_hol parm)
   let
-    val {higher_order, with_types} = parm
+    val {higher_order, with_types, ...} = parm : parameters
   in
     case (higher_order, with_types, fm) of
       (true,  _,     mlibTerm.Atom (mlibTerm.Fn ("$", [tm]))) => tm
@@ -632,7 +639,7 @@ local
       fp r tm p
     end;
 
-  fun ap {higher_order, with_types} (r, tm) p =
+  fun ap ({higher_order, with_types, ...} : parameters) (r, tm) p =
     uncurry3 (if higher_order then hp else fp)
     ((fn (r', tm', p') => (r', tm', if with_types then zeroes [] p' else p'))
      (if is_eq tm then
@@ -729,7 +736,7 @@ fun proof_step parm prev =
         val hol_lit = fol_literal_to_hol parm fol_lit
         val ((hol_ms1, hol_lits1), hol_th1) = res0 fol_th1 fol_lit
         val ((hol_ms2, hol_lits2), hol_th2) = res0 fol_th2 (negate fol_lit)
-        val _ = chatting 2 andalso chat
+        val _ = chatting (#chat parm) 2 andalso chat
           ("resolve: hol_lits1 =\n" ^ terms_to_string hol_lits1 ^
            "resolve: hol_lits2 =\n" ^ terms_to_string hol_lits2 ^
            "resolve: hol_ms1 =\n" ^ terms_to_string hol_ms1 ^
@@ -792,8 +799,8 @@ local
   fun previous a l x =
     case assoc1 x l of SOME (_, y) => y | NONE => initialize_axiom (a x);
 
-  fun chat_proof th =
-    if not (chatting 1) then mlibThm.proof th else
+  fun chat_proof ch th =
+    if not (chatting ch 1) then mlibThm.proof th else
       let
         val res = mlibThm.proof th
         val _ = chat ("\n\nProof:\n" ^ mlibThm.proof_to_string res ^ "\n\n")
@@ -801,8 +808,8 @@ local
         res
       end;
 
-  fun chat_proof_step parm prev (p as (fol_th, inf)) =
-    if not (chatting 1) then proof_step parm prev p else
+  fun chat_proof_step (parm : parameters) prev (p as (fol_th, inf)) =
+    if not (chatting (#chat parm) 1) then proof_step parm prev p else
       let
         val _ = chat
           ("_____________________________________________________\n" ^
@@ -835,9 +842,9 @@ local
     gen_alpha (change_vars to_gen) (map o PINST) o
     new_free_vars (list_mk_conj' o map concl);
 in
-  fun fol_thms_to_hol parm axioms pattern ths =
+  fun fol_thms_to_hol (parm : parameters) axioms pattern ths =
     (finalize_thms o match_pattern pattern o
-     map (translate parm (previous axioms) [] o chat_proof)) ths
+     map (translate parm (previous axioms) [] o chat_proof (#chat parm))) ths
     handle HOL_ERR _ => raise ERR "fol_thms_to_hol" "proof translation error";
 end;
 

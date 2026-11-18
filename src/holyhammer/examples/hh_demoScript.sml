@@ -12,7 +12,7 @@ Libs
 
 
 (* load "holyHammer"; open holyHammer; *)
-(* mlibUseful.trace_level := 0; *)
+(* HOLFlags.set_flag (metisTools.metis_trace, 0); *)
 
 (* -------------------------------------------------------------------------
    Example 1: integer exponentation

@@ -25,10 +25,11 @@ val heap_fix   : fix  (* 0 1 2 suc pre + - * exp < <= > >= is_0 *)
 val set_fix    : fix  (* empty univ union inter compl card in subset *)
 
 (* Parameters *)
-type parameters = {size : int, fix : fix}
+type parameters = {size : int, fix : fix, chat : int}
 val defaults    : parameters
 val update_size : (int -> int) -> parameters -> parameters
 val update_fix  : (fix -> fix) -> parameters -> parameters
+val update_chat : (int -> int) -> parameters -> parameters
 
 (* The type of finite models *)
 type model

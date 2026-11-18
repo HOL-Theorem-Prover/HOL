@@ -25,6 +25,7 @@ structure Refute_TypeBase :> Refute_TypeBase = struct
   fun mk_case x = TypeBasePure.mk_case (theTypeBase ()) x
   fun is_case tm = TypeBasePure.is_case (theTypeBase ()) tm
   fun strip_case tm = TypeBasePure.strip_case (theTypeBase ()) tm
+  fun dest_case tm = TypeBasePure.dest_case (theTypeBase ()) tm
   fun is_record tm = TypeBasePure.is_record (theTypeBase ()) tm
   fun dest_record tm = TypeBasePure.dest_record (theTypeBase ()) tm
 end

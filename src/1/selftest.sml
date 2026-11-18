@@ -417,6 +417,14 @@ val _ = temp_overload_on ("RM*", ``\x y. x /\ y``)
 val _ = tpp "RM* p q"
 val _ = clear_overloads_on "RM*"
 
+(* the printer's check for tokens that merge sees a token added since
+   it last printed, and its removal *)
+val _ = tpp "~a"
+val _ = temp_overload_on ("~a", ``\x:bool. F``)
+val _ = tpp "~ a"
+val _ = clear_overloads_on "~a"
+val _ = tpp "~a"
+
 val _ = add_rule {term_name = "=",
                   fixity = Infix(NONASSOC, 450),
                   block_style = (AroundSamePrec, (PP.CONSISTENT,0)),
@@ -1770,4 +1778,17 @@ in
   tprint "Lib.subst_keep_last: later maplet wins";
   require (check_result (Lib.subst_eq aconv aconv [a |-> c]))
           (Lib.subst_keep_last aconv) [a |-> b, a |-> c]
+end
+
+val _ = let
+  val x = mk_var("x", Type.alpha)
+  val a = mk_var("a", Type.alpha)
+  val b = mk_var("b", Type.alpha)
+  val c = mk_var("c", Type.alpha)
+  val th1 = ASSUME (mk_eq(a, b))
+  val th2 = ASSUME (mk_eq(a, c))
+in
+  tprint "SUBST_CONV: repeated template variable, later theorem wins";
+  require (check_result (aconv (mk_eq(a, c)) o concl))
+          (Drule.SUBST_CONV [x |-> th1, x |-> th2] x) a
 end

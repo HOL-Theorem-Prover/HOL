@@ -205,6 +205,15 @@ fun ground_types context binarize terms =
 fun free_variables terms =
   Util.distinct_terms (List.concat (map Term.free_vars_lr terms))
 
+(* One reason per encoding condition a group's encoding relied on and
+   that was not proved (MFH.record_check). *)
+fun unproved_conditions (context : MFH.mf_context) =
+  List.mapPartial (fn (member, condition, proved) =>
+    if proved then NONE
+    else SOME ("cases of " ^ Parse.term_to_string member ^
+               " not proved " ^ condition))
+    (rev (!(#fixpoint_checks context)))
+
 fun none_true assignments =
   List.all (fn (_, value) => value <> SOME true) assignments
 
@@ -865,12 +874,14 @@ fun run_instance deadline started (config : Refute_Core.config)
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
         val weakened = !(#whack_weakening context)
+        val unproved = unproved_conditions context
         val reasons = if sound then
             authenticity_reasons mf got_all_mono_user_axioms
               no_poly_user_axioms (#codatatypes_ok reconstructed) @
             (if weakened then
                ["formula was semantically weakened by whack"]
-             else [])
+             else []) @
+            unproved
           else ["model comes from the liberal, unsound-by-design problem"]
         fun discard () = if sound then discarded_sound_model := true else ()
       in
@@ -884,7 +895,8 @@ fun run_instance deadline started (config : Refute_Core.config)
            replay_hints = replay_hints,
            cex = make_base problem,
            sound = sound,
-           genuine_means_genuine = genuine_formula andalso not weakened,
+           genuine_means_genuine = genuine_formula andalso not weakened
+             andalso null unproved,
            reasons = reasons,
            deadline = SOME deadline} of
             MFM.Drop => (discard (); NONE)
@@ -1327,6 +1339,12 @@ fun run_instance deadline started (config : Refute_Core.config)
               (accounting_reason
                  "formula was semantically weakened by whack" ::
                !error_reasons)
+          (* An encoding whose condition was not proved approximates
+             nothing, so no search through it says the goal holds. *)
+          else if not (null (unproved_conditions context)) andalso null cexs
+          then
+            Refute_Core.Unknown
+              (unproved_conditions context @ !error_reasons)
           (* An untouched budget means the search delivered nothing, except
              when a sound problem yielded a model too weak to spend a
              genuine slot.  Such a model is still a result and must be

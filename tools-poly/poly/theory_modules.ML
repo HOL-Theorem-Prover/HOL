@@ -104,12 +104,62 @@ fun digest_reader text (offset, count) =
   in (Byte.stringToBytes (String.substring (text, offset, n)), offset + n)
   end
 
+(* SHA-1 through libcrypto when the process can load it: the ML
+   implementation costs ~15 ms per MB, about half a second for a large
+   ancestry's .dat files.  Both give the same digest, so module names
+   don't depend on which one ran. *)
+local
+  open Foreign
+  (* Foreign loads a library lazily; symbolAsAddress makes it load here,
+     so a missing library raises now and the next name is tried *)
+  fun build name =
+    let val sym = getSymbol (loadLibrary name) "SHA1"
+    in ignore (symbolAsAddress sym);
+       buildCall3 (sym, (cByteArray, cSize, cPointer), cPointer)
+    end
+  val native =
+    Susp.delay (fn () =>
+      SOME (build "libcrypto.so.3") handle _ =>
+      SOME (build "libcrypto.so") handle _ => NONE)
+  fun hex_lower bytes =
+    String.concat
+      (Word8Vector.foldr
+         (fn (b, l) => StringCvt.padLeft #"0" 2
+                         (String.map Char.toLower (Word8.toString b)) :: l)
+         [] bytes)
+  (* NONE when SHA1 returns NULL, which OpenSSL 3 does without writing
+     the digest when its configuration rules SHA-1 out *)
+  fun native_sha1 sha1 text =
+    let
+      val out = Memory.malloc 0w20
+      fun get () = Word8Vector.tabulate
+                     (20, fn i => Memory.get8 (out, Word.fromInt i))
+      fun digest () =
+        if Memory.voidStar2Sysword
+             (sha1 (Byte.stringToBytes text, String.size text, out)) = 0w0
+        then NONE
+        else SOME (hex_lower (get ()))
+    in
+      digest () before Memory.free out
+      handle e => (Memory.free out; raise e)
+    end
+  fun ml_sha1 text = SHA1.sha1String (digest_reader text) 0
+in
+fun string_digest text =
+  case Susp.force native of
+      SOME sha1 => ((case native_sha1 sha1 text of
+                         SOME d => d
+                       | NONE => ml_sha1 text)
+                    handle Foreign.Foreign _ => ml_sha1 text)
+    | NONE => ml_sha1 text
+end
+
 fun file_digest path =
   let
     val input = HOLFileSys.openIn path
     val text = HOLFileSys.inputAll input before HOLFileSys.closeIn input
   in
-    SHA1.sha1String (digest_reader text) 0
+    string_digest text
   end
 
 fun hex bytes =
