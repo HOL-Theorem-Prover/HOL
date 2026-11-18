@@ -1039,6 +1039,70 @@ fun test_hhMonomorph () =
     val _ = expect
       "bounded-best monomorphization equals exhaustive canonical prefix"
       (same_output bounded_branch reference_branch)
+    (* The reusable pool seeds exactly as the goal does. *)
+    val caps = {max_iters = 3, max_new_instances = 100}
+    fun via_pool goal premises =
+      hhMonomorph.monomorph_pool caps (hhMonomorph.mk_pool goal) premises
+    fun pool_same goal premises =
+      same_output (via_pool goal premises)
+        (hhMonomorph.monomorph caps goal premises)
+    val gamma = Type.gamma
+    val none_bool = Term.inst [{redex = alpha, residue = Type.bool}]
+      ``NONE : 'a option``
+    val ground_none = mk_eq (none_bool, none_bool)
+    val schematic_none = let
+      val none = Term.inst [{redex = alpha, residue = beta}]
+        ``NONE : 'a option`` in mk_eq (none, none) end
+    val xa = Term.mk_var ("x", alpha)
+    val self_eq = mk_eq (xa, xa)
+    val empty_pool = via_pool goal []
+    val retained = via_pool goal [("none", schematic_none)]
+    val joined_pool = via_pool goal [("ground", ground_none),
+      ("list", schematic), ("none", schematic_none)]
+    fun witness ty = let val f = Term.mk_var ("f", ty) in mk_eq (f, f) end
+    val num_fun = Type.mk_type ("fun", [num, num])
+    fun extended goal extras premises =
+      same_output
+        (hhMonomorph.monomorph_pool caps
+          (hhMonomorph.extend_pool (hhMonomorph.mk_pool goal) goal extras)
+          premises)
+        (hhMonomorph.monomorph caps (list_mk_conj (goal :: extras))
+          premises)
+    val ext_facts = [("eq", self_eq)]
+    fun ext_count goal extras = length (hhMonomorph.monomorph_pool caps
+      (hhMonomorph.extend_pool (hhMonomorph.mk_pool goal) goal extras)
+      ext_facts)
+    val rigid_goal = mk_conj (eq_nil (list_ty alpha), goal)
+    val _ = expect "monomorph pool: empty helper set gives no facts"
+      (null empty_pool)
+    val _ = expect "monomorph pool equals monomorph (goal-only grounds)"
+      (pool_same goal [("ground", goal), ("schematic", schematic)])
+    val _ = expect "monomorph pool takes grounds from ground premises"
+      (same_output joined_pool
+         (hhMonomorph.monomorph caps goal [("ground", ground_none),
+           ("list", schematic), ("none", schematic_none)])
+       andalso length (named "none" joined_pool) = 1)
+    val _ = expect "monomorph pool does not keep grounds across calls"
+      (null (via_pool goal [("none", schematic_none)])
+       andalso null retained)
+    val _ = expect "monomorph pool with rigid variables equals monomorph"
+      (pool_same rigid_goal [("schematic", schematic), ("none",
+        schematic_none), ("ignored", ignored)])
+    val _ = expect "monomorph pool extension without extras is the pool"
+      (extended goal [] ext_facts)
+    val _ = expect "monomorph pool extension adds witness-only grounds"
+      (extended goal [witness num_fun] ext_facts
+       andalso ext_count goal [witness num_fun] = ext_count goal [] + 1)
+    val _ = expect "monomorph pool extension with a rigid variable type"
+      (extended rigid_goal [witness (list_ty alpha)] ext_facts
+       andalso ext_count rigid_goal [witness (list_ty alpha)]
+               = ext_count rigid_goal [] + 1)
+    val _ = expect "monomorph pool extension rebuilds for a new type variable"
+      (extended rigid_goal [witness gamma] ext_facts
+       andalso extended rigid_goal [witness num_fun, witness gamma,
+                                    witness (list_ty alpha)] ext_facts
+       andalso ext_count rigid_goal [witness gamma]
+               = ext_count rigid_goal [] + 1)
   in
     ()
   end
@@ -1154,6 +1218,15 @@ fun test_hhProblemGen () =
       (is_cond cond_tf0 andalso is_cond cond_tx0)
     val _ = expect "hhProblemGen downgrades keep_lams outside THF"
       (not (null (#facts downgraded)) andalso null (#facts kept))
+    val pool_dispatch = pass_monomorph_pool
+      (hhTypeEnc.of_string "poly_native")
+      {max_iters = 3, max_new_instances = 100}
+      (fn () => raise Fail "poly encodings must not build a pool")
+      [("schematic", schematic)]
+    val _ = expect "hhProblemGen poly encodings bypass the ground pool"
+      (ListPair.allEq (fn ((left_name, left), (right_name, right)) =>
+         left_name = right_name andalso Term.aconv left right)
+         (pool_dispatch, [("schematic", schematic)]))
     val _ = expect "hhProblemGen dispatches monomorphization by encoding"
       (List.exists (fn (_, tm) => not (Term.aconv tm schematic)) (#facts mono)
        andalso ListPair.allEq (fn ((left_name, left), (right_name, right)) =>

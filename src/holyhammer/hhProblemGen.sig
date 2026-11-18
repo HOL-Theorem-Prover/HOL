@@ -41,6 +41,13 @@ sig
   val pass_monomorph : hhTypeEnc.type_enc ->
     {max_iters : int, max_new_instances : int} -> named_terms -> named_terms
 
+  (* The same on premises alone, against a ground pool that is built (and
+     reused) only when the encoding is monomorphic. *)
+  val pass_monomorph_pool : hhTypeEnc.type_enc ->
+    {max_iters : int, max_new_instances : int} ->
+    (unit -> hhMonomorph.pool) -> (string * Term.term) list ->
+    (string * Term.term) list
+
   (* Pass 4 turns the outer HOL logical skeleton into formula constructors.
      Boolean equality is represented by Iff. *)
   val formula_skeleton : named_terms -> formula_ir

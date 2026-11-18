@@ -326,15 +326,19 @@ struct
     | result_of (Schematic {nickname, instances, ...}) =
         map (fn (_, _, theorem) => (nickname, theorem)) (!instances)
 
-  fun monomorph {max_iters, max_new_instances} goal premises =
+  (* The seed of a run: the rigid type variables and the initial table,
+     which holds every schematic name (empty when it has no ground type)
+     with the ground types of the goal and of the ground premises. *)
+  fun add_premise_grounds rigid infos table =
+    List.foldl (fn (Ground (_, theorem), result) =>
+                  add_grounds rigid theorem result
+                 | (_, result) => result) table infos
+
+  fun run {max_iters, max_new_instances} rigid seed premises =
     let
-      val rigid = Term.type_vars_in_term goal
       val infos = Portable.mapi (classify rigid) premises
       val names = schema_names infos
-      val initial = add_grounds rigid goal
-        (List.foldl (fn (Ground (_, theorem), result) =>
-                       add_grounds rigid theorem result
-                      | (_, result) => result) names infos)
+      val initial = seed rigid infos names
       val remaining = ref (Int.max (0, max_new_instances))
 
       fun rounds round known new =
@@ -356,5 +360,68 @@ struct
     in
       List.concat (map result_of infos)
     end
+
+  fun monomorph caps goal premises =
+    run caps (Term.type_vars_in_term goal)
+      (fn rigid => fn infos => fn names =>
+         add_grounds rigid goal (add_premise_grounds rigid infos names))
+      premises
+
+  (* A reusable seed: the ground types of a term by constant name,
+     sorted, for every constant whose type is ground for the rigid
+     variables.  A run projects it onto its own schematic names. *)
+  type pool = {rigid : hol_type list,
+               grounds : (string, hol_type list) Redblackmap.dict}
+
+  fun pool_add rigid tm grounds =
+    let
+      fun walk current result =
+        if is_const current then
+          let val (name, ty) = dest_const current in
+            if not (is_ground rigid ty) then result
+            else Redblackmap.insert (result, name, insert_type ty
+              (Option.getOpt (Redblackmap.peek (result, name), [])))
+          end
+        else if is_comb current then
+          walk (rand current) (walk (rator current) result)
+        else if is_abs current then walk (body current) result
+        else result
+    in
+      walk tm grounds
+    end
+
+  fun mk_pool goal =
+    let val rigid = Term.type_vars_in_term goal in
+      {rigid = rigid,
+       grounds = pool_add rigid goal (Redblackmap.mkDict String.compare)}
+    end
+
+  (* The pool of [list_mk_conj (goal :: extras)] given the pool of
+     [goal].  The conjunction constructor adds only the constants of
+     [/\], which are monomorphic and so never schematic names; they do
+     not enter the table.  A new type variable changes which types are
+     ground, so the pool is then rebuilt from the whole conjunction. *)
+  fun extend_pool (pool : pool) goal extras =
+    if null extras then pool
+    else
+      let
+        val rigid = Term.type_vars_in_term (boolSyntax.list_mk_conj extras)
+      in
+        if List.all (fn ty => mem ty (#rigid pool)) rigid then
+          {rigid = #rigid pool,
+           grounds = List.foldl (fn (tm, grounds) =>
+             pool_add (#rigid pool) tm grounds) (#grounds pool) extras}
+        else mk_pool (boolSyntax.list_mk_conj (goal :: extras))
+      end
+
+  fun monomorph_pool caps (pool : pool) premises =
+    run caps (#rigid pool)
+      (fn rigid => fn infos => fn names =>
+         add_premise_grounds rigid infos
+           (map (fn (name, _) =>
+                   (name, Option.getOpt
+                            (Redblackmap.peek (#grounds pool, name), [])))
+                names))
+      premises
 
 end

@@ -149,6 +149,12 @@ struct
        facts = hhMonomorph.monomorph caps conjecture facts}
     else {conjecture = conjecture, facts = facts}
 
+  (* Monomorphization against a reusable ground pool (the goal's). *)
+  fun pass_monomorph_pool encoding caps pool facts =
+    if is_monomorphic encoding then
+      hhMonomorph.monomorph_pool caps (pool ()) facts
+    else facts
+
   fun skeleton tm =
     if is_forall tm then
       let val (var, body) = dest_forall tm in
@@ -1315,6 +1321,12 @@ struct
       (* Helpers have the original problem as their monomorphization ground
          pool.  They are then firstorderized together with it, so application
          arities and the final symbol table are shared by every section. *)
+      val pool_cell = ref NONE
+      fun main_pool () = case !pool_cell of
+          SOME pool => pool
+        | NONE => let val pool = hhMonomorph.mk_pool ground_pool in
+            pool_cell := SOME pool; pool
+          end
       fun translate_helpers source =
         if null source then []
         else
@@ -1345,8 +1357,8 @@ struct
                 end
             val helper_source = List.filter (is_helper_name o #1)
               (#facts lambda_terms')
-            val translated = #facts (pass_monomorph type_enc caps
-              {conjecture = ground_pool, facts = helper_source})
+            val translated = pass_monomorph_pool type_enc caps main_pool
+              helper_source
             (* A schematic proxy law with no ground instance is still sound:
                the mono printer gives its remaining type variables opaque
                sorts.  Do not silently lose it as an "ignored" user fact. *)
@@ -1386,10 +1398,10 @@ struct
             fun witness ty = let val f = mk_var ("f", ty) in
               mk_eq (f, f)
             end
-            val pool = list_mk_conj (ground_pool :: map witness app_types)
+            fun pool () = hhMonomorph.extend_pool (main_pool ()) ground_pool
+              (map witness app_types)
           in
-            case #facts (pass_monomorph type_enc caps
-                           {conjecture = pool, facts = [ext]}) of
+            case pass_monomorph_pool type_enc caps pool [ext] of
                 [] => [ext]
               | instances => instances
           end
