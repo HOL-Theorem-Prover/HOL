@@ -68,15 +68,43 @@ sig
      copied : hhProver.slice * int -> unit}
   (* export_problems_observed exports the problems of the schedule, with
      the observer told of each one.  The number of workers that finish the
-     generated problems (format and write a private temporary) is min
-     (export_workers, cores, generated problems); one means inline.
-     prepare, which draws fresh names and touches HOL state, stays on the
-     calling thread in schedule order, and the files are published in
-     schedule order.  A failure or an interrupt stops and waits for the
-     workers and removes their temporaries before it propagates.  A worker
+     generated problems (the tail of the preparation, then format and
+     write a private temporary) is min (export_workers, cores, generated
+     problems); one means inline, and so does a caller whose context is
+     pinned (Context.is_pinned () at the start of the export).  prepare,
+     which draws fresh names and uses the memo, the theorem data and the
+     caches, stays on the calling thread in schedule order, and the
+     files are published in schedule order.  At most as many problems as
+     workers wait for resolution (one more briefly), which bounds the
+     HOL terms the queued tails retain.  A failure or an interrupt stops
+     and waits for the workers and removes their temporaries before it
+     propagates.  A worker
      thread that cannot be started fails the item it was for like any
      other failure of that item (there is no inline fallback).  Test hooks
-     are in hhSchedule_Test (hhSchedule.sml). *)
+     are in hhSchedule_Test (hhSchedule.sml).
+
+     Concurrency of the tails.  A tail draws no fresh names and uses no
+     shared state of HolyHammer, but it reads the live signature (new
+     bound-variable names, constant types) and the TypeBase (the ??
+     encoding).  An unpinned caller, which is every batch build and plain
+     session, is served by workers that read the live signature as the
+     caller would; HolyHammer installs no Context pin of its own.  The
+     export never changes the signature, and the pool only widens the
+     window in which a tail can overlap a later prepare, so a concurrent
+     writer of the signature that exists outside the tree (the language
+     server publishes none while a proof replays, and replay is pinned)
+     could at worst make an export fail (a constant missing) or produce
+     bytes that belong to a slightly different signature.  It cannot cause
+     a wrong prover-cache hit, because the cache is keyed on the bytes.
+
+     Failure path.  A failure of a tail at item i is a failure of the
+     finishing of i, raised in index order with the same text as the
+     caller-side failure would have (a "lambda survived" is converted on
+     the calling thread).  Up to as many later items as workers may by then
+     have been prepared (more generated events, more memo entries), so a
+     later export in the same process differs from the serial one only in
+     the fresh-name counter: different generated names, hence possible
+     prover-cache misses, never wrong bytes. *)
   val export_problems_observed : export_observer -> string ->
     hhConfig.hh_options -> goal -> (string * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit

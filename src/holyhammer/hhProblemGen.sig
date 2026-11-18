@@ -75,11 +75,30 @@ sig
   val new_export_memo : unit -> export_memo
   val memo_lambda_runs : export_memo -> int
 
-  (* export_pb_in writes format_pb of prepare_pb.  prepare_pb runs on the
-     caller (theorem data, memo, fresh names) and returns the fully
-     materialized AST; format_pb touches no HOL state. *)
+  (* An abstraction survived first-order lambda handling; the labels are
+     the context prefixes ("fact NAME", "conjecture"), innermost first.
+     The tail of a prepared problem raises this instead of the Fail text,
+     which needs the term grammar and so is produced by describe_failure
+     on the calling thread: describe_failure maps it to the Fail
+     exception of the same text the caller-side first-orderization
+     raises, and every other exception to itself. *)
+  exception Lambda_survived of string list * term
+  val describe_failure : exn -> exn
+
+  (* export_pb_in writes format_pb of force_tail of prepare_pb.  prepare_pb
+     runs on the caller: it draws the fresh names and reads the memo,
+     theorem data and caches (its own failures are final).  It returns the
+     tail of make_problem: the final first-orderization and the build of
+     the AST, which draw no names and use no shared state but read the live
+     signature and type database.  A tail may run on another thread, only
+     where no context is pinned (see hhSchedule), and fails with the raw
+     exception (Lambda_survived, not its text); force_tail runs a tail on
+     the calling thread and applies describe_failure.  format_pb touches no
+     HOL state. *)
+  type tail = unit -> hhTptpProblem.problem
   val prepare_pb : export_memo -> problem_options
-    -> term * (string * thm) list -> hhTptpProblem.problem
+    -> term * (string * thm) list -> tail
+  val force_tail : tail -> hhTptpProblem.problem
   val format_pb : problem_options -> hhTptpProblem.problem -> string
 
   val export_pb_in : export_memo -> problem_options -> string

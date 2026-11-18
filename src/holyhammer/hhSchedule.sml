@@ -257,9 +257,11 @@ fun ordered_work root options rankings schedule =
      await q           at resolution, in order: wait for the pending item
                        and return what it staged;
      publish (w, f)    in order, on the caller.
-   Finishing work touches no HOL state.  submit and await must be
-   interchangeable in timing: an implementation may run the finishing work
-   inside await (deferred, window 0) or on a worker started by submit.
+   Finishing work draws no fresh names and uses neither the memo nor
+   the caches; it may read the live signature (see hhSchedule.sig).
+   submit and await must be interchangeable in timing: an implementation
+   may run the finishing work inside await (deferred, window 0) or on a
+   worker started by submit.
    submit cleans up what it was given when it fails, await what it staged
    when it fails and publish what it was given when it fails.  abandon q
    cancels a pending item (waiting for its work to stop) and removes
@@ -332,7 +334,7 @@ fun run_staged {window}
   end
 
 datatype prepared =
-    Problem of hhProblemGen.problem_options * hhTptpProblem.problem
+    Problem of hhProblemGen.problem_options * hhProblemGen.tail
   | Written of string
   | Copy of string
 
@@ -363,15 +365,20 @@ fun prepare_work (observer : export_observer) conjecture memo named_for
                (conjecture, named_for key)))
   end
 
-(* The finishing work of a generated problem formats the prepared AST and
-   writes it to a temporary whose name was chosen beforehand, so that
-   whoever drops the item can remove it whatever the writer did.  It
-   touches no HOL state (it may run on a worker). *)
-fun finish_problem options problem temporary =
+(* The finishing work of a generated problem runs the tail of its
+   preparation (the final first-orderization and the build of the AST),
+   formats the AST and writes it to a temporary whose name was chosen
+   beforehand, so that whoever drops the item can remove it whatever the
+   writer did.  It draws no fresh names and uses no memo or cache, but the
+   tail reads the live signature and type database, so it runs on a worker
+   only when no context is pinned (see pool_size).  A failure of the tail
+   is raw (hhProblemGen.Lambda_survived) and becomes its text where the
+   caller awaits the item. *)
+fun finish_problem options tail temporary =
   (hhConfig.stage_to
      {open_out = TextIO.openOut, close_out = TextIO.closeOut} temporary
      (fn output => TextIO.output (output, hhProblemGen.format_pb options
-                                            problem));
+                                            (tail ())));
    Temp temporary)
 
 (* The inline implementation: the finishing work is deferred and runs on
@@ -379,9 +386,9 @@ fun finish_problem options problem temporary =
    no work. *)
 fun submit_inline ({path, ...} : work, prepared) : pending =
   case prepared of
-      Problem (options, problem) =>
+      Problem (options, tail) =>
         let val temporary = hhConfig.temp_path path in
-          {await = fn () => finish_problem options problem temporary,
+          {await = fn () => finish_problem options tail temporary,
            cancel = fn () => hhConfig.remove_quietly temporary}
         end
     | Written temporary =>
@@ -398,12 +405,12 @@ fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
 fun submit_pooled pool before_finish
     (work as {path, index, ...} : work, prepared) : pending =
   case prepared of
-      Problem (options, problem) =>
+      Problem (options, tail) =>
         let
           val temporary = hhConfig.temp_path path
           val job = hhPool.submit pool
             {run = fn () => (before_finish index;
-                             finish_problem options problem temporary),
+                             finish_problem options tail temporary),
              discard = fn () => hhConfig.remove_quietly temporary}
         in
           {await = fn () => hhPool.await job,
@@ -411,7 +418,10 @@ fun submit_pooled pool before_finish
         end
     | _ => submit_inline (work, prepared)
 
-fun await_pending ({await, ...} : pending) = await ()
+(* The caller-side conversion of a tail's failure to its text: the
+   grammar is not read on a worker. *)
+fun await_pending ({await, ...} : pending) =
+  await () handle exn => raise hhProblemGen.describe_failure exn
 
 fun abandon_pending ({cancel, ...} : pending) = cancel ()
 
@@ -425,24 +435,31 @@ fun publish_work (observer : export_observer)
 
 (* The number of threads that finish generated problems: the configured
    export_workers, at most the cores and the number of generated problems;
-   one means inline.  The items admitted and waiting for publication are
-   bounded by twice the workers, so the prepared ASTs and the finished
-   files held at any time are bounded as well. *)
+   one means inline.  A caller with a pinned context (Context.is_pinned,
+   in practice only the proof replay of the language server) gets one:
+   the tail reads the ambient signature, which a fresh thread would see
+   unpinned.  HolyHammer installs no pin itself.  The items admitted and
+   waiting for resolution are bounded by the workers (the queue briefly
+   holds one more at admission), so the prepared tails (retained HOL
+   terms) and the finished files held at any time are bounded as well. *)
 fun pool_size (options : hhConfig.hh_options) works =
   let
     val generated = length (List.filter
       (fn {kind = ExportGenerated _, ...} => true | _ => false) works)
   in
-    Int.min (Int.min (#export_workers options, #cores options), generated)
+    if Context.is_pinned () then 1
+    else Int.min (Int.min (#export_workers options, #cores options),
+                  generated)
   end
 
-(* prepare (and everything that draws fresh names or touches HOL state)
-   runs on the calling thread, which is the thread that called this
-   function before any scheduler thread was created.  Both thml_of_namel
-   and the exporters touch HOL process-global state.  Only the finishing
-   work of generated problems moves to the workers of a pool, which is
-   closed (its workers stopped and their files removed) before this
-   returns or raises. *)
+(* prepare (and everything that draws fresh names or touches HOL state
+   other than reading the signature) runs on the calling thread, which is
+   the thread that called this function before any scheduler thread was
+   created.  Both thml_of_namel and the exporters touch HOL process-global
+   state.  Only the finishing work of generated problems (the tail of the
+   preparation, then format and write) moves to the workers of a pool,
+   which is closed (its workers stopped and their files removed) before
+   this returns or raises. *)
 fun export_problems_observed
     (observer : export_observer) root options goal rankings schedule =
   let
@@ -478,7 +495,7 @@ fun export_problems_observed
     else
       hhPool.with_pool {workers = workers, fork = fork}
         (fn pool =>
-         run (2 * workers) (submit_pooled pool before_finish))
+         run workers (submit_pooled pool before_finish))
   end
 
 val export_problems = export_problems_observed silent_observer

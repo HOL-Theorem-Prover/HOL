@@ -38,6 +38,22 @@ struct
 
   fun fail message = raise Fail ("hhProblemGen: " ^ message)
 
+  (* An abstraction that survives first-order lambda handling.  The text
+     needs the grammar (Parse.term_to_string), so it is produced only by
+     describe_failure, on the calling thread; the labels are the context
+     prefixes ("fact NAME", "conjecture"), innermost first. *)
+  exception Lambda_survived of string list * term
+
+  fun describe_failure (Lambda_survived (labels, tm)) =
+        let
+          val base = "hhProblemGen: lambda survived first-order lambda " ^
+            "handling: " ^ Parse.term_to_string tm
+        in
+          Fail (List.foldl (fn (label, message) =>
+            "hhProblemGen: " ^ label ^ ": " ^ message) base labels)
+        end
+    | describe_failure exn = exn
+
   val syntax_of = hhTptpProblem.syntax_of
 
   fun is_full_ho (hhTptpProblem.THF _) = true
@@ -400,8 +416,7 @@ struct
         val used_pp = ref false
         fun term in_position tm =
           if is_abs tm then
-            fail ("lambda survived first-order lambda handling: " ^
-              Parse.term_to_string tm)
+            raise Lambda_survived ([], tm)
           else
             let
               val (head, args) = strip_comb tm
@@ -445,8 +460,12 @@ struct
         fun named_formula (name, body) =
           (name, formula body)
           handle Fail message => fail ("fact " ^ name ^ ": " ^ message)
+               | Lambda_survived (labels, tm) =>
+                   raise Lambda_survived (labels @ ["fact " ^ name], tm)
         val conjecture' = formula conjecture
           handle Fail message => fail ("conjecture: " ^ message)
+               | Lambda_survived (labels, tm) =>
+                   raise Lambda_survived (labels @ ["conjecture"], tm)
       in
         {conjecture = conjecture',
          facts = map named_formula facts,
@@ -1288,13 +1307,20 @@ struct
        ("Conjecture", [conjecture'])]
     end
 
-  fun needs_of encoding terms =
+  (* The formulas the ?? monotonicity oracle reads; none for the other
+     encodings, so that the deferred tail keeps no HOL terms alive for
+     it. *)
+  fun needs_input encoding terms =
     case encoding of
         hhTypeEnc.Guards {level = hhTypeEnc.NonmonoNonUniform, ...} =>
-          hhTypeEnc.types_needing_encoding
-            (#conjecture terms :: map #2 (#facts terms))
+          #conjecture terms :: map #2 (#facts terms)
       | _ => []
 
+  (* Everything up to the TPTP AST that resolves terms or draws fresh
+     names runs here, on the caller, and what is left (the tail) neither
+     draws nor consults the memo, theorem data or the translation cache.
+     The tail reads the live signature and type database and builds the
+     AST; its failures are raw (see describe_failure). *)
   fun make_problem main_is_mono options lambda_terms =
     let
       val {format, type_enc, lam_trans, mono_iters, mono_instances} = options
@@ -1367,11 +1393,15 @@ struct
       fun combined helpers =
         {conjecture = #conjecture main_terms,
          facts = #facts main_terms @ helpers}
-      val main_fo = firstorder []
+      (* The caller-side first-orderizations report as the tail's
+         failures do after describe_failure. *)
+      fun firstorder_now helpers = firstorder helpers
+        handle (exn as Lambda_survived _) => raise describe_failure exn
+      val main_fo = firstorder_now []
       val initial = hol_helpers format lam_trans (#used_app main_fo)
         (heads_of main_fo)
       val preliminary_helpers = translate_helpers initial
-      val preliminary_fo = firstorder preliminary_helpers
+      val preliminary_fo = firstorder_now preliminary_helpers
       val proxy_source = proxy_helpers (heads_of preliminary_fo)
       val with_proxies = initial @ proxy_source
       (* EQ_EXT's only constant is equality, and app is introduced only
@@ -1401,12 +1431,21 @@ struct
               | instances => instances
           end
       val helper_terms = translate_helpers with_proxies @ extensionality
-      val final_fo = firstorder helper_terms
-      val needs = needs_of type_enc (combined helper_terms)
+      val needs_terms = needs_input type_enc (combined helper_terms)
     in
-      generated_problem format type_enc needs final_fo
-        (pp_helpers (#used_pp final_fo))
+      fn () =>
+        let
+          val final_fo = firstorder helper_terms
+          val needs = hhTypeEnc.types_needing_encoding needs_terms
+        in
+          generated_problem format type_enc needs final_fo
+            (pp_helpers (#used_pp final_fo))
+        end
     end
+
+  type tail = unit -> hhTptpProblem.problem
+
+  fun force_tail tail = tail () handle exn => raise describe_failure exn
 
   fun generate_problem options terms =
     let
@@ -1420,8 +1459,8 @@ struct
           simplified
         else simplified
     in
-      make_problem pre_mono options
-        (pass_lambda format lam_trans lambda_input)
+      force_tail (make_problem pre_mono options
+        (pass_lambda format lam_trans lambda_input))
     end
 
   type export_memo =
@@ -1475,8 +1514,9 @@ struct
       handle error => (TextIO.closeOut output handle _ => (); raise error)
     end
 
-  (* The caller-side stage: everything that resolves HOL terms or draws
-     fresh names, up to the TPTP AST. *)
+  (* The caller-side stage: everything that draws fresh names or reads the
+     memo, theorem data or the translation cache.  The tail it returns
+     builds the TPTP AST and may run on another thread. *)
   fun prepare_pb memo options (conjecture, named) =
     let
       val input = presimp (#format options) {conjecture = conjecture,
@@ -1503,7 +1543,7 @@ struct
 
   fun export_pb_in memo options file input =
     write_problem file
-      (format_pb options (prepare_pb memo options input))
+      (format_pb options (force_tail (prepare_pb memo options input)))
 
   fun export_pb options file input =
     export_pb_in (new_export_memo ()) options file input

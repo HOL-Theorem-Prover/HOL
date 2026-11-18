@@ -327,7 +327,7 @@ val option_specs : option_spec list =
     valid = nonnegative_int},
    {name = "export_workers", default = fn () => "1",
     expected = "a non-negative integer",
-    doc = "threads that format generated problems (1 means inline on " ^
+    doc = "threads that finish generated problems (1 means inline on " ^
           "the calling thread, 0 means cores; at most cores)",
     valid = nonnegative_int},
    {name = "filter", default = fn () => "",
