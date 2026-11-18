@@ -24,71 +24,8 @@ fun get_first f =
     first
   end;
 
-(* Masking interrupts the plain way does not defer a Ctrl-C, it loses one.
-   Poly/ML retains a directed [Thread.interrupt] and delivers it when the
-   mask lifts, but HOL raises Ctrl-C as [Thread.broadcastInterrupt], and a
-   broadcast simply skips a thread whose broadcast flag is clear, recording
-   nothing; [Thread_Attributes.no_interrupts] clears that flag along with
-   the rest.  A wait that must run to completion therefore has to stay
-   observant while it waits.
-
-   [uninterruptible_defer f x] is [Thread_Attributes.uninterruptible] with
-   the broadcast flag left as the caller had it: interrupts are deferred
-   rather than refused, so a broadcast arriving inside the masked region is
-   held and delivered when the caller's attributes come back, at a [restore]
-   step or on the way out.  Poly/ML has no attribute constant for that
-   combination, hence the raw [Thread.setAttributes]; it writes the
-   interrupt-state bits only. *)
-fun uninterruptible_defer f x =
-  let
-    val saved = Thread_Attributes.get_attributes ()
-    val _ =
-      Thread.setAttributes [Thread.InterruptState Thread.InterruptDefer]
-    fun restore g y = Thread_Attributes.with_attributes saved (fn _ => g y)
-    val result = Exn.capture (f restore) x
-    val _ = Thread_Attributes.set_attributes saved
-  in
-    Exn.release result
-  end;
-
-(* [Multithreading.synchronized] masks with the plain [uninterruptible], so
-   the [Mutex.lock] a caller queues on is one more place its Ctrl-C is lost;
-   this is otherwise the same function without the tracing. *)
-fun with_lock lock e =
-  Exn.release (uninterruptible_defer (fn restore => fn () =>
-    let
-      val _ = Mutex.lock lock
-      val result = Exn.capture (restore e) ()
-      val _ = Mutex.unlock lock
-    in
-      result
-    end) ());
-
-(* [uninterruptible_wait f x] runs [f observe x] masked, as
-   [Thread_Attributes.uninterruptible] does, except that [observe g y] runs
-   [g y] under the caller's own attributes, so a broadcast arriving during
-   that step is delivered.  [observe] answers [SOME] with the result, or
-   records the interrupt and answers [NONE]; once one is recorded, later
-   steps run masked, one being all that is needed.  A recorded interrupt is
-   raised after [f] has returned, so the wait still runs to completion.  An
-   exception from [f] itself wins and the recorded interrupt is dropped: it
-   is [f]'s own outcome the caller is waiting on, and control is leaving for
-   the top level under either exception anyway. *)
-fun uninterruptible_wait f =
-  Thread_Attributes.uninterruptible (fn restore => fn x =>
-    let
-      val pending = ref false
-      fun observe g y =
-        if !pending then SOME (g y)
-        else
-          (SOME (restore g y)
-           handle Interrupt => (pending := true; NONE))
-      val result = Exn.capture (f observe) x
-    in
-      case result of
-          Exn.Res value => if !pending then raise Interrupt else value
-        | Exn.Exn _ => Exn.release result
-    end);
+(* Defined in [Thread_Attributes]; re-exported for its existing callers. *)
+val uninterruptible_wait = Thread_Attributes.uninterruptible_wait;
 
 (* Losing workers are interrupted, never killed.  A worker can hold a
    process-global lock across an uninterruptible section, and Thread.kill
@@ -108,14 +45,9 @@ fun stop_threads observe cancel threads =
   let
     val _ = cancel ()
     val _ = List.app Standard_Thread.interrupt_unsynchronized threads
-    fun poll () =
-      (Option.app (fn hook => hook ()) (!ParList_Test.join_hook);
-       OS.Process.sleep (Time.fromReal 0.001))
-    fun await thread =
-      if not (Thread.isActive thread) then ()
-      else (ignore (observe poll ()); await thread)
+    fun poll () = Option.app (fn hook => hook ()) (!ParList_Test.join_hook)
   in
-    List.app await threads
+    Multithreading.join_threads observe poll threads
   end;
 
 (* Run a bounded set of local workers without consulting the process-global
@@ -136,7 +68,7 @@ fun run_workers name worker_count f xs publish finished =
     val initial = List.take (indexed, workers);
     val pending = ref (List.drop (indexed, workers));
 
-    fun synchronized e = with_lock lock e;
+    fun synchronized e = Multithreading.with_lock lock e;
 
     (* Never cleared: [take] is the only place a job is handed out, so once
        the caller has stopped waiting no worker claims another one. *)
@@ -179,7 +111,7 @@ fun run_workers name worker_count f xs publish finished =
        Deferred rather than refused: a Ctrl-C landing between the two is
        answered once the handle is recorded, instead of being dropped. *)
     fun fork_one job =
-      uninterruptible_defer (fn _ => fn () =>
+      Thread_Attributes.uninterruptible_defer (fn _ => fn () =>
         let
           val _ = Option.app (fn hook => hook ()) (!ParList_Test.fork_hook)
           val thread =
