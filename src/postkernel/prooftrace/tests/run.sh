@@ -25,17 +25,19 @@ for HOL_PFT_TEST in $pft_suites; do
            "$pft_scratch/$HOL_PFT_TEST/hol4"
   cd "$pft_scratch/$HOL_PFT_TEST"
   case "$HOL_PFT_TEST" in
-    identity) pft_phases='produce loader-parent loader-child raw convert separate' ;;
+    identity) pft_phases='produce loader-parent loader-child raw convert separate merged' ;;
     mk-abs) pft_phases='produce replay' ;;
     export) pft_phases='vacuous shadow overlap hypotheses binder replay' ;;
-    term-kind|oracle) pft_phases='produce replay' ;;
+    term-kind) pft_phases='produce replay' ;;
+    oracle) pft_phases='produce replay merged' ;;
     *) pft_phases=run ;;
   esac
   for HOL_PFT_PHASE in $pft_phases; do
     export HOL_PFT_PHASE
     case "$HOL_PFT_TEST:$HOL_PFT_PHASE" in
       identity:produce) set -- ;;
-      identity:*|mk-abs:replay|export:replay|term-kind:replay|oracle:replay)
+      identity:*|mk-abs:replay|export:replay|term-kind:replay|oracle:replay|\
+      oracle:merged)
         set -- --min ;;
       *) set -- ;;
     esac

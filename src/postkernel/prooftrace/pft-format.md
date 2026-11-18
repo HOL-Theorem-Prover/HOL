@@ -16,6 +16,9 @@ accepts only `candle`. Readers check the header before executing commands.
 The earlier integer-version `1` format with explicit compute objects is
 incompatible and is rejected.
 
+The [conversion and merge commands](pft-cli.md) select exports and their
+dependencies. Cross-theory LOADs require their saved dependencies first.
+
 AXIOM remains a supported command, so replay alone is not an allowed-axiom
 policy or an exact-result certificate. Callers must check the desired
 conclusion and hypotheses explicitly.

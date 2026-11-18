@@ -21,6 +21,10 @@ Contents
 New features
 ------------
 
+-   Proof traces can be converted to version 0.1.0 binary PFT files and replayed in HOL4 or Candle.
+    `src/postkernel/prooftrace/pft.sh` converts a theory's proof dump, and `pft.sh merge` combines selected exports and their dependencies into one file; see `src/postkernel/prooftrace/README.md`.
+    Raw traces from earlier versions must be regenerated.
+
 -   Types and constants of theories loaded from disk now get canonical kernel ids, the same in every process whatever was loaded before.
     On Poly/ML runtimes with dependent modules, `Meta.configureTheoryModuleCache` saves a loaded theory's signature, theorems and decoded data in a module (up to `Meta.theoryModuleWriteLimit` per process), so later loads skip compiling the generated code and reading the `.dat`, and repeat only the theory's registration and load hooks.  `Meta.writeTheoryModules` writes modules from `.dat` files alone, for stores the loading processes must not write.
     Missing or unusable modules fall back to source loading.
