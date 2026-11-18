@@ -1,0 +1,28 @@
+# Every HolRefute test directory, named once.  There are no sources
+# here: `CLINE_OPTIONS = -r' builds the top target of each directory
+# named below, so src/parallel_builds/core has to name only this one,
+# and a developer can run the whole suite with a single Holmake here.
+#
+# The suites are not driven from src/HolRefute with a recursive
+# Holmake, which is what this replaces.  That gave each its own
+# dependency graph, blind to how the tree orders src/sort, src/n-bit
+# and the rest, so the imports had to be repeated here as explicit
+# prerequisites -- and an import that was missed did not report
+# anything, it just stopped (d3c6a00ff5 fixed one such list;
+# tests/selftest.sml then gained sortingTheory, wordsLib and stringLib,
+# and the tree build broke again).  Reached through INCLUDES they are
+# scanned into one graph, which orders them itself.
+CLINE_OPTIONS = -r
+
+INCLUDES = ../tests \
+           ../loading_tests/core ../loading_tests/rat \
+           ../loading_tests/real ../loading_tests/persistence
+
+# theory_tests needs a fresh user theory per check, and runs at level 2
+# only.  Each directory below decides for itself what the level means;
+# this is the one place that decides whether it is built at all.
+ifdef HOLSELFTESTLEVEL
+ifneq ($(HOLSELFTESTLEVEL),1)
+INCLUDES += ../theory_tests
+endif
+endif
