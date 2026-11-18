@@ -1082,8 +1082,8 @@ fun define_with_tactic loc stem q tac scope post =
             complete "tDefine" bind
               (in_scope scope
                  (fn g => boolLib.prove_named (Context.snapshot ()) g)
-                 {name = name, goal = goal, tac = tac})
-            handle e => (set_pending bind NONE; raise e)
+                 {name = name, goal = goal, tac = tac}
+               handle e => (set_pending bind NONE; raise e))
   in
     Parse.try_grammar_extension thunk ()
     handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)

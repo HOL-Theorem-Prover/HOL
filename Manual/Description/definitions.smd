@@ -1453,6 +1453,13 @@ induction theorem is not stored for primitive recursive functions,
 since that theorem would be identical to the induction theorem
 resulting from the declaration of the datatype.
 
+The `Termination` argument may also `suspend` goals (see *Proof
+Suspension and Resumption* in the chapter on tactics).  Then
+`Definition` stores nothing yet: once `Resume` blocks have proved the
+suspended goals, `Finalise` of the definition's name stores its
+equations and induction theorem.  Such a definition's attributes are
+given on `Definition`; its `Finalise` takes none.
+
 Part of the process of the automatic termination proof involves
 the use of “termination simplification” theorems.  These encode
 facts about the way in which arguments to desired functions may be

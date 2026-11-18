@@ -544,6 +544,12 @@ val occ_th = TAC_PROOF (occ_goal, count_goal)
 val _ = assert ((complete_definition "occ_def" occ_th; false)
                 handle _ => true)
 val _ = assert (rejects_with "occ_def" export_theory)
+val _ = save_thm ("held_def", TRUTH)
+val _ = prepare_qDefine "held_def"
+  ‘held n = if n = 0 then 0n else held (n - 1) + 1’
+val _ = assert (rejects (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "held_def"))
+val _ = assert (rejects_with "held_def" export_theory)
 val _ = OK ()
 
 val _ = tprint "a discarded or restarted theory leaves nothing pending"

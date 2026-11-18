@@ -1324,7 +1324,7 @@ fun find_parent nm : (parent_source * string * thm) option =
           (case if thy = cur then NONE else in_db cur of
                NONE => SOME (FromStore, thy, th)
              | found => found)
-        | NONE => search (if own then [cur] else cur :: Theory.ancestry cur)
+        | NONE => if own then NONE else search (cur :: Theory.ancestry cur)
     end
 
 (* ----------------------------------------------------------------------
