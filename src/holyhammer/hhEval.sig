@@ -11,7 +11,8 @@ sig
   datatype engine =
       Prover of hhProver.prover
     | Sched of {provers : hhProver.prover list, slices : int,
-                cores : int, max_proofs : int}
+                cores : int, max_proofs : int,
+                export_workers : int}
 
   type condition =
     {cond_id : string, regime : regime, selector : selector,

@@ -3,6 +3,16 @@
 (* DESCRIPTION   : HolyHammer parallel slice scheduler                       *)
 (* ========================================================================= *)
 
+(* Kept outside the public [hhSchedule] signature so [selftest.sml] can start
+   the workers of the export pool its own way ([fork]) and act on a worker
+   before it finishes an item ([before_finish], applied to the item's
+   index).  Production leaves both at their defaults. *)
+structure hhSchedule_Test =
+struct
+  val fork = ref hhPool.default_fork
+  val before_finish = ref (fn (_ : int) => ())
+end
+
 structure hhSchedule :> hhSchedule =
 struct
 
@@ -263,8 +273,8 @@ fun ordered_work root options rankings schedule =
 
    Up to window admitted items wait while later ones are prepared.  With
    window 0 each item is prepared, awaited and published before the next is
-   prepared; window > 0 exists for the bounded workers of TASK_17 (the
-   finishing work of up to window items overlaps later prepares).  An
+   prepared; with window > 0 the finishing work of up to window items (on
+   the workers of a pool) overlaps later prepares.  An
    observer sees the effects in stage order: a generated event fires in
    prepare and a copied event in publish, so with a window the copies are
    reported after later generated events. *)
@@ -274,8 +284,12 @@ fun run_staged {window}
     val queue = ref []
     val failure = ref NONE
     val stopped = ref NONE
+    (* Newest first: an abandoned running item frees its worker slot, which
+       the pool would hand to a waiting item, so the waiting (later) items
+       are cancelled before the running (earlier) ones are interrupted. *)
     fun forget () =
-      (List.app (fn (_, q) => (abandon q handle _ => ())) (!queue);
+      (List.app (fn (_, q) => (abandon q handle _ => ()))
+         (List.rev (!queue));
        queue := [])
     (* The head stays queued until it is published, so that forget covers
        it whenever an exception leaves resolve. *)
@@ -353,29 +367,27 @@ fun prepare_work (observer : export_observer) conjecture memo named_for
    writes it to a temporary whose name was chosen beforehand, so that
    whoever drops the item can remove it whatever the writer did.  It
    touches no HOL state (it may run on a worker). *)
-fun finish_work ({path, ...} : work, prepared) temporary =
-  case prepared of
-      Problem (options, problem) =>
-        (hhConfig.stage_to
-           {open_out = TextIO.openOut, close_out = TextIO.closeOut}
-           temporary
-           (fn output => TextIO.output
-              (output, hhProblemGen.format_pb options problem));
-         Temp temporary)
-    | Written temporary => Temp temporary
-    | Copy first => Copying first
-
-fun remove_staged (Written temporary) = hhConfig.remove_quietly temporary
-  | remove_staged _ = ()
+fun finish_problem options problem temporary =
+  (hhConfig.stage_to
+     {open_out = TextIO.openOut, close_out = TextIO.closeOut} temporary
+     (fn output => TextIO.output (output, hhProblemGen.format_pb options
+                                            problem));
+   Temp temporary)
 
 (* The inline implementation: the finishing work is deferred and runs on
-   the caller when await forces it. *)
-fun submit_inline (work as {path, ...} : work, prepared) : pending =
-  let val temporary = hhConfig.temp_path path in
-    {await = fn () => finish_work (work, prepared) temporary,
-     cancel = fn () =>
-       (remove_staged prepared; hhConfig.remove_quietly temporary)}
-  end
+   the caller when await forces it.  A staged legacy file or a copy needs
+   no work. *)
+fun submit_inline ({path, ...} : work, prepared) : pending =
+  case prepared of
+      Problem (options, problem) =>
+        let val temporary = hhConfig.temp_path path in
+          {await = fn () => finish_problem options problem temporary,
+           cancel = fn () => hhConfig.remove_quietly temporary}
+        end
+    | Written temporary =>
+        {await = fn () => Temp temporary,
+         cancel = fn () => hhConfig.remove_quietly temporary}
+    | Copy first => {await = fn () => Copying first, cancel = fn () => ()}
 
 fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
   | release_finished (Copying _) = ()
@@ -386,12 +398,12 @@ fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
 fun submit_pooled pool before_finish
     (work as {path, index, ...} : work, prepared) : pending =
   case prepared of
-      Problem _ =>
+      Problem (options, problem) =>
         let
           val temporary = hhConfig.temp_path path
           val job = hhPool.submit pool
             {run = fn () => (before_finish index;
-                             finish_work (work, prepared) temporary),
+                             finish_problem options problem temporary),
              discard = fn () => hhConfig.remove_quietly temporary}
         in
           {await = fn () => hhPool.await job,
@@ -431,9 +443,11 @@ fun pool_size (options : hhConfig.hh_options) works =
    work of generated problems moves to the workers of a pool, which is
    closed (its workers stopped and their files removed) before this
    returns or raises. *)
-fun export_problems_using {fork, before_finish}
+fun export_problems_observed
     (observer : export_observer) root options goal rankings schedule =
   let
+    val fork = !hhSchedule_Test.fork
+    val before_finish = !hhSchedule_Test.before_finish
     val works = ordered_work root options rankings schedule
     val conjecture = list_mk_imp goal
     val memo = hhProblemGen.new_export_memo ()
@@ -466,10 +480,6 @@ fun export_problems_using {fork, before_finish}
         (fn pool =>
          run (2 * workers) (submit_pooled pool before_finish))
   end
-
-fun export_problems_observed observer =
-  export_problems_using
-    {fork = hhPool.default_fork, before_finish = fn _ => ()} observer
 
 val export_problems = export_problems_observed silent_observer
 

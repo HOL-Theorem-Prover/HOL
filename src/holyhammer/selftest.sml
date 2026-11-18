@@ -3003,7 +3003,7 @@ fun test_hhEval root =
        selector = hhEval.Knn 256,
        engine = hhEval.Sched
          {provers = [Eprover, Vampire], slices = 6, cores = 2,
-          max_proofs = 3},
+          max_proofs = 3, export_workers = 2},
        timeout = 30, reconstruct = true}
     val parsed_sched_condition =
       hhEval.parse_condition (hhEval.encode_condition sched_condition)
@@ -3033,7 +3033,8 @@ fun test_hhEval root =
       {cond_id = "invalid-sched", regime = hhEval.Bushy,
        selector = hhEval.Deps,
        engine = hhEval.Sched
-         {provers = [Eprover], slices = 1, cores = 1, max_proofs = 1},
+         {provers = [Eprover], slices = 1, cores = 1, max_proofs = 1,
+          export_workers = 1},
        timeout = 5, reconstruct = false}
     val _ = expect "Sched condition requires reconstruction"
       ((hhEval.validate_condition invalid_sched; false)
@@ -3253,7 +3254,8 @@ fun test_hhEval root =
     val _ = hhEval.append_journal ensemble_journal
       (one_shot_entry "report-mesh" "mesh" (hhEval.Mesh 96))
     val collision_engine = hhEval.Sched
-      {provers = [Z3], slices = 1, cores = 1, max_proofs = 1}
+      {provers = [Z3], slices = 1, cores = 1, max_proofs = 1,
+       export_workers = 1}
     fun collision_slice filter : hhProver.slice =
       {prover = Z3, format = "fof", type_enc = "",
        lam_trans = "", nfacts = 77, filter = filter,
@@ -4818,16 +4820,16 @@ fun test_schedule_staged () =
     val _ = check "an earlier finish failure beats a later publish failure"
       3 [(Publish, 3), (Finish, 1)] "finish 1" [0]
     val (_, pub_two, log_two) = scenario 3 [(Prepare, 4), (Finish, 2)]
-    val _ = expect "two failures: later work is abandoned, never published"
+    val _ = expect "two failures: later work is abandoned newest first"
       (List.filter (String.isPrefix "abandon") log_two =
-         ["abandon 2", "abandon 3"] andalso not (List.exists
+         ["abandon 3", "abandon 2"] andalso not (List.exists
            (fn i => i >= 2) pub_two) andalso
        not (List.exists (fn s => s = "prepare 5" orelse s = "finish 3")
          log_two))
     val (_, _, windowed) = scenario 3 [(Finish, 1)]
-    val _ = expect "after a failure later admitted work is abandoned"
+    val _ = expect "after a failure later work is abandoned, newest first"
       (List.filter (String.isPrefix "abandon") windowed =
-         ["abandon 1", "abandon 2", "abandon 3", "abandon 4"] andalso
+         ["abandon 4", "abandon 3", "abandon 2", "abandon 1"] andalso
        not (List.exists (fn s => s = "prepare 5") windowed))
     val (_, _, immediate) = scenario 0 [(Finish, 2)]
     val _ = expect "no work is admitted after a failure"
@@ -4846,13 +4848,13 @@ fun test_schedule_staged () =
     val _ = expect "an interrupt propagates and abandons the waiting work"
       (outcome = "interrupt" andalso pub = [0, 1] andalso
        List.filter (String.isPrefix "abandon") log =
-         ["abandon 2", "abandon 3", "abandon 4", "abandon 5"] andalso
+         ["abandon 5", "abandon 4", "abandon 3", "abandon 2"] andalso
        numbered "prepare" log = [0, 1, 2, 3, 4, 5])
     val (outcome, pub, log) = interrupted 3 [(Prepare, 4)]
     val _ = expect "an interrupt in prepare abandons the waiting work"
       (outcome = "interrupt" andalso pub = [0] andalso
        List.filter (String.isPrefix "abandon") log =
-         ["abandon 1", "abandon 2", "abandon 3"])
+         ["abandon 3", "abandon 2", "abandon 1"])
     (* The real stages: a fetch failure at a later index. *)
     val bad_rank = [("knn", bad_ranking)]
     val failing = [(e, legacy Eprover "knn" 2), (e, generated Eprover "knn" 2),
@@ -4990,6 +4992,9 @@ fun await_exits message threads =
       else (OS.Process.sleep (Time.fromMilliseconds 5); loop ())
   in loop () end
 
+(* Every recorded thread has exited.  No polling: the pool joined them. *)
+fun all_exited threads = not (List.exists Thread.isActive (threads ()))
+
 fun test_hhPool () =
   let
     val gates = new_monitor ()
@@ -5045,11 +5050,12 @@ fun test_hhPool () =
           val _ = open_all 5
           val values = map hhPool.await jobs
         in (full, values, hhPool.stats pool) end)
-    val _ = await_exits "workers did not exit" threads
     val _ = expect "pool: running workers and waiting jobs are bounded"
       (#running stats_full = 2 andalso #waiting stats_full = 3 andalso
        #max_running stats_end = 2 andalso !most = 2 andalso
        length (!started) = 5 andalso length (threads ()) = 5)
+    val _ = expect "pool: with_pool returns only after every worker exited"
+      (all_exited threads)
     val _ = expect "pool: results come back in submission order"
       (values = [0, 1, 2, 3, 4])
     (* Out-of-order completion: await still delivers in order. *)
@@ -5064,9 +5070,8 @@ fun test_hhPool () =
           (open_gate i; monitor_until gates "job did not finish"
              (has_finished i))) [2, 1, 0]
       in (rev (!finished), map hhPool.await jobs) end)
-    val _ = await_exits "workers did not exit" threads
     val _ = expect "pool: out-of-order completion is awaited in order"
-      (completed = ([2, 1, 0], [0, 1, 2]))
+      (completed = ([2, 1, 0], [0, 1, 2]) andalso all_exited threads)
     (* An exception is recorded for the caller; discard follows it. *)
     val _ = reset ()
     val raised = hhPool.with_pool {workers = 2, fork = hhPool.default_fork}
@@ -5104,10 +5109,10 @@ fun test_hhPool () =
         val _ = open_all 3
         val _ = hhPool.await other
       in () end)
-    val _ = await_exits "workers did not exit" threads
-    val _ = expect "abandon: cancelled jobs wrote nothing, discard is repeatable"
-      (not (member (!wrote) 0) andalso not (member (!started) 2) andalso
-       !wrote = [1] andalso member (!discarded) 0 andalso
+    val _ = expect "abandon: cancelled jobs wrote nothing, discard repeats"
+      (all_exited threads andalso not (member (!wrote) 0) andalso
+       not (member (!started) 2) andalso !wrote = [1] andalso
+       member (!discarded) 0 andalso
        length (threads ()) = 2)
     (* The caller is interrupted while it waits: the pool closes, the
        running job is interrupted and everything stops. *)
@@ -5121,13 +5126,72 @@ fun test_hhPool () =
     val _ = Thread.interrupt caller
     val _ = monitor_until gates "caller did not stop"
       (fn () => member (!exited) 0)
-    val _ = await_exits "threads did not exit" (fn () => caller :: threads ())
+    val _ = await_exits "caller did not exit" (fn () => [caller])
     val _ = expect "interrupt of the caller stops the worker and propagates"
-      (case !outcome of
-           SOME (Exn.Exn Interrupt) => true
-         | _ => false)
+      ((case !outcome of
+            SOME (Exn.Exn Interrupt) => true
+          | _ => false) andalso all_exited threads)
     val _ = expect "interrupt of the caller discards the job"
       (member (!discarded) 0 andalso not (member (!wrote) 0))
+    (* A Ctrl-C (a broadcast interrupt) that arrives while the owner waits
+       for a worker to stop is not lost: it is raised after the cleanup.  The
+       job answers its own interrupt by broadcasting one, then returns. *)
+    fun swallowing_job i =
+      {run = fn () =>
+         ((monitor_do gates (fn () => started := i :: !started);
+           monitor_until gates "gate never opened"
+             (fn () => member (!opened) i); i)
+          handle Interrupt =>
+            (Thread.broadcastInterrupt ();
+             monitor_do gates (fn () => exited := i :: !exited); i)),
+       discard = fn () =>
+         monitor_do gates (fn () => discarded := i :: !discarded)}
+    fun as_owner f =
+      let
+        val result = ref NONE
+        val _ = Thread.fork (fn () =>
+          (result := SOME (Exn.capture f ());
+           monitor_do gates (fn () => ())),
+          [Thread.EnableBroadcastInterrupt true,
+           Thread.InterruptState Thread.InterruptAsynch])
+      in
+        (* The broadcast reaches every thread that accepts one: this one
+           must not, or the test would interrupt the whole selftest. *)
+        Thread_Attributes.with_attributes Thread_Attributes.private_interrupts
+          (fn _ =>
+             (monitor_until gates "owner did not finish"
+                (fn () => isSome (!result));
+              valOf (!result)))
+      end
+    val _ = reset ()
+    val (fork, threads) = recording_fork (fn start => start)
+    val closing = as_owner (fn () =>
+      hhPool.with_pool {workers = 1, fork = fork} (fn pool =>
+        let val job = hhPool.submit pool (swallowing_job 0) in
+          monitor_until gates "job did not start"
+            (fn () => member (!started) 0)
+        end))
+    val _ = expect "a Ctrl-C during close is raised after the cleanup"
+      ((case closing of Exn.Exn Interrupt => true | _ => false) andalso
+       member (!exited) 0 andalso member (!discarded) 0 andalso
+       all_exited threads)
+    val _ = reset ()
+    val (fork, threads) = recording_fork (fn start => start)
+    val abandoning = as_owner (fn () =>
+      hhPool.with_pool {workers = 1, fork = fork} (fn pool =>
+        let val job = hhPool.submit pool (swallowing_job 0) in
+          monitor_until gates "job did not start"
+            (fn () => member (!started) 0);
+          ((hhPool.abandon job; "not interrupted")
+           handle Interrupt =>
+             (if member (!discarded) 0 then "interrupted, discarded"
+              else "interrupted, not discarded"))
+        end))
+    val _ = expect "a Ctrl-C during abandon is raised after the discard"
+      ((case abandoning of
+            Exn.Res "interrupted, discarded" => true
+          | _ => false) andalso member (!exited) 0 andalso
+       all_exited threads)
     (* Partial launch: the third thread cannot be started. *)
     val _ = reset ()
     fun failing_at n =
@@ -5145,10 +5209,10 @@ fun test_hhPool () =
           (fn () => length (!started) = 2)
         val c = hhPool.submit pool (job 2)
       in "launched" end)) handle Fail text => text)
-    val _ = await_exits "threads did not exit" threads
     val _ = expect "partial launch: the failure propagates after the started \
       \workers stopped"
-      (message = "no thread" andalso length (!exited) = 2 andalso
+      (message = "no thread" andalso all_exited threads andalso
+       length (!exited) = 2 andalso
        member (!discarded) 0 andalso member (!discarded) 1 andalso
        not (member (!discarded) 2) andalso null (!wrote))
     (* A thread that cannot be started for a waiting job fails that job. *)
@@ -5163,10 +5227,9 @@ fun test_hhPool () =
       in
         ((hhPool.await second; "no exception") handle Fail text => text)
       end)
-    val _ = await_exits "threads did not exit" threads
     val _ = expect "a failed hand-over fails the waiting job"
-      (message = "no thread" andalso member (!discarded) 1 andalso
-       not (member (!started) 1))
+      (message = "no thread" andalso all_exited threads andalso
+       member (!discarded) 1 andalso not (member (!started) 1))
     (* A closed pool admits nothing. *)
     val escaped = ref NONE
     val _ = hhPool.with_pool {workers = 1, fork = hhPool.default_fork}
@@ -5225,6 +5288,22 @@ fun test_schedule_pool () =
     fun no_temporaries root =
       List.all (not o String.isSuffix ".tmp") (root_files root)
     val plain = {fork = hhPool.default_fork, before_finish = fn _ => ()}
+    (* The test hooks are global (hhSchedule_Test) and read once when an
+       export starts; they are set for one export and restored after it.
+       Concurrent exports must therefore start under the hooks they want
+       and restore in the reverse order (see the concurrent test). *)
+    fun using {fork, before_finish} observer root options goal rankings
+        schedule =
+      Portable.bracket
+        (fn () => (!hhSchedule_Test.fork, !hhSchedule_Test.before_finish))
+        (fn (old_fork, old_before) =>
+           (hhSchedule_Test.fork := old_fork;
+            hhSchedule_Test.before_finish := old_before))
+        (fn _ =>
+           (hhSchedule_Test.fork := fork;
+            hhSchedule_Test.before_finish := before_finish;
+            hhSchedule.export_problems_observed observer root options goal
+              rankings schedule))
     (* One export at a given counter start: its files (relative paths with
        their bytes) and the number of names drawn, counted by one read of
        the counter after the run. *)
@@ -5233,16 +5312,31 @@ fun test_schedule_pool () =
         val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
         val _ = advance_to start
         val first = counter ()
-        val _ = quiet (fn () => hhSchedule.export_problems_using hooks silent
+        val _ = quiet (fn () => using hooks silent
           root (options_with 8 workers NONE NONE) pool_goal
           [("knn", pool_ranking)] schedule)
         val used = counter () - first - 1
         val files = tree root
       in
-        (remove_tree root; (files, used))
+        (remove_tree root; (files, used, first))
       end
     val power = power_above (counter () + 5000)
-    val starts = [power - 3000, power - 1500, power - 700, power + 10]
+    (* The counter only moves forward, so the runs of one start follow one
+       another: each begins where the previous one ended, used + 2 draws
+       later (the draws of the export and one for each of the two readings
+       of the counter).  The serial draw count, measured by a probe, places
+       a start so that run j (0 is the serial one) draws names on both
+       sides of a power of ten: it draws first+1 to first+used and the
+       power lies in between.  Powers are crossed once, so the runs that
+       follow are past it and must still give the serial bytes. *)
+    val (_, probe_used, _) = export plain 1 (power - 3000)
+    fun straddles boundary (first, used) =
+      first + 1 < boundary andalso boundary <= first + used
+    fun crossing_start power run =
+      power - run * (probe_used + 2) - probe_used div 2
+    val starts =
+      [(power - 3000, NONE), (crossing_start power 0, SOME 0),
+       (crossing_start (10 * power) 3, SOME 3)]
     (* Forced completion orders: the finishing work of index i waits for
        its gate; a controller thread opens the gates in the given order
        and waits for each job to finish before opening the next.  The
@@ -5273,33 +5367,48 @@ fun test_schedule_pool () =
       in
         (result, rev (!done_))
       end
-    fun check_start start =
+    fun check_start (start, crossing) =
       let
         val label = Int.toString start
-        val (serial_files, serial_used) = export plain 1 start
+        val boundary = if start > power then 10 * power else power
+        val crossed = ref ([] : bool list)
+        fun note (result as (_, used, first)) =
+          (crossed := straddles boundary (first, used) :: !crossed; result)
+        val (serial_files, serial_used, _) = note (export plain 1 start)
         val _ = expect ("pool: the baseline exports every file at start " ^
             label)
           (length serial_files = length schedule andalso serial_used > 0)
-        fun same what (files, used) =
+        fun same what (files, used, _) =
           expect ("pool: " ^ what ^ " gives the serial bytes and counter at \
             \start " ^ label)
             (files = serial_files andalso used = serial_used)
-        val _ = same "natural completion, 2 workers" (export plain 2 start)
-        val _ = same "natural completion, 4 workers" (export plain 4 start)
+        val _ = same "natural completion, 2 workers"
+          (note (export plain 2 start))
+        val _ = same "natural completion, 4 workers"
+          (note (export plain 4 start))
         fun ordered order workers =
           let val (result, seen) = forced order workers start in
             (expect ("pool: the gates opened in order " ^
-               String.concatWith "," (map Int.toString order))
+               String.concatWith "," (map Int.toString order) ^
+               " at start " ^ label)
                (seen = order);
              same ("forced order " ^ String.concatWith ","
                (map Int.toString order) ^ ", " ^ Int.toString workers ^
-               " workers") result)
+               " workers") (note result))
           end
+        val _ =
+          (ordered [5, 3, 2, 0] 4;
+           ordered [3, 5, 0, 2] 4;
+           ordered [2, 0, 3, 5] 4;
+           ordered [2, 0, 5, 3] 2)
+        val runs = rev (!crossed)
       in
-        ordered [5, 3, 2, 0] 4;
-        ordered [3, 5, 0, 2] 4;
-        ordered [2, 0, 3, 5] 4;
-        ordered [2, 0, 5, 3] 2
+        case crossing of
+            NONE => expect ("pool: no run straddles a power of ten at start "
+                              ^ label) (not (List.exists (fn x => x) runs))
+          | SOME run => expect ("pool: run " ^ Int.toString run ^ " draws \
+              \names on both sides of a power of ten at start " ^ label)
+              (List.nth (runs, run))
       end
     val _ = List.app check_start starts
     (* Cap: workers never exceed the generated jobs; one worker is inline
@@ -5323,23 +5432,35 @@ fun test_schedule_pool () =
     fun path_of root index =
       hhSchedule.problem_path root (#2 (List.nth (schedule, index)))
     fun present root index = OS.FileSys.access (path_of root index, [])
+    fun raw_export hooks observer workers root rankings_list =
+      using hooks observer root (options_with 8 workers NONE NONE) pool_goal
+        rankings_list schedule
     fun run_export hooks observer workers root rankings_list =
-      quiet (fn () => hhSchedule.export_problems_using hooks observer root
-        (options_with 8 workers NONE NONE) pool_goal rankings_list schedule)
-    fun inactive thread () = not (Thread.isActive thread)
-    fun poll message predicate =
+      quiet (fn () => raw_export hooks observer workers root rankings_list)
+    (* A fork wrapper that signals, through a monitor, when the function of
+       the n-th started thread has returned (the job's outcome is then
+       recorded and its slot freed). *)
+    fun signalling_fork () =
       let
-        val limit = Time.+ (Time.now (), Time.fromSeconds 30)
-        fun loop () =
-          if predicate () then ()
-          else if Time.>= (Time.now (), limit) then raise Fail message
-          else (OS.Process.sleep (Time.fromMilliseconds 5); loop ())
-      in loop () end
-    (* An early worker error, then a later prepare error.  Index 2's
-       directory is read-only, so its worker cannot write; index 3's
-       premise list is missing, so prepare fails there, and only after
-       the worker thread of index 2 has stopped.  The earliest failing
-       index (2) is raised, the prefix is published and nothing else. *)
+        val m = new_monitor ()
+        val returned = ref ([] : int list)
+        val count = ref 0
+        val (fork, threads) = recording_fork (fn start => fn f =>
+          let val n = monitor_do m (fn () => !count before count := !count + 1)
+          in
+            start (fn () =>
+              (f (); monitor_do m (fn () => returned := n :: !returned)))
+          end)
+        fun wait_for n =
+          monitor_until m ("worker " ^ Int.toString n ^ " did not return")
+            (fn () => List.exists (fn j => j = n) (!returned))
+      in (fork, threads, wait_for) end
+    (* An early worker error, then a later prepare error.  The worker of
+       index 2 fails (the hook raises, which works for any user, unlike a
+       read-only directory); index 3's premise list is missing, so prepare
+       fails there, and only after the worker thread of index 2 has
+       returned.  The earliest failing index (2) is raised, the prefix is
+       published and nothing else. *)
     val later_filter : hhProver.slice =
       {prover = Eprover, format = "tf0", type_enc = "mono_native",
        lam_trans = "combs", nfacts = 7, filter = "mepo", extra_opts = [],
@@ -5348,31 +5469,24 @@ fun test_schedule_pool () =
       List.take (schedule, 3) @ [(e, later_filter)] @ List.drop (schedule, 4)
     val _ = with_root (fn root =>
       let
-        val locked_dir = OS.Path.dir (path_of root 2)
-        val _ = hhConfig.ensure_dir locked_dir
-        val _ = Posix.FileSys.chmod (locked_dir, Posix.FileSys.S.flags
-          [Posix.FileSys.S.irusr, Posix.FileSys.S.ixusr])
-        val (fork, threads) = recording_fork (fn start => start)
+        val (fork, threads, wait_for) = signalling_fork ()
         val observer : hhSchedule.export_observer =
           {generated = fn slice =>
-             if #filter slice = "mepo" then
-               poll "the worker of index 2 did not stop"
-                 (inactive (List.nth (threads (), 1)))
-             else (),
+             if #filter slice = "mepo" then wait_for 1 else (),
            copied = fn _ => ()}
+        fun fail_two index =
+          if index = 2 then raise Fail "worker" else ()
         val outcome =
-          (quiet (fn () => hhSchedule.export_problems_using
-             {fork = fork, before_finish = fn _ => ()} observer root
+          (quiet (fn () => using
+             {fork = fork, before_finish = fail_two} observer root
              (options_with 8 4 NONE NONE) pool_goal
              [("knn", pool_ranking), ("mepo", bad_ranking)]
              failing_schedule); "ok")
-          handle IO.Io _ => "worker" | Feedback.HOL_ERR _ => "prepare"
-        val _ = Posix.FileSys.chmod (locked_dir,
-          Posix.FileSys.S.flags [Posix.FileSys.S.irwxu])
-        val _ = await_exits "threads did not exit" threads
+          handle Fail "worker" => "worker" | Feedback.HOL_ERR _ => "prepare"
       in
         expect "pool: an early worker error beats a later prepare error"
-          (outcome = "worker" andalso present root 0 andalso
+          (outcome = "worker" andalso all_exited threads andalso
+           present root 0 andalso
            present root 1 andalso not (present root 2) andalso
            not (present root 3) andalso not (present root 5) andalso
            no_temporaries root)
@@ -5382,16 +5496,16 @@ fun test_schedule_pool () =
       let
         val (fork, threads) = recording_fork (fn start => start)
         val outcome =
-          (quiet (fn () => hhSchedule.export_problems_using
+          (quiet (fn () => using
              {fork = fork, before_finish = fn _ => ()} silent root
              (options_with 8 4 NONE NONE) pool_goal
              [("knn", pool_ranking), ("mepo", bad_ranking)]
              failing_schedule); "ok")
           handle Feedback.HOL_ERR _ => "prepare"
-        val _ = await_exits "threads did not exit" threads
       in
         expect "pool: a prepare error publishes the prefix and stops workers"
-          (outcome = "prepare" andalso present root 0 andalso
+          (outcome = "prepare" andalso all_exited threads andalso
+           present root 0 andalso
            present root 1 andalso present root 2 andalso
            not (present root 3) andalso not (present root 5) andalso
            no_temporaries root)
@@ -5408,10 +5522,10 @@ fun test_schedule_pool () =
           (run_export {fork = fork, before_finish = fn _ => ()} silent 4 root
              [("knn", pool_ranking)]; "ok")
           handle Fail "no thread" => "no thread"
-        val _ = await_exits "threads did not exit" threads
       in
         expect "pool: a partial launch raises and publishes the prefix"
-          (outcome = "no thread" andalso present root 0 andalso
+          (outcome = "no thread" andalso all_exited threads andalso
+           present root 0 andalso
            present root 1 andalso present root 2 andalso
            not (present root 3) andalso not (present root 4) andalso
            not (present root 5) andalso no_temporaries root andalso
@@ -5428,16 +5542,16 @@ fun test_schedule_pool () =
           (monitor_do m (fn () => arrived := !arrived + 1);
            monitor_until m "gate never opened" (fn () => !released))
         fun release () = monitor_do m (fn () => released := true)
-        fun all_arrived () =
-          monitor_until m "jobs did not arrive"
-            (fn () => !arrived = generated_count)
-      in (gate, release, all_arrived) end
+        fun arrived_count n =
+          monitor_until m "jobs did not arrive" (fn () => !arrived = n)
+        fun all_arrived () = arrived_count generated_count
+      in (gate, release, all_arrived, arrived_count, fn () => !arrived) end
     (* An interrupt while the workers are busy: the caller is interrupted,
        the workers are interrupted, stopped and their files removed, and no
        file appears later. *)
     val _ = with_root (fn root =>
       let
-        val (gate, release, all_arrived) = gated ()
+        val (gate, release, all_arrived, _, _) = gated ()
         val (fork, threads) = recording_fork (fn start => start)
         val result = ref NONE
         val caller = Thread.fork (fn () =>
@@ -5446,30 +5560,75 @@ fun test_schedule_pool () =
               [("knn", pool_ranking)]) ()), [])
         val _ = all_arrived ()
         val _ = Thread.interrupt caller
-        val _ = await_exits "threads did not exit"
-          (fn () => caller :: threads ())
+        val _ = await_exits "caller did not exit" (fn () => [caller])
         val _ = release ()
       in
         expect "pool: an interrupt propagates, stops workers, leaves no file"
           ((case !result of SOME (Exn.Exn Interrupt) => true | _ => false)
            andalso length (threads ()) = generated_count andalso
-           null (root_files root))
+           all_exited threads andalso null (root_files root))
+      end)
+    (* Cancelling a pool with a waiting job starts no thread for it: two
+       workers, three generated jobs admitted (two run at their gates, one
+       waits), the caller is interrupted, and the items are abandoned newest
+       first, so no finalizer hands a slot to the waiting item. *)
+    val _ = with_root (fn root =>
+      let
+        val (gate, release, _, arrived_count, arrived) = gated ()
+        val (fork, threads) = recording_fork (fn start => start)
+        val prepared = new_monitor ()
+        val last_prepared = ref false
+        (* The window (twice the workers) holds five items, so the caller
+           blocks awaiting the first before it prepares the sixth: the
+           fifth, the Vampire one with four facts, is the last prepared. *)
+        val observer : hhSchedule.export_observer =
+          {generated = fn slice =>
+             if #prover slice = Vampire andalso #nfacts slice = 4 then monitor_do prepared (fn () => last_prepared := true)
+             else (),
+           copied = fn _ => ()}
+        val result = ref NONE
+        val caller = Thread.fork (fn () =>
+          result := SOME (Exn.capture (fn () =>
+            run_export {fork = fork, before_finish = gate} observer 2 root
+              [("knn", pool_ranking)]) ()), [])
+        val _ = arrived_count 2
+        val _ = monitor_until prepared "the fifth item was not prepared"
+          (fn () => !last_prepared)
+        val _ = Thread.interrupt caller
+        val _ = await_exits "caller did not exit" (fn () => [caller])
+        val _ = release ()
+      in
+        expect "pool: cancelling starts no thread for a waiting job"
+          ((case !result of SOME (Exn.Exn Interrupt) => true | _ => false)
+           andalso length (threads ()) = 2 andalso arrived () = 2 andalso
+           all_exited threads andalso null (root_files root))
       end)
     (* Two concurrent invocations: the second runs completely while the
        workers of the first are busy. *)
     val _ = with_root (fn first_root => with_root (fn second_root =>
       let
-        val (gate, release, all_arrived) = gated ()
+        val (gate, release, all_arrived, _, _) = gated ()
         val first = ref NONE
-        val caller = Thread.fork (fn () =>
-          first := SOME (Exn.capture (fn () =>
-            run_export {fork = hhPool.default_fork, before_finish = gate}
-              silent 4 first_root [("knn", pool_ranking)]) ()), [])
-        val _ = all_arrived ()
-        val second_outcome = Exn.capture (fn () =>
-          run_export plain silent 3 second_root [("knn", pool_ranking)]) ()
-        val _ = release ()
-        val _ = await_exits "caller did not exit" (fn () => [caller])
+        val second_outcome = ref (Exn.Res ())
+        (* Both invocations run under one redirection of the output (the
+           redirection is a process-global stack, so two threads must not
+           push and pop their own), and the second starts after the first
+           has read its hooks and finishes, restoring them, before the first
+           is released and restores its own. *)
+        val _ = quiet (fn () =>
+          let
+            val caller = Thread.fork (fn () =>
+              first := SOME (Exn.capture (fn () =>
+                raw_export {fork = hhPool.default_fork, before_finish = gate}
+                  silent 4 first_root [("knn", pool_ranking)]) ()), [])
+            val _ = all_arrived ()
+            val _ = second_outcome := Exn.capture (fn () =>
+              raw_export plain silent 3 second_root
+                [("knn", pool_ranking)]) ()
+            val _ = release ()
+          in
+            await_exits "caller did not exit" (fn () => [caller])
+          end)
         fun complete root =
           List.all (fn index => present root index) [0, 1, 2, 3, 4, 5] andalso
           no_temporaries root
@@ -5478,7 +5637,7 @@ fun test_schedule_pool () =
             jobs
       in
         expect "pool: two concurrent invocations both complete"
-          ((case (!first, second_outcome) of
+          ((case (!first, !second_outcome) of
                 (SOME (Exn.Res ()), Exn.Res ()) => true
               | _ => false) andalso complete first_root andalso
            complete second_root andalso
@@ -5493,7 +5652,7 @@ fun test_schedule_pool () =
         val outcome = (hhSchedule.with_problem_dir parent
           (options_with 8 workers debug NONE) (fn root =>
             (seen := root;
-             quiet (fn () => hhSchedule.export_problems_using plain silent
+             quiet (fn () => using plain silent
                root (options_with 8 workers debug NONE) pool_goal
                rankings_list schedule))); "ok")
           handle Feedback.HOL_ERR _ => "prepare"
@@ -5625,7 +5784,7 @@ fun test_hhEval_integration () =
             {cond_id = "runtime-options", regime = hhEval.Bushy,
              selector = hhEval.Deps,
              engine = hhEval.Sched {provers = [Eprover], slices = 1,
-               cores = 1, max_proofs = 1},
+               cores = 1, max_proofs = 1, export_workers = 1},
              timeout = 1, reconstruct = true}
           fun run expname conditions = with_hh_options
             [("filter", "mepo"), ("format", "tf0"),

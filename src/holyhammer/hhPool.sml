@@ -16,6 +16,7 @@ type pool =
   {lock : Mutex.mutex, changed : ConditionVar.conditionVar, limit : int,
    fork : (unit -> unit) -> Thread.thread,
    running : int ref, max_running : int ref, next : int ref,
+   threads : Thread.thread list ref,
    waiting : (int * (unit -> unit)) list ref,
    abandoners : (unit -> unit) list ref, closed : bool ref}
 
@@ -30,12 +31,15 @@ fun default_fork f =
     [Thread.InterruptState Thread.InterruptDefer,
      Thread.EnableBroadcastInterrupt false])
 
-(* Interrupts are deferred while the mutex is held, so no update of the
-   bookkeeping is cut short.  A wait is the only place where a pending
-   interrupt can be taken, and only if interruptible: it then arrives with
-   the mutex held, which is released before the exception propagates. *)
+(* Interrupts are deferred (not refused: a broadcast Ctrl-C is held, not
+   dropped) while the mutex is held, so no update of the bookkeeping is cut
+   short, and one that arrived is raised once the mutex has been released.
+   A wait is the only place where a pending interrupt can be taken, and only
+   if interruptible: it then arrives with the mutex held, which is released
+   before the exception propagates.  An uninterruptible wait runs to
+   completion and answers an interrupt afterwards. *)
 fun locked_wait ({lock, changed, ...} : pool) interruptible check =
-  Thread_Attributes.uninterruptible (fn restore => fn () =>
+  Thread_Attributes.uninterruptible_defer (fn restore => fn () =>
     let
       val _ = Mutex.lock lock
       fun wait () =
@@ -69,6 +73,7 @@ fun start (pool as {running, max_running, fork, ...} : pool) state run =
     val thread = fork (fn () => worker pool state run)
   in
     state := Running thread;
+    #threads pool := thread :: !(#threads pool);
     running := !running + 1;
     max_running := Int.max (!max_running, !running)
   end
@@ -118,8 +123,13 @@ fun release_state ({pool, id, state, cancelled, ...} : 'a job) =
     | Taken => SOME ()
 
 fun abandon (job as {pool, discard, ...} : 'a job) =
-  (ignore (locked_wait pool false (fn () => release_state job));
-   discard () handle _ => ())
+  let
+    val waited = Exn.capture (fn () =>
+      locked_wait pool false (fn () => release_state job)) ()
+    val _ = discard () handle _ => ()
+  in
+    ignore (Exn.release waited)
+  end
 
 fun submit (pool as {next, waiting, running, limit, closed, abandoners, ...}
               : pool) {run, discard} =
@@ -154,30 +164,36 @@ fun await (job as {pool, state, discard, ...} : 'a job) =
       | Exn.Exn exn => ((discard () handle _ => ()); raise exn)
   end
 
-fun stats ({running, waiting, max_running, ...} : pool) =
-  {running = !running, waiting = length (!waiting),
-   max_running = !max_running}
+fun stats pool =
+  locked pool (fn () =>
+    {running = !(#running pool), waiting = length (!(#waiting pool)),
+     max_running = !(#max_running pool)})
 
-(* No new job starts, every admitted job is abandoned (so the workers have
-   stopped and their leftovers are discarded) before the pool is dropped. *)
-fun close (pool as {closed, abandoners, ...} : pool) =
-  let
-    val jobs = locked pool (fn () => (closed := true; !abandoners))
-  in
-    List.app (fn abandon_job => abandon_job ()) jobs
-  end
+(* No new job starts, every admitted job is abandoned (so every job has
+   finished and its leftovers are discarded) and then every thread that was
+   started is joined (polled until it is no longer active, with interrupts
+   deferred) before the pool is dropped.  An interrupt that arrives meanwhile
+   is raised only after all of that; a job's own exception is not. *)
+fun close (pool as {closed, abandoners, threads, ...} : pool) =
+  Thread_Attributes.uninterruptible_defer (fn _ => fn () =>
+    let
+      val jobs = locked pool (fn () => (closed := true; !abandoners))
+      val results = map (fn abandon_job => Exn.capture abandon_job ()) jobs
+      val started = locked pool (fn () => !threads)
+      val joined = Exn.capture (fn () =>
+        Multithreading.join_threads (fn g => fn y => SOME (g y)) (fn () => ())
+          started) ()
+    in
+      app (ignore o Exn.release) results; Exn.release joined
+    end) ()
 
 fun with_pool {workers, fork} f =
-  let
-    val pool : pool =
-      {lock = Mutex.mutex (), changed = ConditionVar.conditionVar (),
-       limit = Int.max (1, workers), fork = fork, running = ref 0,
-       max_running = ref 0, next = ref 0, waiting = ref [],
-       abandoners = ref [], closed = ref false}
-    val outcome = Exn.capture f pool
-    val _ = Thread_Attributes.uninterruptible (fn _ => fn () => close pool) ()
-  in
-    Exn.release outcome
-  end
+  Portable.bracket
+    (fn () =>
+       {lock = Mutex.mutex (), changed = ConditionVar.conditionVar (),
+        limit = Int.max (1, workers), fork = fork, running = ref 0,
+        max_running = ref 0, next = ref 0, threads = ref [], waiting = ref [],
+        abandoners = ref [], closed = ref false} : pool)
+    close f
 
 end

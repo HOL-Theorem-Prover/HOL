@@ -66,21 +66,17 @@ sig
   type export_observer =
     {generated : hhProver.slice -> unit,
      copied : hhProver.slice * int -> unit}
-  (* export_problems_using {fork} is export_problems_observed with the
-     function that starts the worker threads of the pool (the default is
-     hhPool.default_fork) and a function that a worker applies to the index
-     of its item before it finishes it (the default does nothing; a test
-     hook).  The number of workers is min (export_workers,
-     cores, generated problems); one means inline.  prepare, which draws
-     fresh names and touches HOL state, stays on the calling thread in
-     schedule order, workers only format and write private temporaries, and
-     the files are published in schedule order.  A failure or an interrupt
-     stops and waits for the workers and removes their temporaries before
-     it propagates. *)
-  val export_problems_using :
-    {fork : hhPool.fork, before_finish : int -> unit} -> export_observer ->
-    string -> hhConfig.hh_options -> goal -> (string * string list) list ->
-    (hhProver.prover_config * hhProver.slice) list -> unit
+  (* export_problems_observed exports the problems of the schedule, with
+     the observer told of each one.  The number of workers that finish the
+     generated problems (format and write a private temporary) is min
+     (export_workers, cores, generated problems); one means inline.
+     prepare, which draws fresh names and touches HOL state, stays on the
+     calling thread in schedule order, and the files are published in
+     schedule order.  A failure or an interrupt stops and waits for the
+     workers and removes their temporaries before it propagates.  A worker
+     thread that cannot be started fails the item it was for like any
+     other failure of that item (there is no inline fallback).  Test hooks
+     are in hhSchedule_Test (hhSchedule.sml). *)
   val export_problems_observed : export_observer -> string ->
     hhConfig.hh_options -> goal -> (string * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit

@@ -26,7 +26,7 @@ datatype selector =
 datatype engine =
     Prover of hhProver.prover
   | Sched of {provers : hhProver.prover list, slices : int,
-              cores : int, max_proofs : int}
+              cores : int, max_proofs : int, export_workers : int}
 
 type condition =
   {cond_id : string, regime : regime, selector : selector,
@@ -229,7 +229,7 @@ fun validate_condition (condition : condition) =
         "invalid hhEval Sched condition: mesh selectors require Prover"
     | (_, Sched _, false) => raise Fail
         "invalid hhEval Sched condition: reconstruct must be true"
-    | (_, Sched {provers, slices, cores, max_proofs}, _) =>
+    | (_, Sched {provers, slices, cores, max_proofs, export_workers}, _) =>
         if null provers then raise Fail
           "invalid hhEval Sched condition: provers must not be empty"
         else if slices < 1 then raise Fail
@@ -238,6 +238,8 @@ fun validate_condition (condition : condition) =
           "invalid hhEval Sched condition: cores must be positive"
         else if max_proofs < 1 then raise Fail
           "invalid hhEval Sched condition: max_proofs must be positive"
+        else if export_workers < 0 then raise Fail
+          "invalid hhEval Sched condition: export_workers must not be negative"
         else ()
     | _ => ()
 
@@ -245,10 +247,11 @@ fun json_int number = JSON.INT (IntInf.fromInt number)
 
 fun json_prover_name prover = JSON.STRING (hhConfig.prover_name prover)
 
-fun engine_param_fields {provers, slices, cores, max_proofs} =
+fun engine_param_fields {provers, slices, cores, max_proofs, export_workers} =
   [("provers", JSON.ARRAY (map json_prover_name provers)),
    ("slices", json_int slices), ("cores", json_int cores),
-   ("max_proofs", json_int max_proofs)]
+   ("max_proofs", json_int max_proofs),
+   ("export_workers", json_int export_workers)]
 
 fun json_condition condition =
   let
@@ -305,7 +308,11 @@ fun prover_field name value = prover_value (field name value)
 fun parse_engine_params value =
   {provers = JSONUtil.arrayMap prover_value (field "provers" value),
    slices = int_field "slices" value, cores = int_field "cores" value,
-   max_proofs = int_field "max_proofs" value}
+   max_proofs = int_field "max_proofs" value,
+   export_workers =
+     (case optional_field "export_workers" value of
+          NONE => 1
+        | SOME workers => JSONUtil.asInt workers)}
 
 fun parse_engine value =
   case optional_field "engine" value of
@@ -1065,11 +1072,12 @@ fun condition_json ({name, cells, metrics, ho, non_ho, seen, fresh}
     val first = hd cells
     val schedule_fields =
       case #engine first of
-          SOME (Sched {provers, slices, cores, max_proofs}) =>
+          SOME (Sched {provers, slices, cores, max_proofs, export_workers}) =>
             [("engine", JSON.STRING "sched"),
              ("provers", JSON.ARRAY (map json_prover_name provers)),
              ("requested_slices", json_int slices),
-             ("cores", json_int cores), ("max_proofs", json_int max_proofs)]
+             ("cores", json_int cores), ("max_proofs", json_int max_proofs),
+             ("export_workers", json_int export_workers)]
         | _ => []
   in
     JSON.OBJECT
@@ -1470,13 +1478,15 @@ fun schedule_stop_name hhSchedule.MaxProofs = "MaxProofs"
   | schedule_stop_name hhSchedule.Exhausted = "Exhausted"
   | schedule_stop_name hhSchedule.Interrupted = "Interrupted"
 
-fun schedule_options condition {provers, slices, cores, max_proofs} =
+fun schedule_options condition
+    {provers, slices, cores, max_proofs, export_workers} =
   hhConfig.snapshot_with
     [("timeout", Int.toString (#timeout condition)),
      ("max_proofs", Int.toString max_proofs),
      ("provers",
       String.concatWith " " (map hhConfig.prover_name provers)),
      ("slices", Int.toString slices), ("cores", Int.toString cores),
+     ("export_workers", Int.toString export_workers),
      ("cache", "true"), ("debug_dir", "")]
 
 fun max_schedule_facts schedule =
@@ -1911,7 +1921,7 @@ fun smoke_condition timeout SmokeSched : condition =
       {cond_id = "smoke-sched", regime = Bushy, selector = Deps,
        engine = Sched
          {provers = [Eprover, Vampire, Zipperposition], slices = 3,
-          cores = 3, max_proofs = 1},
+          cores = 3, max_proofs = 1, export_workers = 1},
        timeout = timeout, reconstruct = true}
   | smoke_condition timeout SmokeMepo =
       {cond_id = "smoke-mepo", regime = Chainy, selector = Mepo 96,
@@ -2157,7 +2167,8 @@ fun run_smoke {expdir, timeout} =
         (sched_name, sched_thm) sched_dependencies sched_condition
         {provers = #provers sched_parameters,
          slices = #slices sched_parameters, cores = #cores sched_parameters,
-         max_proofs = #slices sched_parameters + 1}
+         max_proofs = #slices sched_parameters + 1,
+         export_workers = #export_workers sched_parameters}
       val _ =
         if #stop primed = SOME "Exhausted" andalso
            length (#slices primed) = #slices sched_parameters then ()
