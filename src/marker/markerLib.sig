@@ -140,11 +140,12 @@ sig
       {suspension_name:string, label_name:string} -> proofManagerLib.proofs
       (* provides id_tacm for the tactic modifier value *)
   val finalise_suspended_thm : DB.thm_src_location -> string -> thm
-  (* set_finaliser name f: finalising name, a suspended theorem of the
-     current theory, passes the assembled theorem to f in place of saving
-     it, and returns what f returns.  The theory cannot be exported while
-     one of its finalisers is waiting. *)
-  val set_finaliser : string -> (thm -> thm) -> unit
+  (* set_finaliser name (SOME f) reserves name in the current theory:
+     Resume and Finalise of name look only there, and finalising the
+     suspended theorem name passes the assembled theorem to f in place of
+     saving it, and returns what f returns.  NONE releases name.  The
+     theory cannot be exported while a name is reserved. *)
+  val set_finaliser : string -> (thm -> thm) option -> unit
 
   (* Look up a suspended parent theorem or a resumption proof in the
      suspension AncestryData stores (current theory merged with

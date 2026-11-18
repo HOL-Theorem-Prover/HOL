@@ -957,7 +957,7 @@ fun pending_definition name =
     Option.map #2 (List.find (fn (n, _) => n = name)
                      (Context.Data.get pending_slot (Context.snapshot ())))
 
-fun set_pending name p =
+fun set_pending0 name p =
     let val entry = case p of NONE => [] | SOME p => [(name, p)]
     in
       Context.Data.modify pending_slot
@@ -967,13 +967,18 @@ fun set_pending name p =
 val _ = Theory.register_hook
   ("TotalDefn.pending_definitions",
    fn TheoryDelta.NewTheory _ => Context.Data.write pending_slot []
-    | TheoryDelta.ExportTheory _ =>
-      (case Context.Data.get pending_slot (Context.snapshot ()) of
-           [] => ()
-         | ps => raise ERR "export_theory"
-                   ("The termination of these definitions is not proved: " ^
-                    String.concatWith ", " (map #1 ps)))
     | _ => ())
+
+(* A pending definition reserves its name with markerLib, which keeps
+   Resume and Finalise of it in the current theory and the theory from
+   being exported *)
+fun set_pending name p =
+    (set_pending0 name p;
+     markerLib.set_finaliser name
+       (Option.map (fn _ => fn _ =>
+                       raise ERR "Finalise" ("The termination of " ^
+                                             Lib.quote name ^
+                                             " is not proved")) p))
 
 fun is_suspended name =
     case markerLib.lookup_suspension name of
@@ -997,8 +1002,10 @@ datatype prepared = Made of thm * thm option
 
 fun delete_consts cs =
     if deleting_support () then
-      List.app (fn c => Theory.delete_const (fst (dest_const c))
-                        handle HOL_ERR _ => ()) cs
+      List.app (fn c => if uptodate_term c then
+                          Theory.delete_const (fst (dest_const c))
+                          handle HOL_ERR _ => ()
+                        else ()) cs
     else ()
 
 (* Makes the definition, in scope; post runs after it is stored, outside *)
@@ -1060,8 +1067,8 @@ fun complete fname name th =
           if boolLib.has_suspended_subgoals th then
             (boolLib.save_thm_attrs loc
                ({thmname = name, attrs = [], reserved = [], unknown = []}, th);
-             markerLib.set_finaliser name finalise;
-             set_pending name NONE;
+             set_pending0 name NONE;
+             markerLib.set_finaliser name (SOME finalise);
              (list_conj_gen (CONJUNCT1 th), NONE))
           else
             finish th before set_pending name NONE

@@ -1243,6 +1243,51 @@ fun slab_owner_lookup slab =
 
 val _ = boolLib.slab_owner_lookup := slab_owner_lookup
 
+(* Finalisers of the current theory's names, such as a definition still
+   to be completed: what finalising the suspended theorem of that name
+   does in place of saving it.  Resume and Finalise of such a name look
+   only in the current theory. *)
+val finaliser_slot : (string * (thm -> thm)) list Context.Data.slot =
+    Context.Data.new {name = "markerLib.finalisers", empty = [],
+                      pp = String.concatWith ", " o map #1}
+
+fun finalisers () = Context.Data.get finaliser_slot (Context.snapshot ())
+
+fun set_finaliser name f =
+    Context.Data.modify finaliser_slot
+      (fn fs => (case f of NONE => [] | SOME f => [(name, f)]) @
+                List.filter (fn (n, _) => n <> name) fs)
+
+fun has_finaliser name = List.exists (fn (n, _) => n = name) (finalisers ())
+
+(* A theory is exported only once its finalisers have run; a new theory
+   drops those of the previous one *)
+val _ = Theory.register_hook
+  ("markerLib.finalisers",
+   fn TheoryDelta.ExportTheory _ =>
+        (case finalisers () of
+             [] => ()
+           | fs => raise ERR "export_theory"
+                     ("These must be completed and finalised in their own \
+                      \theory: " ^
+                      String.concatWith ", " (map #1 fs)))
+    | TheoryDelta.NewTheory {newseg, ...} =>
+        (Context.Data.write finaliser_slot [];
+         (* A restarted theory starts again without its suspensions *)
+         update_susp_global
+           (fn tab => KNametab.fold
+                        (fn (k, th) => fn acc =>
+                            if #Thy k = newseg then acc
+                            else KNametab.update (k, th) acc)
+                        tab empty_susp_table);
+         update_res_global
+           (fn dict => ResTab.fold
+                         (fn (k as (t, _, _), v) => fn acc =>
+                             if t = newseg then acc
+                             else ResTab.update (k, v) acc)
+                         dict empty_res_dict))
+    | _ => ())
+
 (* ----------------------------------------------------------------------
     Finding the parent theorem for a Resume / Finalise.
 
@@ -1271,13 +1316,15 @@ fun find_parent nm : (parent_source * string * thm) option =
       fun search [] = NONE
         | search (t::rest) =
           case in_db t of NONE => search rest | found => found
+      val own = has_finaliser nm
     in
-      case lookup_suspension nm of
+      case if own then lookup_suspension_qualified (cur, nm)
+           else lookup_suspension nm of
           SOME (thy, th) =>
           (case if thy = cur then NONE else in_db cur of
                NONE => SOME (FromStore, thy, th)
              | found => found)
-        | NONE => search (cur :: Theory.ancestry cur)
+        | NONE => search (if own then [cur] else cur :: Theory.ancestry cur)
     end
 
 (* ----------------------------------------------------------------------
@@ -1501,46 +1548,6 @@ fun assemble_finalised parent_thy parent_nm parent_th =
       aux parent_th susp_hyps
     end
 
-(* Finalisers of the current theory's suspended theorems, by name: what
-   finalising such a theorem does in place of saving it *)
-val finaliser_slot : (string * (thm -> thm)) list Context.Data.slot =
-    Context.Data.new {name = "markerLib.finalisers", empty = [],
-                      pp = String.concatWith ", " o map #1}
-
-fun finalisers () = Context.Data.get finaliser_slot (Context.snapshot ())
-
-fun set_finaliser name f =
-    Context.Data.modify finaliser_slot
-      (fn fs => (name, f) :: List.filter (fn (n, _) => n <> name) fs)
-
-(* A theory is exported only once its finalisers have run; a new theory
-   drops those of the previous one *)
-val _ = Theory.register_hook
-  ("markerLib.finalisers",
-   fn TheoryDelta.ExportTheory _ =>
-        (case finalisers () of
-             [] => ()
-           | fs => raise ERR "export_theory"
-                     ("These suspended theorems must be finalised in \
-                      \their own theory: " ^
-                      String.concatWith ", " (map #1 fs)))
-    | TheoryDelta.NewTheory {newseg, ...} =>
-        (Context.Data.write finaliser_slot [];
-         (* A restarted theory starts again without its suspensions *)
-         update_susp_global
-           (fn tab => KNametab.fold
-                        (fn (k, th) => fn acc =>
-                            if #Thy k = newseg then acc
-                            else KNametab.update (k, th) acc)
-                        tab empty_susp_table);
-         update_res_global
-           (fn dict => ResTab.fold
-                         (fn (k as (t, _, _), v) => fn acc =>
-                             if t = newseg then acc
-                             else ResTab.update (k, v) acc)
-                         dict empty_res_dict))
-    | _ => ())
-
 fun finalise_suspended_thm loc nm0 =
     let
       val attrblock = ThmAttribute.extract_attributes nm0
@@ -1587,9 +1594,7 @@ fun finalise_suspended_thm loc nm0 =
                       (RemoveSuspended {Thy = parent_thy, Name = name})
             (* Also clean up the resumption proofs for this theorem. *)
             val _ = record_resumption_delta (RemoveResumptions (parent_thy, name))
-            val _ = if Option.isSome own then
-                      Context.Data.modify finaliser_slot
-                        (List.filter (fn (n, _) => n <> name))
+            val _ = if Option.isSome own then set_finaliser name NONE
                     else ()
           in
             saved

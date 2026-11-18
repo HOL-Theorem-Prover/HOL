@@ -530,21 +530,20 @@ val _ = tprint "a theory is not exported with a definition pending"
 val _ = discard_to "staged_export"
 val export_goal = valOf (prepare_qDefine "exp_def"
   ‘exp_fun n = if n = 0 then 0n else exp_fun (n - 1) + 1’)
-val _ = assert (rejects_with "not proved: exp_def" export_theory)
+val _ = assert (rejects_with "own theory: exp_def" export_theory)
 val _ = complete_definition "exp_def" (TAC_PROOF (export_goal, count_goal))
 val _ = located_qDefine DB.Unknown "expsusp_def"
   ‘expsusp n = if n = 0 then 0n else expsusp (n - 1) + 1’
   (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
   (Context.snapshot ())
-val _ = assert (rejects_with "finalised in their own theory: expsusp_def"
-                  export_theory)
+val _ = assert (rejects_with "own theory: expsusp_def" export_theory)
 val _ = save_thm ("occ_steps", TRUTH)
 val occ_goal = valOf (prepare_qDefine "occ_def[induction=occ_steps]"
   ‘occ n = if n = 0 then 0n else occ (n - 1) + 1’)
-val _ = assert ((complete_definition "occ_def"
-                   (TAC_PROOF (occ_goal, count_goal)); false)
+val occ_th = TAC_PROOF (occ_goal, count_goal)
+val _ = assert ((complete_definition "occ_def" occ_th; false)
                 handle _ => true)
-val _ = assert (rejects_with "not proved: occ_def" export_theory)
+val _ = assert (rejects_with "occ_def" export_theory)
 val _ = OK ()
 
 val _ = tprint "a discarded or restarted theory leaves nothing pending"
