@@ -74,7 +74,7 @@ SRCTESTDIRS = \
   finite_maps/theory_tests
 
 ifdef POLY
-SRCTESTDIRS += n-bit/interactive_tests
+SRCTESTDIRS += n-bit/interactive_tests n-bit/threaded_tests
 EXDIRS += RL_Environment
 
 ifneq ($(KERNELID),otknl)

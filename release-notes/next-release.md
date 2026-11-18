@@ -189,7 +189,7 @@ Bugs fixed
 -   `Holmake -r` now overrides `--no_prereqs`, as the documentation has always said it does.
 
 -   `BBLAST_TAC` and `BBLAST_PROVE` called from several threads at once could leave a provable goal unsolved when the threads first met the same word size.
-    They now give the same results as on a single thread.
+    The cache of index theorems for each word size is now updated safely across threads.
 
 -   `Holmake`'s progress display no longer assumes that anything it can call a terminal will act on the carriage returns the display is made of.
     Emacs runs an `M-x compile` subprocess on a pty, so `Holmake` took its output for a terminal's and animated the running jobs in place; because a compilation buffer never moves back over a line it has printed, a whole build's worth of status updates piled up into one enormous line, which Emacs then hid behind a clickable `[...]` button -- taking every per-target completion line with it.
