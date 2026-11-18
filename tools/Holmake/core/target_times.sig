@@ -2,10 +2,15 @@ signature target_times =
 sig
 
   (* Cost data for the parallel scheduler, in child CPU seconds --
-     what `ProcessMultiplexor' measures for each job it runs, and hands
-     to that job's `update'.  Holmake records every job it runs,
-     theories included; `Theory.sml' still reports and logs its own
-     proof times, but nothing here reads them.
+     user plus system time, as `ProcessMultiplexor' measures it for
+     each job it runs and hands to that job's `update'.  System time is
+     counted because a HOL child spends a real share of its cost
+     mapping its heap and faulting pages in, and a target that only
+     copies files spends almost all of it there.
+
+     Holmake records every job it runs, theories included;
+     `Theory.sml' still reports and logs its own proof times (also
+     user plus system), but nothing here reads them.
 
      Two sources, presented as one map:
 

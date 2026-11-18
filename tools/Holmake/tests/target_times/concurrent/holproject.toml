@@ -1,0 +1,4 @@
+name = "target_times_concurrent"
+
+# A project root of its own, so the cache this test writes is
+# concurrent/.hol/build-logs/target-times and not HOLDIR's.

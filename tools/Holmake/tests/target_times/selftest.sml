@@ -218,8 +218,98 @@ val _ =
                     Real.toString one ^ ": a command line went unrecorded")
 
 (* ------------------------------------------------------------------
+   A job's cost is its user time *and* its system time.  `times'
+   reports the two separately and only `cutime' used to be read, which
+   hid everything a child spends in the kernel -- heap mapping, page
+   faults, I/O -- and made a target that mostly does I/O look free.
+
+   systime/ runs one syscall-bound recipe that measures itself with the
+   shell's own `times' builtin, so Holmake's figure is compared against
+   another measurement of the same work rather than against a
+   wall-clock number.  The recipe's sed and awk run after it takes that
+   reading, so self-measured sits a little *under* what Holmake sees;
+   the lower bound allows for it.  Counting user time alone put the
+   ratio at about 0.3.
+   ------------------------------------------------------------------ *)
+val stdir = cwd ++ "systime"
+val sthol = stdir ++ ".hol"
+val stcache = sthol ++ "build-logs" ++ "target-times"
+
+val _ = tprint "a job's system time is counted"
+val _ = OS.Process.system ("rm -rf " ^ sthol)
+val stres = Systeml.systeml [Holmake, "-C", stdir, "all"]
+val _ =
+    if not (OS.Process.isSuccess stres) then die "systime build failed"
+    else
+      let
+        val self = Real.fromString (slurp (stdir ++ "self-measured"))
+      in
+        case (value_of stcache "syswork", self) of
+            (NONE, _) => die "no cost recorded for syswork"
+          | (_, NONE) => die "recipe did not report its own cost"
+          | (SOME recorded, SOME measured) =>
+            (* Too fast to see is a meaningless ratio, not a false one. *)
+            if measured < 0.1 then
+              die ("syswork too cheap to compare: " ^ Real.toString measured)
+            else if recorded >= 0.8 * measured andalso
+                    recorded <= 2.0 * measured
+            then OK()
+            else die ("recorded " ^ Real.toString recorded ^
+                      " against a self-measured " ^ Real.toString measured ^
+                      ": system time is being dropped")
+      end
+
+(* ------------------------------------------------------------------
+   Concurrent jobs are billed separately.  `times' counts waited-for
+   children only, so a child still running contributes nothing to it,
+   and reaping exactly one child and differencing across that `waitpid'
+   bills that child alone.  Nothing in the types keeps reaping and
+   billing in step: batch the reaps, or reap without re-stamping the
+   watermark, and whichever job exits next silently picks up its
+   neighbours' work.
+
+   concurrent/ runs 1:2:4:8 rounds of the same work under `-j 4'.  The
+   assertion is on the spread between the recorded costs, never on a
+   wall-clock figure, and the bands are wide because a loaded machine
+   inflates a long job more than a short one.  Billing the neighbours'
+   work too would pull the cheap jobs up towards the dear ones and
+   collapse that spread.
+   ------------------------------------------------------------------ *)
+val cdir = cwd ++ "concurrent"
+val chol = cdir ++ ".hol"
+val ccache = chol ++ "build-logs" ++ "target-times"
+
+val _ = tprint "concurrent jobs are costed separately"
+val _ = OS.Process.system ("rm -rf " ^ chol)
+val cres = Systeml.systeml [Holmake, "-C", cdir, "-j", "4", "all"]
+val _ =
+    if not (OS.Process.isSuccess cres) then die "concurrent build failed"
+    else
+      case (value_of ccache "one", value_of ccache "two",
+            value_of ccache "four", value_of ccache "eight") of
+          (SOME one, SOME two, SOME four, SOME eight) =>
+          if one < 0.05 then
+            die ("one too cheap to compare: " ^ Real.toString one)
+          else
+            let
+              fun within (lo, hi) r = lo <= r andalso r <= hi
+              val rs = [(two / one, (1.2, 4.0), "two"),
+                        (four / one, (2.0, 8.0), "four"),
+                        (eight / one, (4.0, 16.0), "eight")]
+            in
+              case List.find (fn (r, band, _) => not (within band r)) rs of
+                  NONE => OK()
+                | SOME (r, _, nm) =>
+                  die (nm ^ "/one = " ^ Real.toString r ^
+                       ": jobs are not being costed separately")
+            end
+        | _ => die "a target went uncosted"
+
+(* ------------------------------------------------------------------
    Cleanup
    ------------------------------------------------------------------ *)
 val _ = OS.Process.system ("rm -rf " ^ fresh)
 val _ = OS.Process.system ("rm -rf " ^ mlhol)
+val _ = OS.Process.system ("rm -rf " ^ sthol)
+val _ = OS.Process.system ("rm -rf " ^ chol)
 val _ = OS.FileSys.remove seedpath
