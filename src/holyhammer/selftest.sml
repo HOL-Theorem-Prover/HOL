@@ -1056,7 +1056,6 @@ fun test_hhMonomorph () =
     val xa = Term.mk_var ("x", alpha)
     val self_eq = mk_eq (xa, xa)
     val empty_pool = via_pool goal []
-    val retained = via_pool goal [("none", schematic_none)]
     val joined_pool = via_pool goal [("ground", ground_none),
       ("list", schematic), ("none", schematic_none)]
     fun witness ty = let val f = Term.mk_var ("f", ty) in mk_eq (f, f) end
@@ -1064,13 +1063,13 @@ fun test_hhMonomorph () =
     fun extended goal extras premises =
       same_output
         (hhMonomorph.monomorph_pool caps
-          (hhMonomorph.extend_pool (hhMonomorph.mk_pool goal) goal extras)
+          (hhMonomorph.extend_pool (hhMonomorph.mk_pool goal) extras)
           premises)
         (hhMonomorph.monomorph caps (list_mk_conj (goal :: extras))
           premises)
     val ext_facts = [("eq", self_eq)]
     fun ext_count goal extras = length (hhMonomorph.monomorph_pool caps
-      (hhMonomorph.extend_pool (hhMonomorph.mk_pool goal) goal extras)
+      (hhMonomorph.extend_pool (hhMonomorph.mk_pool goal) extras)
       ext_facts)
     val rigid_goal = mk_conj (eq_nil (list_ty alpha), goal)
     val _ = expect "monomorph pool: empty helper set gives no facts"
@@ -1082,9 +1081,28 @@ fun test_hhMonomorph () =
          (hhMonomorph.monomorph caps goal [("ground", ground_none),
            ("list", schematic), ("none", schematic_none)])
        andalso length (named "none" joined_pool) = 1)
+    val shared = hhMonomorph.mk_pool goal
+    val first_call = hhMonomorph.monomorph_pool caps shared
+      [("ground", ground_none), ("none", schematic_none)]
+    val second_call = hhMonomorph.monomorph_pool caps shared
+      [("none", schematic_none)]
     val _ = expect "monomorph pool does not keep grounds across calls"
-      (null (via_pool goal [("none", schematic_none)])
-       andalso null retained)
+      (length (named "none" first_call) = 1 andalso null second_call)
+    val lazy_pool = hhMonomorph.mk_pool goal
+    val _ = hhMonomorph.monomorph_pool caps lazy_pool []
+    val _ = hhMonomorph.monomorph_pool caps lazy_pool [("ground", goal)]
+    val untouched = not (hhMonomorph.pool_indexed lazy_pool)
+    val _ = hhMonomorph.monomorph_pool caps lazy_pool [("schematic", schematic)]
+    val _ = expect "monomorph pool indexes only for a schematic premise"
+      (untouched andalso hhMonomorph.pool_indexed lazy_pool)
+    val rigid_pool = hhMonomorph.mk_pool rigid_goal
+    val reused = hhMonomorph.extend_pool rigid_pool
+      [witness (list_ty alpha)]
+    val rebuilt = hhMonomorph.extend_pool rigid_pool [witness gamma]
+    val _ = expect "monomorph pool extension decides without indexing"
+      (not (hhMonomorph.pool_indexed rigid_pool)
+       andalso not (hhMonomorph.pool_indexed reused)
+       andalso not (hhMonomorph.pool_indexed rebuilt))
     val _ = expect "monomorph pool with rigid variables equals monomorph"
       (pool_same rigid_goal [("schematic", schematic), ("none",
         schematic_none), ("ignored", ignored)])
@@ -1218,13 +1236,15 @@ fun test_hhProblemGen () =
       (is_cond cond_tf0 andalso is_cond cond_tx0)
     val _ = expect "hhProblemGen downgrades keep_lams outside THF"
       (not (null (#facts downgraded)) andalso null (#facts kept))
+    val poly_pool = hhMonomorph.mk_pool schematic
     val pool_dispatch = pass_monomorph_pool
       (hhTypeEnc.of_string "poly_native")
       {max_iters = 3, max_new_instances = 100}
-      (fn () => raise Fail "poly encodings must not build a pool")
+      poly_pool
       [("schematic", schematic)]
     val _ = expect "hhProblemGen poly encodings bypass the ground pool"
-      (ListPair.allEq (fn ((left_name, left), (right_name, right)) =>
+      (not (hhMonomorph.pool_indexed poly_pool) andalso
+       ListPair.allEq (fn ((left_name, left), (right_name, right)) =>
          left_name = right_name andalso Term.aconv left right)
          (pool_dispatch, [("schematic", schematic)]))
     val _ = expect "hhProblemGen dispatches monomorphization by encoding"
@@ -1462,6 +1482,23 @@ fun test_hhProblemGen () =
        String.isSubstring "help_2Epxy_2Efalse" false_helpers andalso
        not (String.isSubstring "help_2Epxy_2Eall" no_helpers) andalso
        not (String.isSubstring "help_2Epxy_2Eex" no_helpers))
+    (* Combs mode retains schematic proxy laws that have no instance. *)
+    val poly_universal = boolSyntax.universal
+    val poly_quantifier_use = Term.mk_var ("poly_quantifier_use",
+      Type.mk_type ("fun", [Term.type_of poly_universal, Type.bool]))
+    val combs_all = string_of_problem tf0 "combs pool"
+      (generate_problem
+        {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
+         lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = 100}
+        (input (Term.mk_comb (poly_quantifier_use, poly_universal))))
+    (* A rigid type variable keeps the proxy laws at its function types
+       (pxy.all at several types) and EQ_EXT at app's types, all through
+       the pool of the main problem. *)
+    val _ = expect "hhProblemGen combs mono helpers use the pool with tyvars"
+      (String.isSubstring "help_2Epxy_2Eall," combs_all andalso
+       String.isSubstring "help_2Epxy_2Eall_2E2" combs_all andalso
+       String.isSubstring "help_2Eeq__ext_2E2" combs_all andalso
+       String.isSubstring "var_2E_27a" combs_all)
     val memo = new_export_memo ()
     val output1 = OS.FileSys.tmpName ()
     val output2 = OS.FileSys.tmpName ()

@@ -152,7 +152,7 @@ struct
   (* Monomorphization against a reusable ground pool (the goal's). *)
   fun pass_monomorph_pool encoding caps pool facts =
     if is_monomorphic encoding then
-      hhMonomorph.monomorph_pool caps (pool ()) facts
+      hhMonomorph.monomorph_pool caps pool facts
     else facts
 
   fun skeleton tm =
@@ -1321,12 +1321,7 @@ struct
       (* Helpers have the original problem as their monomorphization ground
          pool.  They are then firstorderized together with it, so application
          arities and the final symbol table are shared by every section. *)
-      val pool_cell = ref NONE
-      fun main_pool () = case !pool_cell of
-          SOME pool => pool
-        | NONE => let val pool = hhMonomorph.mk_pool ground_pool in
-            pool_cell := SOME pool; pool
-          end
+      val main_pool = hhMonomorph.mk_pool ground_pool
       fun translate_helpers source =
         if null source then []
         else
@@ -1398,7 +1393,7 @@ struct
             fun witness ty = let val f = mk_var ("f", ty) in
               mk_eq (f, f)
             end
-            fun pool () = hhMonomorph.extend_pool (main_pool ()) ground_pool
+            val pool = hhMonomorph.extend_pool main_pool
               (map witness app_types)
           in
             case pass_monomorph_pool type_enc caps pool [ext] of
