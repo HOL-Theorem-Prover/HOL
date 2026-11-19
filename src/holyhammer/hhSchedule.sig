@@ -107,6 +107,17 @@ sig
   val export_problems_observed : export_observer -> string ->
     hhConfig.hh_options -> goal -> (string * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit
+  (* The theorems of the premise selections of a list of work, as the
+     export reads them: lazy_named fetches a selection (filter, count) when
+     it is first used; hoisted_named fetches once per filter, at the
+     largest count of the work, before anything is exported, and a
+     selection takes its prefix by name.  Both give the same theorems.  A
+     theorem that cannot be fetched raises at the first use (lazy) or when
+     hoisted_named is applied to the work. *)
+  val lazy_named : (string * string list) list -> string * int ->
+    (string * thm) list
+  val hoisted_named : (string * string list) list -> work list ->
+    string * int -> (string * thm) list
   val default_progress : event -> unit
   (* On failure the exception of the earliest failing problem is raised:
      the problems before it stay published, it and the later ones are

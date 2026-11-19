@@ -17,6 +17,9 @@ struct
   (* Called on the caller with the item's index once a pooled item has
      been handed to the pool. *)
   val after_submit = ref (fn (_ : int) => ())
+  (* Called with the item's index on the thread that prepares, before the
+     item is prepared (after the producer's own check for a stop). *)
+  val before_prepare = ref (fn (_ : int) => ())
 end
 
 structure hhSchedule :> hhSchedule =
@@ -344,7 +347,7 @@ datatype prepared =
   | Written of string
   | Copy of string
 
-datatype finished = Temp of string | Copying of string
+datatype finished = Temp of string | Copying of string | Published
 
 (* A pending item: the finishing work of one item, awaited at resolution
    or cancelled when the item is dropped. *)
@@ -405,26 +408,44 @@ fun submit_inline ({path, ...} : work, prepared) : pending =
 
 fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
   | release_finished (Copying _) = ()
+  | release_finished Published = ()
 
 (* The pool-backed implementation: a generated problem is finished on a
    worker, everything else (a staged legacy file, a copy) is cheap and
-   stays inline. *)
-fun submit_pooled pool before_finish after_submit
+   stays inline.  With early set, an item is published by the thread that
+   finishes it (the worker, or the submitting thread for the cheap items)
+   as soon as it is finished and awaiting it returns Published, so that a
+   file does not wait for earlier items. *)
+fun submit_pooled pool early before_finish after_submit
     (work as {path, index, ...} : work, prepared) : pending =
-  case prepared of
-      Problem (options, tail) =>
+  case (prepared, early) of
+      (Problem (options, tail), _) =>
         let
           val temporary = hhConfig.temp_path path
+          fun run () =
+            let
+              val finished = finish_problem
+                (fn () => before_finish index) options tail temporary
+            in
+              case early of
+                  NONE => finished
+                | SOME publish => (publish (work, finished); Published)
+            end
           val job = hhPool.submit pool
-            {run = fn () => finish_problem (fn () => before_finish index)
-                              options tail temporary,
+            {run = run,
              discard = fn () => hhConfig.remove_quietly temporary}
           val _ = after_submit index
         in
           {await = fn () => hhPool.await job,
            cancel = fn () => hhPool.abandon job}
         end
-    | _ => submit_inline (work, prepared)
+    | (_, NONE) => submit_inline (work, prepared)
+    | (_, SOME publish) =>
+        let val {await, cancel} = submit_inline (work, prepared) in
+          (publish (work, await ())
+           handle exn => (cancel (); raise exn);
+           {await = fn () => Published, cancel = fn () => ()})
+        end
 
 (* The caller-side conversion of a tail's failure to its text: the
    grammar is not read on a worker. *)
@@ -440,43 +461,33 @@ fun publish_work (observer : export_observer)
         (hhConfig.commit {temporary = temporary, final = path}
          handle exn => (hhConfig.remove_quietly temporary; raise exn))
     | Copying first => #copied observer (slice, copy_file first path)
+    | Published => ()
 
 (* The number of threads that finish generated problems: the configured
    export_workers, at most the cores and the number of generated problems;
    one means inline.  A caller with a pinned context (Context.is_pinned,
    in practice only the proof replay of the language server) gets one:
    the tail reads the ambient signature, which a fresh thread would see
-   unpinned.  HolyHammer installs no pin itself.  The items admitted and
-   waiting for resolution are bounded by the workers (the queue briefly
-   holds one more at admission), so the prepared tails (retained HOL
-   terms) and the finished files held at any time are bounded as well. *)
-fun pool_size (options : hhConfig.hh_options) works =
+   unpinned.  pinned is the caller's answer, asked once where the export
+   starts: a forked producer is never pinned.  HolyHammer installs no pin
+   itself.  The items admitted and waiting for resolution are bounded by
+   the workers (the queue briefly holds one more at admission), so the
+   prepared tails (retained HOL terms) and the finished files held at any
+   time are bounded as well. *)
+fun pool_size pinned (options : hhConfig.hh_options) works =
   let
     val generated = length (List.filter
       (fn {kind = ExportGenerated _, ...} => true | _ => false) works)
   in
-    if Context.is_pinned () then 1
+    if pinned then 1
     else Int.min (Int.min (#export_workers options, #cores options),
                   generated)
   end
 
-(* prepare (and everything that draws fresh names or touches HOL state
-   other than reading the signature) runs on the calling thread, which is
-   the thread that called this function before any scheduler thread was
-   created.  Both thml_of_namel and the exporters touch HOL process-global
-   state.  Only the finishing work of generated problems (the tail of the
-   preparation, then format and write) moves to the workers of a pool,
-   which is closed (its workers stopped and their files removed) before
-   this returns or raises. *)
-fun export_problems_observed
-    (observer : export_observer) root options goal rankings schedule =
+(* The theorems of a selection, fetched lazily the first time a key is
+   used. *)
+fun lazy_named rankings =
   let
-    val fork = !hhSchedule_Test.fork
-    val before_finish = !hhSchedule_Test.before_finish
-    val after_submit = !hhSchedule_Test.after_submit
-    val works = ordered_work root options rankings schedule
-    val conjecture = list_mk_imp goal
-    val memo = hhProblemGen.new_export_memo ()
     val named_memo = ref []
     fun named_for (key as (filter, count)) =
       case List.find (fn (old, _) => old = key) (!named_memo) of
@@ -492,20 +503,109 @@ fun export_problems_observed
               named_memo := (key, named) :: !named_memo;
               named
             end
+  in
+    named_for
+  end
+
+(* The same theorems, fetched at once before anything is exported: one
+   fetch per filter, at the largest count any exported item of the filter
+   uses, and the smaller counts take their prefix by name (the fetch is
+   element-wise, so it adds no work to the lazy one).  A theorem that
+   cannot be fetched raises here, before any file is written, where the
+   lazy fetch raises at the key's first use.  The theorems are read on the
+   calling thread, which is the only one that may run them (the fetch uses
+   process-global state that the reconstruction thread uses as well). *)
+fun hoisted_named rankings (works : work list) =
+  let
+    val keys = List.mapPartial
+      (fn {kind = CopyLegacy _, ...} => NONE | {key, ...} => SOME key) works
+    fun largest filter =
+      List.foldl (fn ((other, count), best) =>
+                    if other = filter then Int.max (best, count) else best)
+        0 keys
+    fun distinct [] = []
+      | distinct ((filter, _) :: rest) =
+          filter :: distinct (List.filter (fn (other, _) => other <> filter)
+                               rest)
+    fun fetch filter =
+      let
+        val names = first_n (largest filter) (ranking_for rankings filter)
+        val fetched = smlRedirect.hidef (fn () =>
+          map (fn name => mlThmData.thml_of_namel [name]) names) ()
+      in
+        (filter, fetched)
+      end
+    val fetched = map fetch (distinct keys)
+    fun named_for (filter, count) =
+      List.filter (null o hyp o #2)
+        (List.concat (first_n count (valOf
+           (Option.map #2 (List.find (fn (old, _) => old = filter) fetched)))))
+  in
+    named_for
+  end
+
+(* How the staged export publishes.  Ordered: items are published in
+   schedule order as they resolve.  Early: an item is published as soon
+   as it is finished, and ready is told of each published item; before and
+   after bracket the preparation of each item (before may raise to stop
+   the export). *)
+datatype publication =
+    Ordered
+  | Early of
+      {ready : work -> unit, before_prepare : work -> unit,
+       after_prepare : work -> unit}
+
+(* prepare (and everything that draws fresh names or touches HOL state
+   other than reading the signature) runs on the thread that calls this
+   function, before any worker exists.  Both thml_of_namel and the
+   exporters touch HOL process-global state.  Only the finishing work of
+   generated problems (the tail of the preparation, then format and write)
+   moves to the workers of a pool, which is closed (its workers stopped and
+   their files removed) before this returns or raises. *)
+fun export_works publication pinned (observer : export_observer) options
+    goal named_for works =
+  let
+    val fork = !hhSchedule_Test.fork
+    val before_finish = !hhSchedule_Test.before_finish
+    val after_submit = !hhSchedule_Test.after_submit
+    val before_prepare = !hhSchedule_Test.before_prepare
+    val conjecture = list_mk_imp goal
+    val memo = hhProblemGen.new_export_memo ()
+    val (prior, later, early, publish) =
+      case publication of
+          Ordered => (ignore, ignore, NONE, publish_work observer)
+        | Early {ready, before_prepare = pre, after_prepare = post} =>
+            let fun now (w, f) = (publish_work observer (w, f); ready w) in
+              (pre, post, SOME now, now)
+            end
+    fun prepare w =
+      let
+        val _ = prior w
+        val _ = before_prepare (#index w)
+        val prepared = prepare_work observer conjecture memo named_for w
+      in
+        (later w; prepared)
+      end
     fun run window submit =
       run_staged {window = window}
-        {prepare = prepare_work observer conjecture memo named_for,
-         submit = submit, await = await_pending,
-         publish = publish_work observer, abandon = abandon_pending,
+        {prepare = prepare, submit = submit, await = await_pending,
+         publish = publish, abandon = abandon_pending,
          release = release_finished} works
-    val workers = pool_size options works
+    val workers = pool_size pinned options works
   in
     if workers <= 1 then run 0 submit_inline
     else
       hhPool.with_pool {workers = workers, fork = fork}
         (fn pool =>
          run workers
-           (submit_pooled pool before_finish after_submit))
+           (submit_pooled pool early before_finish after_submit))
+  end
+
+fun export_problems_observed
+    (observer : export_observer) root options goal rankings schedule =
+  let val works = ordered_work root options rankings schedule in
+    export_works Ordered (Context.is_pinned ()) observer options goal
+      (lazy_named rankings) works
   end
 
 val export_problems = export_problems_observed silent_observer

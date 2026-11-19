@@ -4763,6 +4763,23 @@ struct
       map (fn name => join directory name)
         (list_directory (join root directory)))
       (list_directory root))
+  fun sorted_files root =
+    Portable.sort (fn a => fn b => String.compare (a, b) <> GREATER)
+      (root_files root)
+  (* The files of a root (relative paths) with their bytes, sorted. *)
+  fun tree root =
+    map (fn file => (file, String.concat (read_lines (join root file))))
+      (sorted_files root)
+  (* A start whose runs stay below the next power of ten (the counter
+     only moves forward, so a fresh start is the next number unless a
+     power of ten is near). *)
+  fun quiet_start () =
+    let
+      val now = counter ()
+      val next = power_above now
+    in
+      if next - now > 5000 then now + 1 else next + 10
+    end
 end
 
 fun test_schedule_staged () =
@@ -5343,12 +5360,6 @@ fun test_schedule_pool () =
        (e, mono Eprover "knn" 7), (vampire, mono Vampire "knn" 4)]
     val silent : hhSchedule.export_observer =
       {generated = fn _ => (), copied = fn _ => ()}
-    fun sorted_files root =
-      Portable.sort (fn a => fn b => String.compare (a, b) <> GREATER)
-        (root_files root)
-    fun tree root =
-      map (fn file => (file, String.concat (read_lines (join root file))))
-        (sorted_files root)
     fun no_temporaries root =
       List.all (not o String.isSuffix ".tmp") (root_files root)
     val plain = {fork = hhPool.default_fork, before_finish = fn _ => ()}
@@ -5460,16 +5471,6 @@ fun test_schedule_pool () =
         (remove_tree root; (files, used, first))
       end
     val export = export_of pool_fixture
-    (* A start whose runs stay below the next power of ten (the counter
-       only moves forward, so a fresh start is the next number unless a
-       power of ten is near). *)
-    fun quiet_start () =
-      let
-        val now = counter ()
-        val next = power_above now
-      in
-        if next - now > 5000 then now + 1 else next + 10
-      end
     (* The counter only moves forward, so the runs of one start follow one
        another: each begins where the previous one ended, used + 2 draws
        later (the draws of the export and one for each of the two readings
@@ -6048,7 +6049,56 @@ fun test_schedule_pool () =
     ()
   end
 
+(* The hoisted named fetch (once per filter at its largest count, prefixes
+   by name) gives the theorems of the lazy fetch of each selection, and a
+   missing theorem raises when the hoisted fetch is made. *)
+fun test_schedule_hoisted_fetch () =
+  let
+    open StagedFixture
+    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    val options = options_with 1 1 NONE NONE
+    val twice = ["listTheory.APPEND_NIL", "listTheory.APPEND_NIL",
+                 "listTheory.APPEND_ASSOC", "listTheory.LENGTH_APPEND"]
+    val rankings = [("knn", ranking), ("mepo", twice)]
+    val schedule =
+      [(e, legacy Eprover "knn" 2), (vampire, legacy Vampire "knn" 2),
+       (e, generated Eprover "knn" 3), (e, legacy Eprover "mepo" 3),
+       (vampire, generated Vampire "mepo" 2),
+       (e, generated Eprover "mepo" 4)]
+    val works = hhSchedule.ordered_work root options rankings schedule
+    val keys = List.mapPartial
+      (fn {kind = hhSchedule.CopyLegacy _, ...} => NONE
+        | {key, ...} => SOME key) works
+    fun same left right =
+      length left = length right andalso
+      ListPair.all (fn ((n1, th1), (n2, th2)) =>
+        n1 = n2 andalso Term.aconv (Thm.concl th1) (Thm.concl th2))
+        (left, right)
+    val lazy = hhSchedule.lazy_named rankings
+    val hoisted = hhSchedule.hoisted_named rankings works
+    val _ = expect "hoisted fetch gives the theorems of each lazy selection"
+      (length keys = 5 andalso
+       List.all (fn key => same (lazy key) (hoisted key)) keys)
+    val _ = expect "hoisted fetch keeps a repeated name once per position"
+      (map #1 (hoisted ("mepo", 2)) =
+         ["listTheory.APPEND_NIL", "listTheory.APPEND_NIL"] andalso
+       length (hoisted ("mepo", 3)) = 3)
+    val missing = [("knn", ranking @ ["listTheory.NO_SUCH_THEOREM"])]
+    val short = [(e, legacy Eprover "knn" 2), (e, generated Eprover "knn" 4)]
+    val missing_works = hhSchedule.ordered_work root options missing short
+    val _ = expect "a missing theorem raises when the hoisted fetch is made"
+      ((ignore (hhSchedule.hoisted_named missing missing_works); false)
+       handle _ => true)
+    val _ = expect "a missing theorem raises at first use of the lazy fetch"
+      (length (hhSchedule.lazy_named missing ("knn", 2)) = 2 andalso
+       ((ignore (hhSchedule.lazy_named missing ("knn", 4)); false)
+        handle _ => true))
+  in
+    remove_tree root
+  end
+
 val _ = test_schedule_pool ()
+val _ = test_schedule_hoisted_fetch ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
 val _ = test_hhSchedule ()
