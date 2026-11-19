@@ -1,5 +1,8 @@
 (* ------------------------------------------------------------------------
    Definitions and theorems used by RISC-V step evaluator (riscv_stepLib)
+
+   P §x p.N and U §x p.N cite the privileged and the unprivileged RISC-V
+   specification by section and printed page (see ../src/README.md).
    ------------------------------------------------------------------------ *)
 Theory riscv_step
 Ancestors
@@ -33,10 +36,9 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
    return NONE.  As in the spec, an instruction is fetched in 2-byte
    parcels, each translated and checked by the PMP: the parcel at the pc
    and, for a 32-bit instruction, the one at pc + 2, whose bytes are read
-   from the physical address that fetchAddr gives for it ([D59], [S16]).
-   NextRISCV only refines Next if it fetches exactly what Next would, so
-   this must mirror the spec (doc/design-privileged.md §1.1 F1, §5.6.3;
-   doc/design-smode.md §1.4). *)
+   from the physical address that fetchAddr gives for it.  NextRISCV only
+   refines Next if it fetches exactly what Next would, so this must mirror
+   the spec. *)
 
 Definition Fetch_def:
   Fetch s =
@@ -69,7 +71,7 @@ End
 
 (* The fetched instruction bits, zero-extended: the trap value (mtval) of
    an illegal instruction, which the spec's Next takes from fetchAndExecute
-   (P §3.1.16 p.52-53, [D43]). *)
+   (P §3.1.16 p.52-53). *)
 Definition rawInstBits_def:
   (rawInstBits (Half h) = w2w h : word64) /\
   (rawInstBits (Word w) = w2w w : word64)
@@ -82,12 +84,12 @@ End
    trap value of an illegal instruction).  NONE when Next would trap in the
    fetch (Fetch above raises UNDEFINED instead), when the instruction raises
    an UNDEFINED, and for SRET, which returns to S-mode or U-mode through
-   sepc: the step theorems are for code that runs in M-mode (H1 below), and
-   S-mode and U-mode code stay outside them by design, although the model
-   executes both (doc/design-smode.md §1.4, §1.9).  NextRISCV does not
-   model what Next does besides running the instruction: it takes no
-   interrupts (see H6 below), leaves out the setupDelta and clear_logs of
-   Next (although an instruction may still write c_update, as writeCSR,
+   sepc: the step theorems are for code that runs in M-mode (see the
+   hypotheses below), and S-mode and U-mode code stay outside them,
+   although the model executes both.  NextRISCV does not model what Next
+   does besides running the instruction: it takes no interrupts (see
+   checkInterrupts_Machine below), leaves out the setupDelta and clear_logs
+   of Next (although an instruction may still write c_update, as writeCSR,
    writeFPRS and writeFPRD do), and does not count (c_cycles, c_instret,
    c_minstret_written). *)
 Definition NextRISCV_def:
@@ -113,45 +115,46 @@ Definition NextRISCV_def:
 End
 
 (* ------------------------------------------------------------------------
-   The hypotheses of the M-mode step theorems (design-privileged.md §1.5)
+   The hypotheses of the M-mode step theorems
 
-   H1  s.c_privilege s.procID = 3w            the hart is in M-mode
-   H2  ~(s.c_MCSR s.procID).mstatus.MPRV      loads and stores use M-mode
-   H3  pmp_unlocked (s.c_MCSR s.procID)       no PMP entry is locked
-   H4  pmp_off_or_napot (s.c_MCSR s.procID)   every PMP entry is OFF or NAPOT
-   H5  the data address is naturally aligned
-   H6  ~(s.c_MCSR s.procID).mstatus.MIE       no interrupt can be taken
+   s.c_privilege s.procID = 3w            the hart is in M-mode
+   ~(s.c_MCSR s.procID).mstatus.MPRV      loads and stores use M-mode
+   pmp_unlocked (s.c_MCSR s.procID)       no PMP entry is locked
+   pmp_off_or_napot (s.c_MCSR s.procID)   every PMP entry is OFF or NAPOT
+   the data address is naturally aligned
+   ~(s.c_MCSR s.procID).mstatus.MIE       no interrupt can be taken
 
    Address translation is off in M-mode (P §12.1.11 p.126, §3.1.6.4 p.35):
    a fetch is translated with the current privilege and a load or store
-   with the effective one, so H1 (fetch) and H1 and H2 (data) make it the
-   identity, whatever satp holds (translateAddr_Machine below,
-   doc/design-smode.md §1.1-1.3).  So no step theorem has a hypothesis on
+   with the effective one, so the first hypothesis (fetch) and the first
+   two (data) make it the identity, whatever satp holds
+   (translateAddr_Machine below).  So no step theorem has a hypothesis on
    satp, or on any other field of c_SCSR.
 
-   The step theorems carry H3 and H4 as their word-level conjuncts, so that
-   a lifter can turn each one into an assertion on a word; the definitions
-   below are for consumers (prog, CakeML, HolBA) that state the contract
-   once.
+   The step theorems carry the two PMP hypotheses as their word-level
+   conjuncts, so that a tool can turn each one into an assertion on a word;
+   the definitions below are for users of the step theorems that state the
+   hypotheses once, as riscv_progTheory does.
    ------------------------------------------------------------------------ *)
 
-(* H3: bit 7 (L) of every entry configuration byte is clear. *)
+(* No PMP entry is locked: bit 7 (L) of every entry configuration byte is
+   clear. *)
 Definition pmp_unlocked_def:
   pmp_unlocked (mcsr: MachineCSR) <=>
     (mcsr.pmpcfg0 && 0x8080808080808080w = 0w) /\
     (mcsr.pmpcfg2 && 0x8080808080808080w = 0w)
 End
 
-(* H4: bits 4 and 3 (A) of every entry configuration byte are equal, so A
-   is 0 (OFF) or 3 (NAPOT). *)
+(* Every PMP entry is OFF or NAPOT: bits 4 and 3 (A) of every entry
+   configuration byte are equal, so A is 0 (OFF) or 3 (NAPOT). *)
 Definition pmp_off_or_napot_def:
   pmp_off_or_napot (mcsr: MachineCSR) <=>
     ((mcsr.pmpcfg0 >>> 1 ?? mcsr.pmpcfg0) && 0x0808080808080808w = 0w) /\
     ((mcsr.pmpcfg2 >>> 1 ?? mcsr.pmpcfg2) && 0x0808080808080808w = 0w)
 End
 
-(* H3 and H4 say the same of the configuration byte of each entry, which
-   pmpcfg_ent selects from pmpcfg0 or pmpcfg2. *)
+(* pmp_unlocked and pmp_off_or_napot say the same of the configuration
+   byte of each entry, which pmpcfg_ent selects from pmpcfg0 or pmpcfg2. *)
 Theorem pmpcfg_ent_unlocked:
   pmp_unlocked (s.c_MCSR s.procID) ==> ~(pmpcfg_ent i s).L
 Proof
@@ -171,12 +174,12 @@ Proof
   \\ blastLib.FULL_BBLAST_TAC
 QED
 
-(* The legalised value of a write of pmpcfg0 or pmpcfg2 (P §3.7.1 p.71-72,
-   doc/design-privileged.md §5.2.3), for the step theorems of the CSR
-   instructions: each byte keeps its L, A, X, W and R bits (bits 6 and 5 are
-   read-only zero), except that W and X are cleared when W is set without R
-   (R = 0 and W = 1 is reserved).  A locked entry would keep its old byte;
-   with H3 none is locked, so the value does not depend on the old one. *)
+(* The legalised value of a write of pmpcfg0 or pmpcfg2 (P §3.7.1 p.71-72),
+   for the step theorems of the CSR instructions: each byte keeps its L, A,
+   X, W and R bits (bits 6 and 5 are read-only zero), except that W and X
+   are cleared when W is set without R (R = 0 and W = 1 is reserved).  A
+   locked entry would keep its old byte; with pmp_unlocked none is locked,
+   so the value does not depend on the old one. *)
 
 val legalize_pmpcfg_byte_unlocked = Q.prove(
   `~c.L ==>
@@ -263,8 +266,9 @@ Proof
         COND_RAND]
 QED
 
-(* An entry that is OFF matches nothing; with H4 the only other mode is
-   NAPOT, whose bounds pmpRegion_aligned makes multiples of 8. *)
+(* An entry that is OFF matches nothing; with pmp_off_or_napot the only
+   other mode is NAPOT, whose bounds pmpRegion_aligned makes multiples of
+   8. *)
 Theorem pmpRegion_OFF:
   ((pmpcfg_ent i s).A = 0w) ==> (pmpRegion i s = NONE)
 Proof
@@ -330,10 +334,10 @@ Proof
   strip_tac \\ asm_simp_tac std_ss [pmpCheck_def, LET_THM, IS_SOME_THE_cond]
 QED
 
-(* The lemma of design-privileged.md §1.5: in M-mode, with no PMP entry
-   locked (H3), every naturally aligned access of at most 4 bytes and every
-   2-byte fetch parcel is allowed, and with every entry OFF or NAPOT (H4)
-   so is every aligned 8-byte access. *)
+(* In M-mode, with no PMP entry locked (pmp_unlocked), every naturally
+   aligned access of at most 4 bytes and every 2-byte fetch parcel is
+   allowed, and with every entry OFF or NAPOT (pmp_off_or_napot) so is
+   every aligned 8-byte access. *)
 Theorem pmpCheck_Machine:
   pmp_unlocked (s.c_MCSR s.procID) /\
   ((n = 1) \/ (n = 2) /\ aligned 1 a \/ (n = 4) /\ aligned 2 a \/
@@ -354,7 +358,7 @@ QED
    the access is S or U (P §12.1.11 p.126, §12.3.2 step 1 p.134).
    translateAddr tests that privilege before it reads anything else, so in
    M-mode it is the identity with no hypothesis, whatever satp, mstatus
-   and the page tables hold (doc/design-smode.md §1.2-1.3, [S1]). *)
+   and the page tables hold. *)
 Theorem translateAddr_Machine:
   translateAddr (a, ft, ac, Machine) s = TR_Address a
 Proof
@@ -362,8 +366,8 @@ Proof
 QED
 
 (* Loads and stores use the effective privilege, which is the current one
-   unless mstatus.MPRV is set (P §3.1.6.4 p.35, [D22]): M-mode by H1 and
-   H2. *)
+   unless mstatus.MPRV is set (P §3.1.6.4 p.35): M-mode when the hart is in
+   M-mode and MPRV is clear. *)
 Theorem effectivePrivilege_Machine:
   (s.c_privilege s.procID = 3w) /\ ~(s.c_MCSR s.procID).mstatus.MPRV ==>
   (effectivePrivilege () s = Machine)
@@ -375,7 +379,7 @@ QED
    (P §12.1.11 Table 40 p.126).  The M-mode step theorems do not use this:
    they need no hypothesis on satp (translateAddr_Machine).  It is the
    lemma that step theorems for S-mode or U-mode code would use, with
-   satp.MODE = 0 as their hypothesis (doc/design-smode.md §1.3, §1.9). *)
+   satp.MODE = 0 as their hypothesis. *)
 Theorem translateAddr_Bare:
   ((63 >< 60) (s.c_SCSR s.procID).satp = (0w: word4)) ==>
   (translateAddr (a, ft, ac, p) s = TR_Address a)
@@ -383,9 +387,9 @@ Proof
   rw [translateAddr_def, SCSR_def]
 QED
 
-(* Fetches use the current privilege, M-mode by H1, so translateAddr is the
+(* Fetches use the current privilege, so in M-mode translateAddr is the
    identity (translateAddr_Machine), and the PMP allows the 2-byte parcel
-   (H3, pmpCheck_Machine). *)
+   when no entry is locked (pmpCheck_Machine). *)
 Theorem fetchAddr_Machine:
   (s.c_privilege s.procID = 3w) /\ pmp_unlocked (s.c_MCSR s.procID) /\
   aligned 1 a ==>
@@ -398,9 +402,10 @@ Proof
            privilege_def]
 QED
 
-(* Loads and stores use the effective privilege, M-mode by H1 and H2
-   (effectivePrivilege_Machine), so translateAddr is the identity, and the
-   PMP allows the access (H3, and H4 for 8 bytes; pmpCheck_Machine). *)
+(* Loads and stores use the effective privilege, M-mode when the hart is in
+   M-mode and MPRV is clear (effectivePrivilege_Machine), so translateAddr
+   is the identity, and the PMP allows the access when no entry is locked
+   and, for 8 bytes, every entry is OFF or NAPOT (pmpCheck_Machine). *)
 Theorem dataAddr_Machine:
   (s.c_privilege s.procID = 3w) /\ ~(s.c_MCSR s.procID).mstatus.MPRV /\
   pmp_unlocked (s.c_MCSR s.procID) /\
@@ -416,13 +421,13 @@ Proof
   \\ simp [dataAddr_def, translateAddr_Machine]
 QED
 
-(* H6.  NextRISCV takes no interrupts: it always fetches and runs the
+(* NextRISCV takes no interrupts: it always fetches and runs the
    instruction at the pc.  The spec's Next first checks for an interrupt
    that is pending, enabled and allowed in the current mode
    (checkInterrupts), and if there is one it takes it instead of running
    the instruction.  So a NextRISCV step theorem describes a step of Next
    only in a state in which no interrupt can be taken, and the theorems
-   below add that hypothesis.  In M-mode (H1) an interrupt is taken only if
+   below add that hypothesis.  In M-mode an interrupt is taken only if
    mstatus.MIE is set, whatever is pending: interrupts delegated to S-mode
    are not taken in M-mode, and the others are taken only when MIE is set
    (P §3.1.6.1 p.32, §3.1.9 p.45).  Note that mie && 0x888 = 0w would not
@@ -451,10 +456,11 @@ QED
 (* ------------------------------------------------------------------------
    Evaluation theorems
 
-   As before the priv-1.13 model, these are equations about NextRISCV
-   only, which does not depend on mstatus.MIE.  riscv_stepLib adds H6 to
-   every step theorem that it builds from them, because NextRISCV refines
-   Next only when no interrupt can be taken (checkInterrupts_Machine).
+   These are equations about NextRISCV only, which does not depend on
+   mstatus.MIE.  riscv_stepLib adds the hypothesis that mstatus.MIE is
+   clear to every step theorem that it builds from them, because NextRISCV
+   refines Next only when no interrupt can be taken
+   (checkInterrupts_Machine).
    ------------------------------------------------------------------------ *)
 
 Theorem NextRISCV:
@@ -657,8 +663,7 @@ Proof
 QED
 
 (* With misa.C clear a 16-bit instruction is illegal: NextRISCV takes the
-   trap, with the parcel as the trap value (before the priv-1.13 model,
-   NextRISCV gave NONE). *)
+   trap, with the parcel as the trap value. *)
 Theorem NextRISCV_Half_noC:
    (Fetch s = (Half h, s')) /\ ~(s.c_MCSR s.procID).misa.C /\
    (s'.exception = NoException) ==>
@@ -1156,10 +1161,10 @@ fun ialign_ok a = ``~(word_bit 1 (^a: word64) /\ ~^rvc)``
 val pc_ok =
   [``~word_bit 0 (^s.c_PC ^s.procID)``, ialign_ok ``^s.c_PC ^s.procID``]
 
-(* H5: the address of a load or store, rs1 + offs, and of an AMO, LR or SC,
+(* The address of a load or store, rs1 + offs, and of an AMO, LR or SC,
    rs1, is naturally aligned.  A misaligned access raises an exception
-   before any other check ([D55]), so without this hypothesis the step
-   theorem would have a trap branch. *)
+   before any other check, so without this hypothesis the step theorem
+   would have a trap branch. *)
 local
   val addr =
     ``if rs1 = 0w then sw2sw offs
@@ -1174,13 +1179,15 @@ in
   val aligned_amo_d = al 3 amo_addr
 end
 
-(* H1 to H4 as word-level conjuncts *)
-val h1 = ``^s.c_privilege ^s.procID = 3w``
-val h2 = ``~(^s.c_MCSR ^s.procID).mstatus.MPRV``
-val h3 =
+(* The hypotheses on the privilege, mstatus.MPRV and the PMP entries, the
+   last two (no entry locked, every entry OFF or NAPOT) as word-level
+   conjuncts *)
+val m_mode = ``^s.c_privilege ^s.procID = 3w``
+val mprv_clear = ``~(^s.c_MCSR ^s.procID).mstatus.MPRV``
+val unlocked =
   [``(^s.c_MCSR ^s.procID).pmpcfg0 && 0x8080808080808080w = 0w``,
    ``(^s.c_MCSR ^s.procID).pmpcfg2 && 0x8080808080808080w = 0w``]
-val h4 =
+val off_or_napot =
   [``((^s.c_MCSR ^s.procID).pmpcfg0 >>> 1 ?? (^s.c_MCSR ^s.procID).pmpcfg0) &&
      0x0808080808080808w = 0w``,
    ``((^s.c_MCSR ^s.procID).pmpcfg2 >>> 1 ?? (^s.c_MCSR ^s.procID).pmpcfg2) &&
@@ -1288,10 +1295,10 @@ val write'GPR =
 val update_pc = Theory.save_thm("update_pc",
   EV [update_pc_def, write'PC_def] [] [] ``update_pc v``)
 
-(* The translation and PMP check of a fetch parcel in M-mode, from H1 and
-   H3 (fetchAddr_Machine). *)
+(* The translation and PMP check of a fetch parcel in M-mode with no PMP
+   entry locked (fetchAddr_Machine). *)
 val fetchAddr = uprove
-  `^h1 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ ~word_bit 0 a ==>
+  `^m_mode /\ ^(hd unlocked) /\ ^(hd (tl unlocked)) /\ ~word_bit 0 a ==>
    (fetchAddr a s = TR_Address a)`
   (
   rw [] \\ match_mp_tac fetchAddr_Machine
@@ -1309,8 +1316,8 @@ val word_bit_0_add2 = blastLib.BBLAST_PROVE
   ``word_bit 0 ((a: word64) + 2w) = word_bit 0 a``
 
 (* The fetch of a 32-bit and of a 16-bit instruction in M-mode.  The PMP
-   allows both parcels (fetchAddr_Machine): H1, the hart is in M-mode, and
-   H3, no PMP entry is locked, suffice because a 2-byte parcel at an even
+   allows both parcels (fetchAddr_Machine): that the hart is in M-mode and
+   that no PMP entry is locked suffice, because a 2-byte parcel at an even
    address never straddles a region bound. *)
 
 Theorem Fetch32:
@@ -1448,27 +1455,31 @@ val rawWriteData1 = REWRITE_RULE [thm] rawWriteData1
    ------------------------------------------------------------------------ *)
 
 (* The translation and PMP check of a naturally aligned data access in
-   M-mode (H1, H2, H3, and H4 for 8 bytes; dataAddr_Machine).  The
-   alignment is the hypothesis H5 of the step theorem, which has already
-   eliminated the misaligned-access trap. *)
+   M-mode (dataAddr_Machine: MPRV clear, no PMP entry locked and, for 8
+   bytes, every entry OFF or NAPOT).  The alignment is a hypothesis of the
+   step theorem, which has already eliminated the misaligned-access
+   trap. *)
 
 val dataAddr1 = uprove
-  `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) ==>
+  `^m_mode /\ ^mprv_clear /\ ^(hd unlocked) /\ ^(hd (tl unlocked)) ==>
    (dataAddr (a, 1, k) s = TR_Address a)`
   (rw [] \\ match_mp_tac dataAddr_Machine \\ fs [pmp_unlocked_def])
 
 val dataAddr2 = uprove
-  `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ aligned 1 a ==>
+  `^m_mode /\ ^mprv_clear /\ ^(hd unlocked) /\ ^(hd (tl unlocked)) /\
+   aligned 1 a ==>
    (dataAddr (a, 2, k) s = TR_Address a)`
   (rw [] \\ match_mp_tac dataAddr_Machine \\ fs [pmp_unlocked_def])
 
 val dataAddr4 = uprove
-  `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ aligned 2 a ==>
+  `^m_mode /\ ^mprv_clear /\ ^(hd unlocked) /\ ^(hd (tl unlocked)) /\
+   aligned 2 a ==>
    (dataAddr (a, 4, k) s = TR_Address a)`
   (rw [] \\ match_mp_tac dataAddr_Machine \\ fs [pmp_unlocked_def])
 
 val dataAddr8 = uprove
-  `^h1 /\ ^h2 /\ ^(hd h3) /\ ^(hd (tl h3)) /\ ^(hd h4) /\ ^(hd (tl h4)) /\
+  `^m_mode /\ ^mprv_clear /\ ^(hd unlocked) /\ ^(hd (tl unlocked)) /\
+   ^(hd off_or_napot) /\ ^(hd (tl off_or_napot)) /\
    aligned 3 a ==>
    (dataAddr (a, 8, k) s = TR_Address a)`
   (
@@ -1476,9 +1487,9 @@ val dataAddr8 = uprove
   \\ fs [pmp_unlocked_def, pmp_off_or_napot_def]
   )
 
-(* WFI and SFENCE.VMA depend on the current privilege (H1). *)
+(* WFI and SFENCE.VMA depend on the current privilege, here M-mode. *)
 val curPrivilege = uprove
-  `^h1 ==> (curPrivilege () s = Machine)`
+  `^m_mode ==> (curPrivilege () s = Machine)`
   (rw [curPrivilege_def, privilege_def])
 
 (* mstatus.FS <> Off; the F and D step theorems assume it (fp_on). *)
@@ -1758,8 +1769,8 @@ local
        ``ptwLevel``, ``ptwStep``, ``ptePermits``, ``round``,
        ``validRounding``]
   (* Nor a hypothesis on the S-mode CSRs, satp among them: translation is
-     off in M-mode (translateAddr_Machine), so the M-mode contract needs
-     none (doc/design-smode.md §1.1, [S28]). *)
+     off in M-mode (translateAddr_Machine), so the M-mode hypotheses
+     include none. *)
   val scsr =
     [Term.rator ``^s.c_SCSR``,
      fst (boolSyntax.strip_comb ``^s with c_SCSR := f``)]
@@ -1768,10 +1779,9 @@ local
       scsr
   (* Nor any other function of the model that reads or writes the state:
      the result must be s with field updates only.  Skip is the exception:
-     NextRISCV adds it to the pc, and as before the priv-1.13 model the
-     step theorems keep it, applied to the state after the fetch, whose
-     c_Skip the fetch sets (consumers rewrite it with Skip_def, e.g.
-     HolBA's lifter). *)
+     NextRISCV adds it to the pc, and the step theorems keep it, applied
+     to the state after the fetch, whose c_Skip the fetch sets (users of
+     the step theorems rewrite it with Skip_def). *)
   val state_ty = ``:riscv_state``
   (* the prefix of the names of the field selectors and updates *)
   val field =
@@ -1925,7 +1935,7 @@ val BLTU = cbranch "BLTU"
 val BGE  = cbranch "BGE"
 val BGEU = cbranch "BGEU"
 
-(* Loads and stores carry the alignment of their address (H5), except for
+(* Loads and stores carry the alignment of their address, except for
    the byte accesses, which cannot be misaligned. *)
 
 val load = class_rd0 `(rd, rs1, offs)`
@@ -2086,9 +2096,9 @@ val SFENCE_VMA = class `(rs1, rs2)` [] "SFENCE_VMA"
 
 (* ECALL and EBREAK raise their exception, which NextRISCV takes
    (NextRISCV_trap): ECALL the environment call from the current privilege,
-   M-mode by H1 (P §3.3.1 p.60-61), and EBREAK a breakpoint, with its own
-   address as the trap value (P §3.1.16 p.52, [D43]).  MRET is legal in
-   M-mode (H1) and leaves the return to NextRISCV (NextRISCV_mret). *)
+   here M-mode (P §3.3.1 p.60-61), and EBREAK a breakpoint, with its own
+   address as the trap value (P §3.1.16 p.52).  MRET is legal in M-mode
+   and leaves the return to NextRISCV (NextRISCV_mret). *)
 
 local
   val trap_thms =
@@ -2101,13 +2111,13 @@ in
 end
 
 (* ------------------------------------------------------------------------
-   CSR instructions (doc/design-privileged.md §3.2)
+   CSR instructions
 
    The step theorems of the six Zicsr instructions below are for any CSR
    number csr: the CSR is read with CSRMap csr and written with writeCSR,
    both left as they are, and riscv_stepLib evaluates them for the CSR
    number of the instruction.  They assume what checkCSROp checks in M-mode
-   (H1, by which every CSR is accessible: privLevel Machine = 3w), which
+   (where every CSR is accessible: privLevel Machine = 3w), which
    riscv_stepLib also decides for the CSR number: that the CSR exists
    (is_CSR_defined), for a write that it is not read-only (bits 11:10 of
    its number are not 3), and the further conditions of the CSR
@@ -2151,7 +2161,7 @@ Proof
   \\ blastLib.BBLAST_TAC
 QED
 
-(* mip as read (P §3.1.9 p.43-45, design-privileged.md §4.1.3): the stored
+(* mip as read (P §3.1.9 p.43-45): the stored
    SSIP and STIP, MSIP and MTIP from the CLINT, SEIP as stored or from the
    platform, and MEIP from the platform. *)
 Theorem read_mip_eval:

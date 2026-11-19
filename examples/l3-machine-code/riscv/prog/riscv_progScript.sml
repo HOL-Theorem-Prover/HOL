@@ -8,16 +8,15 @@ val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 (* The components of the specs are those of riscv_state except the hidden
-   ones (doc/design-privileged.md §1.4.1): the logs (c_update, log, which
-   only the spec's Next, writeCSR, writeFPRS and writeFPRD write; see
-   riscv_frame_hidden below), the counters (c_instret, c_cycles,
-   c_minstret_written), the platform interrupt lines (c_extMEIP,
-   c_extSEIP), the harness (done, c_ExitCode), totalCore, the S-mode CSRs
-   (c_SCSR), and c_UCSR (fcsr) and c_ReserveLoad, which of the
-   instructions that riscv_stepLib steps only the F and D instructions and
-   LR and SC use (riscv_progLib gives no specs for those).  The current
-   privilege, c_privilege, is visible: every step theorem reads it (H1,
-   riscv_ID below). *)
+   ones: the logs (c_update, log, which only the spec's Next, writeCSR,
+   writeFPRS and writeFPRD write; see riscv_frame_hidden below), the
+   counters (c_instret, c_cycles, c_minstret_written), the platform
+   interrupt lines (c_extMEIP, c_extSEIP), the exit state of an emulator
+   (done, c_ExitCode), totalCore, the S-mode CSRs (c_SCSR), and c_UCSR
+   (fcsr) and c_ReserveLoad, which of the instructions that riscv_stepLib
+   steps only the F and D instructions and LR and SC use (riscv_progLib
+   gives no specs for those).  The current privilege, c_privilege, is
+   visible: every step theorem reads it (riscv_ID below). *)
 val _ = stateLib.sep_definitions "riscv" []
           (List.map Lib.list_of_singleton
              ["c_update", "log", "totalCore", "done", "c_instret",
@@ -65,17 +64,17 @@ val RISCV_IMP_TEMPORAL = Theory.save_thm ("RISCV_IMP_TEMPORAL",
 
 (* ------------------------------------------------------------------------ *)
 
-(* The M-mode contract of the step theorems (riscv_stepTheory;
-   doc/design-privileged.md §1.5, [D11]), the same for every instruction:
-   the hart is in M-mode (H1: c_privilege is 3), loads and stores use
-   M-mode (H2: mstatus.MPRV is clear), no PMP entry is locked (H3), every
-   PMP entry is OFF or NAPOT (H4) and no interrupt can be taken (H6:
-   mstatus.MIE is clear, which riscv_step assumes for every instruction
-   because NextRISCV takes no interrupts).  A step theorem has only the
-   conjuncts that its instruction needs (H2 for a data access, H4 for an
-   8-byte one); riscv_progLib adds the others, so that every spec has
-   riscv_ID.  H5, the alignment of a data address, depends on the
-   instruction and stays a condition of its spec. *)
+(* The M-mode contract of the step theorems (riscv_stepTheory), the same
+   for every instruction: the hart is in M-mode (c_privilege is 3), loads
+   and stores use M-mode (mstatus.MPRV is clear), no PMP entry is locked
+   (pmp_unlocked), every PMP entry is OFF or NAPOT (pmp_off_or_napot) and
+   no interrupt can be taken (mstatus.MIE is clear, which riscv_step
+   assumes for every instruction because NextRISCV takes no interrupts).
+   A step theorem has only the conjuncts that its instruction needs
+   (mstatus.MPRV clear for a data access, pmp_off_or_napot for an 8-byte
+   one); riscv_progLib adds the others, so that every spec has riscv_ID.
+   The alignment of a data address depends on the instruction and stays a
+   condition of its spec. *)
 Definition riscv_ID_def:
    riscv_ID id mcsr =
    riscv_exception NoException * riscv_procID id * riscv_c_NextFetch id NONE *

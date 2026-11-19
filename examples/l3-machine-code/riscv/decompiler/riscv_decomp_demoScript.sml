@@ -48,11 +48,11 @@ val (text4_cert, test4_def) = riscv_decompile_code_noC "test4"
    ``ArithI (ADDI (2w, 1w, 0w))``
   ]
 
-(* Data accesses.  The M-mode contract of their step theorems (H1 to H4 and
-   H6, riscv_stepTheory) is part of riscv_RV64I, so the certificates assume
-   only that the address is aligned (H5) and the data are in dmem.  test5
-   accesses 8 bytes, which needs H4 (every PMP entry OFF or NAPOT), test6 4
-   bytes, which does not, and test7 is an AMO, which reads and writes. *)
+(* Data accesses.  The M-mode contract of their step theorems
+   (riscv_stepTheory) is part of riscv_RV64I, so the certificates assume
+   only that the address is aligned and the data are in dmem.  test5
+   accesses 8 bytes, which needs every PMP entry to be OFF or NAPOT, test6
+   4 bytes, which does not, and test7 is an AMO, which reads and writes. *)
 
 val (text5_cert, test5_def) = riscv_decompile_code "test5"
   [

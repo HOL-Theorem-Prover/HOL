@@ -428,11 +428,13 @@ local
     Drule.CONJUNCTS
       (UNDISCH (Q.INST [`pc` |-> `s.c_PC s.procID`] word_bit_aligned_noC))
   (* The M-mode contract as riscv_ID (riscv_progTheory.riscv_ID_def) states
-     it: H3 and H4, which the step theorem has as word-level conjuncts,
-     become pmp_unlocked and pmp_off_or_napot of the MCSR, and the parts of
-     the contract that the instruction does not need (H2 unless it accesses
-     data, H4 unless it accesses 8 bytes) are added, as misa.C is below, so
-     that every spec has the same riscv_ID. *)
+     it: that no PMP entry is locked and that every entry is OFF or NAPOT,
+     which the step theorem has as word-level conjuncts, become
+     pmp_unlocked and pmp_off_or_napot of the MCSR, and the parts of the
+     contract that the instruction does not need (mstatus.MPRV clear unless
+     it accesses data, pmp_off_or_napot unless it accesses 8 bytes) are
+     added, as misa.C is below, so that every spec has the same
+     riscv_ID. *)
   val mcsr_tm = ``s.c_MCSR s.procID``
   fun fold_rule def th =
     let

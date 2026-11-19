@@ -6,14 +6,15 @@ generated:
 | Generated file | Export | Used by |
 |---|---|---|
 | `riscvScript.sml`, `riscvLib.sml`, `riscvLib.sig` | `HolExport.spec ("riscv.spec", "riscv")` | HOL4 (`riscvTheory`, the step, prog and decompiler libraries) |
-| `riscv.sml`, `riscv.sig` | `SMLExport.spec ("riscv.spec", "riscv nointinf")` | the standalone SML emulator |
+| `riscv.sml`, `riscv.sig` | `SMLExport.spec ("riscv.spec", "riscv nointinf")` | the executable SML version of the model (`riscv.uo`) |
 
 Both exports must run from this directory.
 
-Comments in `riscv.spec` cite the privileged specification (version
-20260120) as `P §x p.N` and the unprivileged one as `U §x p.N`, by printed
-page, and the design decisions as `[Dn]` (`../doc/design-privileged.md` §7)
-and `[Sn]` (`../doc/design-smode.md` §5).
+Comments in `riscv.spec` and in the step library cite the RISC-V privileged
+specification, version 20260120, as `P §x p.N`, and the unprivileged
+specification as `U §x p.N`, by section and printed page. The `U` citations
+are to the unprivileged volume of the combined manual
+`riscv-spec-8fb3965-2026-10-30.pdf`.
 
 ## Regenerating
 

@@ -16,6 +16,10 @@
 -- See the LICENSE file for details.
 --
 -- For syntax highlighting, treat this file as Haskell source.
+--
+-- Comments cite the RISC-V privileged specification, version 20260120, as
+-- "P §x p.N" and the unprivileged specification as "U §x p.N", by section
+-- and printed page (see README.md).
 ---------------------------------------------------------------------------
 
 
@@ -137,7 +141,7 @@ priv_level privLevel(p::Privilege) =
     }
 
 -- Total: the reserved 10 decodes as User, which is also what
--- legalize_mstatus stores for an mstatus.MPP write of 10 ([D2]).
+-- legalize_mstatus stores for an mstatus.MPP write of 10.
 Privilege privilege(p::priv_level) =
     match p
     { case 1          => Supervisor
@@ -277,7 +281,7 @@ string excName(e::ExceptionType) =
 -- Machine-Level CSRs
 
 -- Machine ISA (P §3.1.1 Figure 2 p.27, Table 12 p.28).  The hart is
--- RV64 I M A F D C with S and U; only C is writable ([D14]).
+-- RV64 I M A F D C with S and U; only C is writable.
 register misa :: regType
 { 63-62 : MXL       -- machine XLEN: 1 = 32, 2 = 64, 3 = 128 (Table 11)
 ,    20 : U         -- user mode
@@ -292,7 +296,7 @@ register misa :: regType
 
 -- Machine status (P §3.1.6 Figure 8 p.32).  Only the writable fields are
 -- stored: UXL, SXL and SD are produced when mstatus is read
--- (read_mstatus, [D20]) and every other field is read-only zero.
+-- (read_mstatus) and every other field is read-only zero.
 register mstatus :: regType
 {    22 : TSR       -- trap SRET (P §3.1.6.6 p.37)
 ,    21 : TW        -- timeout wait
@@ -424,7 +428,7 @@ record UserCSR
 
 regType MISA_RESET = 0x800000000014112D -- MXL = 2; A C D F I M S U (P §3.4 p.63)
 
--- Only C is writable ([D14]).  "If an instruction that would write misa
+-- Only C is writable.  "If an instruction that would write misa
 -- increases IALIGN, and the subsequent instruction's address is not
 -- IALIGN-bit aligned, the write to misa is suppressed" (p.29): clearing C
 -- is ignored when bit 1 of the next pc is set.  pc is the address of the
@@ -444,7 +448,7 @@ regType MSTATUS_SD    = 0x8000000000000000
 
 -- An explicit write.  Read-only and WPRI fields are dropped (P §2.3.1
 -- p.24).  MPP is WARL and holds U, S or M (P §3.1.6.2 p.33); the reserved
--- 10 is stored as U ([D15]).
+-- 10 is stored as U.
 mstatus legalize_mstatus(v::regType) =
 { var m = mstatus(v && MSTATUS_WMASK)
 ; when m.MPP == 2 do m.MPP <- 0
@@ -460,7 +464,7 @@ regType read_mstatus(m::mstatus) =
 -- sstatus is a view of mstatus (P §12.1.1 p.113-114): its fields are the
 -- homonymous fields of mstatus.  Of these, SIE SPIE SPP FS SUM MXR are
 -- writable here.  SUM is writable because satp.MODE is not read-only zero
--- (P §3.1.6.4 p.35, §12.1.1.2 p.114, [S19]).
+-- (P §3.1.6.4 p.35, §12.1.1.2 p.114).
 
 regType SSTATUS_MASK = 0x80000003018DE762  -- SD UXL SDT SPELP MXR SUM XS FS
                                            -- VS SPP UBE SPIE SIE
@@ -472,19 +476,19 @@ mstatus legalize_sstatus(v::regType, m::mstatus) =
 
 -- mtvec and stvec (P §3.1.7 p.41-42, §12.1.2 p.116): MODE is Direct (0) or
 -- Vectored (1), with a 4-byte aligned BASE in both.  A write of a reserved
--- MODE keeps the old MODE and still writes BASE ([D39]).
+-- MODE keeps the old MODE and still writes BASE.
 regType legalize_xtvec(v::regType, old::regType) =
     if v<1> then v<63:2> : old<1:0> else v
 
 -- mepc and sepc (P §3.1.14 p.48, §12.1.7 p.119): bit 0 is always zero.
 -- Bit 1 stays writable when IALIGN = 32 but is then masked when read, by
--- read_xepc ([D44]).
+-- read_xepc.
 regType legalize_xepc(v::regType) = v && ~0x1
 
 -- mcause and scause (P §3.1.15 p.49-50, §12.1.8 p.120): the exception
 -- code is WLRL.  A write of a code this hart does not have leaves the
 -- register unchanged; the legal codes are those of sail-riscv's
--- legalize_cause ([D33]).  scause holds any code from 0 to 31.
+-- legalize_cause.  scause holds any code from 0 to 31.
 mcause legalize_mcause(v::regType, old::mcause) =
 { c = v<62:0>
 ; if (if v<63> then c == 1 or c == 3 or c == 5 or c == 7 or c == 9 or c == 11
@@ -496,13 +500,13 @@ mcause legalize_scause(v::regType, old::mcause) =
     if v<62:0> <=+ 31 then mcause(v) else legalize_mcause(v, old)
 
 -- satp (P §12.1.11 p.124-126, Figure 64 p.125): MODE is Bare, Sv39, Sv48
--- or Sv57 (Table 40 p.126, [S7]), and if satp "is written with an
+-- or Sv57 (Table 40 p.126), and if satp "is written with an
 -- unsupported MODE, the entire write has no effect; no fields in satp are
--- modified" (p.125).  All 16 ASID bits and all 44 PPN bits are writable
--- ([S8], [S9]).  A write of Bare with a nonzero ASID or PPN, whose effect
--- is UNSPECIFIED (p.125), stores the value as written ([S10]).  MODE is
--- compared under a mask rather than extracted, so that HolBA's lifter
--- can translate the legaliser.
+-- modified" (p.125).  All 16 ASID bits and all 44 PPN bits are writable.
+-- A write of Bare with a nonzero ASID or PPN, whose effect is UNSPECIFIED
+-- (p.125), stores the value as written.  MODE is compared under a mask
+-- rather than extracted, so that HolBA's lifter can translate the
+-- legaliser.
 regType legalize_satp(v::regType, old::regType) =
 { m = v && 0xF000000000000000
 ; if m == 0 or m == 0x8000000000000000 or m == 0x9000000000000000
@@ -522,7 +526,7 @@ register pmpcfg :: bits(8)
 
 -- A locked entry ignores writes until reset (P §3.7.1.2 p.73).  Bits 6:5
 -- are read-only zero.  R = 0 with W = 1 is reserved and is stored as
--- R = W = X = 0 ([D49]).  With grain G = 0 every A mode can be selected.
+-- R = W = X = 0.  With grain G = 0 every A mode can be selected.
 pmpcfg legalize_pmpcfg_byte(b::bits(8), old::pmpcfg) =
     if old.L then old
     else { var n = pmpcfg(b && 0x9F)
@@ -703,8 +707,8 @@ component MEM (a::pAddrIdx) :: regType
 
 -- The core-local interruptor (CLINT) of sail-riscv's platform.  mtime,
 -- mtimecmp and msip are memory-mapped registers (P §3.2.1 p.59, §3.1.9
--- p.44), so here they are words of memory ([D67]).  Nothing in the model
--- advances mtime: the emulator does that after every step ([D63]).
+-- p.44), so here they are words of memory.  Nothing in the model
+-- advances mtime: the emulator does that after every step.
 
 pAddr CLINT_BASE = 0x2000000
 
@@ -718,7 +722,7 @@ bool msip(h::id) = MEM8(CLINT_BASE + 4 * ZeroExtend(h))<0>
 
 -- machine state utilities
 
--- misa.MXL is read-only 2 ([D4]): initIdent accepts only RV64I, and
+-- misa.MXL is read-only 2: initIdent accepts only RV64I, and
 -- legalize_misa changes only C.  So this is false in every reachable
 -- state, and the RV32 cases of the instructions are dead code.  They do not
 -- make a complete RV32 (for one, addresses and the pc are not truncated
@@ -736,7 +740,7 @@ bool fpEnabled() =
     MCSR.mstatus.FS != ext_status(Off)
 
 -- mepc and sepc as read, also by MRET and SRET: bit 1 reads as zero when
--- IALIGN = 32 (P §3.1.14 p.48, [D44]).
+-- IALIGN = 32 (P §3.1.14 p.48).
 regType read_xepc(epc::regType) =
     if haveRVC() then epc else epc && ~0x3
 
@@ -749,7 +753,7 @@ unit setPrivilege(p::Privilege) =
     c_privilege(procID) <- privLevel(p)
 
 -- Explicit loads and stores use the privilege in mstatus.MPP while
--- mstatus.MPRV is set (P §3.1.6.4 p.35, [D22]); instruction fetches do
+-- mstatus.MPRV is set (P §3.1.6.4 p.35); instruction fetches do
 -- not.  Only an M-mode write of mstatus sets MPRV, and an xRET that leaves
 -- M-mode clears it, so below M-mode it is 0 in every reachable state.
 Privilege effectivePrivilege() =
@@ -769,7 +773,7 @@ regType read_mip() =
 
 -- cycle, time and instret are readable below M-mode only when enabled in
 -- mcounteren, and in U-mode also in scounteren (P §3.1.11 p.47, §12.1.5
--- p.119).  hpmcounter3-31 do not exist ([D25]), so i is 0, 1 or 2.
+-- p.119).  hpmcounter3-31 do not exist, so i is 0, 1 or 2.
 bool counterReadAllowed(csr::creg, p::Privilege) =
 { i = [csr<4:0>]::nat
 ; match p
@@ -891,7 +895,7 @@ ieee_rounding option round(rnd::fprnd) =
 
 -- rm of an instruction whose result is exact (FCVT.D.S, FCVT.D.W, FCVT.D.WU):
 -- it is decoded as usual, so RMM is legal, but it is never used to round
--- (ISA manual 6.1.2)
+-- (U §6.1.2)
 bool validRounding(rnd::fprnd) =
     match rnd_mode_static(rnd)
     { case Some(RDYN) => IsSome(rnd_mode_dynamic(fcsr.FRM))
@@ -905,7 +909,7 @@ bits(32) RV32_CanonicalNan = 0x7fc00000
 bits(64) RV64_CanonicalNan = 0x7ff8000000000000
 
 -- a NaN result of an arithmetic or conversion instruction is the canonical
--- NaN (ISA manual 6.1.3 and 6.2)
+-- NaN (U §6.1.3 and §6.2)
 bits(32) canonS(x::bits(32)) = if FP32_IsNan(x) then RV32_CanonicalNan else x
 bits(64) canonD(x::bits(64)) = if FP64_IsNan(x) then RV64_CanonicalNan else x
 
@@ -921,7 +925,7 @@ bool FP32_Sign(x::bits(32)) = x<31>
 bool FP64_Sign(x::bits(64)) = x<63>
 
 -- multiplicands of an FMA that must raise NV even when the addend is a quiet
--- NaN (ISA manual 6.1.6); IEEE 754-2008 leaves that case open, and neither
+-- NaN (U §6.1.6); IEEE 754-2008 leaves that case open, and neither
 -- export's MulAdd raises it
 bool FP32_InfTimesZero(a::bits(32), b::bits(32)) =
     (FP32_IsZero(a) and (b == FP32_PosInf or b == FP32_NegInf)) or
@@ -931,7 +935,7 @@ bool FP64_InfTimesZero(a::bits(64), b::bits(64)) =
     (FP64_IsZero(a) and (b == FP64_PosInf or b == FP64_NegInf)) or
     (FP64_IsZero(b) and (a == FP64_PosInf or a == FP64_NegInf))
 
--- setting exception flags (fcsr bits 4-0: NV DZ OF UF NX, ISA manual 6.1.2)
+-- setting exception flags (fcsr bits 4-0: NV DZ OF UF NX, U §6.1.2)
 
 unit setFP_Invalid() =
     fcsr.NV <- true
@@ -948,7 +952,7 @@ unit setFP_Underflow() =
 unit setFP_Inexact() =
     fcsr.NX <- true
 
--- accrue the exception flags returned by an IEEE operation (ISA manual 6.1.2)
+-- accrue the exception flags returned by an IEEE operation (U §6.1.2)
 unit accrueFlags(f::ieee_flags) =
 { when f.InvalidOp    do setFP_Invalid()
 ; when f.DivideByZero do setFP_DivZero()
@@ -976,9 +980,9 @@ bool check_CSR_access(rw::csrRW, pr::csrPR, p::Privilege, a::accessType) =
     (a == Read or rw != 0b11) and (privLevel(p) >=+ pr)
 
 -- The CSRs of this hart (P §2.2 Tables 3-8 p.14-23).  Every other address
--- is reserved, and accessing it is an illegal instruction (P §2.1 p.13,
--- [D24]).  This includes the RV32-only halves, hpmcounter3-31 ([D25]),
--- the odd pmpcfg registers and those of PMP entries 16-63.
+-- is reserved, and accessing it is an illegal instruction (P §2.1 p.13).
+-- This includes the RV32-only halves, hpmcounter3-31, the odd pmpcfg
+-- registers and those of PMP entries 16-63.
 bool is_CSR_defined(csr::creg) =
     -- unprivileged: floating point, counters and timer
     (csr >=+ 0x001 and csr <=+ 0x003)
@@ -997,11 +1001,11 @@ bool is_CSR_defined(csr::creg) =
  or  csr == 0xB00 or (csr >=+ 0xB02 and csr <=+ 0xB1F)
 
 -- mhpmevent3-31 and mhpmcounter3-31: read-only zero, writes are ignored
--- (P §3.1.10 p.46, [D26])
+-- (P §3.1.10 p.46)
 bool is_mhpm_CSR(csr::creg) =
     (csr >=+ 0x323 and csr <=+ 0x33F) or (csr >=+ 0xB03 and csr <=+ 0xB1F)
 
--- Further conditions on CSR access ([D9])
+-- Further conditions on CSR access
 bool check_CSR_conditions(csr::creg, p::Privilege) =
     -- fflags, frm, fcsr need mstatus.FS != Off (P §3.1.6.7 p.38)
     if csr >=+ 0x001 and csr <=+ 0x003 then fpEnabled()
@@ -1046,7 +1050,7 @@ component CSRMap(csr::creg) :: regType
         case 0x180  => c_SCSR(procID).satp
 
         -- machine information registers: mvendorid, marchid, mimpid and
-        -- mconfigptr are zero (P §3.1.2-3.1.4 p.29-31, §3.1.17 p.53, [D31])
+        -- mconfigptr are zero (P §3.1.2-3.1.4 p.29-31, §3.1.17 p.53)
         case 0xF11  => 0
         case 0xF12  => 0
         case 0xF13  => 0
@@ -1121,9 +1125,9 @@ component CSRMap(csr::creg) :: regType
         case 0x104  => c_MCSR(procID).mie               <- mie((c_MCSR(procID).&mie && ~c_MCSR(procID).mideleg)
                                                                || (value && c_MCSR(procID).mideleg))
         case 0x105  => c_SCSR(procID).stvec             <- legalize_xtvec(value, c_SCSR(procID).stvec)
-        -- CY, TM, IR (P §12.1.5 p.119, [D27])
+        -- CY, TM, IR (P §12.1.5 p.119)
         case 0x106  => c_SCSR(procID).scounteren        <- value && 0x7
-        -- only FIOM (P §12.1.10 p.122, [D29])
+        -- only FIOM (P §12.1.10 p.122)
         case 0x10A  => c_SCSR(procID).senvcfg           <- value && 0x1
 
         -- supervisor trap handling; of sip only SSIP is writable, and only
@@ -1139,20 +1143,20 @@ component CSRMap(csr::creg) :: regType
         case 0x180  => c_SCSR(procID).satp              <- legalize_satp(value, c_SCSR(procID).satp)
 
         -- machine trap setup.  medeleg: exceptions 0-9, 12, 13 and 15 can
-        -- be delegated ([D40]; 11 and 16 are read-only zero, P §3.1.8 p.43);
-        -- mideleg: SSI, STI, SEI ([D41]); mie: the six interrupts.
+        -- be delegated (11 and 16 are read-only zero, P §3.1.8 p.43);
+        -- mideleg: SSI, STI, SEI; mie: the six interrupts.
         case 0x300  => c_MCSR(procID).mstatus           <- legalize_mstatus(value)
         case 0x301  => c_MCSR(procID).misa              <- legalize_misa(value, c_MCSR(procID).misa, c_PC(procID))
         case 0x302  => c_MCSR(procID).medeleg           <- value && 0xB3FF
         case 0x303  => c_MCSR(procID).mideleg           <- value && 0x222
         case 0x304  => c_MCSR(procID).mie               <- mie(value && 0xAAA)
         case 0x305  => c_MCSR(procID).mtvec             <- legalize_xtvec(value, c_MCSR(procID).mtvec)
-        -- CY, TM, IR (P §3.1.11 p.46-47, [D27])
+        -- CY, TM, IR (P §3.1.11 p.46-47)
         case 0x306  => c_MCSR(procID).mcounteren        <- value && 0x7
-        -- only FIOM (P §3.1.18 p.54, [D29])
+        -- only FIOM (P §3.1.18 p.54)
         case 0x30A  => c_MCSR(procID).menvcfg           <- value && 0x1
 
-        -- machine counter setup: CY and IR (P §3.1.12 p.47, [D28])
+        -- machine counter setup: CY and IR (P §3.1.12 p.47)
         case 0x320  => c_MCSR(procID).mcountinhibit     <- value && 0x5
 
         -- machine trap handling; of mip only SSIP, STIP and SEIP are
@@ -1322,7 +1326,7 @@ inline unit setupDelta(pc::regType, instr::rawInstType) =
 }
 
 -- A load or store is recorded with its physical address, as sail-riscv
--- logs it ([S30]).
+-- logs it.
 inline unit recordLoad(addr::pAddr, val::regType) =
 when not PROVER_EXPORT do
 { Delta.addr      <- Some(addr)
@@ -1476,7 +1480,7 @@ unit clear_logs()                   = log <- Nil
 
 -- Signalled exceptions are recorded as traps.  The trap value is the
 -- faulting address, or zero; Next replaces it by the instruction bits for
--- an illegal instruction (P §3.1.16 p.52-53, [D43]).
+-- an illegal instruction (P §3.1.16 p.52-53).
 
 unit setTrap(e::ExceptionType, tval::regType) =
 { var trap
@@ -1553,9 +1557,8 @@ regType trapVector(tvec::regType, intr::bool, ec::exc_code) =
 
 -- Trap entry (P §3.1.6.1 p.32, §3.1.14-3.1.16 p.48-53; §12.1.1 p.113,
 -- §12.1.7-12.1.9 p.119-121).  mstatus.MPRV and the load reservation are
--- unchanged ([D45]).  A trap goes to M-mode or S-mode, as excDest or
--- checkInterrupts gives, never to U-mode.  Traps into S-mode are
--- validated like those into M-mode (design-smode.md §2.7-2.9).
+-- unchanged.  A trap goes to M-mode or S-mode, as excDest or
+-- checkInterrupts gives, never to U-mode.
 unit takeTrap(intr::bool, ec::exc_code, epc::regType, tval::regType, toPriv::Privilege) =
 { fromP = curPrivilege()
 ; mark_log(LOG_INSN, ["trapping from " : privName(fromP) : " to " : privName(toPriv) :
@@ -1589,8 +1592,7 @@ unit takeTrap(intr::bool, ec::exc_code, epc::regType, tval::regType, toPriv::Pri
 
 -- MRET returns to the mode in mstatus.MPP and SRET to the mode in
 -- mstatus.SPP (P §3.3.2 p.61, §3.1.6.1 p.32-33); both clear MPRV when
--- they leave M-mode (P §3.1.6.4 p.35).  The load reservation is kept
--- ([D45]).
+-- they leave M-mode (P §3.1.6.4 p.35).  The load reservation is kept.
 
 unit mret() =
 { p = privilege(MCSR.mstatus.MPP)
@@ -1648,14 +1650,14 @@ component GPR(n::reg) :: regType
 
 -- val is bound once, before the write: it may read GPR(rd), and the SML
 -- export would otherwise re-evaluate it for Delta.data1 after the write
--- (e.g. DIV x2,x1,x2, which must not raise an exception: ISA manual 4.5.2)
+-- (e.g. DIV x2,x1,x2, which must not raise an exception: U §4.5.2)
 inline unit writeRD(rd::reg, val::regType) =
 { v = val
 ; GPR(rd)       <- v
 ; when not PROVER_EXPORT do Delta.data1   <- Some(v)
 }
 
--- Single-precision values are NaN-boxed (ISA manual 6.2.2): a write sets
+-- Single-precision values are NaN-boxed (U §6.2.2): a write sets
 -- bits 63:32 to all 1s, and a read of a register that does not hold a
 -- NaN-boxed value gives the canonical NaN.  The transfers out of a register
 -- (FSW, FMV.X.W) use FPRS_raw, which ignores bits 63:32.
@@ -1731,7 +1733,7 @@ unit rawWriteData(pAddr::pAddr, data::regType, nbytes::nat) =
               ; mark_log(LOG_MEM, log_w_mem_mask_misaligned(pAddrIdx, pAddr, mask, data, align, old, new))
               }
          -- write touching adjacent regType-sized blocks; not reached,
-         -- since every store is naturally aligned ([D55])
+         -- since every store is naturally aligned
          else { dw_old  = MEM(pAddrIdx+1) : old
               ; dw_data = ZeroExtend(data) << (align*8)
               ; dw_mask = ZeroExtend(mask) << (align*8)
@@ -1767,7 +1769,7 @@ unit rawWriteMem(pAddr::pAddr, data::regType) =
 -- PMP (P §3.7 p.70-74) checks every instruction fetch and explicit data
 -- access, by physical address.  The hart has 16 entries and the grain G
 -- is 0, so pmpaddr is read as stored and every region is a multiple of 4
--- bytes (P §3.7.1.1 p.73, [D47], [D48]).
+-- bytes (P §3.7.1.1 p.73).
 
 -- What an access needs from the entry that matches it (P §3.7.1 p.72): R
 -- for a load or LR, W for a store or SC, both for an AMO, X for a fetch.
@@ -1824,7 +1826,7 @@ bool option pmpEntryCheck(i::bits(4), a::pAddr, last::pAddr, kind::pmpAccess,
 -- §3.7.1.3 p.73): the lowest-numbered entry that matches any of its bytes
 -- decides, and if none does, only M-mode is allowed.  The access is
 -- naturally aligned, so a + (n - 1) does not wrap.  The caller raises the
--- access fault ([D53]).
+-- access fault.
 bool pmpCheck(a::pAddr, n::nat, kind::pmpAccess, p::Privilege) =
 { last = a + [n - 1]
 ; e0  = pmpEntryCheck(0,  a, last, kind, p)
@@ -1867,16 +1869,16 @@ bool pmpCheck(a::pAddr, n::nat, kind::pmpAccess, p::Privilege) =
 ---------------------------------------------------------------------------
 
 -- Supervisor address translation with Sv39, Sv48 and Sv57 (P §12.1.11
--- p.124-126, §12.3-12.6 p.130-139, [S7]).  The hart has no
+-- p.124-126, §12.3-12.6 p.130-139).  The hart has no
 -- address-translation cache, so every access walks the page table as it is
--- in memory at that moment (P §12.3.2 p.135, [S4]).  A and D are managed
--- by software, as with Svade (P §12.3.1 p.132, [S3]), and Svnapot, Svpbmt
--- and Svrsw60t59b are absent ([S12]).  The walk only reads the state: it
--- reads the PTEs from memory without logging them ([S6]) and never writes
--- them.  PTE reads are physical and have no PMA check ([S14]).
+-- in memory at that moment (P §12.3.2 p.135).  A and D are managed
+-- by software, as with Svade (P §12.3.1 p.132), and Svnapot, Svpbmt
+-- and Svrsw60t59b are absent.  The walk only reads the state: it
+-- reads the PTEs from memory without logging them and never writes
+-- them.  PTE reads are physical and have no PMA check.
 
 -- The physical address of an access, or the exception it raises (P §3.1.15
--- Table 16 p.50, [S2]).
+-- Table 16 p.50).
 construct TransResult { TR_Address :: pAddr, TR_Fault :: ExceptionType }
 
 -- What one level of the walk gives (P §12.3.2 p.134): the PPN of the
@@ -1921,10 +1923,10 @@ bool ptePermits(pte::dword, ft::fetchType, ac::accessType, p::Privilege) =
 -- 2-5 and 10 p.134).  The PTE at ppn * 4096 + VPN[i] * 8 is read as an
 -- implicit access by S-mode, which needs the PMP's read permission or
 -- raises the access fault of the original access type (step 2; P §3.7.2
--- p.74, [S14]).  A PTE with V = 0, with W = 1 but R = 0, or with any of
+-- p.74).  A PTE with V = 0, with W = 1 but R = 0, or with any of
 -- bits 63-54 set is invalid, and so is a pointer (R = W = X = 0) with D,
 -- A or U set: those bits are reserved (step 3; P §12.3.1 p.133, §12.4.1
--- p.137, [S12]).  A pointer at level 0 and a misaligned superpage are
+-- p.137).  A pointer at level 0 and a misaligned superpage are
 -- page faults (steps 4 and 5).  Otherwise the leaf maps a page of
 -- 2^(12 + 9i) bytes (step 10).
 walkResult ptwLevel(i::nat, ppn::bits(44), va::vAddr, ft::fetchType,
@@ -1959,14 +1961,14 @@ walkResult ptwStep(r::walkResult, i::nat, levels::nat, va::vAddr,
 
 -- The physical address of an access at va by privilege p, which is
 -- curPrivilege() for a fetch and effectivePrivilege() for a load or store
--- (P §3.1.6.4 p.35, [S1]).  satp is active, and va translated, only if p
+-- (P §3.1.6.4 p.35).  satp is active, and va translated, only if p
 -- is S or U (P §12.1.11 p.126) and satp.MODE is not Bare (Table 40
 -- p.126).  p is tested first, so that at M nothing else is read.
 -- legalize_satp keeps the reserved MODEs out of satp; they would act as
--- Bare ([S11]).  A va whose bits 63 to VALEN - 1 are not all equal raises
+-- Bare.  A va whose bits 63 to VALEN - 1 are not all equal raises
 -- a page fault before any PTE is read (P §12.4.1 p.136, §12.5.1 p.137,
 -- §12.6.1 p.138).  The walk starts at level LEVELS - 1 with the root table
--- at satp.PPN (P §12.3.2 step 1 p.134); it is unrolled ([S5]), and the
+-- at satp.PPN (P §12.3.2 step 1 p.134); it is unrolled, and the
 -- levels at or above LEVELS pass the start on unchanged.
 TransResult translateAddr(va::vAddr, ft::fetchType, ac::accessType, p::Privilege) =
   if p == Machine then TR_Address(va)
@@ -2008,7 +2010,7 @@ TransResult fetchAddr(vAddr::vAddr) =
 
 -- The physical address of an explicit, naturally aligned data access of n
 -- bytes at vAddr.  The access is translated with the effective privilege
--- (P §3.1.6.4 p.35, [D22]), and its physical address needs the PMP's
+-- (P §3.1.6.4 p.35), and its physical address needs the PMP's
 -- permission for that privilege, or the access raises an access fault (P
 -- §3.7 p.70).  A load or LR is a read, and a store, SC or AMO a write.
 TransResult dataAddr(vAddr::vAddr, n::nat, kind::pmpAccess) =
@@ -2026,7 +2028,7 @@ TransResult dataAddr(vAddr::vAddr, n::nat, kind::pmpAccess) =
 ---------------------------------------------------------------------------
 
 -- The reservation is of a physical address, since the reservation set lies
--- within one physical page (P §12.3.1 p.133, [S17]).
+-- within one physical page (P §12.3.1 p.133).
 bool matchLoadReservation(pAddr::pAddr) =
     IsSome(ReserveLoad) and ValOf(ReserveLoad) == pAddr
 
@@ -2548,8 +2550,8 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 ---------------------------------------------------------------------------
 
 -- A load or store that is not naturally aligned raises an
--- address-misaligned exception (U §2.1.6 p.37, [D55]) before any other
--- check, translation included (P §3.1.15 Table 17 p.51, [S15]), so no
+-- address-misaligned exception (U §2.1.6 p.37) before any other
+-- check, translation included (P §3.1.15 Table 17 p.51), so no
 -- access is ever split or crosses a page.  An aligned access is
 -- translated and needs the permission of the PMP (dataAddr), or raises the
 -- page fault or access fault that dataAddr gives.  The trap value is the
@@ -2753,7 +2755,7 @@ define FENCE_I(rd::reg, rs1::reg, imm::imm12) = nothing
 -----------------------------------
 -- LR.W [aq,rl] rd, rs1
 -----------------------------------
--- LR is a load, so a misaligned LR raises a load exception ([D57]).
+-- LR is a load, so a misaligned LR raises a load exception.
 define AMO > LR_W(aq::amo, rl::amo, rd::reg, rs1::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
@@ -2787,7 +2789,7 @@ define AMO > LR_D(aq::amo, rl::amo, rd::reg, rs1::reg) =
 -- SC.W [aq,rl] rd, rs1, rs2
 -----------------------------------
 -- An SC is translated and needs the PMP's write permission also when it
--- fails for want of a reservation (P §3.7.1 p.72, [D60], [S18]).  The
+-- fails for want of a reservation (P §3.7.1 p.72).  The
 -- reservation is of the physical address (matchLoadReservation).
 define AMO > SC_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
@@ -2797,7 +2799,7 @@ define AMO > SC_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
        { case TR_Address(pAddr) =>
            if not matchLoadReservation(pAddr)
            then { writeRD(rd, 1)
-                ; ReserveLoad <- None   -- ISA manual 5.2: a failed SC also invalidates it
+                ; ReserveLoad <- None   -- U §5.2: a failed SC also invalidates it
                 }
            else { data = GPR(rs2)
                 ; rawWriteData(pAddr, data, 4)
@@ -2822,7 +2824,7 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
                 { case TR_Address(pAddr) =>
                     if not matchLoadReservation(pAddr)
                     then { writeRD(rd, 1)
-                         ; ReserveLoad <- None   -- ISA manual 5.2: a failed SC also invalidates it
+                         ; ReserveLoad <- None   -- U §5.2: a failed SC also invalidates it
                          }
                     else { data = GPR(rs2)
                          ; rawWriteData(pAddr, data, 8)
@@ -3041,7 +3043,7 @@ define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = SignedMin(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3081,7 +3083,7 @@ define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = SignedMax(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3121,7 +3123,7 @@ define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = Min(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3161,7 +3163,7 @@ define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- ISA manual 5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = Max(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3210,7 +3212,7 @@ define FPLoad > FLW(rd::reg, rs1::reg, offs::imm12) =
            then signalAddressException(Load_Misaligned, vAddr)
            else match dataAddr(vAddr, 4, PMP_Read)
                 { case TR_Address(pAddr) => { val       = rawReadData(pAddr)<31:0>
-                                            ; writeFPRS(rd, val)  -- sets FS to Dirty (privileged manual 3.1.6.7)
+                                            ; writeFPRS(rd, val)  -- sets FS to Dirty (P §3.1.6.7)
                                             ; recordLoad(pAddr, ZeroExtend(val))
                                             }
                   case TR_Fault(e)       => signalAddressException(e, vAddr)
@@ -3237,7 +3239,7 @@ define FPStore > FSW(rs1::reg, rs2::reg, offs::imm12) =
 
 -- Computational
 
--- Arithmetic accrues the flags of the IEEE operation (ISA manual 6.1.2);
+-- Arithmetic accrues the flags of the IEEE operation (U §6.1.2);
 -- tininess is detected after rounding (6.1.4) by SSE and by HOL's
 -- Underflow_AfterRounding alike.
 
@@ -3327,7 +3329,7 @@ define FArith > FMIN_S(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1  = FPRS(rs1)
          ; f2  = FPRS(rs2)
-         -- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
@@ -3346,7 +3348,7 @@ define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1  = FPRS(rs1)
          ; f2  = FPRS(rs2)
-         -- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
@@ -3362,7 +3364,7 @@ define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
 -- FMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused (rs1*rs2)+rs3, rounded once
+-- U §6.1.6: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -3379,7 +3381,7 @@ define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused (rs1*rs2)-rs3, rounded once
+-- U §6.1.6: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -3396,7 +3398,7 @@ define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- U §6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -3414,7 +3416,7 @@ define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- U §6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -3439,7 +3441,7 @@ define FConv > FCVT_S_W(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [GPR(rs)<31:0>]::int
                              ; v = FP32_FromInt(r, i)
-                             -- ISA manual 6.1.7: NX when the result is not exact
+                             -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3457,7 +3459,7 @@ define FConv > FCVT_S_WU(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [0`1 : GPR(rs)<31:0>]::int
                              ; v = FP32_FromInt(r, i)
-                             -- ISA manual 6.1.7: NX when the result is not exact
+                             -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3475,7 +3477,7 @@ define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP32_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3489,7 +3491,7 @@ define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 31
                                      then -[0n2 ** 31]
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 31 - 1 or val < -2 ** 31
@@ -3510,7 +3512,7 @@ define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP32_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3524,13 +3526,13 @@ define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 32 - 1 or val < 0
                                then setFP_Invalid()
                                else when not FP32_IsIntegral(inp) do setFP_Inexact()
-                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (ISA manual 6.1.7)
+                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §6.1.7)
                              }
              case None    => signalException(Illegal_Instr)
            }
@@ -3545,7 +3547,7 @@ define FConv > FCVT_S_L(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [GPR(rs)]::int
                              ; v = FP32_FromInt(r, i)
-                             -- ISA manual 6.1.7: NX when the result is not exact
+                             -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3571,7 +3573,7 @@ define FConv > FCVT_S_LU(rd::reg, rs::reg, fprnd::fprnd) =
                              ; v = if PROVER_EXPORT or not x<63> then FP32_FromInt(r, i)
                                    else FP32_Mul(r, FP32_FromInt(r, [(x >>+ 1) || (x && 1)]::int),
                                                  0x40000000)
-                             -- ISA manual 6.1.7: NX when the result is not exact
+                             -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3589,7 +3591,7 @@ define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP32_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3603,7 +3605,7 @@ define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 63
                                      then -[0n2 ** 63]
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 63 - 1 or val < -2 ** 63
@@ -3624,7 +3626,7 @@ define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP32_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3638,7 +3640,7 @@ define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 64 - 1 or val < 0
@@ -3790,7 +3792,7 @@ define FConv > FCLASS_S(rd::reg, rs::reg) =
          ; ret<6> <- !FP32_Sign(val) and FP32_IsNormal(val)
          ; ret<7> <- val == FP32_PosInf
          ; ret<8> <- FP32_IsSignalingNan(val)
-         ; ret<9> <- FP32_IsNan(val) and not FP32_IsSignalingNan(val)  -- any quiet NaN (ISA manual 6.1.9)
+         ; ret<9> <- FP32_IsNan(val) and not FP32_IsSignalingNan(val)  -- any quiet NaN (U §6.1.9)
          ; writeRD(rd, ZeroExtend(ret))
          }
 
@@ -3811,7 +3813,7 @@ define FPLoad > FLD(rd::reg, rs1::reg, offs::imm12) =
            then signalAddressException(Load_Misaligned, vAddr)
            else match dataAddr(vAddr, 8, PMP_Read)
                 { case TR_Address(pAddr) => { val       = rawReadData(pAddr)
-                                            ; writeFPRD(rd, val)  -- sets FS to Dirty (privileged manual 3.1.6.7)
+                                            ; writeFPRD(rd, val)  -- sets FS to Dirty (P §3.1.6.7)
                                             ; recordLoad(pAddr, val)
                                             }
                   case TR_Fault(e)       => signalAddressException(e, vAddr)
@@ -3838,7 +3840,7 @@ define FPStore > FSD(rs1::reg, rs2::reg, offs::imm12) =
 
 -- Computational
 
--- Arithmetic accrues the flags of the IEEE operation (ISA manual 6.1.2);
+-- Arithmetic accrues the flags of the IEEE operation (U §6.1.2);
 -- tininess is detected after rounding (6.1.4) by SSE and by HOL's
 -- Underflow_AfterRounding alike.
 
@@ -3928,7 +3930,7 @@ define FArith > FMIN_D(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1 = FPRD(rs1)
          ; f2 = FPRD(rs2)
-         -- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
@@ -3947,7 +3949,7 @@ define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1 = FPRD(rs1)
          ; f2 = FPRD(rs2)
-         -- ISA manual 6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
@@ -3963,7 +3965,7 @@ define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
 -- FMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused (rs1*rs2)+rs3, rounded once
+-- U §6.1.6: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -3980,7 +3982,7 @@ define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused (rs1*rs2)-rs3, rounded once
+-- U §6.1.6: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -3997,7 +3999,7 @@ define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- U §6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -4015,7 +4017,7 @@ define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- ISA manual 6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- U §6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -4037,7 +4039,7 @@ define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FConv > FCVT_D_W(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
-    else if validRounding(fprnd)  -- exact (ISA manual 6.2.5)
+    else if validRounding(fprnd)  -- exact (U §6.2.5)
     then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [GPR(rs)<31:0>]::int))
     else signalException(Illegal_Instr)
 
@@ -4047,7 +4049,7 @@ define FConv > FCVT_D_W(rd::reg, rs::reg, fprnd::fprnd) =
 
 define FConv > FCVT_D_WU(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
-    else if validRounding(fprnd)  -- exact (ISA manual 6.2.5)
+    else if validRounding(fprnd)  -- exact (U §6.2.5)
     then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [0`1 : GPR(rs)<31:0>]::int))
     else signalException(Illegal_Instr)
 
@@ -4060,7 +4062,7 @@ define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP64_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4074,7 +4076,7 @@ define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 31
                                      then -[0n2 ** 31]
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 31 - 1 or val < -2 ** 31
@@ -4095,7 +4097,7 @@ define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP64_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4109,13 +4111,13 @@ define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 32 - 1 or val < 0
                                then setFP_Invalid()
                                else when not FP64_IsIntegral(inp) do setFP_Inexact()
-                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (ISA manual 6.1.7)
+                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §6.1.7)
                              }
              case None    => signalException(Illegal_Instr)
            }
@@ -4139,7 +4141,7 @@ define FConv > FCVT_D_L(rd::reg, rs::reg, fprnd::fprnd) =
                              ; v = if PROVER_EXPORT or x<63:62> != 0b10 then FP64_FromInt(r, i)
                                    else FP64_Mul(r, FP64_FromInt(r, -([((-x) >>+ 1) || ((-x) && 1)]::int)),
                                                  0x4000000000000000)
-                             -- ISA manual 6.1.7: NX when the result is not exact
+                             -- U §6.1.7: NX when the result is not exact
                              ; when FP64_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRD(rd, v)
@@ -4157,7 +4159,7 @@ define FConv > FCVT_D_LU(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [0`1 : GPR(rs)]::int
                              ; v = FP64_FromInt(r, i)
-                             -- ISA manual 6.1.7: NX when the result is not exact
+                             -- U §6.1.7: NX when the result is not exact
                              ; when FP64_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRD(rd, v)
@@ -4175,7 +4177,7 @@ define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP64_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4189,7 +4191,7 @@ define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 63
                                      then -[0n2 ** 63]
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 63 - 1 or val < -2 ** 63
@@ -4210,7 +4212,7 @@ define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (ISA manual 6.1.7, Table 29) before val is used
+                             -- (U §6.1.7, Table 29) before val is used
                              ; val = match FP64_ToInt(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4224,7 +4226,7 @@ define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- ISA manual 6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 64 - 1 or val < 0
@@ -4257,7 +4259,7 @@ define FConv > FCVT_S_D(rd::reg, rs::reg, fprnd::fprnd) =
 
 define FConv > FCVT_D_S(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
-    else if validRounding(fprnd)  -- exact (ISA manual 6.2.5)
+    else if validRounding(fprnd)  -- exact (U §6.2.5)
     then { a = FPRS(rs)
          -- only a signalling NaN raises a flag (NV)
          ; when FP32_IsSignalingNan(a) do setFP_Invalid()
@@ -4405,7 +4407,7 @@ define FConv > FCLASS_D(rd::reg, rs::reg) =
          ; ret<6> <- !FP64_Sign(val) and FP64_IsNormal(val)
          ; ret<7> <- val == FP64_PosInf
          ; ret<8> <- FP64_IsSignalingNan(val)
-         ; ret<9> <- FP64_IsNan(val) and not FP64_IsSignalingNan(val)  -- any quiet NaN (ISA manual 6.1.9)
+         ; ret<9> <- FP64_IsNan(val) and not FP64_IsSignalingNan(val)  -- any quiet NaN (U §6.1.9)
          ; writeRD(rd, ZeroExtend(ret))
          }
 
@@ -4422,7 +4424,7 @@ define System > ECALL  = signalEnvCall()
 -----------------------------------
 -- EBREAK
 -----------------------------------
--- The trap value is the address of the EBREAK (P §3.1.16 p.52, [D43]).
+-- The trap value is the address of the EBREAK (P §3.1.16 p.52).
 define System > EBREAK = signalAddressException(Breakpoint, PC)
 
 -----------------------------------
@@ -4453,9 +4455,9 @@ define System > SRET   =
 -- mstatus.TW set it is illegal unless it completes within the time limit
 -- (P §3.1.6.6 p.37), which is zero here: it completes at once iff an
 -- interrupt is pending and enabled in mie, whatever mstatus.MIE,
--- mstatus.SIE and mideleg are (P §3.3.3 p.62, [S20]).  In U-mode it is
+-- mstatus.SIE and mideleg are (P §3.3.3 p.62).  In U-mode it is
 -- always illegal: with S-mode implemented, WFI is not available to U-mode
--- (P §3.1.6.6 p.37, §3.3.3 p.61, [D23]).
+-- (P §3.1.6.6 p.37, §3.3.3 p.61).
 define System > WFI    =
     match curPrivilege()
     { case User       => signalException(Illegal_Instr)
@@ -4477,11 +4479,11 @@ construct csrOp { CSR_Write, CSR_Set, CSR_Clear }
 -- or uimm field and src the value it stands for.  CSRRW and CSRRWI always
 -- write; the others write iff f is not 0, whatever the value of src, and
 -- only a write needs a writable CSR.  Standard CSRs have no side effects
--- on reads (P §2.1 p.13), so the CSR is read also when rd = 0 ([D36]).
+-- on reads (P §2.1 p.13), so the CSR is read also when rd = 0.
 -- The CSRRS and CSRRC of mip see SEIP without the platform's line (P
 -- §3.1.9 p.45).  Those of sip see the value read, line included, but
 -- SEIP is read-only in sip (P §12.1.3 p.118), so the line never reaches
--- mip ([S21]).
+-- mip.
 unit accessCSR(op::csrOp, rd::reg, f::reg, src::regType, csr::creg) =
 { isWrite = op == CSR_Write or f != 0
 ; if checkCSROp(csr, f, if isWrite then Write else Read)
@@ -4543,9 +4545,9 @@ define System > CSRRCI(rd::reg, zimm::reg, csr::imm12) =
 -----------------------------------
 -- The hart has no address-translation cache, so the fence has nothing to
 -- do: every access uses the translation current when it is made, which is
--- always one that the fence allows (P §12.2.1 p.128, [S4]).
+-- always one that the fence allows (P §12.2.1 p.128).
 -- SFENCE.VMA is illegal in U-mode, and in S-mode while mstatus.TVM is set
--- (P §12.2.1 p.127, §3.1.6.6 p.37, [D46]).
+-- (P §12.2.1 p.127, §3.1.6.6 p.37).
 define System > SFENCE_VMA(rs1::reg, rs2::reg) =
     match curPrivilege()
     { case User       => signalException(Illegal_Instr)
@@ -4589,8 +4591,8 @@ construct FetchResult
 
 -- An instruction is fetched in 2-byte parcels, each translated and
 -- checked by the PMP, the upper half of a 32-bit instruction only after
--- the lower one, since it can lie in another page or PMP region ([D59],
--- [S16]).  A parcel that fails raises the instruction page fault or
+-- the lower one, since it can lie in another page or PMP region.  A
+-- parcel that fails raises the instruction page fault or
 -- access fault of fetchAddr, with the virtual address of the parcel as the
 -- trap value (P §3.1.16 p.52, §12.1.9 p.121).
 FetchResult Fetch() =
@@ -5343,7 +5345,7 @@ instruction DecodeRVC(h::half) =
      case '000 0 00000 00000 01' => ArithI(ADDI(0, 0, 0))
 
      case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi))
-     case '001 i5`1 00000 imi`5                01' => UnknownInstruction  -- ISA manual 7.1.4.2: C.ADDIW rd=x0 is reserved
+     case '001 i5`1 00000 imi`5                01' => UnknownInstruction  -- U §7.1.4.2: C.ADDIW rd=x0 is reserved
      case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi))
      case '010 i5`1 rd    imi`5                01' => ArithI( ADDI(rd, 0, i5 ^ 7 : imi))
      case '011 0    00010 00000                01' => UnknownInstruction
@@ -5400,7 +5402,7 @@ string log_instruction(w::word, inst::instruction) =
     " 0x" : hex64(PC) : " : " : hex32(w) : "   " : instructionToString(inst)
 
 -- Termination for an emulator.  Nothing in the model sets these: the
--- host-target interface (HTIF) belongs to the emulator ([D13]).
+-- host-target interface (HTIF) belongs to the emulator.
 declare done :: bool   -- Flag to request termination
 
 nat exitCode() =
@@ -5408,16 +5410,16 @@ nat exitCode() =
 
 -- minstret counts the instructions that retire (P §3.1.10 p.46): not
 -- those that raise an exception (U §4.3 p.67), nor a step that takes an
--- interrupt ([D64]).  It does not count while mcountinhibit.IR is set,
+-- interrupt.  It does not count while mcountinhibit.IR is set,
 -- sampled before the step (P §3.1.12 p.47), nor for an instruction that
--- writes minstret itself (U §4.2.1 p.64, [D65]).
+-- writes minstret itself (U §4.2.1 p.64).
 unit incrInstret(incIR::bool) =
     when incIR and not c_minstret_written(procID)
     do c_instret(procID) <- c_instret(procID) + 1
 
 -- Fetch and run one instruction.  The result is the trap value of an
 -- illegal instruction: the instruction bits, zero-extended (P §3.1.16
--- p.52-53, [D43]).
+-- p.52-53).
 regType fetchAndExecute() =
     match Fetch()
     { case F_Result(Half(h)) =>
@@ -5439,8 +5441,7 @@ regType fetchAndExecute() =
       }
     }
 
--- One step of the hart, in M-, S- or U-mode; all three are validated
--- (design-smode.md §2).
+-- One step of the hart, in M-, S- or U-mode.
 unit Next =
 { clear_logs()
 ; c_minstret_written(procID) <- false
@@ -5448,7 +5449,7 @@ unit Next =
 
 -- An interrupt is taken between instructions, at the start of a step:
 -- the step does not fetch, and mepc is the instruction not executed
--- (P §3.1.14 p.49, [D38]).
+-- (P §3.1.14 p.49).
 ; match checkInterrupts()
   { case Some(i, p) => takeTrap(true, interruptIndex(i), PC, 0, p)
     case None =>
@@ -5486,15 +5487,15 @@ unit Next =
   }
 
 -- mcycle counts every step, unless mcountinhibit.CY is set after it
--- (P §3.1.10 p.46, §3.1.12 p.47, [D63], [D66]).  An emulator advances
--- mtime by one after each step, so mtime counts steps too ([D67]).
+-- (P §3.1.10 p.46, §3.1.12 p.47).  An emulator advances
+-- mtime by one after each step, so mtime counts steps too.
 ; when not MCSR.mcountinhibit<0>
   do c_cycles(procID) <- c_cycles(procID) + 1
 }
 
 -- Reset (P §3.4 p.63): M-mode, mstatus.MIE = mstatus.MPRV = 0, misa
 -- with every extension, mcause = 0 and every PMP entry OFF and unlocked.
--- What the reset leaves unspecified is zero ([D62], [D70], [D71]): the
+-- What the reset leaves unspecified is zero: the
 -- read value of mstatus is 0x0000000A00000000 (FS Off, MPP U), mtvec and
 -- stvec are Direct at address 0, and the counters are zero.  The
 -- emulator sets the pc and the CLINT memory.
@@ -5549,8 +5550,8 @@ unit initMachine(hartid::id) =
 
 -- This initializes each core (via setting procID appropriately) on
 -- startup before execution begins.  The registers are UNSPECIFIED after
--- reset (P §3.4 p.63) and zero here ([D71]); an emulator then sets a0 and
--- a1 as its boot convention requires ([D72]).
+-- reset (P §3.4 p.63) and zero here; an emulator then sets a0 and
+-- a1 as its boot convention requires.
 unit initRegs(pc::nat) =
 { for i in 0 .. 31 do
     gpr([i])   <- 0x0

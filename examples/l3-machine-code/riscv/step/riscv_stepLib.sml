@@ -414,11 +414,14 @@ end
 
 val rvc_tm = ``(^s.c_MCSR ^s.procID).misa.C``
 
-(* H6 *)
+(* No interrupt can be taken in M-mode: mstatus.MIE is clear
+   (riscv_stepTheory.checkInterrupts_Machine). *)
 val no_interrupt = ``~(^s.c_MCSR ^s.procID).mstatus.MIE``
 
-(* The M-mode contract H1-H4 and H6 (riscv_stepTheory), as the word-level
-   conjuncts that the step theorems carry. *)
+(* The M-mode contract (riscv_stepTheory): the hart is in M-mode,
+   mstatus.MPRV and mstatus.MIE are clear, no PMP entry is locked and every
+   PMP entry is OFF or NAPOT, the last two as the word-level conjuncts that
+   the step theorems carry. *)
 val contract_hyps =
   let
     val mcsr = ``^s.c_MCSR ^s.procID``
@@ -537,7 +540,7 @@ end
    decided (an instruction that fails them is illegal and has no step
    theorem here), and check_CSR_conditions becomes mstatus.FS <> Off for
    fflags, frm and fcsr and is true for every other CSR in M-mode.  The
-   locks of the PMP entries (pmpcfg0/2, pmpaddr0-15) are decided by H3, a
+   locks of the PMP entries (pmpcfg0/2, pmpaddr0-15) are decided by a
    hypothesis of every step theorem: no entry is locked, so a write of
    pmpaddr<i> is never ignored, and the legalised value of pmpcfg0/2 does
    not depend on the old one (riscv_stepTheory.legalize_pmpcfg_unlocked).
@@ -608,8 +611,8 @@ local
        ``:mstatus``, ``:mip``, ``:StateDelta``]
   val csr_ss =
     std_ss ++ simpLib.rewrites (record_rwts @ cond_updates) ++ word_eq_ss
-  (* H3, by which no PMP entry is locked *)
-  val h3 =
+  (* the hypothesis that no PMP entry is locked *)
+  val unlocked =
     List.map Thm.ASSUME
       (boolSyntax.strip_conj
          (utilsLib.rhsc (Thm.SPEC ``^s.c_MCSR ^s.procID``
@@ -664,7 +667,8 @@ local
      boolTheory.LET_THM, pairTheory.UNCURRY_DEF,
      riscv_stepTheory.legalize_pmpcfg_unlocked, pmpcfg_ent_unlocked,
      riscv_stepTheory.reg_rec_id, riscv_stepTheory.reg'mip_updates,
-     riscv_stepTheory.fflags_insert, riscv_stepTheory.mtimecmp_address] @ h3
+     riscv_stepTheory.fflags_insert, riscv_stepTheory.mtimecmp_address] @
+    unlocked
   (* again after the ground terms are evaluated, which can make them apply:
      the address of mtimecmp is known only then *)
   val csr_values =
@@ -740,7 +744,7 @@ local
   val MP_Next_b = next riscv_stepTheory.NextRISCV_branch
   val MP_Next_mret = next riscv_stepTheory.NextRISCV_mret
   (* NextRISCV_trap with its last antecedent, that the trap is not
-     delegated, apart: in M-mode (H1) it holds whatever medeleg is. *)
+     delegated, apart: in M-mode it holds whatever medeleg is. *)
   val NextRISCV_trap =
     let
       val th = Drule.SPEC_ALL riscv_stepTheory.NextRISCV_trap
@@ -753,11 +757,11 @@ local
            (Thm.MP th (Drule.LIST_CONJ
                          (Drule.CONJUNCTS (Thm.ASSUME a5) @ [Thm.ASSUME a6]))))
     end
-  val h1 = ``^s.c_privilege ^s.procID = 3w``
+  val m_mode = ``^s.c_privilege ^s.procID = 3w``
   val not_delegated_conv =
-    STATE_CONV THENC REWRITE_CONV [Thm.ASSUME h1]
+    STATE_CONV THENC REWRITE_CONV [Thm.ASSUME m_mode]
   (* The cause, the trap value and the privilege that the trap is taken
-     from (MPP), for the trap of the instruction: M-mode by H1. *)
+     from (MPP), for the trap of the instruction: M-mode. *)
   val trap_conv =
     let
       val rwts =
@@ -769,7 +773,7 @@ local
            pats = [``n2w a = n2w b: 'a word``]}
     in
       SIMP_CONV (std_ss ++ simpLib.rewrites rwts ++ word_eq_ss)
-        [Thm.ASSUME h1, excCode_def, riscv_stepTheory.rawInstBits_def]
+        [Thm.ASSUME m_mode, excCode_def, riscv_stepTheory.rawInstBits_def]
       THENC Conv.DEPTH_CONV
               (fn tm => if wordsSyntax.is_w2w tm andalso
                            List.null (Term.free_vars tm)
@@ -836,7 +840,7 @@ in
       val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
       val tm = utilsLib.rhsc thm6
     in
-      (* H6: NextRISCV takes no interrupt, so its step is one of the spec's
+      (* NextRISCV takes no interrupt, so its step is one of the spec's
          Next only if no interrupt can be taken; in M-mode that holds when
          mstatus.MIE is clear (riscv_stepTheory.checkInterrupts_Machine).
          The equation itself does not depend on it.  tidy_up_rvc runs again
