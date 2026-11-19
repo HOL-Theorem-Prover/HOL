@@ -25,7 +25,7 @@ struct
     let
       val (prefix, first) = draw ()
       val next = ref first
-      val inside = ref false
+      val owner : Thread.thread option ref = ref NONE
       (* The kernel's Type.mk_vartype complains about a non-standard name
          unless the trace Vartype_Format_Complaint is off.  Flags are
          per-thread only inside a pin (Context.with_context): an unpinned
@@ -36,19 +36,34 @@ struct
           (fn () =>
              HOLFlags.with_bflags [(Type.vartype_fmt_complaint, false)]
                (fn () =>
-                  Portable.bracket (fn () => inside := true)
-                    (fn () => inside := false) (fn () => f ())) ()) ()
+                  Portable.bracket
+                    (fn () => owner := SOME (Thread.self ()))
+                    (fn () => owner := NONE) (fn () => f ())) ()) ()
       fun supply () =
         let val current = !next in
-          if !inside then ()
-          else raise Fail "hhNames: a private supply is used outside scoped";
+          if (case !owner of
+                  SOME t => Thread.equal (t, Thread.self ())
+                | NONE => false) then ()
+          else raise Fail "hhNames: a private supply is used outside scoped, \
+                          \or from a thread other than its scoped one";
           next := current + 1;
           Type.mk_vartype (prefix ^ Int.toString current)
         end
       (* The global counter has handed out everything below the number of
-         its next draw; draw until that number is past the last one used. *)
+         its next draw.  It is monotone and advances by one per draw, so
+         after reading the number k of one draw, the draws up to the number
+         !next - 1 are the next (!next - 1 - k) ones, which need no
+         parsing.  (A check by a further draw would itself move the
+         counter, so there is none.) *)
       fun release () =
-        if #2 (draw ()) >= !next - 1 then () else release ()
+        let
+          val (_, k) = draw ()
+          val missing = !next - 1 - k
+          fun skip n =
+            if n <= 0 then () else (ignore (Type.gen_tyvar ()); skip (n - 1))
+        in
+          skip missing
+        end
     in
       {supply = supply, release = release, scoped = scoped}
     end

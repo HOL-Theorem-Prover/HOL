@@ -155,7 +155,10 @@ sig
      seeded by one draw of the global counter, and advances the counter
      past its last name when it ends, so a reconstruction replay, which
      draws from the global counter, starts as soon as a proof is found.
-     (A warning of the export goes to the file that hides the
+     The producer runs in hhNames.scoped, which freezes the context at
+     the start of the producer (a snapshot pin, writes discarded); see
+     hhNames.sig for why this second pin client, besides proof replay, is
+     safe.  (A warning of the export goes to the file that hides the
      output of a replay running at the time.)
 
      Stops.  At the soft deadline no slice is started and the export is

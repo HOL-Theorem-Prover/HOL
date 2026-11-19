@@ -293,8 +293,8 @@ New tools
     for `hhConfig.hh_set ("timeout", ...)`.  The timeout counts from the
     launch of the provers.  The export of their problem files is finished
     first and not charged to it, except where the measured policy overlaps
-    the export with the search (few cores, a long timeout, `max_proofs` 1;
-    see `export_mode` in `hhSchedule.sml`): there the export counts against
+    the export with the search (the conditions are stated by `export_mode`
+    in `hhSchedule.sml`): there the export counts against
     the timeout.
 
 -   HOLyHammer schedules TPTP formats, type encodings, and lambda

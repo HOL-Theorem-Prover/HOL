@@ -503,8 +503,11 @@ fun publish_work (observer : export_observer)
    in practice only the proof replay of the language server) gets one:
    the tail reads the ambient signature, which a fresh thread would see
    unpinned.  pinned is the caller's answer, asked once where the export
-   starts: a forked producer is never pinned.  HolyHammer installs no pin
-   itself.  The items admitted and waiting for resolution are bounded by
+   starts: a forked producer is never pinned.  The producer does install a
+   pin itself (hhNames.scoped, a snapshot of the context taken at its
+   start, with writes discarded), but only for its own thread; its pool
+   workers are unpinned and read the live context, which agrees with the
+   snapshot because nothing writes the context during an export.  The items admitted and waiting for resolution are bounded by
    the workers (the queue briefly holds one more at admission), so the
    prepared tails (retained HOL terms) and the finished files held at any
    time are bounded as well. *)
@@ -1051,7 +1054,6 @@ fun run_in root {options, goal, rankings, progress} =
        private format of the names (see hhNames). *)
     fun producer (works : work list, named_for) () =
       let
-        val {supply, release, scoped} = hhNames.private_supply ()
         fun cancelled () = with_mutex state_mutex (fn () =>
           !stopping orelse !producer_cancelled
           orelse not (time_before (Time.now ()) deadline))
@@ -1061,11 +1063,20 @@ fun run_in root {options, goal, rankings, progress} =
              (Thread.testInterrupt ();
               if cancelled () then raise Export_cancelled else ())}
         datatype outcome = Quiet | Cut | Broke of exn
+        (* The supply is created inside the handled region, so that a
+           failure of its creation still ends in producer_finished.  The
+           release is then only known once it exists. *)
+        val released = ref (fn () => ())
         val outcome =
-          (scoped (fn () =>
-             export_works publication supply false silent_observer options
-               goal named_for works);
-           Quiet)
+          (let
+             val {supply, release, scoped} = hhNames.private_supply ()
+           in
+             released := release;
+             scoped (fn () =>
+               export_works publication supply false silent_observer options
+                 goal named_for works);
+             Quiet
+           end)
           handle Export_cancelled => Quiet
                | Interrupt => Cut
                | exn => Broke exn
@@ -1075,7 +1086,7 @@ fun run_in root {options, goal, rankings, progress} =
           (fn _ => fn () =>
             let
               val outcome =
-                (release (); outcome) handle exn =>
+                (!released (); outcome) handle exn =>
                   (case outcome of Broke _ => outcome | _ => Broke exn)
             in
               (case outcome of

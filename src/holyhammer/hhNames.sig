@@ -28,6 +28,18 @@ sig
      about the format of these names switched off.  It pins the thread
      (Context.with_context), which is what makes the switch private to it:
      a flag set without a pin is the live flag that every thread reads.
+     The pin is a snapshot of the context taken when scoped starts: the
+     thread then sees the context frozen at that moment, and any write to
+     the context inside f is discarded when f ends.  This makes the
+     producer of a pipelined run a second pin client besides the proof
+     replay of the language server (see with_context in Context.sig, which
+     expects pins only while proofs replay).  That is acceptable: the pin
+     lasts only for the export window, on a fresh thread, and nothing in
+     the export writes a context slot.  The producer's pool workers are
+     not pinned and read the live context; that agrees with the snapshot
+     because nothing writes the context during an export.  The supply may
+     be used only on the thread that runs scoped (it raises Fail
+     otherwise).
      release () must be called once the supply is no longer used: it
      advances the global counter past every number handed out, so that no
      later global draw repeats a name held in a memo or a cache.  Calling

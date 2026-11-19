@@ -2020,6 +2020,8 @@ fun test_hhLamTrans_ucomb () =
        ("C applied to a nested polymorphic type", combin "C",
         mk "q" (Type.--> (Type.mk_type ("list", [alpha]),
                           Type.--> (beta, alpha)))),
+       ("a function applied to an argument of a variable-sharing type",
+        mk "f" (Type.--> (alpha, alpha)), mk "a" (Type.--> (beta, alpha))),
        ("no unifier", mk "h" (Type.--> (num, Type.bool)), mk "z" Type.bool)]
     fun result apply (f, a) =
       let

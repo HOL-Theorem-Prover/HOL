@@ -88,6 +88,12 @@ struct
       (clean sub1, clean sub2)
     end
 
+  (* Mirrors boolSyntax.mk_ucomb, whose sep_type_unify draws the fresh
+     variables of the first type and then those of the second, in this
+     order, and then unifies.  The draw order decides the names, hence the
+     exported files: keep this in step with boolSyntax.  It cannot call
+     boolSyntax, because that draws from the global counter whatever the
+     caller wants, and changing boolSyntax is a last resort. *)
   fun mk_ucomb_with names (f, a) =
     let
       val (dty, _) = dom_rng (Term.type_of f)
