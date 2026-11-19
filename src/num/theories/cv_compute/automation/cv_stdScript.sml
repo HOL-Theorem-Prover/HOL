@@ -4,7 +4,7 @@
 Theory cv_std
 Ancestors
   cv cv_type arithmetic words byte cv_rep cv_prim pair list option sum
-  alist indexedLists rich_list sptree finite_set expMod
+  alist indexedLists rich_list sptree finite_set expMod numposrep
 Libs
   dep_rewrite wordsLib cv_typeLib cv_repLib cv_transLib
 
@@ -663,6 +663,13 @@ Proof
   \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
   \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
 QED
+
+(*----------------------------------------------------------*
+   positional numerals
+ *----------------------------------------------------------*)
+
+val () = cv_trans l2n_def;
+val () = cv_auto_trans n2l_n2lA;
 
 (*----------------------------------------------------------*
    byte: word_of_bytes / word_to_bytes
