@@ -171,7 +171,9 @@ Definition SHA_256_bytes_def:
     MAP (REVERSE o PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
-val () = cv_auto_trans SHA_256_bytes_def;
+val () = SHA_256_bytes_def
+  |> REWRITE_RULE [GSYM bytes_to_bits_def]
+  |> cv_auto_trans;
 
 Theorem SHA_256_bytes_abc:
   SHA_256_bytes (MAP (n2w o ORD) "abc") =

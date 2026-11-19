@@ -219,6 +219,43 @@ in
 end
 handle HOL_ERR e => die ("set_skip after copy failed: " ^ message_of e)
 
+(* Rules added to a compset built from another must not reach that one: the
+   compset `new_compset` starts from, and a sealed compset whose copy meets a
+   new constant, used to share their refs with the result. *)
+fun unchanged_by cs t =
+    case Lib.total (computeLib.CBV_CONV cs) t of
+        NONE => true
+      | SOME th => aconv (rhs (concl th)) t
+
+val _ = tprint "Checking new_compset leaves bool_compset's rules alone"
+val _ = computeLib.new_compset [mk_thm ([], “((p:bool) = ARB) <=> F”)]
+val _ = if unchanged_by computeLib.bool_compset “(q:bool) = ARB” then OK()
+        else die "a rule given to new_compset reached bool_compset"
+
+val _ = tprint "Checking adding to a sealed compset leaves it alone"
+val _ = computeLib.add_thms [mk_thm ([], “result4 = ARB”),
+                             mk_thm ([], “((x:ind) = ARB) <=> F”)]
+                            computeLib.bool_compset
+val _ = if unchanged_by computeLib.bool_compset “(y:ind) = ARB” then OK()
+        else die "a rule added to a copy of bool_compset reached it"
+
+val _ = tprint "Checking a first rule for a sealed compset's constant stays out"
+val _ = computeLib.add_thms [mk_thm ([], “T <=> F”)] computeLib.bool_compset
+val _ = if unchanged_by computeLib.bool_compset “T” then OK()
+        else die "a first rule for T added to bool_compset reached it"
+
+val _ = tprint "Checking rules added to a copy are used inside its old rules"
+val _ = new_constant("g5", “:ind -> bool”)
+val _ = let
+  val cs0 = computeLib.new_compset [mk_thm ([], “g5 x = (x = result2)”)]
+  val cs = computeLib.add_thms [mk_thm ([], “(result1 = result2) <=> F”)]
+                               (computeLib.copy cs0)
+  val th = computeLib.CBV_CONV cs “g5 result1”
+in
+  if aconv (rhs (concl th)) F then OK()
+  else die ("got " ^ thm_to_string th)
+end
+
 (* Registered conversions: a conversion that makes no progress must fall
    through to the constant's remaining rules rather than be retried on
    its own (reflexive) result, or escape CBV_CONV (UNCHANGED). *)

@@ -17,7 +17,10 @@ signature PFTEmit = sig
      are loaded first (via their own .pft files, in dependency order).
 
      IDs are allocated monotonically in each namespace and are never reused.
-     The footer gives the resulting array bounds.
+     The footer gives the resulting array bounds. PFTMerge can select the
+     target dependency closure and reuse slots after their final uses. Its
+     footer gives allocation high-water marks, including consecutive result
+     blocks required by implicit multi-result commands.
 
      The raw producer must use the current kernel identifier layout and the
      six-field identity-aware envelope; older raw traces must be regenerated.
