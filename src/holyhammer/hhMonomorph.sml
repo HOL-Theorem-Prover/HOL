@@ -439,6 +439,7 @@ struct
       List.concat (map result_of infos)
     end
 
-  fun monomorph caps goal premises = monomorph_pool caps (mk_pool goal) premises
+  fun monomorph caps goal premises =
+    monomorph_pool caps (mk_pool goal) premises
 
 end

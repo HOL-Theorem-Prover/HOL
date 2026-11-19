@@ -1103,7 +1103,8 @@ fun test_hhMonomorph () =
     val _ = hhMonomorph.monomorph_pool caps lazy_pool []
     val _ = hhMonomorph.monomorph_pool caps lazy_pool [("ground", goal)]
     val untouched = not (hhMonomorph.pool_indexed lazy_pool)
-    val _ = hhMonomorph.monomorph_pool caps lazy_pool [("schematic", schematic)]
+    val _ = hhMonomorph.monomorph_pool caps lazy_pool
+      [("schematic", schematic)]
     val _ = expect "monomorph pool indexes only for a schematic premise"
       (untouched andalso hhMonomorph.pool_indexed lazy_pool)
     val rigid_pool = hhMonomorph.mk_pool rigid_goal
