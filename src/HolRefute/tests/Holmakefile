@@ -8,7 +8,6 @@
 # rejects a parent that depends on its own subdirectory ("INCLUDES
 # chain", tools/Holmake/tests/badincludes/onesteploopdir).  The parent
 # therefore drives this directory with a recursive Holmake instead.
-CLINE_OPTIONS = --no_prereqs
 INCLUDES = ..
 
 all: $(DEFAULT_TARGETS) selftest.exe

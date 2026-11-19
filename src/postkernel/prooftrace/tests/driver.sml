@@ -10,7 +10,7 @@ fun load_pft extras =
      (use (source ^ name ^ ".sig"); use (source ^ name ^ ".sml")))
      (["ProofTraceParser","ProofTraceWalk","PFTOpcodes","PFTWriter",
        "IntPairTable","PFTEmit"] @ extras));
-val () = load_pft ["PFTReader","PFTReplay"];
+val () = load_pft ["PFTReader","PFTReplay","PFTMerge"];
 val () = use (test_source ^ "check.sml");
 val rulesets = [("hol4",PFTEmit.HOL4),("candle",PFTEmit.Candle)];
 fun emit trace output ruleset =

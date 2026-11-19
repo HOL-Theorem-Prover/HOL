@@ -1,4 +1,3 @@
-CLINE_OPTIONS = --no_prereqs
 INCLUDES = ../..
 
 EXES = early.exe late.exe descendant.exe diamond.exe diamond_early.exe \
@@ -37,9 +36,9 @@ replacement-tests: refutePersistOldTheory.uo
 	cp changed-Holmakefile.in .hol/replacement/Holmakefile
 	cp changed_consumer.sml changed-checks.sml .hol/replacement/
 	cp changed-a.sml.in .hol/replacement/refutePersistChangedScript.sml
-	REFUTE_EXPECT_CASE=a $(HOLDIR)/bin/Holmake -C .hol/replacement --no_prereqs
+	REFUTE_EXPECT_CASE=a $(HOLDIR)/bin/Holmake -C .hol/replacement
 	cp changed-b.sml.in .hol/replacement/refutePersistChangedScript.sml
-	REFUTE_EXPECT_CASE=b $(HOLDIR)/bin/Holmake -C .hol/replacement --no_prereqs
+	REFUTE_EXPECT_CASE=b $(HOLDIR)/bin/Holmake -C .hol/replacement
 endif
 
 EXTRA_CLEANS = $(EXES) persistence-selftest.log

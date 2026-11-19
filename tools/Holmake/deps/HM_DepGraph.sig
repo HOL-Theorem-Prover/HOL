@@ -112,7 +112,13 @@ sig
   val listNodes : 'a t -> (node * 'a nodeInfo) list
   val find_nodes_by_command : 'a t -> dir * command -> node list
   val mkneeded : dep list -> 'a t -> 'a t
-  val mk_dirneeded : Holmake_tools.hmdir.t -> 'a t -> 'a t
+  val mk_dirneeded : (string -> unit) -> Holmake_tools.hmdir.t -> 'a t -> 'a t
+    (* Restricts a `--no_prereqs' run to directory d: a node outside it
+       stands or falls on whether its target is already there.  One
+       that is needed and absent can never be built here, so it is
+       marked Failed without ever being dispatched -- no job runs, and
+       so nothing reports it.  The first argument is told about each
+       one; wire it to tgtfatal, or the run exits 1 in silence. *)
   val fold : (node * 'a nodeInfo -> 'b -> 'b) -> 'a t -> 'b -> 'b
   val topo_sort : 'a t -> node list
 
