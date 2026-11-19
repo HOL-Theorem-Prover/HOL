@@ -145,12 +145,16 @@ sig
      the named theorems fetched, the cache pruned and the provers probed on the
      calling thread, then the export runs on a producer thread while the
      slices start as their files are published, each file as soon as it is
-     complete.  The clock then starts at the launch of the workers.  The
-     files equal the blocking export's, because a reconstruction replay
-     draws fresh names from the counters the export draws from and so
-     waits until the producer has drawn its last name.  (A warning of the
-     export goes to the file that hides the output of a replay running at
-     the time.)
+     complete.  The clock then starts at the launch of the workers.  While
+     the producer is unfinished at most max (1, cores - 1 - pool workers)
+     slices run, so that the provers do not starve it; the bound is lifted
+     when it ends.  The files equal the blocking export's for the same
+     start of the counter of fresh type variables: the producer draws its
+     names from a supply of its own, seeded by one draw of the global
+     counter, and advances the counter past its last name when it ends, so
+     a reconstruction replay, which draws from the global counter, starts as
+     soon as a proof is found.  (A warning of the export goes to the file
+     that hides the output of a replay running at the time.)
 
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an
