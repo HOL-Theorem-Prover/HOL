@@ -37,8 +37,8 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
    parcels, each translated and checked by the PMP: the parcel at the pc
    and, for a 32-bit instruction, the one at pc + 2, whose bytes are read
    from the physical address that fetchAddr gives for it.  NextRISCV only
-   refines Next if it fetches exactly what Next would, so this must mirror
-   the spec. *)
+   steps as Next does if it fetches exactly what Next would, so this must
+   mirror the spec (riscv_refineTheory.Fetch_step_spec). *)
 
 Definition Fetch_def:
   Fetch s =
@@ -91,7 +91,11 @@ End
    checkInterrupts_Machine below), leaves out the setupDelta and clear_logs
    of Next (although an instruction may still write c_update, as writeCSR,
    writeFPRS and writeFPRD do), and does not count (c_cycles, c_instret,
-   c_minstret_written). *)
+   c_minstret_written).  From a state in which Next takes no interrupt, the
+   two step to states that agree on every field but those, log and
+   exception, unless the instruction reads mcycle, minstret, cycle or
+   instret (riscv_refineTheory.Next_NextRISCV_ghost): the step theorems
+   for a read of one of these four CSRs are about NextRISCV only. *)
 Definition NextRISCV_def:
   NextRISCV s =
   let rvc = haveRVC () s in
@@ -459,8 +463,8 @@ QED
    These are equations about NextRISCV only, which does not depend on
    mstatus.MIE.  riscv_stepLib adds the hypothesis that mstatus.MIE is
    clear to every step theorem that it builds from them, because NextRISCV
-   refines Next only when no interrupt can be taken
-   (checkInterrupts_Machine).
+   steps as Next does only when no interrupt can be taken
+   (checkInterrupts_Machine, riscv_refineTheory.Next_NextRISCV_ghost).
    ------------------------------------------------------------------------ *)
 
 Theorem NextRISCV:

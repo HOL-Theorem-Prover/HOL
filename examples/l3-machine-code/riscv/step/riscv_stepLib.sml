@@ -842,8 +842,10 @@ in
       val tm = utilsLib.rhsc thm6
     in
       (* NextRISCV takes no interrupt, so its step is one of the spec's
-         Next only if no interrupt can be taken; in M-mode that holds when
-         mstatus.MIE is clear (riscv_stepTheory.checkInterrupts_Machine).
+         Next only if no interrupt can be taken
+         (riscv_refineTheory.Next_NextRISCV_ghost); in M-mode that holds
+         when mstatus.MIE is clear
+         (riscv_stepTheory.checkInterrupts_Machine).
          The equation itself does not depend on it.  tidy_up_rvc runs again
          after ground_hyp_rule, which can leave misa.C as a hypothesis (a
          jump to a constant target with bit 1 set), to drop the hypotheses
