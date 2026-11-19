@@ -35,6 +35,15 @@ struct
   (* Selects the pipelined run_in (export overlapping the search).  The
      blocking run_in stays the default until a policy chooses. *)
   val pipelined = ref false
+  (* Called at the launch points of a run_in: with "<thread>-registered"
+     after the bookkeeping of a thread to launch (before it is forked) and
+     with "<thread>-forked" right after it, for the threads "recon",
+     "producer" and "worker".  An exception raised here stands for an
+     asynchronous interrupt of the caller at that point. *)
+  val launch_point = ref (fn (_ : string) => ())
+  (* Called on a slice worker before each claim of work, with a test of
+     whether the run is stopping. *)
+  val before_claim = ref (fn (_ : unit -> bool) => ())
 end
 
 structure hhSchedule :> hhSchedule =
@@ -744,7 +753,18 @@ fun run_in root {options, goal, rankings, progress} =
       end
     val producer_active = ref false
     val prepares_done = ref (not pipelined)
+    (* The first fatal export error.  It and reason are the two outcomes of
+       a stop that win by being first: once one is set (or the soft
+       deadline has passed, or the producer was cancelled for it), a
+       later error of the export is a late error of a cancelled job and is
+       dropped. *)
     val producer_error = ref (NONE : exn option)
+    val producer_thread = ref (NONE : Thread.thread option)
+    val producer_cancelled = ref false
+    (* Every thread forked by the caller, to be joined before it returns. *)
+    val threads = ref ([] : Thread.thread list)
+    val launch_point = !hhSchedule_Test.launch_point
+    val before_claim = !hhSchedule_Test.before_claim
 
     fun signal () = ConditionVar.broadcast state_changed
 
@@ -829,14 +849,12 @@ fun run_in root {options, goal, rankings, progress} =
     fun set_prepares_done () =
       with_mutex state_mutex (fn () => (prepares_done := true; signal ()))
 
-    (* The one terminal step of the producer, whatever ended it. *)
-    fun producer_finished failure =
+    (* The one terminal step of the producer, whatever ended it: failed
+       says that its unfinished problems ended in an error of the run
+       (Failed) and not in a stop or a late error (Cancelled). *)
+    fun producer_finished failed =
       with_mutex state_mutex (fn () =>
-        (case failure of
-             SOME _ => if Option.isSome (!producer_error) then ()
-                       else producer_error := failure
-           | NONE => ();
-         end_exports (if Option.isSome failure then Failed else Cancelled);
+        (end_exports (if failed then Failed else Cancelled);
          prepares_done := true; producer_active := false; signal ()))
 
     fun register_running kill =
@@ -864,9 +882,17 @@ fun run_in root {options, goal, rankings, progress} =
           cancelled
         end)
 
+    (* A directed interrupt of a thread of the run, never of the running
+       one (it would be taken at its next wait). *)
+    fun interrupt_thread thread =
+      if Thread.equal (thread, Thread.self ()) then ()
+      else Thread.interrupt thread handle Thread _ => ()
+
+    fun interrupt_recon () = Option.app interrupt_thread (!recon_thread)
+
     fun kill_all stop_reason =
       let
-        val kills = with_mutex state_mutex (fn () =>
+        val (kills, producer) = with_mutex state_mutex (fn () =>
           let
             val _ =
               case !reason of
@@ -879,41 +905,93 @@ fun run_in root {options, goal, rankings, progress} =
               (cancelled := true; kill)) (!running)
             val _ = signal ()
           in
-            kills
+            (kills, if !producer_active then !producer_thread else NONE)
           end)
       in
-        List.app (fn kill => kill () handle _ => ()) kills
+        List.app (fn kill => kill () handle _ => ()) kills;
+        Option.app interrupt_thread producer
       end
 
-    exception Cancelled
+    (* The soft deadline (or any later stop) cancels the export: nothing
+       claims a problem past it, so its remaining problems have no
+       consumer.  The producer is interrupted, once, wherever it waits;
+       one that computes a prepare ends at the end of that prepare. *)
+    fun cancel_exports () =
+      let
+        val producer = with_mutex state_mutex (fn () =>
+          if !producer_active andalso not (!producer_cancelled) then
+            (producer_cancelled := true; !producer_thread)
+          else NONE)
+      in
+        Option.app interrupt_thread producer
+      end
+
+    (* A stop that also cancels the replays. *)
+    fun stop_hard stop_reason =
+      (kill_all stop_reason; interrupt_recon ())
+
+    (* The export failed with exn.  If that is the first outcome of the run
+       it is the run's error: the run stops, replays included, and the
+       caller re-raises it.  Otherwise it is the late error of a cancelled
+       export and is dropped.  True when the error is the run's. *)
+    fun fail_export exn =
+      let
+        val first = with_mutex state_mutex (fn () =>
+          if Option.isSome (!reason) orelse Option.isSome (!producer_error)
+             orelse !producer_cancelled
+             orelse not (time_before (Time.now ()) deadline) then false
+          else (producer_error := SOME exn; true))
+      in
+        if first then stop_hard Exhausted else ();
+        first
+      end
+
+    exception Export_cancelled
 
     (* The export of the pipelined path, run on its own thread: the
        producer.  It stops between two prepares when the run is stopping
-       or the soft deadline has passed (nothing is claimed after it).  An
-       interrupt or a cancellation ends it quietly; any other failure
-       stops the run and is raised on the caller once everything has
-       stopped. *)
+       or the soft deadline has passed (nothing is claimed after it), and
+       a stop interrupts it where it waits (for a pooled tail).  The
+       interrupts are taken only at waits and at the check between the
+       prepares: a prepare is never cut, so its partial state cannot
+       be left behind and the response to a stop is bounded by one
+       prepare.  An interrupt that is neither a stop nor a cancellation is
+       a stop of the run (Interrupted); an export failure is the run's
+       error or a late error (see fail_export). *)
     fun producer (works : work list, named_for) () =
       let
         val last = length works - 1
         fun cancelled () = with_mutex state_mutex (fn () =>
-          !stopping orelse not (time_before (Time.now ()) deadline))
+          !stopping orelse !producer_cancelled
+          orelse not (time_before (Time.now ()) deadline))
         val publication = Early
           {ready = mark_ready,
            before_prepare = fn _ =>
-             if cancelled () then raise Cancelled else (),
+             (Thread.testInterrupt ();
+              if cancelled () then raise Export_cancelled else ()),
            after_prepare = fn w =>
              if #index w = last then set_prepares_done () else ()}
-        val failure =
+        datatype outcome = Quiet | Cut | Broke of exn
+        val outcome =
           (export_works publication false silent_observer options goal
              named_for works;
-           NONE)
-          handle Cancelled => NONE | Interrupt => NONE | exn => SOME exn
-        val _ =
-          (case failure of SOME _ => kill_all Exhausted | NONE => ())
-          handle _ => ()
+           Quiet)
+          handle Export_cancelled => Quiet | Interrupt => Cut | exn => Broke exn
+        (* No interrupt cuts the conclusion short. *)
+        val failed = Thread_Attributes.uninterruptible_defer
+          (fn _ => fn () =>
+            (case outcome of
+                 Quiet => false
+               | Cut =>
+                   (if with_mutex state_mutex (fn () =>
+                         !stopping orelse !producer_cancelled) then ()
+                    else stop_hard Interrupted;
+                    false)
+               | Broke exn => fail_export exn)
+            handle _ => false) ()
       in
-        producer_finished failure
+        Thread_Attributes.uninterruptible_defer
+          (fn _ => fn () => producer_finished failed) ()
       end
 
     fun cache_key config request =
@@ -991,16 +1069,17 @@ fun run_in root {options, goal, rankings, progress} =
       end
 
     fun worker_loop () =
-      case get_work () of
-          NONE => ()
-        | SOME item =>
-            ((run_slice item
-              handle Interrupt => ()
-                   | error =>
-                     TextIO.output (TextIO.stdErr,
-                       "HolyHammer slice failed: " ^
-                       General.exnMessage error ^ "\n"));
-             worker_loop ())
+      (before_claim (fn () => with_mutex state_mutex (fn () => !stopping));
+       case get_work () of
+           NONE => ()
+         | SOME item =>
+             ((run_slice item
+               handle Interrupt => ()
+                    | error =>
+                      TextIO.output (TextIO.stdErr,
+                        "HolyHammer slice failed: " ^
+                        General.exnMessage error ^ "\n"));
+              worker_loop ()))
 
     fun worker () =
       ((worker_loop () handle _ => ()); worker_finished ())
@@ -1126,19 +1205,23 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun completed () = with_mutex state_mutex finished_locked
 
+    (* Waits for the run to finish.  The soft deadline cancels the export,
+       the hard deadline stops everything that is left: the provers are
+       killed and the replay and the producer interrupted. *)
     fun await () =
       if completed () then ()
       else if not (time_before (Time.now ()) hard_deadline) then
-        (kill_all Timeout;
-         case !recon_thread of
-             NONE => ()
-           | SOME thread => Thread.interrupt thread handle Thread _ => ();
+        (stop_hard Timeout;
          OS.Process.sleep (Time.fromMilliseconds 10);
          await ())
       else
         let
+          val now = Time.now ()
+          val soft = time_before now deadline
+          val _ = if soft then () else cancel_exports ()
           val wake = time_min hard_deadline
-            (Time.+ (Time.now (), Time.fromMilliseconds 100))
+            (time_min (if soft then deadline else hard_deadline)
+               (Time.+ (now, Time.fromMilliseconds 100)))
           val _ = with_locked (fn () =>
             if finished_locked () then ()
             else ignore (ConditionVar.waitUntil (state_changed, state_mutex,
@@ -1146,6 +1229,17 @@ fun run_in root {options, goal, rankings, progress} =
         in
           await ()
         end
+
+    (* Waits, masked, until every thread forked by the caller has exited;
+       an interrupt that arrives meanwhile is raised afterwards. *)
+    fun join_all () =
+      Thread_Attributes.uninterruptible_wait (fn observe => fn () =>
+        Multithreading.join_threads observe (fn () => ()) (!threads)) ()
+
+    (* Everything has exited: the problems whose export never started or
+       was left unfinished are Cancelled. *)
+    fun close_exports () =
+      with_mutex state_mutex (fn () => end_exports Cancelled)
 
     fun finish stopped =
       let
@@ -1161,42 +1255,73 @@ fun run_in root {options, goal, rankings, progress} =
     if schedule_length = 0 then finish Exhausted
     else
       let
+        (* Forks a thread of the run.  The bookkeeping before the fork
+           (started) and after it (forked, which records the thread) must
+           not be cut apart by an interrupt of the caller: they run with
+           interrupts deferred, and a failure to fork undoes started
+           (failed).  An exception from a launch point before the fork
+           takes the same way; one after it leaves the thread running and
+           recorded, so that the cleanup stops and joins it. *)
+        fun spawn name {started, failed, forked} body =
+          Thread_Attributes.uninterruptible_defer (fn _ => fn () =>
+            let
+              val _ = started ()
+              val thread =
+                (launch_point (name ^ "-registered");
+                 Thread.fork (body, []))
+                handle error => (failed (); raise error)
+              val _ = threads := thread :: !threads
+              val _ = forked thread
+              val _ = launch_point (name ^ "-forked")
+            in
+              ()
+            end) ()
         fun launch () =
           let
-            val consumer = Thread.fork (reconstruction_worker, [])
-            val _ = recon_thread := SOME consumer
+            val _ = spawn "recon"
+              {started = ignore,
+               forked = fn thread => recon_thread := SOME thread,
+               failed = fn () => with_mutex state_mutex (fn () =>
+                 (recon_done := true; signal ()))}
+              reconstruction_worker
             val _ =
               case plan of
                   NONE => ()
                 | SOME (works, named_for) =>
-                    (launching_producer ();
-                     ignore (Thread.fork (producer (works, named_for), []))
-                     handle error => (producer_finished NONE; raise error))
+                    spawn "producer"
+                      {started = launching_producer,
+                       forked = fn thread =>
+                         if with_mutex state_mutex (fn () =>
+                              (producer_thread := SOME thread; !stopping))
+                         then interrupt_thread thread else (),
+                       failed = fn () => producer_finished false}
+                      (producer (works, named_for))
             fun start_worker _ =
-              let
-                val _ = launching_worker ()
-              in
-                Thread.fork (worker, [])
-                handle error => (worker_finished (); raise error)
-              end
+              spawn "worker"
+                {started = launching_worker, forked = ignore,
+                 failed = worker_finished} worker
             val _ = List.tabulate (worker_count, start_worker)
             val _ = finished_launching ()
           in
             await ()
           end
+        (* Everything that follows an interrupt or a failure of the caller
+           is masked: a second interrupt is raised after the cleanup, which
+           leaves no thread or process behind. *)
         fun interrupt () =
-          (finished_launching ();
-           kill_all Interrupted;
-           case !recon_thread of
-               NONE => ()
-             | SOME thread =>
-                 Thread.interrupt thread handle Thread _ => ();
-           await ())
+          Thread_Attributes.uninterruptible_defer (fn _ => fn () =>
+            (finished_launching ();
+             stop_hard Interrupted;
+             await ();
+             join_all ();
+             close_exports ())) ()
         val interrupted =
           ((launch (); false)
            handle Interrupt =>
              (interrupt (); true)
                 | error => (interrupt (); raise error))
+        val _ = join_all ()
+        val _ = close_exports ()
         val _ = if pipelined then hhSchedule_Test.export_states :=
                   with_mutex state_mutex (fn () => !exports)
                 else ()
