@@ -532,25 +532,34 @@ fun pool_threads pinned options works =
    schedule has nothing to export, a pinned caller would see a producer
    thread that is not pinned, and debug_dir keeps the whole problem set.
    Then hhSchedule_Test.export_choice, if it forces one.  Otherwise the
-   policy decides, and the policy is what paired measurements of both
-   exports with real provers support, nothing more: the pipelined export
-   is chosen only with 1 or 4 cores (the counts measured), a timeout of at
-   least 30 s and max_proofs 1.  There it brought the first verified proof
-   sooner without losing proofs or using more CPU.  With a shorter timeout
-   the export, which the pipelined run charges to the timeout, took a share
-   of the budget that the search needed and proofs were lost; with 16
-   cores the gain came with more CPU and a first proof from a different
-   slice on some goals.  Everything unmeasured keeps the blocking export.
-   The measurements are kept outside the repository.  This is the one
-   place that states these numbers. *)
+   policy decides.  The policy is what paired measurements of both exports
+   with real provers support, nothing more: a measured cell either passed
+   (no proof lost, no goal slower, no more CPU) and is pipelined, or it
+   failed or was not measured and keeps the blocking export.  The pipelined
+   export is chosen only with max_proofs 1 and a (cores, timeout) pair of
+   pipelined_region, the passing cells.  The pipelined run charges the
+   export to the timeout and the export competes with the search for the
+   CPU, which showed at more than one proof (later proofs lost, goals
+   slower), at 1 core with a 60 s budget (a proof lost at the budget edge)
+   and with 16 cores (more CPU, goals slower).  The measurements are kept
+   outside the repository, under .agent-files/evidence/speedup/phase3/grid
+   of the development tree.  This is the one place that states the
+   region. *)
 datatype blocking_reason =
-    EmptySchedule | PinnedCaller | Debugging | UnmeasuredCores | ShortTimeout
-  | MoreProofs | Forced
+    EmptySchedule | PinnedCaller | Debugging | UnmeasuredCores
+  | UnmeasuredTimeout | MoreProofs | Forced
 datatype export_mode = Blocking of blocking_reason | Pipelined
 
-val pipelined_cores = [1, 4]
-val pipelined_min_timeout = 30
+(* The timeouts measured to pass: exactly one value, or that value and any
+   longer one (the longer budget measured at 4 cores passed as well). *)
+datatype budget = Exactly of int | AtLeast of int
+
+val pipelined_region =
+  [(1, Exactly 30), (2, Exactly 30), (3, Exactly 30), (4, AtLeast 30)]
 val pipelined_max_proofs = 1
+
+fun in_budget (Exactly t) timeout = timeout = t
+  | in_budget (AtLeast t) timeout = timeout >= t
 
 fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
   if schedule_length = 0 then Blocking EmptySchedule
@@ -561,13 +570,15 @@ fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
         hhSchedule_Test.ForceBlocking => Blocking Forced
       | hhSchedule_Test.ForcePipelined => Pipelined
       | hhSchedule_Test.Policy =>
-          if not (List.exists (fn c => c = #cores options) pipelined_cores)
-          then Blocking UnmeasuredCores
-          else if #timeout options < pipelined_min_timeout then
-            Blocking ShortTimeout
-          else if #max_proofs options <> pipelined_max_proofs then
-            Blocking MoreProofs
-          else Pipelined
+          (case List.find (fn (c, _) => c = #cores options)
+                  pipelined_region of
+               NONE => Blocking UnmeasuredCores
+             | SOME (_, budget) =>
+                 if not (in_budget budget (#timeout options)) then
+                   Blocking UnmeasuredTimeout
+                 else if #max_proofs options <> pipelined_max_proofs then
+                   Blocking MoreProofs
+                 else Pipelined)
 
 (* Theorems with hypotheses are no premises (see hhLearn); explicit hh_pb
    lists bypass premise selection. *)

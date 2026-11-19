@@ -7358,10 +7358,10 @@ fun with_choice choice f =
     (fn _ => (hhSchedule_Test.export_choice := choice; f ()))
 
 (* The policy that picks the export of a run_in: the structural reasons in
-   their order of precedence, the measured policy (1 or 4 cores, a timeout
-   of at least 30 s, max_proofs 1), and the selector that forces either
-   export.  Options that the policy does not look at do not change the
-   choice. *)
+   their order of precedence, the measured region (cores 1-3 at a timeout
+   of exactly 30 s, 4 cores at 30 s or more, max_proofs 1), and the
+   selector that forces either export.  Options that the policy does not
+   look at do not change the choice. *)
 fun test_export_mode () =
   let
     open hhSchedule
@@ -7375,13 +7375,21 @@ fun test_export_mode () =
     fun varied (cores, timeout, proofs) =
       hhConfig.snapshot_with [("debug_dir", ""), ("cores", cores),
         ("timeout", timeout), ("max_proofs", proofs)]
-    val pipelined_cells = [("1", "30", "1"), ("4", "30", "1"),
-                           ("4", "300", "1"), ("1", "31", "1")]
-    val unmeasured_cores = [("2", "30", "1"), ("3", "30", "1"),
-                            ("5", "30", "1"), ("16", "30", "1"),
-                            ("16", "5", "1")]
-    val short_timeout = [("1", "29", "1"), ("4", "5", "1"), ("4", "1", "1")]
-    val more_proofs = [("1", "30", "2"), ("4", "30", "4")]
+    val pipelined_cells = [("1", "30", "1"), ("2", "30", "1"),
+                           ("3", "30", "1"), ("4", "30", "1"),
+                           ("4", "31", "1"), ("4", "60", "1"),
+                           ("4", "300", "1")]
+    val unmeasured_cores = [("5", "30", "1"), ("16", "30", "1"),
+                            ("16", "5", "1"), ("5", "60", "1")]
+    val unmeasured_timeout = [("1", "29", "1"), ("1", "31", "1"),
+                              ("1", "60", "1"), ("2", "31", "1"),
+                              ("2", "60", "1"), ("3", "31", "1"),
+                              ("3", "60", "1"), ("3", "29", "1"),
+                              ("4", "29", "1"), ("4", "5", "1"),
+                              ("4", "1", "1")]
+    val more_proofs = [("1", "30", "2"), ("2", "30", "2"),
+                       ("3", "30", "4"), ("4", "30", "4"),
+                       ("4", "60", "2")]
     fun all_modes cells m =
       List.all (fn c => mode (varied c) false 24 = m) cells
     fun policy f = with_choice hhSchedule_Test.Policy f
@@ -7391,8 +7399,8 @@ fun test_export_mode () =
          (all_modes pipelined_cells Pipelined);
        expect "export_mode: unmeasured core counts block"
          (all_modes unmeasured_cores (Blocking UnmeasuredCores));
-       expect "export_mode: a short timeout blocks"
-         (all_modes short_timeout (Blocking ShortTimeout));
+       expect "export_mode: an unmeasured timeout blocks"
+         (all_modes unmeasured_timeout (Blocking UnmeasuredTimeout));
        expect "export_mode: more than one proof blocks"
          (all_modes more_proofs (Blocking MoreProofs));
        expect "export_mode: cores are named before the timeout"
@@ -7404,7 +7412,7 @@ fun test_export_mode () =
             ("slices", "3")]) false 24 = Pipelined)));
     expect "export_mode: the selector forces the pipelined export"
       (forced (fn () =>
-         all_modes (unmeasured_cores @ short_timeout @ more_proofs)
+         all_modes (unmeasured_cores @ unmeasured_timeout @ more_proofs)
            Pipelined));
     expect "export_mode: the selector forces the blocking export"
       (blocked (fn () =>

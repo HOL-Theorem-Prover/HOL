@@ -131,12 +131,12 @@ sig
      precedence.  After them the internal selector
      hhSchedule_Test.export_choice may force either export; otherwise the
      policy of the measured cases decides, and chooses blocking with the
-     reason UnmeasuredCores, ShortTimeout or MoreProofs where it has not
-     measured the pipelined export (see hhSchedule.sml, which states the
-     cases). *)
+     reason UnmeasuredCores, UnmeasuredTimeout or MoreProofs where the
+     (cores, timeout, max_proofs) combination is not in the measured
+     passing region (see hhSchedule.sml, which states the region). *)
   datatype blocking_reason =
       EmptySchedule | PinnedCaller | Debugging | UnmeasuredCores
-    | ShortTimeout | MoreProofs | Forced
+    | UnmeasuredTimeout | MoreProofs | Forced
   datatype export_mode = Blocking of blocking_reason | Pipelined
   val export_mode :
     {pinned : bool, options : hhConfig.hh_options, schedule_length : int} ->
