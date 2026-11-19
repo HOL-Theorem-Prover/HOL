@@ -46,9 +46,10 @@ The options are `timeout`, `max_proofs`, `provers`, `slices`, `cores`,
 only its outcome: the verified tactic or why it failed.  With `verbose` set
 it also reports every slice as it starts and ends.
 
-`export_workers` is the number of threads that format and write the
-generated problems before the provers start (also settable through the
-environment variable `HOL4_HAMMER_EXPORT_WORKERS`).  The default 1 does the
+`export_workers` is the number of threads that finish the
+generated problems (the draw-free tail, then format and write) before the
+provers start (also settable through the environment variable
+`HOL4_HAMMER_EXPORT_WORKERS`).  The default 1 does the
 work on the calling thread, 0 means `cores`, and the count never exceeds
 `cores`.  The files written are the same whatever the count.
 

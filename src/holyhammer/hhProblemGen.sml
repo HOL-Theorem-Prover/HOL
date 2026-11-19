@@ -1310,10 +1310,11 @@ struct
   (* The formulas the ?? monotonicity oracle reads; none for the other
      encodings, so that the deferred tail keeps no HOL terms alive for
      it. *)
-  fun needs_input encoding terms =
+  fun needs_input encoding main_terms helpers =
     case encoding of
         hhTypeEnc.Guards {level = hhTypeEnc.NonmonoNonUniform, ...} =>
-          #conjecture terms :: map #2 (#facts terms)
+          #conjecture main_terms ::
+          map #2 (#facts main_terms @ helpers)
       | _ => []
 
   (* Everything up to the TPTP AST that resolves terms or draws fresh
@@ -1390,9 +1391,6 @@ struct
           in
             translated @ retained
           end
-      fun combined helpers =
-        {conjecture = #conjecture main_terms,
-         facts = #facts main_terms @ helpers}
       (* The caller-side first-orderizations report as the tail's
          failures do after describe_failure. *)
       fun firstorder_now helpers = firstorder helpers
@@ -1431,7 +1429,7 @@ struct
               | instances => instances
           end
       val helper_terms = translate_helpers with_proxies @ extensionality
-      val needs_terms = needs_input type_enc (combined helper_terms)
+      val needs_terms = needs_input type_enc main_terms helper_terms
     in
       fn () =>
         let

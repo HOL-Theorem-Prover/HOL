@@ -10,7 +10,13 @@
 structure hhSchedule_Test =
 struct
   val fork = ref hhPool.default_fork
+  (* Called on the worker with the item's index, after the temporary is
+     opened and just before the tail runs, so that an exception raised
+     here is a tail failure. *)
   val before_finish = ref (fn (_ : int) => ())
+  (* Called on the caller with the item's index once a pooled item has
+     been handed to the pool. *)
+  val after_submit = ref (fn (_ : int) => ())
 end
 
 structure hhSchedule :> hhSchedule =
@@ -374,11 +380,12 @@ fun prepare_work (observer : export_observer) conjecture memo named_for
    only when no context is pinned (see pool_size).  A failure of the tail
    is raw (hhProblemGen.Lambda_survived) and becomes its text where the
    caller awaits the item. *)
-fun finish_problem options tail temporary =
+fun finish_problem started options tail temporary =
   (hhConfig.stage_to
      {open_out = TextIO.openOut, close_out = TextIO.closeOut} temporary
-     (fn output => TextIO.output (output, hhProblemGen.format_pb options
-                                            (tail ())));
+     (fn output =>
+        (started ();
+         TextIO.output (output, hhProblemGen.format_pb options (tail ()))));
    Temp temporary)
 
 (* The inline implementation: the finishing work is deferred and runs on
@@ -388,7 +395,7 @@ fun submit_inline ({path, ...} : work, prepared) : pending =
   case prepared of
       Problem (options, tail) =>
         let val temporary = hhConfig.temp_path path in
-          {await = fn () => finish_problem options tail temporary,
+          {await = fn () => finish_problem ignore options tail temporary,
            cancel = fn () => hhConfig.remove_quietly temporary}
         end
     | Written temporary =>
@@ -402,16 +409,17 @@ fun release_finished (Temp temporary) = hhConfig.remove_quietly temporary
 (* The pool-backed implementation: a generated problem is finished on a
    worker, everything else (a staged legacy file, a copy) is cheap and
    stays inline. *)
-fun submit_pooled pool before_finish
+fun submit_pooled pool before_finish after_submit
     (work as {path, index, ...} : work, prepared) : pending =
   case prepared of
       Problem (options, tail) =>
         let
           val temporary = hhConfig.temp_path path
           val job = hhPool.submit pool
-            {run = fn () => (before_finish index;
-                             finish_problem options tail temporary),
+            {run = fn () => finish_problem (fn () => before_finish index)
+                              options tail temporary,
              discard = fn () => hhConfig.remove_quietly temporary}
+          val _ = after_submit index
         in
           {await = fn () => hhPool.await job,
            cancel = fn () => hhPool.abandon job}
@@ -465,6 +473,7 @@ fun export_problems_observed
   let
     val fork = !hhSchedule_Test.fork
     val before_finish = !hhSchedule_Test.before_finish
+    val after_submit = !hhSchedule_Test.after_submit
     val works = ordered_work root options rankings schedule
     val conjecture = list_mk_imp goal
     val memo = hhProblemGen.new_export_memo ()
@@ -495,7 +504,8 @@ fun export_problems_observed
     else
       hhPool.with_pool {workers = workers, fork = fork}
         (fn pool =>
-         run workers (submit_pooled pool before_finish))
+         run workers
+           (submit_pooled pool before_finish after_submit))
   end
 
 val export_problems = export_problems_observed silent_observer

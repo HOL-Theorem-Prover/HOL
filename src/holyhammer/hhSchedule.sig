@@ -78,10 +78,9 @@ sig
      workers wait for resolution (one more briefly), which bounds the
      HOL terms the queued tails retain.  A failure or an interrupt stops
      and waits for the workers and removes their temporaries before it
-     propagates.  A worker
-     thread that cannot be started fails the item it was for like any
-     other failure of that item (there is no inline fallback).  Test hooks
-     are in hhSchedule_Test (hhSchedule.sml).
+     propagates.  A worker thread that cannot be started fails the item
+     it was for like any other failure of that item (there is no inline
+     fallback).  Test hooks are in hhSchedule_Test (hhSchedule.sml).
 
      Concurrency of the tails.  A tail draws no fresh names and uses no
      shared state of HolyHammer, but it reads the live signature (new
