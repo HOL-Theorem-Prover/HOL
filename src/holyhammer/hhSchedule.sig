@@ -125,6 +125,19 @@ sig
   val export_problems : string -> hhConfig.hh_options -> goal ->
     (string * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit
+  (* run_in exports the problems of the schedule and then runs it.  With
+     the internal selector hhSchedule_Test.pipelined set (off by default),
+     an unpinned caller without debug_dir and with a non-empty schedule
+     gets the pipelined run: the rankings are validated, the named
+     theorems fetched, the cache pruned and the provers probed on the
+     calling thread, then the export runs on a producer thread while the
+     slices start as their files are published, each file as soon as it is
+     complete.  The clock then starts at the launch of the workers.  The
+     files equal the blocking export's, because a reconstruction replay
+     draws fresh names from the counters the export draws from and so
+     waits until the producer has drawn its last name.  An export failure
+     stops the run and is raised on the caller after everything has
+     stopped. *)
   val run_in : string ->
     {options : hhConfig.hh_options, goal : goal,
      rankings : (string * string list) list,

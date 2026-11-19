@@ -3727,14 +3727,18 @@ fun ranking_fixture_slice prover filter nfacts : hhProver.slice =
    nfacts = nfacts, filter = filter,
    extra_opts = ["0", "e-gave-up.out"], slice_size = 1}
 
-fun printer_config name slices note parser : hhProver.prover_config =
+fun printer_config_formats formats name slices note parser
+    : hhProver.prover_config =
   {name = name, exec_names = [schedule_printer], env_var = "",
    version_args = ["--version"], parse_version = fn _ => SOME "test",
-   tested_versions = ["test"], supported_formats = ["fof"],
+   tested_versions = ["test"], supported_formats = formats,
    mk_command = fn executable => fn request =>
      (note request; (executable, #extra request)),
    parse_output = parser, mono_instances = 100,
    slices = slices, legacy = false}
+
+fun printer_config name slices note parser =
+  printer_config_formats ["fof"] name slices note parser
 
 fun sleeper_config prover name parser : hhProver.prover_config =
   let val slice = fixture_slice prover [] 1 in
@@ -6097,7 +6101,367 @@ fun test_schedule_hoisted_fetch () =
     remove_tree root
   end
 
+(* The pipelined run_in (selected by hhSchedule_Test.pipelined).  Fixture:
+   two fixture provers and five slices (two legacy, three generated) over
+   the premises of a goal that Metis proves from LENGTH_APPEND.  Every
+   prover reads its whole problem file when it starts; the blocking export
+   of the same schedule, at a fresh counter start, gives the expected
+   bytes.  Each run is on its own thread, so that a hang fails the test. *)
+fun test_schedule_pipelined parser =
+  let
+    val gave_up = ["0", "e-gave-up.out"]
+    val proof = ["0", "schedule-length-append.out"]
+    val goal : Abbrev.goal = ([], ``LENGTH (l ++ m) = LENGTH l + LENGTH m``)
+    fun names bad = map (fn fact => "listTheory." ^ fact)
+      ["LENGTH_APPEND", "APPEND_NIL", "APPEND_ASSOC", "MAP_APPEND",
+       "LENGTH_MAP", "REVERSE_APPEND", bad, "LENGTH_REVERSE"]
+    val rankings = [("knn", names "MAP_MAP_o")]
+    fun slice prover format type_enc lam_trans count extra : hhProver.slice =
+      {prover = prover, format = format, type_enc = type_enc,
+       lam_trans = lam_trans, nfacts = count, filter = "knn",
+       extra_opts = extra, slice_size = 1}
+    fun legacy prover count extra = slice prover "fof" "" "" count extra
+    fun mono prover count =
+      slice prover "tf0" "mono_native" "combs" count gave_up
+    fun with_provers recording note f =
+      with_fixtures
+        [(Vampire, printer_config_formats ["fof", "tf0"] "hh-pipe-v"
+                [legacy Vampire 2 recording, mono Vampire 3, mono Vampire 5]
+                note parser),
+         (Eprover, printer_config_formats ["fof", "tf0"] "hh-pipe-e"
+                [legacy Eprover 2 recording, mono Eprover 7] note parser)]
+        f
+    fun options slices timeout max_proofs debug : hhConfig.hh_options =
+      {timeout = timeout, max_proofs = max_proofs,
+       provers = [Eprover, Vampire], slices = slices, cores = 8,
+       export_workers = 2, filter = "", max_facts = NONE, format = "",
+       type_enc = "", lam_trans = "", mono_iters = 3, mono_instances = NONE,
+       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
+       cache = false, cache_dir = "", cache_max_entries = 100,
+       debug_dir = debug, preplay_drop_one = false, verbose = false}
+    val tree = StagedFixture.tree
+    val quiet_start = StagedFixture.quiet_start
+    fun new_root () = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+    fun relative root path = String.extract (path, size root + 1, NONE)
+    fun exists_prefix prefix events =
+      List.exists (String.isPrefix prefix) events
+    (* The selector and the test hooks are set for one run. *)
+    fun with_hooks {pipelined, before_finish, before_prepare} f =
+      Portable.bracket
+        (fn () => (!hhSchedule_Test.pipelined, !hhSchedule_Test.before_finish,
+                   !hhSchedule_Test.before_prepare))
+        (fn (a, b, c) =>
+           (hhSchedule_Test.pipelined := a;
+            hhSchedule_Test.before_finish := b;
+            hhSchedule_Test.before_prepare := c))
+        (fn _ =>
+           (hhSchedule_Test.pipelined := pipelined;
+            hhSchedule_Test.before_finish := before_finish;
+            hhSchedule_Test.before_prepare := before_prepare;
+            f ()))
+    fun hooks pipelined = {pipelined = pipelined, before_finish = fn _ => (),
+                           before_prepare = fn _ => ()}
+    (* The relative paths and generated-ness of the work of a schedule. *)
+    fun is_generated ({kind = hhSchedule.ExportGenerated _, ...} :
+                        hhSchedule.work) = true
+      | is_generated _ = false
+    fun work_list opts =
+      let
+        val root = new_root ()
+        val works = with_provers gave_up ignore (fn () =>
+          hhSchedule.ordered_work root opts rankings
+            (hhSlice.mk_schedule opts))
+      in
+        (remove_tree root;
+         map (fn w => (#index w, relative root (#path w), is_generated w))
+           works)
+      end
+    (* The files of the blocking export of the schedule from a counter
+       start, and the number of names it drew. *)
+    fun expected opts start =
+      let
+        val root = new_root ()
+        val schedule = with_provers gave_up ignore (fn () =>
+          hhSlice.mk_schedule opts)
+        val _ = advance_to start
+        val first = counter ()
+        val _ = StagedFixture.quiet (fn () =>
+          hhSchedule.export_problems root opts goal rankings schedule)
+        val used = counter () - first - 1
+        val files = tree root
+      in
+        (remove_tree root; (files, used))
+      end
+    (* The state of a run, shared with the thread that steers it. *)
+    fun new_state () =
+      {root = new_root (), m = new_monitor (), released = ref false,
+       events = ref ([] : string list),
+       entered = ref ([] : (string * string * bool) list),
+       reached = ref false, caller = ref (NONE : Thread.thread option),
+       seen = ref (NONE : Thread.thread option)}
+    fun attempt f = (SOME (f ()), NONE) handle exn => (NONE, SOME exn)
+    (* Runs run_in on its own thread, bounded by a wait; the result and
+       the failure, if any. *)
+    fun run st recording opts rks hooks' wrap start =
+      let
+        val {root, m, released, events, entered, caller, seen, ...} = st
+        fun note (request : hhProver.run_request) =
+          let val path = #problem request in
+            monitor_do m (fn () =>
+              entered := (relative root path,
+                          String.concat (read_lines path), !released) ::
+                         !entered)
+          end
+        fun progress event =
+          monitor_do m (fn () =>
+            events := observe_schedule_event event :: !events)
+        val {pipelined, before_finish, before_prepare} = hooks'
+        val tag_prepare = fn i =>
+          ((if Option.isSome (!seen) then ()
+            else seen := SOME (Thread.self ()));
+           before_prepare i)
+        val outcome = ref NONE
+        val done_ = new_monitor ()
+        val _ = advance_to start
+        val _ = Thread.fork (fn () =>
+          (caller := SOME (Thread.self ());
+           outcome := SOME (attempt (fn () =>
+             wrap (fn () =>
+               with_provers recording note (fn () =>
+                 with_hooks {pipelined = pipelined,
+                             before_finish = before_finish,
+                             before_prepare = tag_prepare} (fn () =>
+                   hhSchedule.run_in root
+                     {options = opts, goal = goal, rankings = rks,
+                      progress = SOME progress}))))) ;
+           monitor_do done_ (fn () => ())), [])
+        val _ = monitor_until done_ "run_in did not finish"
+          (fn () => Option.isSome (!outcome))
+      in
+        valOf (!outcome)
+      end
+    val no_wrap = fn f => f ()
+    fun same_thread (seen : Thread.thread option ref,
+                     caller : Thread.thread option ref) =
+      case (!seen, !caller) of
+          (SOME a, SOME b) => Thread.equal (a, b)
+        | _ => false
+    fun tmp_clean_names files =
+      List.all (fn (name, _) => not (String.isSuffix ".tmp" name)) files
+    fun lookup files path =
+      Option.map #2 (List.find (fn (name, _) => name = path) files)
+
+    (* Readiness: a generated job held before its publication keeps
+       neither the earlier legacy slice nor the later files back. *)
+    fun readiness () =
+      let
+        val opts = options 5 30 1 NONE
+        val works = work_list opts
+        val n = length works
+        val (held, held_path, _) =
+          valOf (List.find (fn (_, _, generated) => generated) works)
+        val admitted = Int.min (n - 1, held + 2)
+        val (want, _) = expected opts (quiet_start ())
+        val st = new_state ()
+        val {m, released, entered, events, root, ...} = st
+        val gate = fn i =>
+          if i = held then
+            monitor_until m "the held job was never released"
+              (fn () => !released)
+          else ()
+        val _ = Thread.fork (fn () =>
+          (monitor_until m "slices did not start while the job was held"
+             (fn () => length (!entered) >= admitted);
+           monitor_do m (fn () => released := true)), [])
+        val (result, failure) =
+          run st gave_up opts rankings
+            {pipelined = true, before_finish = gate,
+             before_prepare = fn _ => ()} no_wrap (quiet_start ())
+        val seen = rev (!entered)
+        val early = List.filter (fn (_, _, late) => not late) seen
+        val files = tree root
+        val _ = remove_tree root
+      in
+        (expect "pipelined: the run completes with every slice"
+           (not (Option.isSome failure) andalso
+            #stopped (valOf result) = hhSchedule.Exhausted andalso
+            length (#slices_run (valOf result)) = n andalso
+            length seen = n andalso
+            schedule_events_sane (rev (!events)));
+         expect "pipelined: slices start while a job is held"
+           (length early = admitted andalso
+            List.exists (fn (path, _, _) =>
+              path = #2 (hd works)) early andalso
+            List.exists (fn (path, _, _) =>
+              List.exists (fn (index, p, _) => index > held andalso p = path)
+                works) early andalso
+            List.exists (fn (path, _, late) => path = held_path andalso late)
+              seen);
+         expect "pipelined: each prover reads the whole blocking file"
+           (List.all (fn (path, text, _) => lookup want path = SOME text)
+              seen);
+         expect "pipelined: the published files are the blocking files"
+           (files = want andalso tmp_clean_names files))
+      end
+
+    (* R1: a replay starts only after the last prepare. *)
+    fun replay_after_prepares () =
+      let
+        val opts = options 5 30 10 NONE
+        val works = work_list opts
+        val last = length works - 1
+        val (want, _) = expected opts (quiet_start ())
+        val st = new_state ()
+        val {m, released, events, root, ...} = st
+        val held_verified = ref true
+        val hold = fn i =>
+          if i = last then
+            monitor_until m "the last prepare was never released"
+              (fn () => !released)
+          else ()
+        val _ = Thread.fork (fn () =>
+          (monitor_until m "no proof was found"
+             (fn () => exists_prefix "found|" (!events));
+           OS.Process.sleep (Time.fromMilliseconds 700);
+           monitor_do m (fn () =>
+             (held_verified := exists_prefix "verified|" (!events);
+              released := true))), [])
+        val (result, failure) =
+          run st proof opts rankings
+            {pipelined = true, before_finish = fn _ => (),
+             before_prepare = hold} no_wrap (quiet_start ())
+        val files = tree root
+        val _ = remove_tree root
+      in
+        (expect "pipelined: no replay verifies before the last prepare"
+           (not (!held_verified) andalso not (Option.isSome failure) andalso
+            length (#suggestions (valOf result)) = 1 andalso
+            exists_prefix "verified|" (!events));
+         expect "pipelined: files beside a real replay equal the blocking ones"
+           (files = want))
+      end
+
+    (* The flag is set on an export error: the run raises and does not
+       hang with a replay waiting. *)
+    fun replay_after_error () =
+      let
+        val opts = options 5 30 1 NONE
+        val works = work_list opts
+        val (first, _, _) =
+          valOf (List.find (fn (_, _, generated) => generated) works)
+        val st = new_state ()
+        val {m, events, root, ...} = st
+        val fail = fn i =>
+          if i = first then
+            (monitor_until m "no proof was found"
+               (fn () => exists_prefix "found|" (!events));
+             raise Fail "injected tail failure")
+          else ()
+        val (_, failure) =
+          run st proof opts rankings
+            {pipelined = true, before_finish = fail,
+             before_prepare = fn _ => ()} no_wrap (quiet_start ())
+        val _ = remove_tree root
+      in
+        expect "pipelined: an export error ends the run with the error"
+          (case failure of
+               SOME exn => contains "injected tail failure"
+                             (General.exnMessage exn)
+             | NONE => false)
+      end
+
+    (* The flag is set when the producer is cancelled at the soft
+       deadline: the replay then runs and the later file is not made. *)
+    fun replay_after_cancel () =
+      let
+        val opts = options 5 1 1 NONE
+        val works = work_list opts
+        val last = length works - 1
+        val st = new_state ()
+        val {m, released, reached, root, ...} = st
+        val hold = fn i =>
+          if i = last - 1 then
+            (monitor_do m (fn () => reached := true);
+             monitor_until m "the held prepare was never released"
+               (fn () => !released))
+          else ()
+        val _ = Thread.fork (fn () =>
+          (monitor_until m "the hold was not reached" (fn () => !reached);
+           OS.Process.sleep (Time.fromMilliseconds 1300);
+           monitor_do m (fn () => released := true)), [])
+        val (result, failure) =
+          run st proof opts rankings
+            {pipelined = true, before_finish = fn _ => (),
+             before_prepare = hold} no_wrap (quiet_start ())
+        val (_, last_path, _) = List.last works
+        val made = OS.FileSys.access (join root last_path, [])
+        val _ = remove_tree root
+      in
+        expect "pipelined: cancellation at the deadline frees the replay"
+          (not (Option.isSome failure) andalso not made andalso
+           length (#suggestions (valOf result)) = 1)
+      end
+
+    (* Where the export runs. *)
+    fun selection () =
+      let
+        fun scenario opts rks pipelined wrap =
+          let
+            val st = new_state ()
+            val (result, failure) =
+              run st gave_up opts rks (hooks pipelined) wrap
+                (quiet_start ())
+            val files = tree (#root st)
+            val _ = remove_tree (#root st)
+          in
+            (st, result, failure, files)
+          end
+        val normal = options 5 30 1 NONE
+        val debug = OS.FileSys.tmpName ()
+        val _ = remove_tree debug
+        val (blocking, _, _, _) = scenario normal rankings false no_wrap
+        val (piped, piped_result, _, _) =
+          scenario normal rankings true no_wrap
+        val (debugged, _, _, _) =
+          scenario (options 5 30 1 (SOME debug)) rankings true no_wrap
+        val (pinned, _, _, _) = scenario normal rankings true
+          (fn f => Context.with_context (Context.snapshot ()) f ())
+        val (empty, empty_result, _, _) =
+          scenario (options 0 30 1 NONE) rankings true no_wrap
+        val missing = [("knn", names "NO_SUCH_THEOREM")]
+        val (absent, _, absent_failure, absent_files) =
+          scenario normal missing true no_wrap
+        val _ = remove_tree debug
+      in
+        (expect "pipelined: the export is on the caller by default"
+           (same_thread (#seen blocking, #caller blocking));
+         expect "pipelined: the selected export runs on its own thread"
+           (Option.isSome (!(#seen piped)) andalso
+            not (same_thread (#seen piped, #caller piped)) andalso
+            #stopped (valOf piped_result) = hhSchedule.Exhausted);
+         expect "pipelined: debug_dir keeps the blocking export"
+           (same_thread (#seen debugged, #caller debugged));
+         expect "pipelined: a pinned caller keeps the blocking export"
+           (same_thread (#seen pinned, #caller pinned));
+         expect "pipelined: an empty schedule behaves as before"
+           (#stopped (valOf empty_result) = hhSchedule.Exhausted andalso
+            null (#slices_run (valOf empty_result)) andalso
+            not (Option.isSome (!(#seen empty))));
+         expect "pipelined: a missing theorem raises before any file"
+           (Option.isSome absent_failure andalso null absent_files andalso
+            null (!(#events absent)) andalso
+            not (Option.isSome (!(#seen absent)))))
+      end
+  in
+    (List.app (fn _ => readiness ()) [1, 2, 3, 4, 5];
+     replay_after_prepares ();
+     replay_after_error ();
+     replay_after_cancel ();
+     selection ())
+  end
+
 val _ = test_schedule_pool ()
+val _ = test_schedule_pipelined (#parse_output (prover Eprover))
 val _ = test_schedule_hoisted_fetch ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
