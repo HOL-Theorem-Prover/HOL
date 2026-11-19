@@ -591,23 +591,28 @@ local
 
   (* Run f on a sigset_t (smaller than an opaque object) set up by init;
      there is nothing to destroy. *)
-  fun with_sigset name init f = with_object name (init, fn _ => ()) f
+  fun with_sigset name init f =
+    let
+      fun init_set set =
+        if init set = 0 then 0 else raise OS.SysErr (name, NONE)
+    in
+      with_object name (init_set, fn _ => ()) f
+    end
 
   fun fd_int fd = SysWord.toInt (Posix.FileSys.fdToWord fd)
 in
 
 (* Start path with arguments args (including argv[0]) and environment env, in
    a new process group, with the descriptor output as both its stdout and
-   stderr.  The child gets the signal state of a program started from a
-   shell: posix_spawn would pass on the calling thread's signal mask and the
-   parent's ignored signals, and Poly/ML threads block almost every signal
-   and the runtime ignores SIGPIPE.  E's --cpu-limit relies on receiving
-   SIGXCPU, and a blocked one lets a runaway prover go on for hours.  So the
-   child starts with an empty mask and every signal at its default.  NONE if
-   the program could not be executed.  Raises OS.SysErr if
-   the spawn attributes cannot be set up.  Must run with interrupts
-   deferred: an interrupt between the spawn and the return of its pid would
-   orphan the child. *)
+   stderr.  The child starts with an empty signal mask and every signal at
+   its default disposition.  posix_spawn would otherwise pass on the calling
+   thread's mask and the parent's ignored signals: Poly/ML threads block
+   almost every signal, including SIGXCPU on which E's --cpu-limit relies (a
+   runaway prover would go on for hours), and the runtime ignores SIGPIPE.
+   NONE if the program could not be executed.  Raises OS.SysErr if the spawn
+   attributes cannot be set up.  Must run with interrupts deferred: an
+   interrupt between the spawn and the return of its pid would orphan the
+   child. *)
 fun spawn path args env output =
   with_object "posix_spawn_file_actions_init"
     (file_actions_init, file_actions_destroy) (fn file_actions =>

@@ -2770,6 +2770,21 @@ fun test_runner_load parser =
     ()
   end
 
+(* Run config synchronously with the given timeout, returning the result
+   and the captured output text; the saved output is removed again. *)
+fun run_text config timeout =
+  let
+    val dir = OS.FileSys.tmpName ()
+    val _ = remove_tree dir
+    val result = hhProver.run config
+      {timeout = timeout, problem = "unused", extra = [],
+       debug_dir = SOME dir}
+    val text = String.concat (read_lines (#output_file result))
+    val _ = remove_tree dir
+  in
+    (result, text)
+  end
+
 fun test_runner () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       SOME _ => ()
@@ -2817,19 +2832,12 @@ fun test_runner () =
     val printer_path = join fixture_dir "runner-print-e.sh"
     val printer = fake_config "runner-printer" printer_path []
       (#parse_output e)
-    val printer_dir = OS.FileSys.tmpName ()
-    val _ = remove_tree printer_dir
-    val printer_request : hhProver.run_request =
-      {timeout = 2, problem = "unused", extra = [],
-       debug_dir = SOME printer_dir}
-    val printer_result = hhProver.run printer printer_request
-    val printed = String.concat (read_lines (#output_file printer_result))
+    val (printer_result, printed) = run_text printer 2
     val recorded = String.concat
       (read_lines (join fixture_dir "e-theorem-chatter.out"))
     val _ = expect "runner captures stdout intact"
       (#szs printer_result = hhProver.SzsTheorem andalso
        printed = recorded)
-    val _ = remove_tree printer_dir
     val forking_path = join fixture_dir "runner-forking-sleeper.sh"
     val forking = fake_config "runner-forking" forking_path []
       (#parse_output e)
@@ -2851,33 +2859,21 @@ fun test_runner () =
     val _ = remove_tree forking_dir
     val merged = fake_config "runner-merge" "/bin/sh"
       ["-c", "echo out; echo err >&2; echo \"home=$HOME\""] (#parse_output e)
-    val merged_dir = OS.FileSys.tmpName ()
-    val _ = remove_tree merged_dir
-    val merged_result = hhProver.run merged
-      {timeout = 5, problem = "unused", extra = [],
-       debug_dir = SOME merged_dir}
-    val merged_text = String.concat
-      (read_lines (#output_file merged_result))
+    val (_, merged_text) = run_text merged 5
     val home = Option.getOpt (OS.Process.getEnv "HOME", "")
     val _ = expect "runner merges stderr and passes the environment"
       (contains "out\n" merged_text andalso
        contains "err\n" merged_text andalso
        contains ("home=" ^ home ^ "\n") merged_text)
-    val _ = remove_tree merged_dir
     (* the child must not inherit the blocked or ignored signals of the
        calling Poly/ML thread (E's --cpu-limit relies on SIGXCPU) *)
     fun signal_survivor signal =
       let
-        val dir = OS.FileSys.tmpName ()
-        val _ = remove_tree dir
+        (* SIGXCPU dumps core by default; leave no core file *)
         val config = fake_config "runner-signal" "/bin/sh"
-          ["-c", "kill -" ^ signal ^ " $$; echo survived"]
+          ["-c", "ulimit -c 0; kill -" ^ signal ^ " $$; echo survived"]
           (#parse_output e)
-        val result = hhProver.run config
-          {timeout = 5, problem = "unused", extra = [],
-           debug_dir = SOME dir}
-        val text = String.concat (read_lines (#output_file result))
-        val _ = remove_tree dir
+        val (_, text) = run_text config 5
       in
         contains "survived" text
       end
