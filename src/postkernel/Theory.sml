@@ -160,28 +160,48 @@ fun thyname_assoc x [] = raise ERR "thyname_assoc" "not found"
  ---------------------------------------------------------------------------*)
 
 structure Graph = struct type graph = (thyid * thyid list) list
+(* The graph is kept twice: as the list of nodes, newest first, and as
+   the same nodes by theory name, newest first for each name, so that
+   finding a node or a theory's newest node doesn't walk the list. *)
+type indexed = {list : graph, by_name : graph Symtab.table}
 local
-  val graph_slot : (thyid * thyid list) list Context.Data.slot =
+  fun index_add (p as (n, _)) tab =
+      Symtab.update (thyid_name n,
+                     p :: (case Symtab.lookup tab (thyid_name n) of
+                               NONE => [] | SOME l => l)) tab
+  val graph_slot : indexed Context.Data.slot =
       Context.Data.new
         {name = "theory.graph",
-         empty = [(min_thyid,[])],
+         empty = {list = [(min_thyid,[])],
+                  by_name = index_add (min_thyid,[]) Symtab.empty},
          pp = fn _ => "<theory.graph>"}
   fun read_of ctxt = Context.Data.get graph_slot ctxt
   fun read () = read_of (Context.snapshot())
+  fun named ({by_name, ...} : indexed) n =
+      case Symtab.lookup by_name (thyid_name n) of
+          NONE => [] | SOME l => l
 in
-   fun add p = Context.Data.modify graph_slot (fn g => p :: g)
+   fun add p = Context.Data.modify graph_slot
+                 (fn {list, by_name} => {list = p :: list,
+                                         by_name = index_add p by_name})
    fun add_parent (n,newp) =
      let fun same (node,_) = thyid_eq node n
          fun addp(node,parents) = (node, op_union thyid_eq [newp] parents)
          fun ins (a::rst) = if same a then addp a::rst else a::ins rst
            | ins [] = raise ERR "Graph.add_parent.ins" "not found"
-     in Context.Data.modify graph_slot ins
+         fun upd {list, by_name} =
+             {list = ins list,
+              by_name = Symtab.update (thyid_name n,
+                                       ins (named {list = list,
+                                                   by_name = by_name} n))
+                                      by_name}
+     in Context.Data.modify graph_slot upd
      end
-   fun isin n = Lib.can (thyid_assoc n) (read ());
-   fun parents_of n = thyid_assoc n (read ());
+   fun isin n = Lib.can (thyid_assoc n) (named (read ()) n);
+   fun parents_of n = thyid_assoc n (named (read ()) n);
    fun ancestryl L =
     let val g = read ()
-        fun local_parents_of n = thyid_assoc n g
+        fun local_parents_of n = thyid_assoc n (named g n)
         fun Anc P Q = rev_itlist
            (fn nde => fn A => if op_mem thyid_eq nde A then A
              else Anc (local_parents_of nde handle HOL_ERR _ => []) (nde::A))
@@ -189,12 +209,17 @@ in
     in Anc L []
     end;
    fun fringe () =
-     let val g = read ()
+     let val g = #list (read ())
          val all_parents = List.map #2 g
          fun is_parent y = Lib.exists (Lib.op_mem thyid_eq y) all_parents
      in List.filter (not o is_parent) (List.map #1 g)
      end;
-   fun first P = Lib.first P (read ())
+   fun first P = Lib.first P (#list (read ()))
+   (* the newest node of the theory named [s] *)
+   fun newest s =
+       case Symtab.lookup (#by_name (read ())) s of
+           SOME (p :: _) => p
+         | _ => Lib.first (fn _ => false) []
 end
 end; (* structure Graph *)
 
@@ -305,11 +330,8 @@ local
 in
 fun thy_types thyname               = Type.thy_types thyname
 fun thy_constants thyname           = Term.thy_consts thyname
-fun thy_hash thyname                = thyid_hash (
-                                      fst (Graph.first
-                                           (equal thyname o thyid_name o fst)))
-fun thy_parents thyname             = snd (Graph.first
-                                           (equal thyname o thyid_name o fst))
+fun thy_hash thyname                = thyid_hash (fst (Graph.newest thyname))
+fun thy_parents thyname             = snd (Graph.newest thyname)
 fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
 fun thy_theorems (th:segment) = filter is_theorem (#facts th)
 fun thy_defns (th:segment)    = filter is_defn    (#facts th)
