@@ -155,20 +155,16 @@ fun thyname_assoc x [] = raise ERR "thyname_assoc" "not found"
 
 
 (*---------------------------------------------------------------------------
-    The theory graph is quite basic: just a list of pairs (thyid,parents).
-    The "min" theory is already installed; it has no parents.
+    The theory graph is a list of pairs (thyid,parents), newest first.
+    The "min" theory is already installed; it has no parents.  The same
+    nodes are also kept by theory name, newest first for each name, so
+    that finding a node or a theory's newest node doesn't walk the list.
  ---------------------------------------------------------------------------*)
 
 structure Graph = struct type graph = (thyid * thyid list) list
-(* The graph is kept twice: as the list of nodes, newest first, and as
-   the same nodes by theory name, newest first for each name, so that
-   finding a node or a theory's newest node doesn't walk the list. *)
 type indexed = {list : graph, by_name : graph Symtab.table}
 local
-  fun index_add (p as (n, _)) tab =
-      Symtab.update (thyid_name n,
-                     p :: (case Symtab.lookup tab (thyid_name n) of
-                               NONE => [] | SOME l => l)) tab
+  fun index_add (p as (n, _)) tab = Symtab.cons_list (thyid_name n, p) tab
   val graph_slot : indexed Context.Data.slot =
       Context.Data.new
         {name = "theory.graph",
@@ -178,8 +174,7 @@ local
   fun read_of ctxt = Context.Data.get graph_slot ctxt
   fun read () = read_of (Context.snapshot())
   fun named ({by_name, ...} : indexed) n =
-      case Symtab.lookup by_name (thyid_name n) of
-          NONE => [] | SOME l => l
+      Symtab.lookup_list by_name (thyid_name n)
 in
    fun add p = Context.Data.modify graph_slot
                  (fn {list, by_name} => {list = p :: list,
