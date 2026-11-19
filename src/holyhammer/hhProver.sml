@@ -544,14 +544,23 @@ local
     buildCall2 (symbol "posix_spawnattr_setpgroup", (cPointer, cInt), cInt)
   val attr_destroy =
     buildCall1 (symbol "posix_spawnattr_destroy", cPointer, cInt)
+  val attr_setsigmask = buildCall2
+    (symbol "posix_spawnattr_setsigmask", (cPointer, cPointer), cInt)
+  val attr_setsigdefault = buildCall2
+    (symbol "posix_spawnattr_setsigdefault", (cPointer, cPointer), cInt)
+  val sigset_empty = buildCall1 (symbol "sigemptyset", cPointer, cInt)
+  val sigset_full = buildCall1 (symbol "sigfillset", cPointer, cInt)
   (* The string vectors are NULL-terminated: NONE is the null pointer. *)
   val c_spawn = buildCall6
     (symbol "posix_spawn",
      (cStar cInt, cString, cPointer, cPointer,
       cVectorPointer (cOptionPtr cString),
       cVectorPointer (cOptionPtr cString)), cInt)
-  (* POSIX_SPAWN_SETPGROUP has this value on Linux and on macOS. *)
-  val spawn_setpgroup = 2
+  (* POSIX_SPAWN_SETPGROUP, _SETSIGDEF and _SETSIGMASK have these values on
+     Linux and on macOS. *)
+  val spawn_setpgroup = 0x02
+  val spawn_setsigdef = 0x04
+  val spawn_setsigmask = 0x08
   (* The opaque posix_spawn types are smaller than this on every
      supported platform. *)
   val opaque_size = 0w1024
@@ -580,12 +589,22 @@ local
       release (); result
     end
 
+  (* Run f on a sigset_t (smaller than an opaque object) set up by init;
+     there is nothing to destroy. *)
+  fun with_sigset name init f = with_object name (init, fn _ => ()) f
+
   fun fd_int fd = SysWord.toInt (Posix.FileSys.fdToWord fd)
 in
 
 (* Start path with arguments args (including argv[0]) and environment env, in
    a new process group, with the descriptor output as both its stdout and
-   stderr.  NONE if the program could not be executed.  Raises OS.SysErr if
+   stderr.  The child gets the signal state of a program started from a
+   shell: posix_spawn would pass on the calling thread's signal mask and the
+   parent's ignored signals, and Poly/ML threads block almost every signal
+   and the runtime ignores SIGPIPE.  E's --cpu-limit relies on receiving
+   SIGXCPU, and a blocked one lets a runaway prover go on for hours.  So the
+   child starts with an empty mask and every signal at its default.  NONE if
+   the program could not be executed.  Raises OS.SysErr if
    the spawn attributes cannot be set up.  Must run with interrupts
    deferred: an interrupt between the spawn and the return of its pid would
    orphan the child. *)
@@ -593,11 +612,18 @@ fun spawn path args env output =
   with_object "posix_spawn_file_actions_init"
     (file_actions_init, file_actions_destroy) (fn file_actions =>
   with_object "posix_spawnattr_init" (attr_init, attr_destroy) (fn attr =>
+  with_sigset "sigemptyset" sigset_empty (fn no_signals =>
+  with_sigset "sigfillset" sigset_full (fn all_signals =>
     let
       val dup2 = "posix_spawn_file_actions_adddup2"
       val pid = ref 0
       val _ = check "posix_spawnattr_setflags"
-        (attr_setflags (attr, spawn_setpgroup))
+        (attr_setflags
+           (attr, spawn_setpgroup + spawn_setsigdef + spawn_setsigmask))
+      val _ = check "posix_spawnattr_setsigmask"
+        (attr_setsigmask (attr, no_signals))
+      val _ = check "posix_spawnattr_setsigdefault"
+        (attr_setsigdefault (attr, all_signals))
       val _ = check "posix_spawnattr_setpgroup" (attr_setpgroup (attr, 0))
       val _ = check dup2 (file_actions_dup2 (file_actions, fd_int output, 1))
       val _ = check dup2 (file_actions_dup2 (file_actions, fd_int output, 2))
@@ -606,7 +632,7 @@ fun spawn path args env output =
     in
       if status <> 0 then NONE
       else SOME (Posix.Process.wordToPid (SysWord.fromInt (!pid)))
-    end))
+    end))))
 
 end
 

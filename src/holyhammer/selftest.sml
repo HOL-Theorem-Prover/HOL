@@ -2864,6 +2864,29 @@ fun test_runner () =
        contains "err\n" merged_text andalso
        contains ("home=" ^ home ^ "\n") merged_text)
     val _ = remove_tree merged_dir
+    (* the child must not inherit the blocked or ignored signals of the
+       calling Poly/ML thread (E's --cpu-limit relies on SIGXCPU) *)
+    fun signal_survivor signal =
+      let
+        val dir = OS.FileSys.tmpName ()
+        val _ = remove_tree dir
+        val config = fake_config "runner-signal" "/bin/sh"
+          ["-c", "kill -" ^ signal ^ " $$; echo survived"]
+          (#parse_output e)
+        val result = hhProver.run config
+          {timeout = 5, problem = "unused", extra = [],
+           debug_dir = SOME dir}
+        val text = String.concat (read_lines (#output_file result))
+        val _ = remove_tree dir
+      in
+        contains "survived" text
+      end
+    val _ = expect "spawned child is not blocking SIGXCPU"
+      (not (signal_survivor "XCPU"))
+    val _ = expect "spawned child is not blocking SIGTERM"
+      (not (signal_survivor "TERM"))
+    val _ = expect "spawned child does not ignore SIGPIPE"
+      (not (signal_survivor "PIPE"))
     val exec_failure : hhProver.prover_config =
       {name = "runner-exec-failure", exec_names = ["/bin/true"],
        env_var = "", version_args = [], parse_version = fn _ => SOME "test",
