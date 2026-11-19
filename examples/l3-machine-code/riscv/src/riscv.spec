@@ -647,7 +647,10 @@ component MEM (a::pAddrIdx) :: regType
 -- The core-local interruptor (CLINT) of sail-riscv's platform.  mtime,
 -- mtimecmp and msip are memory-mapped registers (P §3.2.1 p.59, §3.1.9
 -- p.44), so here they are words of memory.  Nothing in the model
--- advances mtime: the emulator does that after every step.
+-- advances mtime: the emulator does that after every step.  Bits 31 to 1
+-- of msip, which read as zero (P §3.1.9 p.44), are stored as written:
+-- only bit 0 is used, and making the others zero would put a test of the
+-- address into every store.
 
 pAddr CLINT_BASE = 0x2000000
 
