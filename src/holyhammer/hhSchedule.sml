@@ -7,10 +7,11 @@
    the workers of the export pool its own way ([fork]), act on a worker
    before it finishes an item ([before_finish], applied to the item's
    index), act where an item is handed to the pool ([after_submit]) or
-   before it is prepared ([before_prepare]), select the pipelined run_in
-   ([pipelined]) and read the export state of the problems of the last
-   pipelined run ([export_states]).  Production leaves the hooks at their
-   defaults. *)
+   before it is prepared ([before_prepare]), act at the launch points of
+   run_in ([launch_point]) and before a slice worker claims work
+   ([before_claim]), select the pipelined run_in ([pipelined]) and read
+   the export state of the problems of the last pipelined run
+   ([export_states]).  Production leaves the hooks at their defaults. *)
 structure hhSchedule_Test =
 struct
   (* The export of one problem file in a pipelined run: Pending until its
@@ -662,6 +663,11 @@ fun distinct_configs schedule =
     collect [] schedule
   end
 
+(* A failure that is reported and does not end the run, on stderr. *)
+fun warn what error =
+  TextIO.output (TextIO.stdErr,
+    "HolyHammer " ^ what ^ " failed: " ^ General.exnMessage error ^ "\n")
+
 fun run_in root {options, goal, rankings, progress} =
   let
     val started = Time.now ()
@@ -671,10 +677,7 @@ fun run_in root {options, goal, rankings, progress} =
     val report_mutex = Mutex.mutex ()
     fun emit event =
       (with_mutex report_mutex (fn () => report event)
-       handle Interrupt => () | error =>
-         TextIO.output (TextIO.stdErr,
-           "HolyHammer progress callback failed: " ^
-           General.exnMessage error ^ "\n"))
+       handle Interrupt => () | error => warn "progress callback" error)
     (* Decided once, on the calling thread: a forked producer is never
        pinned, so a pinned caller keeps the blocking export, as does a
        debug_dir (which keeps the whole problem set) and the empty
@@ -933,7 +936,11 @@ fun run_in root {options, goal, rankings, progress} =
     (* The export failed with exn.  If that is the first outcome of the run
        it is the run's error: the run stops, replays included, and the
        caller re-raises it.  Otherwise it is the late error of a cancelled
-       export and is dropped.  True when the error is the run's. *)
+       export: it is reported on stderr, as the failure of a slice is, and
+       dropped.  True when the error is the run's.  "First" is the order
+       in which the errors are reported here (run_staged raises an error
+       after the items admitted before it have settled), not the order in
+       which the prepares failed. *)
     fun fail_export exn =
       let
         val first = with_mutex state_mutex (fn () =>
@@ -942,7 +949,7 @@ fun run_in root {options, goal, rankings, progress} =
              orelse not (time_before (Time.now ()) deadline) then false
           else (producer_error := SOME exn; true))
       in
-        if first then stop_hard Exhausted else ();
+        if first then stop_hard Exhausted else warn "late export" exn;
         first
       end
 
@@ -976,7 +983,9 @@ fun run_in root {options, goal, rankings, progress} =
           (export_works publication false silent_observer options goal
              named_for works;
            Quiet)
-          handle Export_cancelled => Quiet | Interrupt => Cut | exn => Broke exn
+          handle Export_cancelled => Quiet
+               | Interrupt => Cut
+               | exn => Broke exn
         (* No interrupt cuts the conclusion short. *)
         val failed = Thread_Attributes.uninterruptible_defer
           (fn _ => fn () =>
@@ -1075,10 +1084,7 @@ fun run_in root {options, goal, rankings, progress} =
          | SOME item =>
              ((run_slice item
                handle Interrupt => ()
-                    | error =>
-                      TextIO.output (TextIO.stdErr,
-                        "HolyHammer slice failed: " ^
-                        General.exnMessage error ^ "\n"));
+                    | error => warn "slice" error);
               worker_loop ()))
 
     fun worker () =
@@ -1188,9 +1194,7 @@ fun run_in root {options, goal, rankings, progress} =
                     (* A variant that fails is expected and not reported. *)
                     if Option.isSome origin then ()
                     else
-                      (TextIO.output (TextIO.stdErr,
-                         "HolyHammer reconstruction failed: " ^
-                         General.exnMessage error ^ "\n");
+                      (warn "reconstruction" error;
                        queue_variants ()))
       end
 

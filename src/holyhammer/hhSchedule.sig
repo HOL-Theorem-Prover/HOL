@@ -142,17 +142,30 @@ sig
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an
      interrupt of the caller (also during the launch) and a failed export
-     stop the run: the provers are killed, the replays and the producer
+     stop the run: the provers are killed (a replay is interrupted at once
+     by the hard deadline, the interrupt and the failed export, but not by
+     MaxProofs, which a replay itself triggers) and the producer
      interrupted, and run_in returns only when every thread it forked has
      exited.  The producer takes an interrupt where it waits (for a worker
      that finishes a problem) and between two problems, never inside the
-     preparation of one: the response is bounded by one preparation.  The
-     first fatal export error, if it comes before any stop (including the
-     soft deadline), is raised on the caller with no result and no
-     ScheduleDone; after a stop it is a late error of a cancelled export
-     and is dropped.  Progress events already reported and results already
-     cached remain.  A root owned by the caller then holds only the files
-     published before the stop. *)
+     preparation of one (copy_file reads a whole file through BinIO.inputAll
+     and so may take an interrupt, which is safe: the copy is written
+     atomically): the response is bounded by one preparation.
+
+     The error race.  The first fatal export error to be reported (the
+     order in which the export surfaces the errors, after the problems
+     admitted before it have settled, not the order of the failures)
+     wins unless a stop came first: a stop is MaxProofs, the hard
+     deadline, an interrupt, the soft deadline or its cancellation of the
+     export.  The winning error is raised on the caller after everything
+     has stopped, with no result and no ScheduleDone; this holds also when
+     proofs had already been verified and max_proofs was not reached (the
+     blocking path raises the same error before any search).  Progress
+     events already reported, Verified included, and results already
+     cached remain.  After a stop an error is a late error of a cancelled
+     export: it is dropped, reported only on stderr as the failure of a
+     slice is.  A root owned by the caller holds only the files published
+     before the stop. *)
   val run_in : string ->
     {options : hhConfig.hh_options, goal : goal,
      rankings : (string * string list) list,

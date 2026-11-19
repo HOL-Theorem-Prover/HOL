@@ -292,17 +292,7 @@ New tools
     their provenance.  `holyHammer.set_timeout` remains as a deprecated alias
     for `hhConfig.hh_set ("timeout", ...)`.  The timeout counts from the
     launch of the provers; the export of their problem files is not charged
-    to it, unless a run overlaps the export with the search (an internal
-    mode, off by default), which starts the clock at the launch and lets the
-    export use the budget.  Such a run stops admitting slices at the soft
-    deadline and cancels exports that nothing waits for; `max_proofs`, the
-    hard deadline, an interrupt or a failed export kill the provers, cancel
-    the exports and wait for every thread before it returns.  A failed export
-    is raised on the caller unless the run had already stopped.  A root
-    passed to `hhSchedule.run_in` may then hold only the problems published
-    before the stop; the published files equal the default run's, as a
-    replay waits for the last problem to be prepared, and warnings of the
-    export go to the file that hides the replay's output while it runs.
+    to it.
 
 -   HOLyHammer schedules TPTP formats, type encodings, and lambda
     translations per prover slice.  Besides FOF, it now proves goals

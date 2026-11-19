@@ -53,12 +53,21 @@ with the search (an internal mode, off by default) starts the clock at the
 launch and the export then uses the budget: at the soft deadline no slice
 is started and an export that no slice waits for any more is cancelled;
 slices already started, and the reconstruction of their proofs, keep their
-grace period up to the hard deadline.  `max_proofs`, the hard deadline, an
-interrupt and a failed export stop everything: the provers are killed, the
-exports cancelled and every thread has exited before the call returns (an
-export is cut at the end of the problem it is preparing).  A failed export
-is raised on the caller, with no result, unless the run had already
-stopped.  The problems of an overlapped run that stops early are partly
+grace period up to the hard deadline.  The hard deadline, an interrupt and
+a failed export stop everything at once, `max_proofs` stops the provers and
+the export (a replay is not cut); the provers are killed, the exports
+cancelled and every thread has exited before the call returns (an export is
+cut at the end of the problem it is preparing).
+
+An export error wins over everything but a stop.  The first one to be
+reported (after the problems admitted before it have settled) is raised on
+the caller, with no result and no ScheduleDone, unless a stop (`max_proofs`,
+the deadlines, an interrupt) came first; then it is a late error of a
+cancelled export, dropped and printed on stderr like the failure of a
+slice.  This holds when a proof has already been verified but `max_proofs`
+is not reached: the run raises the error, as the default run does before
+any search, and the events already reported, `Verified` included, stay
+observable.  The problems of an overlapped run that stops early are partly
 exported: a root that the caller owns (`hhSchedule.run_in`) holds only the
 files published until then.  The files that are published equal those of
 the default run, because a replay of a proof, which draws fresh names, waits

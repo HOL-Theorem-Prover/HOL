@@ -312,8 +312,7 @@ val option_specs : option_spec list =
   [{name = "timeout", default = fn () => "30",
     expected = "a positive integer",
     doc = "overall wall-clock budget in seconds, counted from the launch " ^
-      "of the provers; the export of their problems is outside it " ^
-      "unless it runs beside the search, when it uses the budget",
+          "of the provers",
     valid = positive_int},
    {name = "max_proofs", default = fn () => "4",
     expected = "a positive integer",
