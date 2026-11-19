@@ -507,10 +507,11 @@ fun publish_work (observer : export_observer)
    pin itself (hhNames.scoped, a snapshot of the context taken at its
    start, with writes discarded), but only for its own thread; its pool
    workers are unpinned and read the live context, which agrees with the
-   snapshot because nothing writes the context during an export.  The items admitted and waiting for resolution are bounded by
-   the workers (the queue briefly holds one more at admission), so the
-   prepared tails (retained HOL terms) and the finished files held at any
-   time are bounded as well. *)
+   snapshot because nothing writes the context during an export.  The
+   items admitted and waiting for resolution are bounded by the workers
+   (the queue briefly holds one more at admission), so the prepared tails
+   (retained HOL terms) and the finished files held at any time are
+   bounded as well. *)
 fun pool_size pinned (options : hhConfig.hh_options) works =
   let
     val generated = length (List.filter
