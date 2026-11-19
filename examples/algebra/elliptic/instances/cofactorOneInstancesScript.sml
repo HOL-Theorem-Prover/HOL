@@ -87,15 +87,14 @@ QED
 Theorem secp256k1_card:
   CARD (sw_points secp256k1_base_field secp256k1_a secp256k1_b) = secp256k1_n
 Proof
-  `secp256k1_n divides CARD (sw_points secp256k1_base_field secp256k1_a secp256k1_b)` by
-    metis_tac[sw_point_order_divides_card, secp256k1_curve,
-              secp256k1_base_field_finite_field, secp256k1_generator_member,
-              secp256k1_generator_order, secp256k1_group_def] >>
-  `0 < secp256k1_n /\ ODD secp256k1_n /\ 2 * secp256k1_p + 1 < 3 * secp256k1_n` by
-    (rw[secp256k1_n_def, secp256k1_p_def] >> EVAL_TAC) >>
-  irule sw_cardinality_from_odd_divisor >>
-  asm_simp_tac bool_ss [secp256k1_curve, secp256k1_base_field_finite_field,
-                       secp256k1_base_field_card, secp256k1_no_two_torsion]
+  irule (Q.INST [`P` |-> `secp256k1_generator`]
+    (INST_TYPE [alpha |-> numSyntax.num]
+      sw_cardinality_from_odd_point_order)) >>
+  simp[secp256k1_curve, secp256k1_base_field_finite_field,
+       REWRITE_RULE [secp256k1_group_def] secp256k1_generator_order,
+       secp256k1_generator_member, secp256k1_no_two_torsion,
+       secp256k1_base_field_card] >>
+  rw[secp256k1_n_def, secp256k1_p_def] >> EVAL_TAC
 QED
 
 Theorem secp256k1_cofactor:
@@ -150,15 +149,14 @@ QED
 Theorem p256_card:
   CARD (sw_points p256_base_field p256_a p256_b) = p256_n
 Proof
-  `p256_n divides CARD (sw_points p256_base_field p256_a p256_b)` by
-    metis_tac[sw_point_order_divides_card, p256_curve,
-              p256_base_field_finite_field, p256_generator_member,
-              p256_generator_order, p256_group_def] >>
-  `0 < p256_n /\ ODD p256_n /\ 2 * p256_p + 1 < 3 * p256_n` by
-    (rw[p256_n_def, p256_p_def] >> EVAL_TAC) >>
-  irule sw_cardinality_from_odd_divisor >>
-  asm_simp_tac bool_ss [p256_curve, p256_base_field_finite_field,
-                       p256_base_field_card, p256_no_two_torsion]
+  irule (Q.INST [`P` |-> `p256_generator`]
+    (INST_TYPE [alpha |-> numSyntax.num]
+      sw_cardinality_from_odd_point_order)) >>
+  simp[p256_curve, p256_base_field_finite_field,
+       REWRITE_RULE [p256_group_def] p256_generator_order,
+       p256_generator_member, p256_no_two_torsion,
+       p256_base_field_card] >>
+  rw[p256_n_def, p256_p_def] >> EVAL_TAC
 QED
 
 Theorem p256_cofactor:
@@ -213,15 +211,14 @@ QED
 Theorem bn254_g1_card:
   CARD (sw_points bn254_base_field bn254_g1_a bn254_g1_b) = bn254_n
 Proof
-  `bn254_n divides CARD (sw_points bn254_base_field bn254_g1_a bn254_g1_b)` by
-    metis_tac[sw_point_order_divides_card, bn254_g1_curve,
-              bn254_base_field_finite_field, bn254_g1_generator_member,
-              bn254_g1_generator_order, bn254_g1_group_def] >>
-  `0 < bn254_n /\ ODD bn254_n /\ 2 * bn254_p + 1 < 3 * bn254_n` by
-    (rw[bn254_n_def, bn254_p_def] >> EVAL_TAC) >>
-  irule sw_cardinality_from_odd_divisor >>
-  asm_simp_tac bool_ss [bn254_g1_curve, bn254_base_field_finite_field,
-                       bn254_base_field_card, bn254_g1_no_two_torsion]
+  irule (Q.INST [`P` |-> `bn254_g1_generator`]
+    (INST_TYPE [alpha |-> numSyntax.num]
+      sw_cardinality_from_odd_point_order)) >>
+  simp[bn254_g1_curve, bn254_base_field_finite_field,
+       REWRITE_RULE [bn254_g1_group_def] bn254_g1_generator_order,
+       bn254_g1_generator_member, bn254_g1_no_two_torsion,
+       bn254_base_field_card] >>
+  rw[bn254_n_def, bn254_p_def] >> EVAL_TAC
 QED
 
 Theorem bn254_g1_cofactor:

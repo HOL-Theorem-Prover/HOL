@@ -74,67 +74,6 @@ Proof
      ring_of_num_def, sw_ring_model]
 QED
 
-(* For a field r, carrier(toRing(r)) = carrier(r). *)
-Theorem sw_toRing_carrier[local]:
-  Field (r:'a field) ==> ring_carrier (toRing r) = r.carrier
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
-(* For a field r, 0 in toRing(r) = 0 in r. *)
-Theorem sw_toRing_zero[local]:
-  Field (r:'a field) ==> ring_0 (toRing r) = r.sum.id
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
-(* For a field r, 1 in toRing(r) = 1 in r. *)
-Theorem sw_toRing_one[local]:
-  Field (r:'a field) ==> ring_1 (toRing r) = r.prod.id
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
-(* For a field r, -x in toRing(r) = -x in r. *)
-Theorem sw_toRing_neg[local]:
-  Field (r:'a field) ==>
-  !x. ring_neg (toRing r) x = r.sum.inv x
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
-(* For a field r, x+y in toRing(r) = x+y in r. *)
-Theorem sw_toRing_add[local]:
-  Field (r:'a field) ==>
-  !x y. ring_add (toRing r) x y = r.sum.op x y
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
-(* For a field r, x*y in toRing(r) = x*y in r. *)
-Theorem sw_toRing_mul[local]:
-  Field (r:'a field) ==>
-  !x y. ring_mul (toRing r) x y = r.prod.op x y
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
-(* For a field r, x^n in toRing(r) = x^n in r. *)
-Theorem sw_toRing_pow[local]:
-  Field (r:'a field) ==>
-  !x n. ring_pow (toRing r) x n = r.prod.exp x n
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
-(* For a field r, the numeral n in toRing(r) = n*1 in r. *)
-Theorem sw_toRing_of_num[local]:
-  Field (r:'a field) ==>
-  !n. ring_of_num (toRing r) n = r.sum.exp r.prod.id n
-Proof
-  metis_tac[sw_ring_ops]
-QED
-
 (* Arithmetic below uses the field record r. Subtraction expands directly
    to addition of the additive inverse, preserving the underlying terms. *)
 Overload "+"[local] = ``(r:'a field).sum.op``
@@ -672,9 +611,7 @@ Proof
        `r.prod.inv (r.sum.op x2 (r.sum.inv x1))`]
       sw_secant_closure_algebra) >>
     ASM_SIMP_TAC bool_ss
-      [sw_toRing_carrier, sw_toRing_zero, sw_toRing_one,
-       sw_toRing_neg, sw_toRing_add, sw_toRing_mul, sw_toRing_pow,
-       LET_THM, sw_curve_rhs_def]
+      [sw_ring_ops, LET_THM, sw_curve_rhs_def]
   ]
 QED
 
@@ -767,9 +704,7 @@ Proof
      `r.prod.inv (r.sum.op x1 (r.sum.inv x2))`]
     sw_secant_comm_algebra) >>
   ASM_SIMP_TAC bool_ss
-    [sw_toRing_carrier, sw_toRing_zero, sw_toRing_one,
-     sw_toRing_neg, sw_toRing_add, sw_toRing_mul, sw_toRing_pow,
-     LET_THM] >>
+    [sw_ring_ops, LET_THM] >>
   metis_tac[]
 QED
 
@@ -1005,9 +940,7 @@ Proof
              (r.prod.op (r.sum.exp r.prod.id 2) (r.sum.inv y1))`]
           sw_tangent_neg_algebra) >>
         ASM_SIMP_TAC bool_ss
-          [sw_toRing_carrier, sw_toRing_zero, sw_toRing_one,
-           sw_toRing_neg, sw_toRing_add, sw_toRing_mul, sw_toRing_pow,
-           sw_toRing_of_num, LET_THM] >>
+          [sw_ring_ops, LET_THM] >>
         metis_tac[]) >>
      `y2 = r.sum.inv y1` by metis_tac[] >>
      `r.sum.inv y2 = y1` by
@@ -1039,9 +972,7 @@ Proof
      `r.prod.inv (r.sum.op x2 (r.sum.inv x1))`]
     sw_secant_neg_algebra) >>
   ASM_SIMP_TAC bool_ss
-    [sw_toRing_carrier, sw_toRing_zero, sw_toRing_one,
-     sw_toRing_neg, sw_toRing_add, sw_toRing_mul, sw_toRing_pow,
-     LET_THM] >>
+    [sw_ring_ops, LET_THM] >>
   metis_tac[]
 QED
 

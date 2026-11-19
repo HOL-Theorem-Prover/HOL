@@ -24,8 +24,8 @@ with characteristic other than 2 or 3 and nonzero discriminant.
 Use `(sw_group r a b).exp` for scalars and the existing `order` operation.
 Point constructors are total; group laws require curve and carrier hypotheses.
 Torsion means rational points over the stated field, not an algebraic closure.
-Cofactor clearing need not produce a nonzero point or land in a chosen
-generator's subgroup. The scripts give the precise theorem statements.
+`sw_ring_ops` supplies the field-to-ring translation used by the algebraic
+proofs. 
 
 ## Build
 
