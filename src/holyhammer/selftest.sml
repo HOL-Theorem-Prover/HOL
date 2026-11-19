@@ -2651,7 +2651,7 @@ fun test_runner_load parser =
     val _ = Mutex.unlock result_mutex
     val _ = expect "runner concurrent load completes"
       (completed andalso successes = workers)
-    val _ = expect "runner spawn counter counts concurrent forks"
+    val _ = expect "runner spawn counter counts concurrent spawns"
       (hhProver.spawn_count () = workers)
   in
     ()
@@ -2736,6 +2736,20 @@ fun test_runner () =
       (fn () => process_is_gone grandchild)
     val _ = expect "runner group kill reaps grandchild" grandchild_gone
     val _ = remove_tree forking_dir
+    val merged = fake_config "runner-merge" "/bin/sh"
+      ["-c", "echo out; echo err >&2; echo \"path=$PATH\""] (#parse_output e)
+    val merged_dir = OS.FileSys.tmpName ()
+    val _ = remove_tree merged_dir
+    val merged_result = hhProver.run merged
+      {timeout = 5, problem = "unused", extra = [],
+       debug_dir = SOME merged_dir}
+    val merged_text = String.concat
+      (read_lines (#output_file merged_result))
+    val _ = expect "runner merges stderr and passes the environment"
+      (contains "out\n" merged_text andalso
+       contains "err\n" merged_text andalso
+       contains ("path=" ^ valOf (OS.Process.getEnv "PATH")) merged_text)
+    val _ = remove_tree merged_dir
     val exec_failure : hhProver.prover_config =
       {name = "runner-exec-failure", exec_names = ["/bin/true"],
        env_var = "", version_args = [], parse_version = fn _ => SOME "test",

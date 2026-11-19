@@ -512,62 +512,151 @@ type process_running =
 
 fun is_esrch error = OS.errorName error = "ESRCH"
 
-(* pipe(2) and fork(2) are separate operations in the Basis interface.  Keep
-   that setup window serial so a concurrent child cannot inherit a pipe
-   before its close-on-exec flags have been installed. *)
-val fork_mutex = Mutex.mutex ()
+(* Prover processes are started with posix_spawn(3) through the Foreign
+   interface rather than with Posix.Process.fork.  Poly/ML's fork only
+   marks the child single-threaded: runtime mutexes (the heap-allocation
+   lock, the scheduler lock taken on every ML/RTS transition) that another
+   thread holds at the time of the fork stay locked in the child, whose ML
+   code between fork and exec can need them.  The child then never reaches
+   exec, and the parent waits for it forever.  (Poly/ML's own Unix.execute
+   was changed to fork in C for the same reason.)  posix_spawn runs only C
+   code in the child, and glibc reports an exec failure as its return
+   value, so no error pipe is needed. *)
+local
+  open Foreign
+  val libc = loadExecutable ()
+  fun symbol name = getSymbol libc name
+  val file_actions_init =
+    buildCall1 (symbol "posix_spawn_file_actions_init", cPointer, cInt)
+  val file_actions_dup2 = buildCall3
+    (symbol "posix_spawn_file_actions_adddup2", (cPointer, cInt, cInt), cInt)
+  val file_actions_destroy =
+    buildCall1 (symbol "posix_spawn_file_actions_destroy", cPointer, cInt)
+  val attr_init = buildCall1 (symbol "posix_spawnattr_init", cPointer, cInt)
+  val attr_setflags =
+    buildCall2 (symbol "posix_spawnattr_setflags", (cPointer, cShort), cInt)
+  val attr_setpgroup =
+    buildCall2 (symbol "posix_spawnattr_setpgroup", (cPointer, cInt), cInt)
+  val attr_destroy =
+    buildCall1 (symbol "posix_spawnattr_destroy", cPointer, cInt)
+  val c_spawn = buildCall6
+    (symbol "posix_spawn",
+     (cPointer, cString, cPointer, cPointer, cPointer, cPointer), cInt)
+  (* POSIX_SPAWN_SETPGROUP has this value on Linux and on macOS. *)
+  val spawn_setpgroup = 2
+  (* The opaque posix_spawn types are smaller than this on every
+     supported platform. *)
+  val opaque_size = 0w1024
 
-fun start_process path args limit : process_running = with_mutex fork_mutex
-  (fn () =>
+  fun free_strings (array, count) =
+    (List.app (fn i => Memory.free (Memory.getAddress (array, i)))
+       (List.tabulate (count, Word.fromInt));
+     Memory.free array)
+
+  (* A NULL-terminated char ** holding copies of strs.  The offsets of
+     the Memory address accessors count pointers, not bytes. *)
+  fun alloc_strings strs =
+    let
+      val count = length strs
+      val array = Memory.malloc (Word.fromInt (8 * (count + 1)))
+      fun copy (i, str) =
+        let
+          val size = String.size str
+          val buffer = Memory.malloc (Word.fromInt (size + 1))
+        in
+          CharVector.appi (fn (j, c) =>
+            Memory.set8 (buffer, Word.fromInt j, Word8.fromInt (Char.ord c)))
+            str;
+          Memory.set8 (buffer, Word.fromInt size, 0w0);
+          Memory.setAddress (array, Word.fromInt i, buffer)
+        end
+    in
+      Memory.setAddress (array, Word.fromInt count, Memory.null);
+      List.foldl (fn (str, i) => (copy (i, str); i + 1)) 0 strs;
+      (array, count)
+    end
+
+  fun with_strings strs f =
+    let
+      val allocated = alloc_strings strs
+      val result = f (#1 allocated) handle exn =>
+        (free_strings allocated; raise exn)
+    in
+      free_strings allocated; result
+    end
+
+  fun fd_int fd = SysWord.toInt (Posix.FileSys.fdToWord fd)
+in
+
+(* Start path with arguments args (including argv[0]) and environment env, in
+   a new process group, with the descriptor output as both its stdout and
+   stderr.  NONE if the program could not be executed. *)
+fun spawn path args env output =
+  let
+    val file_actions = Memory.malloc opaque_size
+    val attr = Memory.malloc opaque_size
+    val pid_cell = Memory.malloc 0w4
+    fun finish () =
+      (file_actions_destroy file_actions; attr_destroy attr;
+       Memory.free file_actions; Memory.free attr; Memory.free pid_cell)
+    fun go () =
+      let
+        val _ = file_actions_init file_actions
+        val _ = attr_init attr
+        val _ = attr_setflags (attr, spawn_setpgroup)
+        val _ = attr_setpgroup (attr, 0)
+        val _ = file_actions_dup2 (file_actions, fd_int output, 1)
+        val _ = file_actions_dup2 (file_actions, fd_int output, 2)
+        val status = with_strings args (fn argv =>
+          with_strings env (fn envp =>
+            c_spawn (pid_cell, path, file_actions, attr, argv, envp)))
+      in
+        if status <> 0 then NONE
+        else SOME (Posix.Process.wordToPid
+          (SysWord.fromInt (Word32.toIntX (Memory.get32 (pid_cell, 0w0)))))
+      end
+  in
+    go () before finish () handle exn => (finish (); raise exn)
+  end
+
+end
+
+(* pipe(2) and fcntl(2) are separate operations in the Basis interface.  Keep
+   that setup window serial with the spawns so that a concurrent child does
+   not inherit a pipe before its close-on-exec flags have been installed. *)
+val spawn_mutex = Mutex.mutex ()
+
+fun failed_process started : process_running =
+  {kill = fn () => (),
+   wait = fn () =>
+     {output = "", exec_failed = true, killed = false,
+      status = Posix.Process.W_EXITSTATUS 0w127, time = elapsed started}}
+
+fun start_process path args limit : process_running =
   let
     val started = Time.now ()
-    val environment = Posix.ProcEnv.environ ()
-    val arguments = path :: args
-    val execute = (path, arguments, environment)
-    val child_group = {pid = NONE, pgid = NONE}
-    val exec_failure : Word8.word = 0w127
-    val {infd = read_fd, outfd = write_fd} = Posix.IO.pipe ()
-    val {infd = error_read_fd, outfd = error_write_fd} = Posix.IO.pipe ()
-    val close_on_exec = Posix.IO.FD.flags [Posix.IO.FD.cloexec]
-    val _ = List.app (fn fd => Posix.IO.setfd (fd, close_on_exec))
-      [read_fd, write_fd, error_read_fd, error_write_fd]
-    val error_byte = Word8Vector.fromList [0w1]
-    val error_slice = Word8VectorSlice.full error_byte
-    val stdout_dup = {old = write_fd, new = Posix.FileSys.stdout}
-    val stderr_dup = {old = write_fd, new = Posix.FileSys.stderr}
-    (* Keep this branch to syscalls over values forced above.  In
-       particular, it must not allocate or acquire a runtime lock between
-       fork and exec: this is the safe fork pattern in threaded Poly/ML. *)
-    fun child () =
-      ((Posix.ProcEnv.setpgid child_group;
-        Posix.IO.dup2 stdout_dup;
-        Posix.IO.dup2 stderr_dup;
-        Posix.IO.close read_fd;
-        Posix.IO.close write_fd;
-        Posix.IO.close error_read_fd;
-        Posix.Process.exece execute)
-       handle _ =>
-         ((ignore (Posix.IO.writeVec (error_write_fd, error_slice))
-           handle _ => ());
-          Posix.Process.exit exec_failure))
-  in
-    case Posix.Process.fork () of
-        NONE => child ()
-      | SOME pid =>
+    val spawned = with_mutex spawn_mutex (fn () =>
       let
-        val _ = note_spawn ()
-        (* The child also calls setpgid.  Doing it here closes the race in
-           which a caller kills immediately after run_async returns. *)
-        val _ =
-          (Posix.ProcEnv.setpgid {pid = SOME pid, pgid = SOME pid}
-           handle OS.SysErr _ => ())
+        val {infd = read_fd, outfd = write_fd} = Posix.IO.pipe ()
+        val close_on_exec = Posix.IO.FD.flags [Posix.IO.FD.cloexec]
+        val _ = List.app (fn fd => Posix.IO.setfd (fd, close_on_exec))
+          [read_fd, write_fd]
+        val pid =
+          spawn path (path :: args) (Posix.ProcEnv.environ ()) write_fd
+          handle exn => (Posix.IO.close read_fd; Posix.IO.close write_fd;
+                         raise exn)
         val _ = Posix.IO.close write_fd
-        val _ = Posix.IO.close error_write_fd
-        val exec_failed =
-          ((Word8Vector.length (Posix.IO.readVec (error_read_fd, 1)) > 0)
-           before Posix.IO.close error_read_fd)
-          handle exn =>
-            ((Posix.IO.close error_read_fd handle _ => ()); raise exn)
+      in
+        (case pid of
+             SOME _ => note_spawn ()
+           | NONE => Posix.IO.close read_fd);
+        Option.map (fn pid => (pid, read_fd)) pid
+      end)
+  in
+    case spawned of
+        NONE => failed_process started
+      | SOME (pid, read_fd) =>
+      let
         val input = text_instream read_fd
         val chunks = ref ([] : string list)
         val state_mutex = Mutex.mutex ()
@@ -624,7 +713,7 @@ fun start_process path args limit : process_running = with_mutex fork_mutex
             val status = reap ()
             val result =
               {output = String.concat (List.rev (!chunks)),
-               exec_failed = exec_failed,
+               exec_failed = false,
                killed = state (fn () => !was_killed),
                status = status, time = elapsed started}
             val _ = state (fn () => process_done := true)
@@ -660,7 +749,7 @@ fun start_process path args limit : process_running = with_mutex fork_mutex
       in
         {kill = signal_group, wait = wait}
       end
-  end)
+  end
 
 fun read_process path args limit =
   #wait (start_process path args limit) ()
