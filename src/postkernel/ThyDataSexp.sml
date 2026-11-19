@@ -366,7 +366,9 @@ fun new {thydataty, load, other_tds, merge} =
     new0 {thydataty = thydataty, load = SOME load, other_tds = other_tds,
           merge = merge}
 
-(* new for data nothing reads when a theory is loaded: loads only skip it *)
+(* new without a load function: a theory load runs no load hook for this
+   data, and making it doesn't replay one over the theories already
+   loaded.  Other code may still read the data (with segment_data). *)
 fun new_noload {thydataty, other_tds, merge} =
     new0 {thydataty = thydataty, load = NONE, other_tds = other_tds,
           merge = merge}
