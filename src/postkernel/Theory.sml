@@ -209,7 +209,6 @@ in
          fun is_parent y = Lib.exists (Lib.op_mem thyid_eq y) all_parents
      in List.filter (not o is_parent) (List.map #1 g)
      end;
-   fun first P = Lib.first P (#list (read ()))
    (* the newest node of the theory named [s] *)
    fun newest s =
        case Symtab.lookup (#by_name (read ())) s of
