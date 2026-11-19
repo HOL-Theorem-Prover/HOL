@@ -452,10 +452,12 @@ fun fullmake0 lazy_global {adinfo:('delta,'value)adata_info, sexps, globinfo,
              empty = now initial_value,
              pp = fn _ => "<ancestry." ^ tag ^ ".global>"}
       fun get_global_value_of ctxt =
-          if lazy_global then
-            Lock.synchronized force_lock
-              (fn () => Susp.force (Context.Data.get global_slot ctxt))
-          else Susp.force (Context.Data.get global_slot ctxt)
+          let val s = Context.Data.get global_slot ctxt
+          in
+            if lazy_global then
+              Lock.synchronized force_lock (fn () => Susp.force s)
+            else Susp.force s
+          end
       fun get_global_value () = get_global_value_of (Context.snapshot())
       fun step f s =
           if lazy_global then Susp.delay (fn () => f (Susp.force s))

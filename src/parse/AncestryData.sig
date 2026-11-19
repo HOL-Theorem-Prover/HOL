@@ -82,7 +82,13 @@ sig
                  ('delta,'value) fullresult
 
   (* fullmake, except that updates to the global value are delayed until
-     it is read; every update function must then be pure. *)
+     it is read.  apply_to_global and thy_finaliser are still applied to
+     a theory's deltas at load, in load order, and may change state there
+     (TypeBase's update hooks run then).  The 'value -> 'value function
+     they return, like every function given to update_global_value, runs
+     at the first read after it, and must depend only on the value it is
+     given.  If it raises, that read raises and the update stays pending,
+     so every later read retries it. *)
   val fullmake_lazy_global :
                { adinfo : ('delta, 'value) adata_info,
                  uptodate_delta : 'delta -> bool,
