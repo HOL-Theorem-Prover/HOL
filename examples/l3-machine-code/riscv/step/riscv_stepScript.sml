@@ -2,7 +2,7 @@
    Definitions and theorems used by RISC-V step evaluator (riscv_stepLib)
 
    P §x p.N and U §x p.N cite the privileged and the unprivileged RISC-V
-   specification by section and printed page (see ../src/README.md).
+   specification, version 20260120, by section and printed page.
    ------------------------------------------------------------------------ *)
 Theory riscv_step
 Ancestors
@@ -2151,7 +2151,7 @@ end
    (check_CSR_conditions: mstatus.FS <> Off for fflags, frm and fcsr).
    CSRRW and CSRRWI always write the CSR; CSRRS, CSRRC, CSRRSI and CSRRCI
    write it unless their rs1 or uimm field is 0, which the theorems named
-   _READ assume (U §4.2.1 p.62-63, Table 21).  The _NOP theorems have
+   _READ assume (U §6.1 p.47-48, Table 7).  The _NOP theorems have
    rd = 0, as for the other instructions.
    ------------------------------------------------------------------------ *)
 

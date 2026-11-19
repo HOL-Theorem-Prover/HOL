@@ -11,10 +11,8 @@ generated:
 Both exports must run from this directory.
 
 Comments in `riscv.spec` and in the step library cite the RISC-V privileged
-specification, version 20260120, as `P §x p.N`, and the unprivileged
-specification as `U §x p.N`, by section and printed page. The `U` citations
-are to the unprivileged volume of the combined manual
-`riscv-spec-8fb3965-2026-10-30.pdf`.
+and unprivileged specifications, version 20260120 of both, as `P §x p.N` and
+`U §x p.N`, by section and printed page.
 
 ## Regenerating
 

@@ -17,9 +17,9 @@
 --
 -- For syntax highlighting, treat this file as Haskell source.
 --
--- Comments cite the RISC-V privileged specification, version 20260120, as
--- "P §x p.N" and the unprivileged specification as "U §x p.N", by section
--- and printed page (see README.md).
+-- Comments cite the RISC-V privileged and unprivileged specifications,
+-- version 20260120, as "P §x p.N" and "U §x p.N", by section and printed
+-- page (see README.md).
 ---------------------------------------------------------------------------
 
 
@@ -810,7 +810,7 @@ Rounding option rnd_mode_dynamic(rnd::fprnd) =
     }
 
 -- The rounding mode of an instruction: its rm field, or fcsr.frm when the
--- field is 7 (U §6.1.2).  It is never RDYN.
+-- field is 7 (U §21.2 p.113-114).  It is never RDYN.
 Rounding option round(rnd::fprnd) =
     match rnd_mode_static(rnd)
     { case Some(RDYN) => rnd_mode_dynamic(fcsr.FRM)
@@ -829,7 +829,7 @@ ieee_rounding ieeeRounding(rnd::Rounding) =
     }
 
 -- rm of an instruction whose result is exact (FCVT.D.S, FCVT.D.W, FCVT.D.WU):
--- it is decoded as usual, but it is never used to round (U §6.1.2)
+-- it is decoded as usual, but it is never used to round (U §21.2 p.114)
 bool validRounding(rnd::fprnd) =
     match rnd_mode_static(rnd)
     { case Some(RDYN) => IsSome(rnd_mode_dynamic(fcsr.FRM))
@@ -843,7 +843,7 @@ bits(32) RV32_CanonicalNan = 0x7fc00000
 bits(64) RV64_CanonicalNan = 0x7ff8000000000000
 
 -- a NaN result of an arithmetic or conversion instruction is the canonical
--- NaN (U §6.1.3 and §6.2)
+-- NaN (U §21.3 p.114-115 and §22.4 p.122)
 bits(32) canonS(x::bits(32)) = if FP32_IsNan(x) then RV32_CanonicalNan else x
 bits(64) canonD(x::bits(64)) = if FP64_IsNan(x) then RV64_CanonicalNan else x
 
@@ -859,7 +859,7 @@ bool FP32_Sign(x::bits(32)) = x<31>
 bool FP64_Sign(x::bits(64)) = x<63>
 
 -- multiplicands of an FMA that must raise NV even when the addend is a quiet
--- NaN (U §6.1.6); IEEE 754-2008 leaves that case open, and neither
+-- NaN (U §21.6 p.117); IEEE 754-2008 leaves that case open, and neither
 -- export's MulAdd raises it
 bool FP32_InfTimesZero(a::bits(32), b::bits(32)) =
     (FP32_IsZero(a) and (b == FP32_PosInf or b == FP32_NegInf)) or
@@ -869,7 +869,7 @@ bool FP64_InfTimesZero(a::bits(64), b::bits(64)) =
     (FP64_IsZero(a) and (b == FP64_PosInf or b == FP64_NegInf)) or
     (FP64_IsZero(b) and (a == FP64_PosInf or a == FP64_NegInf))
 
--- setting exception flags (fcsr bits 4-0: NV DZ OF UF NX, U §6.1.2)
+-- setting exception flags (fcsr bits 4-0: NV DZ OF UF NX, U §21.2 p.113)
 
 unit setFP_Invalid() =
     fcsr.NV <- true
@@ -886,7 +886,7 @@ unit setFP_Underflow() =
 unit setFP_Inexact() =
     fcsr.NX <- true
 
--- accrue the exception flags returned by an IEEE operation (U §6.1.2)
+-- accrue the exception flags returned by an IEEE operation (U §21.2 p.114)
 unit accrueFlags(f::ieee_flags) =
 { when f.InvalidOp    do setFP_Invalid()
 ; when f.DivideByZero do setFP_DivZero()
@@ -914,8 +914,8 @@ bits(64) FP64_FromFP32(a::bits(32)) =
 -- Rounding to nearest, ties to max magnitude (RMM)
 ---------------------------------------------------------------------------
 
--- Neither L3 nor HOL's binary_ieee has this rounding mode, so the result
--- under RMM is computed from the result n under
+-- Neither L3 nor HOL's binary_ieee has this rounding mode (U §21.2 p.114,
+-- Table 24), so the result under RMM is computed from the result n under
 -- roundTiesToEven.  The two differ only when the exact value lies halfway
 -- between two neighbouring values of the format and n is the one nearer
 -- zero; RMM then gives the other one, which is n + 1 as a bit pattern.
@@ -1180,18 +1180,19 @@ bool check_CSR_conditions(csr::creg, p::Privilege) =
     else true
 
 -- The read values and write legalisation of the CSRs (P §3.1, §3.7.1,
--- §12.1; U §4.3, §6.1.2).  Writes never trap: those that checkCSROp
+-- §12.1; U §7.1 p.51-53, §21.2 p.113-114).  Writes never trap: those that checkCSROp
 -- rejects do not get here.
 component CSRMap(csr::creg) :: regType
 {
   value =
       match csr
-      { -- floating-point control and status (U §6.1.2 p.130-131)
+      { -- floating-point control and status (U §21.2 p.113-114)
         case 0x001  => ZeroExtend(c_UCSR(procID).&fpcsr<4:0>)
         case 0x002  => ZeroExtend(c_UCSR(procID).fpcsr.FRM)
         case 0x003  => ZeroExtend(c_UCSR(procID).&fpcsr<7:0>)
 
-        -- counters and timer: mcycle, mtime, minstret (U §4.3 p.65-66)
+        -- cycle, time and instret (U §7.1 p.51-53), the read-only shadows
+        -- of mcycle, mtime and minstret (P §3.1.11 p.47)
         case 0xC00  => c_cycles(procID)
         case 0xC01  => mtime()
         case 0xC02  => c_instret(procID)
@@ -1271,7 +1272,7 @@ component CSRMap(csr::creg) :: regType
 
   assign value =
       match csr
-      { -- floating-point control and status (U §6.1.2 p.130-131); a write
+      { -- floating-point control and status (U §21.2 p.113-114); a write
         -- makes the floating-point state Dirty (P §3.1.6.7 p.39)
         case 0x001  => { c_UCSR(procID).&fpcsr<4:0>     <- value<4:0>
                        ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
@@ -1353,7 +1354,7 @@ component CSRMap(csr::creg) :: regType
 
         -- machine counters
         -- a write of minstret is done instead of the increment for the
-        -- writing instruction (U §4.2.1 p.64; incrInstret)
+        -- writing instruction (U §6.1 p.49; incrInstret)
         case 0xB00  => c_cycles(procID)                 <- value
         case 0xB02  => { c_instret(procID)              <- value
                        ; c_minstret_written(procID)     <- true
@@ -1803,14 +1804,14 @@ component GPR(n::reg) :: regType
 
 -- val is bound once, before the write: it may read GPR(rd), and the SML
 -- export would otherwise re-evaluate it for Delta.data1 after the write
--- (e.g. DIV x2,x1,x2, which must not raise an exception: U §4.5.2)
+-- (e.g. DIV x2,x1,x2, which must not raise an exception: U §12.2 p.66)
 inline unit writeRD(rd::reg, val::regType) =
 { v = val
 ; GPR(rd)       <- v
 ; when not PROVER_EXPORT do Delta.data1   <- Some(v)
 }
 
--- Single-precision values are NaN-boxed (U §6.2.2): a write sets
+-- Single-precision values are NaN-boxed (U §22.2 p.121): a write sets
 -- bits 63:32 to all 1s, and a read of a register that does not hold a
 -- NaN-boxed value gives the canonical NaN.  The transfers out of a register
 -- (FSW, FMV.X.W) use FPRS_raw, which ignores bits 63:32.
@@ -2696,7 +2697,8 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 ---------------------------------------------------------------------------
 
 -- A load or store that is not naturally aligned raises an
--- address-misaligned exception (U §2.1.6 p.37) before any other
+-- address-misaligned exception, which the manual leaves to the execution
+-- environment (U §2.6 p.34), before any other
 -- check, translation included (P §3.1.15 Table 17 p.51), so no
 -- access is ever split or crosses a page.  An aligned access is
 -- translated and needs the permission of the PMP (dataAddr), or raises the
@@ -2945,7 +2947,7 @@ define AMO > SC_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
        { case TR_Address(pAddr) =>
            if not matchLoadReservation(pAddr)
            then { writeRD(rd, 1)
-                ; ReserveLoad <- None   -- U §5.2: a failed SC also invalidates it
+                ; ReserveLoad <- None   -- U §13.2 p.68: a failed SC also invalidates it
                 }
            else { data = GPR(rs2)
                 ; rawWriteData(pAddr, data, 4)
@@ -2970,7 +2972,7 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
                 { case TR_Address(pAddr) =>
                     if not matchLoadReservation(pAddr)
                     then { writeRD(rd, 1)
-                         ; ReserveLoad <- None   -- U §5.2: a failed SC also invalidates it
+                         ; ReserveLoad <- None   -- U §13.2 p.68: a failed SC also invalidates it
                          }
                     else { data = GPR(rs2)
                          ; rawWriteData(pAddr, data, 8)
@@ -3189,7 +3191,7 @@ define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = SignedMin(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3229,7 +3231,7 @@ define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = SignedMax(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3269,7 +3271,7 @@ define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = Min(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3309,7 +3311,7 @@ define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
   then signalAddressException(Store_AMO_Misaligned, vAddr)
   else match dataAddr(vAddr, 4, PMP_ReadWrite)
        { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §5.6: ignore rs2<63:32>
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
                                    ; GPR(rd) <- memv
                                    ; val  = Max(data, memv)
                                    ; rawWriteData(pAddr, val, 4)
@@ -3385,8 +3387,8 @@ define FPStore > FSW(rs1::reg, rs2::reg, offs::imm12) =
 
 -- Computational
 
--- Arithmetic accrues the flags of the IEEE operation (U §6.1.2);
--- tininess is detected after rounding (6.1.4) by SSE and by HOL's
+-- Arithmetic accrues the flags of the IEEE operation (U §21.2 p.114);
+-- tininess is detected after rounding (U §21.4 p.115) by SSE and by HOL's
 -- Underflow_AfterRounding alike.
 
 -----------------------------------
@@ -3475,7 +3477,7 @@ define FArith > FMIN_S(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1  = FPRS(rs1)
          ; f2  = FPRS(rs2)
-         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
@@ -3494,7 +3496,7 @@ define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1  = FPRS(rs1)
          ; f2  = FPRS(rs2)
-         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
@@ -3510,7 +3512,7 @@ define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
 -- FMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused (rs1*rs2)+rs3, rounded once
+-- U §21.6 p.116: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -3527,7 +3529,7 @@ define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused (rs1*rs2)-rs3, rounded once
+-- U §21.6 p.116: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -3544,7 +3546,7 @@ define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- U §21.6 p.117: fused -(rs1*rs2)-rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -3562,7 +3564,7 @@ define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- U §21.6 p.116: fused -(rs1*rs2)+rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -3587,7 +3589,7 @@ define FConv > FCVT_S_W(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [GPR(rs)<31:0>]::int
                              ; v = FP32_FromIntR(r, i)
-                             -- U §6.1.7: NX when the result is not exact
+                             -- U §21.7 p.118: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3605,7 +3607,7 @@ define FConv > FCVT_S_WU(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [0`1 : GPR(rs)<31:0>]::int
                              ; v = FP32_FromIntR(r, i)
-                             -- U §6.1.7: NX when the result is not exact
+                             -- U §21.7 p.118: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3623,7 +3625,7 @@ define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3637,7 +3639,7 @@ define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 31
                                      then -[0n2 ** 31]
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 31 - 1 or val < -2 ** 31
@@ -3658,7 +3660,7 @@ define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3672,13 +3674,13 @@ define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 32 - 1 or val < 0
                                then setFP_Invalid()
                                else when not FP32_IsIntegral(inp) do setFP_Inexact()
-                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §6.1.7)
+                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §21.7 p.117)
                              }
              case None    => signalException(Illegal_Instr)
            }
@@ -3693,7 +3695,7 @@ define FConv > FCVT_S_L(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [GPR(rs)]::int
                              ; v = FP32_FromIntR(r, i)
-                             -- U §6.1.7: NX when the result is not exact
+                             -- U §21.7 p.118: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3712,7 +3714,7 @@ define FConv > FCVT_S_LU(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { x = GPR(rs)
                              ; i = [0`1 : x]::int
                              ; v = FP32_FromU64R(r, x)
-                             -- U §6.1.7: NX when the result is not exact
+                             -- U §21.7 p.118: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRS(rd, v)
@@ -3730,7 +3732,7 @@ define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3744,7 +3746,7 @@ define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 63
                                      then -[0n2 ** 63]
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 63 - 1 or val < -2 ** 63
@@ -3765,7 +3767,7 @@ define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -3779,7 +3781,7 @@ define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP32_IsFinite(inp)
                                     or val > 2 ** 64 - 1 or val < 0
@@ -3931,7 +3933,7 @@ define FConv > FCLASS_S(rd::reg, rs::reg) =
          ; ret<6> <- !FP32_Sign(val) and FP32_IsNormal(val)
          ; ret<7> <- val == FP32_PosInf
          ; ret<8> <- FP32_IsSignalingNan(val)
-         ; ret<9> <- FP32_IsNan(val) and not FP32_IsSignalingNan(val)  -- any quiet NaN (U §6.1.9)
+         ; ret<9> <- FP32_IsNan(val) and not FP32_IsSignalingNan(val)  -- any quiet NaN (U §21.9 p.120)
          ; writeRD(rd, ZeroExtend(ret))
          }
 
@@ -3979,8 +3981,8 @@ define FPStore > FSD(rs1::reg, rs2::reg, offs::imm12) =
 
 -- Computational
 
--- Arithmetic accrues the flags of the IEEE operation (U §6.1.2);
--- tininess is detected after rounding (6.1.4) by SSE and by HOL's
+-- Arithmetic accrues the flags of the IEEE operation (U §21.2 p.114);
+-- tininess is detected after rounding (U §21.4 p.115) by SSE and by HOL's
 -- Underflow_AfterRounding alike.
 
 -----------------------------------
@@ -4069,7 +4071,7 @@ define FArith > FMIN_D(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1 = FPRD(rs1)
          ; f2 = FPRD(rs2)
-         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
@@ -4088,7 +4090,7 @@ define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { f1 = FPRD(rs1)
          ; f2 = FPRD(rs2)
-         -- U §6.1.6: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
          -- canonical NaN if both are NaNs), and a signalling NaN raises NV
          ; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
          ; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
@@ -4104,7 +4106,7 @@ define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
 -- FMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused (rs1*rs2)+rs3, rounded once
+-- U §21.6 p.116: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -4121,7 +4123,7 @@ define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused (rs1*rs2)-rs3, rounded once
+-- U §21.6 p.116: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
@@ -4138,7 +4140,7 @@ define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- U §21.6 p.117: fused -(rs1*rs2)-rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -4156,7 +4158,7 @@ define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -- FNMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
--- U §6.1.6: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- U §21.6 p.116: fused -(rs1*rs2)+rs3, rounded once; the product is
 -- negated, not the result
 define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
@@ -4178,7 +4180,7 @@ define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 
 define FConv > FCVT_D_W(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
-    else if validRounding(fprnd)  -- exact (U §6.2.5)
+    else if validRounding(fprnd)  -- exact (U §22.5 p.123)
     then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [GPR(rs)<31:0>]::int))
     else signalException(Illegal_Instr)
 
@@ -4188,7 +4190,7 @@ define FConv > FCVT_D_W(rd::reg, rs::reg, fprnd::fprnd) =
 
 define FConv > FCVT_D_WU(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
-    else if validRounding(fprnd)  -- exact (U §6.2.5)
+    else if validRounding(fprnd)  -- exact (U §22.5 p.123)
     then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [0`1 : GPR(rs)<31:0>]::int))
     else signalException(Illegal_Instr)
 
@@ -4201,7 +4203,7 @@ define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4215,7 +4217,7 @@ define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 31
                                      then -[0n2 ** 31]
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 31 - 1 or val < -2 ** 31
@@ -4236,7 +4238,7 @@ define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4250,13 +4252,13 @@ define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 32 - 1 or val < 0
                                then setFP_Invalid()
                                else when not FP64_IsIntegral(inp) do setFP_Inexact()
-                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §6.1.7)
+                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §22.5 p.123)
                              }
              case None    => signalException(Illegal_Instr)
            }
@@ -4272,7 +4274,7 @@ define FConv > FCVT_D_L(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { x = GPR(rs)
                              ; i = [x]::int
                              ; v = FP64_FromS64R(r, x)
-                             -- U §6.1.7: NX when the result is not exact
+                             -- U §21.7 p.118: NX when the result is not exact
                              ; when FP64_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRD(rd, v)
@@ -4290,7 +4292,7 @@ define FConv > FCVT_D_LU(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { i = [0`1 : GPR(rs)]::int
                              ; v = FP64_FromIntR(r, i)
-                             -- U §6.1.7: NX when the result is not exact
+                             -- U §21.7 p.118: NX when the result is not exact
                              ; when FP64_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
                              ; writeFPRD(rd, v)
@@ -4308,7 +4310,7 @@ define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4322,7 +4324,7 @@ define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < -2 ** 63
                                      then -[0n2 ** 63]
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 63 - 1 or val < -2 ** 63
@@ -4343,7 +4345,7 @@ define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
-                             -- (U §6.1.7, Table 29) before val is used
+                             -- (U §21.7 p.117-118, Table 27) before val is used
                              ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
@@ -4357,7 +4359,7 @@ define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
                                      else if val < 0
                                      then 0x0
                                      else [val]
-                             -- U §6.1.7: NV for a NaN, infinite or out-of-range
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
                              -- input, otherwise NX if the input is not an integer
                              ; if   not FP64_IsFinite(inp)
                                     or val > 2 ** 64 - 1 or val < 0
@@ -4390,7 +4392,7 @@ define FConv > FCVT_S_D(rd::reg, rs::reg, fprnd::fprnd) =
 
 define FConv > FCVT_D_S(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
-    else if validRounding(fprnd)  -- exact (U §6.2.5)
+    else if validRounding(fprnd)  -- exact (U §22.5 p.123)
     then { a = FPRS(rs)
          -- only a signalling NaN raises a flag (NV)
          ; when FP32_IsSignalingNan(a) do setFP_Invalid()
@@ -4538,7 +4540,7 @@ define FConv > FCLASS_D(rd::reg, rs::reg) =
          ; ret<6> <- !FP64_Sign(val) and FP64_IsNormal(val)
          ; ret<7> <- val == FP64_PosInf
          ; ret<8> <- FP64_IsSignalingNan(val)
-         ; ret<9> <- FP64_IsNan(val) and not FP64_IsSignalingNan(val)  -- any quiet NaN (U §6.1.9)
+         ; ret<9> <- FP64_IsNan(val) and not FP64_IsSignalingNan(val)  -- any quiet NaN (U §21.9 p.120)
          ; writeRD(rd, ZeroExtend(ret))
          }
 
@@ -4606,11 +4608,12 @@ bool checkCSROp(csr::imm12, rs1::reg, a::accessType) =
 
 construct csrOp { CSR_Write, CSR_Set, CSR_Clear }
 
--- The six Zicsr instructions (U §4.2.1 p.62-63, Table 21).  f is the rs1
+-- The six Zicsr instructions (U §6.1 p.47-48, Table 7).  f is the rs1
 -- or uimm field and src the value it stands for.  CSRRW and CSRRWI always
 -- write; the others write iff f is not 0, whatever the value of src, and
--- only a write needs a writable CSR.  Standard CSRs have no side effects
--- on reads (P §2.1 p.13), so the CSR is read also when rd = 0.
+-- only a write needs a writable CSR.  A CSRRW or CSRRWI with rd = 0 shall
+-- not read the CSR (U §6.1 p.47); here it is read, which cannot be
+-- observed, since no CSR has a side effect on a read (P §2.1 p.13).
 -- The CSRRS and CSRRC of mip see SEIP without the platform's line (P
 -- §3.1.9 p.45).  Those of sip see the value read, line included, but
 -- SEIP is read-only in sip (P §12.1.3 p.118), so the line never reaches
@@ -5473,7 +5476,7 @@ instruction DecodeRVC(h::half) =
      case '000 0 00000 00000 01' => ArithI(ADDI(0, 0, 0))
 
      case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi))
-     case '001 i5`1 00000 imi`5                01' => UnknownInstruction  -- U §7.1.4.2: C.ADDIW rd=x0 is reserved
+     case '001 i5`1 00000 imi`5                01' => UnknownInstruction  -- U §28.5.2 p.160: C.ADDIW rd=x0 is reserved
      case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi))
      case '010 i5`1 rd    imi`5                01' => ArithI( ADDI(rd, 0, i5 ^ 7 : imi))
      case '011 0    00010 00000                01' => UnknownInstruction
@@ -5537,10 +5540,10 @@ nat exitCode() =
     [ExitCode]::nat
 
 -- minstret counts the instructions that retire (P §3.1.10 p.46): not
--- those that raise an exception (U §4.3 p.67), nor a step that takes an
+-- those that raise an exception (U §7.1 p.53), nor a step that takes an
 -- interrupt.  It does not count while mcountinhibit.IR is set,
 -- sampled before the step (P §3.1.12 p.47), nor for an instruction that
--- writes minstret itself (U §4.2.1 p.64).
+-- writes minstret itself (U §6.1 p.49).
 unit incrInstret(incIR::bool) =
     when incIR and not c_minstret_written(procID)
     do c_instret(procID) <- c_instret(procID) + 1
