@@ -1,5 +1,11 @@
 signature polynomialCertificateLib =
 sig
+  (* Ascending natural coefficient lists. Construction preserves trailing zeros;
+     trim removes only trailing zeros and does not reduce coefficients. *)
+  val coefficients : Term.term -> IntInf.int list
+  val polynomial : IntInf.int list -> Term.term
+  val trim : IntInf.int list -> IntInf.int list
+
   (* The prime theorem is a closed |- prime p, with p a numeral; the polynomial
      is a canonical ascending num list. All candidate arithmetic is rechecked. *)
   (* Bounded addition/multiplication/list predicates only; no abstract inverses. *)

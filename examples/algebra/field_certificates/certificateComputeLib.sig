@@ -1,5 +1,22 @@
 signature certificateComputeLib =
 sig
+  (* Literal natural-number terms and untrusted inverse candidates.
+     inverse_candidate p x returns Euclid's proposed residue modulo p without
+     checking coprimality; callers must prove the required inverse equation. *)
+  val integer : Term.term -> IntInf.int
+  val literal : IntInf.int -> Term.term
+  val inverse_candidate : IntInf.int -> IntInf.int -> IntInf.int
+
+  (* Assemble ordered milestone claims and reconstruct the original goal.
+     final is the last milestone equality (or the zero-case equality);
+     seed is an optional assumed prefix. A continuation leaves the original
+     goal under final, otherwise final rewrites it to an optional residual.
+     Scheduling and candidate generation remain the caller's responsibility. *)
+  val MILESTONE_GOALS :
+    {goal : Abbrev.goal, equations : Term.term list,
+     seed : Term.term option, continuation : bool, final : Thm.thm} ->
+    Abbrev.goal list * (Thm.thm list -> Thm.thm)
+
   (* Normalize natural arithmetic and comparisons with kernel CV arithmetic.
      Surrounding Boolean connectives are left unchanged. *)
   val NAT_CONV : Abbrev.conv

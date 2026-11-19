@@ -15,12 +15,10 @@ open HolKernel boolLib bossLib boolSyntax
 open shortWeierstrassTheory shortWeierstrassGroupTheory ellipticTorsionTheory
 open ellipticCertificatesTheory fieldInstancesTheory
 open shortWeierstrassSyntax
+open certificateComputeLib
 
 val ERR = mk_HOL_ERR "ellipticCertificateLib" "SCALAR_CONV"
 
-fun integer tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
-
-fun numeral n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
 val infinity = mk_ECInfinity numSyntax.num
 val affine = Term.inst [alpha |-> numSyntax.num] ECAffine_tm
 val scalar_pattern = mk_sw_scalar
@@ -44,15 +42,6 @@ fun point tm =
         else raise ERR "Expected a literal curve point"
     | _ => raise ERR "Expected a literal curve point"
 
-(* Candidate generation is untrusted. sw_GF_prod_inv_witness checks the
-   residue bounds and product, so neither Euclid nor its result is an oracle. *)
-fun inverse p x =
-  let
-    fun euclid (a,b,u,v) =
-      if b = 0 then u
-      else euclid (b,IntInf.mod(a,b),v,u - IntInf.div(a,b) * v)
-  in IntInf.mod (euclid (x,p,1,0),p) end
-
 (* Field-independent binary proof; the supplied addition conversion returns
    kernel equalities, so alternative concrete field representations share it. *)
 fun binary_scalar_conv_from seed add_conv curve member tm =
@@ -66,7 +55,7 @@ fun binary_scalar_conv_from seed add_conv curve member tm =
           pred_setSyntax.mk_in (P,mk_sw_points (r,a,b))))
       then () else raise ERR "Mismatched curve or point certificate"
     fun scalar k =
-      let val expression = mk_comb (rator tm,numeral k)
+      let val expression = mk_comb (rator tm,literal k)
       in
         case seed expression of
           SOME th => th
@@ -77,7 +66,7 @@ fun binary_scalar_conv_from seed add_conv curve member tm =
             val half = IntInf.div(k,2)
             val even = IntInf.mod(k,2)=0
             val previous = if even then NONE else seed
-              (mk_comb (rator tm,numeral (k-1)))
+              (mk_comb (rator tm,literal (k-1)))
           in
             case previous of
               SOME prev =>
@@ -86,10 +75,10 @@ fun binary_scalar_conv_from seed add_conv curve member tm =
                      scalar, so this odd transition checks only one add. *)
                   val law = MP (PART_MATCH (lhs o rand) sw_scalar_add
                     (mk_comb (rator tm,
-                      numSyntax.mk_plus (numeral 1,numeral (k-1)))))
+                      numSyntax.mk_plus (literal 1,literal (k-1)))))
                     premises
                   val one = MP (PART_MATCH (lhs o rand) sw_scalar_one
-                    (mk_comb (rator tm,numeral 1))) premises
+                    (mk_comb (rator tm,literal 1))) premises
                   val normalized = CONV_RULE
                     (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) law
                   val substituted = CONV_RULE
@@ -102,7 +91,7 @@ fun binary_scalar_conv_from seed add_conv curve member tm =
                   val binary = if even then sw_scalar_double
                                else sw_scalar_double_add
                   val law = MP
-                    (ISPECL [r,a,b,P,numeral half] binary) premises
+                    (ISPECL [r,a,b,P,literal half] binary) premises
                   val normalized = CONV_RULE
                     (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) law
                   val substituted = SUBS [scalar half] normalized
@@ -145,7 +134,7 @@ fun scalar_certificate_tac operations width candidate curve member (asl,w) _ =
     fun bits 0 acc = acc
       | bits k acc = bits (IntInf.div(k,2)) (IntInf.mod(k,2)::acc)
     fun equation k Q =
-      mk_eq (mk_comb (scalar_prefix,numeral k),Q)
+      mk_eq (mk_comb (scalar_prefix,literal k),Q)
     val digits = bits n []
     fun prefixes [] k = [(k,[])]
       | prefixes (remaining as bit::rest) k =
@@ -204,40 +193,11 @@ fun scalar_certificate_tac operations width candidate curve member (asl,w) _ =
       else case seed_eq of
         SOME eq => ASSUME eq
       | NONE => REWRITE_CONV [sw_scalar_zero] scalar
-    val rewritten = if continuation then NONE
-                    else SOME (REWRITE_CONV [final] w)
-    val residual = Option.map (rhs o concl) rewritten
-    fun implications [] _ = []
-      | implications (eq::eqs) previous =
-          (case previous of NONE => eq | SOME p => mk_imp (p,eq)) ::
-          implications eqs (SOME eq)
-    val claims = implications equations seed_eq
-    val subgoals =
-      map (fn claim => (asl,claim)) claims @
-      (if continuation then [(concl final::asl,w)]
-       else case residual of
-         SOME tm => if aconv tm T then [] else [(asl,tm)]
-       | NONE => raise ERR "Missing scalar residual")
-    fun validate proofs =
-      let
-        val steps = List.take (proofs,length claims)
-        val rest = List.drop (proofs,length claims)
-        fun chain [] previous = previous
-          | chain (th::ths) previous =
-              chain ths (SOME (case previous of NONE => th
-                | SOME prev => MP th prev))
-        val result =
-          if continuation then hd rest
-          else case (rewritten,residual) of
-            (SOME rewrite,SOME tm) =>
-              if aconv tm T then EQT_ELIM rewrite
-              else EQ_MP (SYM rewrite) (hd rest)
-          | _ => raise ERR "Missing scalar rewrite"
-      in
-        case chain steps (Option.map ASSUME seed_eq) of NONE => result
-        | SOME proved => PROVE_HYP proved result
-      end
-  in (subgoals,validate) end
+  in
+    certificateComputeLib.MILESTONE_GOALS
+      {goal=(asl,w),equations=equations,seed=seed_eq,
+       continuation=continuation,final=final}
+  end
 
 fun BINARY_SCALAR_CERTIFICATE_TAC width =
   scalar_certificate_tac false width
@@ -308,15 +268,15 @@ fun gf_scalar_tools prime curve member tm =
 
     fun inverse_rule x =
       let
-        val xt = numeral x
-        val y = numeral (inverse modulus x)
+        val xt = literal x
+        val y = literal (inverse_candidate modulus x)
         val rule = SPECL [p,xt,y] sw_GF_prod_inv_witness
         val numeric = arithmetic (list_mk_conj
           [numSyntax.mk_less (xt,p),
            mk_neg (mk_eq (xt,numSyntax.zero_tm)),
            numSyntax.mk_less (y,p),
            mk_eq (numSyntax.mk_mod (numSyntax.mk_mult (xt,y),p),
-                  numeral 1)])
+                  literal 1)])
       in MP rule (CONJ prime (EQT_ELIM numeric)) end
 
     (* Only the current addition's checked witness is needed. Appending every
@@ -339,7 +299,7 @@ fun gf_scalar_tools prime curve member tm =
         val (substitution,_) = match_term add_pattern expression
         val U = Term.subst substitution (mk_var ("U",type_of P))
         val V = Term.subst substitution (mk_var ("V",type_of P))
-        fun affine_point (x,y) = list_mk_comb (affine,[numeral x,numeral y])
+        fun affine_point (x,y) = list_mk_comb (affine,[literal x,literal y])
         fun residue x = IntInf.mod (x,modulus)
       in
         case (point U,point V) of
@@ -352,7 +312,8 @@ fun gf_scalar_tools prime curve member tm =
                 val numerator = if x1=x2 then 3*x1*x1 + integer a
                                 else y2-y1
                 val denominator = residue (if x1=x2 then 2*y1 else x2-x1)
-                val slope = residue (numerator * inverse modulus denominator)
+                val slope =
+                  residue (numerator * inverse_candidate modulus denominator)
                 val x3 = residue (slope*slope-x1-x2)
                 val y3 = residue (slope*(x1-x3)-y1)
               in affine_point (x3,y3) end

@@ -12,7 +12,8 @@ come from `namedPrimesTheory`.
 * `bn254Degree12Certificate`, `bls12381Degree12Certificate`,
   `pairingDegree12Fields`: checked irreducibility and degree-twelve fields.
 * `pairingFieldEmbeddings`: injective quadratic-to-degree-twelve field maps.
-* `certificateComputeLib`: bounded arithmetic and shared modular powering.
+* `certificateComputeLib`: bounded arithmetic, shared modular powering,
+  literal numerals, inverse candidates and milestone proof reconstruction.
 * `polynomialSyntax`: grammar-independent field, polynomial and record-operation
   constructors shared by polynomial, quotient and curve certificate libraries.
 * `polynomialCertificateLib`, `pairingFieldCertificateLib`: checked polynomial
@@ -26,6 +27,13 @@ The certificate libraries kernel-check arithmetic witnesses. See their
 signatures for conversion contracts.
 Both libraries construct algebra terms from theory-qualified constants, without
 parsing quotations or depending on the caller's algebra overloads.
+
+The curve certificate libraries also use the representation-independent
+milestone assembler in `certificateComputeLib` and the coefficient-list
+helpers in `polynomialCertificateLib`. List construction preserves trailing
+zeros; trimming is explicit. Shared inverse candidates do not check
+coprimality and must be justified by inverse-witness proofs. Polynomial
+division retains its separate checked inverse and rejects nonunits.
 
 Certificate contexts require a closed primality theorem and the documented
 literal modulus. Mixed fields/moduli and invalid coefficients are rejected.

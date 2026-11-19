@@ -13,11 +13,10 @@ struct
 
 open HolKernel boolLib bossLib Conv
 open polynomialSyntax
+open certificateComputeLib
 
 val ERR = mk_HOL_ERR "polynomialCertificateLib"
 val numeral = numSyntax.mk_numeral o Arbnum.fromString
-fun integer tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
-fun literal n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
 fun coefficients tm = map integer (#1 (listSyntax.dest_list tm))
 fun polynomial xs = listSyntax.mk_list (map literal xs,numSyntax.num)
 val indeterminate = polynomial [0,1]

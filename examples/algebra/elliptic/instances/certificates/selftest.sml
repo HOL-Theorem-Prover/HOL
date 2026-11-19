@@ -49,6 +49,37 @@ val _ = proof_test "Scalar operations retain residuals across chunks"
   ``(GF 5).prod.exp (f (ECAffine 4 0)) 2 = c ==>
     (GF 5).prod.exp (f ((sw_group (GF 5) 0 1).exp (ECAffine 2 2) 3)) 2 = c``;
 
+val _ = proof_test "Zero scalar closes without operation branches"
+  operation
+  ``(sw_group (GF 5) 0 1).exp (ECAffine 2 2) 0 = ECInfinity``;
+
+val _ = proof_test "Completed scalar prefix rewrites only the residual"
+  (STRIP_TAC THEN operation THEN ASM_REWRITE_TAC [])
+  ``(sw_group (GF 5) 0 1).exp (ECAffine 2 2) 3 = ECAffine 4 0 /\
+    f (ECAffine 4 0) ==>
+    f ((sw_group (GF 5) 0 1).exp (ECAffine 2 2) 3)``;
+
+val _ =
+  let
+    val curve = ASSUME (concl curve)
+    val member = ASSUME (concl member)
+    val certificate =
+      ellipticCertificateLib.BINARY_SCALAR_OPERATION_CERTIFICATE_TAC
+        1 candidate curve member
+    val step = ellipticCertificateLib.BINARY_SCALAR_STEP_TAC
+      addition curve member
+    val goal =
+      ``(sw_group (GF 5) 0 1).exp (ECAffine 2 2) 1 = ECAffine 2 2``
+    fun check th =
+      aconv (concl th) goal andalso length (hyp th) = 2 andalso
+      List.all (fn tm => List.exists (aconv tm) (hyp th))
+        [concl curve, concl member]
+  in
+    tprint "Scalar milestones retain supplied theorem hypotheses";
+    require_msg (check_result check) thm_to_string
+      (fn tm => prove (tm, certificate THENL [step, step])) goal
+  end;
+
 (* F_7[i], i^2 = -1. Expected values below are fixed arithmetic answers,
    not results obtained from the converters under test. *)
 val quadratic_prime = groupTheory.PRIME_7;
@@ -146,6 +177,10 @@ val quadratic_power =
 val quadratic_power_step =
   pairingCurveCertificateLib.POWER_STEP_TAC
     quadratic_prime quadratic_field;
+val _ = proof_test "Zero quadratic power closes without operation branches"
+  quadratic_power
+  ``^quadratic.prod.exp [1n;1] 0 = [1n]``;
+
 val _ = proof_test "Quadratic power resumes and retains its residual"
   (DISCH_TAC THEN
    pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC

@@ -21,6 +21,12 @@ are preserved.
 Both certificate libraries construct terms without parsing quotations.
 They share `shortWeierstrassSyntax` and reuse the field, polynomial and record
 constructors in `polynomialSyntax` from the field certificates.
+The scalar and power tactics share milestone goal assembly and theorem
+reconstruction through `certificateComputeLib.MILESTONE_GOALS`; their
+arithmetic and scheduling remain separate. Numeral and inverse-candidate
+helpers come from `certificateComputeLib`, and coefficient-list construction
+and trimming come from `polynomialCertificateLib`. Candidate values still
+require the same kernel-checked arithmetic witnesses.
 
 `pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC certificate step counts
 residuals` composes scalar or power chunks. The nonempty `counts` list gives
@@ -41,6 +47,8 @@ They cover prime-field scalar certificates and arithmetic over
 `GF(7)[i]/(i^2+1)`: a non-real inverse, scalar multiplication, and field
 powers. Scalar and power cases use exponent 65537 to cross the sixteen-bit
 chunk boundary and check continuation, residual goals, exact conclusions,
-and absence of unexpected hypotheses.
+and absence of unexpected hypotheses. Boundary cases cover zero exponents,
+an already-complete scalar prefix and preservation of supplied theorem
+hypotheses.
 Additional regressions rebind the algebra and curve syntax before constructing
 converters and checking prime/quadratic scalar, inverse and milestone proofs.

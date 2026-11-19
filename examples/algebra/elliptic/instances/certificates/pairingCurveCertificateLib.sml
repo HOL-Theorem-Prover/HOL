@@ -15,6 +15,7 @@ open HolKernel boolLib bossLib Conv
 open fieldTheory fieldInstancesTheory polyModuloRingTheory
 open ellipticCertificatesTheory shortWeierstrassTheory shortWeierstrassGroupTheory
 open polynomialSyntax
+open certificateComputeLib polynomialCertificateLib
 
 val coefficient_type = listSyntax.mk_list_type numSyntax.num
 val infinity = shortWeierstrassSyntax.mk_ECInfinity coefficient_type
@@ -33,22 +34,6 @@ fun CERTIFICATE_CHUNKS_TAC certificate step counts residuals =
     List.foldr chunk
       (certificate THENL (List.tabulate (last, K step) @ residuals)) initial
   end
-
-fun integer tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
-fun numeral n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
-fun polynomial xs = listSyntax.mk_list (map numeral xs,numSyntax.num)
-fun coefficients tm = map integer (#1 (listSyntax.dest_list tm))
-fun trim (xs:IntInf.int list) =
-  let fun drop (0::rest) = drop rest | drop rest = rest
-  in rev (drop (rev xs)) end
-
-(* Euclid only proposes a candidate.  Its result is checked by the generic
-   inverse witness theorem against the actual PolyModRing multiplication. *)
-fun inverse p x =
-  let fun loop (a,b,u,v) =
-    if b = 0 then IntInf.mod (u,p)
-    else loop (b,IntInf.mod(a,b),v,u-IntInf.div(a,b)*v)
-  in loop (x,p,1,0) end
 
 fun field_conv prime field =
   let
@@ -135,7 +120,7 @@ fun field_conv prime field =
     fun inv_candidate x =
       let
         val (a,b) = literal_pair x
-        val d = inverse p (IntInf.mod(a*a+b*b,p))
+        val d = inverse_candidate p (IntInf.mod(a*a+b*b,p))
       in polynomial (trim [IntInf.mod(a*d,p),IntInf.mod(~b*d,p)]) end
     (* Normalize the polynomial operand once. Only a genuinely quadratic
        product needs REMAINDER_CONV's full division witness. *)
@@ -256,7 +241,7 @@ fun field_conv prime field =
                   REWRITE_CONV [monoidTheory.monoid_exp_0] expression
                 else
                   let
-                    val previous = numeral (k-1)
+                    val previous = literal (k-1)
                     val rule = ISPECL [sum_monoid,x,previous]
                       monoidTheory.monoid_exp_SUC
                     val rule = CONV_RULE
@@ -271,7 +256,7 @@ fun field_conv prime field =
             else REFL expression
           end
         and power x k =
-          let val expression = list_mk_comb (powop,[x,numeral k]) in
+          let val expression = list_mk_comb (powop,[x,literal k]) in
             if k = 0 then
               (REWRITE_CONV [monoidTheory.monoid_exp_0] THENC normalize) expression
             else if k = 1 then
@@ -279,7 +264,7 @@ fun field_conv prime field =
               in MP rule (member x) end
             else if IntInf.mod(k,2) = 1 then
               let
-                val rule = ISPECL [prod_monoid,x,numeral (k-1)]
+                val rule = ISPECL [prod_monoid,x,literal (k-1)]
                   monoidTheory.monoid_exp_SUC
                 val rule = CONV_RULE
                   (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) rule
@@ -287,7 +272,7 @@ fun field_conv prime field =
               in TRANS substituted (normalize (rhs (concl substituted))) end
             else
               let
-                val half = numeral (IntInf.div(k,2))
+                val half = literal (IntInf.div(k,2))
                 val law = SPECL [half,half]
                   (MP (SPEC x exp_add_rule) (member x))
                 val law = CONV_RULE
@@ -370,7 +355,7 @@ fun addition_candidate prime =
     fun square (a,b) = (residue(a*a-b*b),residue(2*a*b))
     fun scale n (a,b) = (residue(n*a),residue(n*b))
     fun inv (a,b) =
-      let val d = inverse p (residue(a*a+b*b))
+      let val d = inverse_candidate p (residue(a*a+b*b))
       in (residue(a*d),residue(~b*d)) end
     type point_value =
       ((IntInf.int * IntInf.int) * (IntInf.int * IntInf.int)) option
@@ -523,7 +508,7 @@ fun POWER_CERTIFICATE_TAC prime field (asl,w) _ =
     fun times ((a,b),(c,d)) =
       (IntInf.mod(a*c-b*d,p),IntInf.mod(a*d+b*c,p))
     fun equation k (a,b) =
-      mk_eq (mk_comb (prefix,numeral k),polynomial (trim [a,b]))
+      mk_eq (mk_comb (prefix,literal k),polynomial (trim [a,b]))
     (* Pure ML multiplication proposes at most sixteen complete binary bits.
        Every doubling and every odd multiplication has its own proof goal. *)
     fun milestones [] _ _ _ acc = (rev acc,[])
@@ -546,40 +531,11 @@ fun POWER_CERTIFICATE_TAC prime field (asl,w) _ =
       else case seed_eq of
         SOME eq => ASSUME eq
       | NONE => arithmetic power
-    val rewritten = if continuation then NONE
-                    else SOME (REWRITE_CONV [final] w)
-    val residual = Option.map (rhs o concl) rewritten
-    fun implications [] _ = []
-      | implications (eq::eqs) previous =
-          (case previous of NONE => eq | SOME p => mk_imp (p,eq)) ::
-          implications eqs (SOME eq)
-    val claims = implications equations seed_eq
-    val subgoals =
-      map (fn claim => (asl,claim)) claims @
-      (if continuation then [(concl final::asl,w)]
-       else case residual of
-         SOME tm => if aconv tm T then [] else [(asl,tm)]
-       | NONE => raise ERR "POWER_CERTIFICATE_TAC" "Missing power residual")
-    fun validate proofs =
-      let
-        val steps = List.take (proofs,length claims)
-        val rest = List.drop (proofs,length claims)
-        fun chain [] previous = previous
-          | chain (th::ths) previous =
-              chain ths (SOME (case previous of NONE => th
-                | SOME prev => MP th prev))
-        val result =
-          if continuation then hd rest
-          else case (rewritten,residual) of
-            (SOME rewrite,SOME tm) =>
-              if aconv tm T then EQT_ELIM rewrite
-              else EQ_MP (SYM rewrite) (hd rest)
-          | _ => raise ERR "POWER_CERTIFICATE_TAC" "Missing power rewrite"
-      in
-        case chain steps (Option.map ASSUME seed_eq) of NONE => result
-        | SOME proved => PROVE_HYP proved result
-      end
-  in (subgoals,validate) end
+  in
+    certificateComputeLib.MILESTONE_GOALS
+      {goal = (asl,w), equations = equations, seed = seed_eq,
+       continuation = continuation, final = final}
+  end
 
 fun POWER_STEP_TAC prime field =
   REPEAT DISCH_TAC THEN
@@ -592,7 +548,7 @@ fun POWER_STEP_TAC prime field =
       val member = EQT_ELIM
         (arithmetic (pred_setSyntax.mk_in (x,carrier)))
       fun seed n =
-        let val expression = list_mk_comb (powop,[x,numeral n]) in
+        let val expression = list_mk_comb (powop,[x,literal n]) in
           case List.find (fn a => is_eq a andalso aconv (lhs a) expression) asl of
             SOME a =>
               let val _ = quadratic_pair p (rhs a) in ASSUME a end
@@ -609,8 +565,8 @@ fun POWER_STEP_TAC prime field =
             val right = if even then left
                         else MP (SPEC x (MATCH_MP field_exp_1 field)) member
             val add_rule = MP (SPEC x (MATCH_MP field_exp_add field)) member
-            val law = SPECL [numeral previous,
-                            numeral (if even then previous else 1)] add_rule
+            val law = SPECL [literal previous,
+                            literal (if even then previous else 1)] add_rule
             val normalized = CONV_RULE
               (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) law
             val substituted = CONV_RULE
