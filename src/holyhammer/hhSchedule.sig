@@ -146,8 +146,9 @@ sig
      asks for it) the rankings are validated, the named theorems fetched,
      the cache pruned and the provers probed on the calling thread, then
      the export runs on a producer thread while the slices start as their
-     files are published, each file as soon as it is complete.  The clock then starts at the launch of the workers.  While
-     the producer is unfinished at most max (1, cores - 1 - pool workers)
+     files are published, each file as soon as it is complete.  The
+     clock then starts at the launch of the workers.  While the producer
+     is unfinished at most max (1, cores - 1 - pool workers)
      slices run, so that the provers do not starve it; the bound is lifted
      when it ends.  The files equal the blocking export's for the same
      start of the counter of fresh type variables: the producer draws its
