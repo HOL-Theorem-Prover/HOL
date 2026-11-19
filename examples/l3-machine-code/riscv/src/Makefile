@@ -8,6 +8,7 @@
 #                 riscv.sml,riscv.sig}
 #   make check    regenerate into a temporary directory and compare with ../model
 #                 (ignoring the timestamp in the first line); exit 1 on a difference
+#                 or if the exports cannot be regenerated
 #
 # Two things are patched into L3's output so that `make check` is clean on an
 # unchanged spec: a trailing newline at end of file, and `temp_prefer_num` in
@@ -40,11 +41,13 @@ sml: $(SPEC)
 	mv $(SMLFILES) $(MODEL)/
 
 check: $(SPEC)
-	@tmp=$$(mktemp -d) && cp $(SPEC) $$tmp && cd $$tmp && \
-	$(HOLEXPORT) > hol.log 2>&1 && $(SMLEXPORT) > sml.log 2>&1 && \
-	$(PATCHHOL) && $(PATCHSML) && status=0 && \
+	@status=1; tmp=$$(mktemp -d) && cp $(SPEC) $$tmp && cd $$tmp && \
+	{ { $(HOLEXPORT) > hol.log 2>&1 && $(SMLEXPORT) > sml.log 2>&1 && \
+	    $(PATCHHOL) && $(PATCHSML); } || \
+	  { echo "could not regenerate the exports:"; \
+	    cat hol.log sml.log 2> /dev/null; false; }; } && status=0 && \
 	for f in $(HOLFILES) $(SMLFILES); do \
 	  if diff <(tail -n +2 $$f) <(tail -n +2 $(CURDIR)/$(MODEL)/$$f) > /dev/null; \
 	  then echo "$$f: identical"; else echo "$$f: DIFFERS from $(MODEL)/$$f"; status=1; fi; \
 	done; \
-	rm -rf $$tmp; exit $$status
+	if [ -n "$$tmp" ]; then rm -rf "$$tmp"; fi; exit $$status
