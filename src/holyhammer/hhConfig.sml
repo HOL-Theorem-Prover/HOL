@@ -306,6 +306,8 @@ fun parse_provers value =
 
 val valid_provers = Option.isSome o parse_provers
 
+val default_export_workers = 2
+
 val option_specs : option_spec list =
   [{name = "timeout", default = fn () => "30",
     expected = "a positive integer",
@@ -325,10 +327,10 @@ val option_specs : option_spec list =
     expected = "a non-negative integer",
     doc = "worker count (0 means detected processor count)",
     valid = nonnegative_int},
-   {name = "export_workers", default = fn () => "2",
+   {name = "export_workers", default = fn () => Int.toString default_export_workers,
     expected = "a non-negative integer",
-    doc = "threads that finish generated problems (default 2; 1 means " ^
-          "inline on the calling thread, 0 means cores; at most cores)",
+    doc = "threads that finish generated problems (1 means inline on " ^
+          "the calling thread, 0 means cores; at most cores)",
     valid = nonnegative_int},
    {name = "filter", default = fn () => "",
     expected = "empty, knn, mepo, mash, mesh, or none",

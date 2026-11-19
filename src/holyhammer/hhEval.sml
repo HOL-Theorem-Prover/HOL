@@ -311,7 +311,7 @@ fun parse_engine_params value =
    max_proofs = int_field "max_proofs" value,
    export_workers =
      (case optional_field "export_workers" value of
-          NONE => 2
+          NONE => hhConfig.default_export_workers
         | SOME workers => JSONUtil.asInt workers)}
 
 fun parse_engine value =
@@ -1921,7 +1921,8 @@ fun smoke_condition timeout SmokeSched : condition =
       {cond_id = "smoke-sched", regime = Bushy, selector = Deps,
        engine = Sched
          {provers = [Eprover, Vampire, Zipperposition], slices = 3,
-          cores = 3, max_proofs = 1, export_workers = 1},
+          cores = 3, max_proofs = 1,
+          export_workers = hhConfig.default_export_workers},
        timeout = timeout, reconstruct = true}
   | smoke_condition timeout SmokeMepo =
       {cond_id = "smoke-mepo", regime = Chainy, selector = Mepo 96,

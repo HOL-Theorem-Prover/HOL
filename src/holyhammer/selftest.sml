@@ -3058,6 +3058,17 @@ fun test_hhEval root =
        #engine parsed_sched_condition = #engine sched_condition andalso
        #timeout parsed_sched_condition = 30 andalso
        #reconstruct parsed_sched_condition)
+    val legacy_sched_condition =
+      "{\"cond_id\":\"legacy\",\"regime\":\"chainy\"," ^
+      "\"selector\":\"knn256\",\"engine\":\"sched\"," ^
+      "\"provers\":[\"e\",\"vampire\"],\"slices\":6,\"cores\":2," ^
+      "\"max_proofs\":3,\"timeout\":30,\"reconstruct\":true}"
+    val _ = expect "Sched condition without export_workers gets the default"
+      (#engine (hhEval.parse_condition legacy_sched_condition) =
+         hhEval.Sched
+           {provers = [Eprover, Vampire], slices = 6, cores = 2,
+            max_proofs = 3,
+            export_workers = hhConfig.default_export_workers})
     val perslice_condition : hhEval.condition =
       {cond_id = "perslice", regime = hhEval.Chainy,
        selector = hhEval.PerSlice, engine = #engine sched_condition,
