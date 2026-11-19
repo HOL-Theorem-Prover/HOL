@@ -114,70 +114,10 @@ Theorem bn254_g2_full_generator_annihilated[local]:
 Proof
   REWRITE_TAC cardinality_definitions >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (28, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (27, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (27, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (29, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (27, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  List.tabulate (18, K cardinality_scalar_step_tac))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    cardinality_scalar_tac cardinality_scalar_step_tac
+    [23,24,25,26,24,25,23,23,20,22,25,21,28,24,24,24,
+     20,20,22,24,23,22,26,27,24,27,29,24,21,27,26,18] []
 QED
 
 Theorem bn254_g2_full_generator_div_10069_nonzero[local]:
@@ -186,69 +126,10 @@ Theorem bn254_g2_full_generator_div_10069_nonzero[local]:
 Proof
   REWRITE_TAC cardinality_definitions >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (18, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (28, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   simp[]]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    cardinality_scalar_tac cardinality_scalar_step_tac
+    [26,22,25,25,25,26,24,25,18,26,23,24,25,25,24,22,
+     24,23,24,23,25,25,25,20,24,26,22,28,23,23,21] [simp[]]
 QED
 
 Theorem bn254_g2_full_generator_div_5864401_nonzero[local]:
@@ -257,69 +138,10 @@ Theorem bn254_g2_full_generator_div_5864401_nonzero[local]:
 Proof
   REWRITE_TAC cardinality_definitions >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (9, K cardinality_scalar_step_tac) @ [
-   simp[]]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    cardinality_scalar_tac cardinality_scalar_step_tac
+    [25,25,21,23,25,25,22,26,24,23,25,22,24,23,24,24,
+     22,20,21,23,20,23,26,21,23,24,24,23,23,24,9] [simp[]]
 QED
 
 Theorem bn254_g2_full_generator_div_1875725156269_nonzero[local]:
@@ -328,67 +150,10 @@ Theorem bn254_g2_full_generator_div_1875725156269_nonzero[local]:
 Proof
   REWRITE_TAC cardinality_definitions >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (27, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (27, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (28, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (4, K cardinality_scalar_step_tac) @ [
-   simp[]]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    cardinality_scalar_tac cardinality_scalar_step_tac
+    [25,24,23,26,25,23,27,27,25,25,24,24,24,26,25,25,
+     22,26,28,26,23,25,25,25,20,24,25,25,22,4] [simp[]]
 QED
 
 Theorem bn254_g2_full_generator_div_cofactor_prime_nonzero[local]:
@@ -398,49 +163,10 @@ Theorem bn254_g2_full_generator_div_cofactor_prime_nonzero[local]:
 Proof
   REWRITE_TAC cardinality_definitions >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  cardinality_scalar_tac >|
-  (List.tabulate (27, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (19, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (26, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (15, K cardinality_scalar_step_tac) @ [
-   simp[]]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    cardinality_scalar_tac cardinality_scalar_step_tac
+    [27,23,19,26,25,21,24,23,25,25,24,22,20,24,25,23,
+     24,23,21,25,15] [simp[]]
 QED
 
 Theorem bn254_g2_full_generator_div_n_nonzero[local]:
@@ -449,39 +175,9 @@ Theorem bn254_g2_full_generator_div_n_nonzero[local]:
 Proof
   REWRITE_TAC cardinality_definitions >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (20, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (23, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (21, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (25, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (24, K cardinality_scalar_step_tac) @ [
-   (cardinality_scalar_tac >|
-  (List.tabulate (22, K cardinality_scalar_step_tac) @ [
-   simp[]]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    cardinality_scalar_tac cardinality_scalar_step_tac
+    [22,25,22,21,22,24,20,23,25,25,23,21,25,24,24,22] [simp[]]
 QED
 
 (* For the full-order certificate point P and target order N,
@@ -553,39 +249,11 @@ Proof
   (* Normalize only the base, never evaluate the complete power here. *)
   CONV_TAC (RAND_CONV (LAND_CONV
     (RATOR_CONV (RAND_CONV cardinality_power_field_conv)))) >>
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (25, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (25, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (25, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (27, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (24, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (25, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (24, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (24, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (26, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (22, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (24, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (26, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (24, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (24, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (27, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (24, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (27, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (26, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (21, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (23, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (25, K cardinality_power_step_tac) @ [
-    (cardinality_power_tac >| (List.tabulate (12, K cardinality_power_step_tac) @ [
-     CONV_TAC cardinality_power_field_conv]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])),
+    pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+      cardinality_power_tac cardinality_power_step_tac
+      [23,23,25,23,25,23,25,27,24,23,25,24,24,23,26,22,
+       24,23,26,23,24,24,27,23,24,27,26,21,23,23,25,12]
+      [CONV_TAC cardinality_power_field_conv],
    REWRITE_TAC cardinality_definitions >>
    CONV_TAC certificateComputeLib.NAT_CONV >>
    CONV_TAC cardinality_power_field_conv]

@@ -22,6 +22,13 @@ Both certificate libraries construct terms without parsing quotations.
 They share `shortWeierstrassSyntax` and reuse the field, polynomial and record
 constructors in `polynomialSyntax` from the field certificates.
 
+`pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC certificate step counts
+residuals` composes scalar or power chunks. The nonempty `counts` list gives
+each chunk's operation-branch count, including the final chunk; `residuals`
+contains only the final chunk's remaining tactics (or is empty). Preparation,
+each checked operation and continuation keep the same branch boundaries as
+explicit nested `THENL` proofs.
+
 ## Dependencies and tests
 
 Depends on generic elliptic theories and

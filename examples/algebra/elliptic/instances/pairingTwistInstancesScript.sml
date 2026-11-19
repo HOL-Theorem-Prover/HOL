@@ -139,38 +139,9 @@ Theorem bn254_g2_generator_annihilated:
   bn254_g2_group.exp bn254_g2_generator bn254_n = ECInfinity
 Proof
   CONV_TAC (LAND_CONV (REWRITE_CONV bn254_g2_scalar_defs)) >>
-  bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (22, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (25, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (22, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (21, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (22, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (24, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (20, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (23, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (24, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (21, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (26, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (22, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (24, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (26, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  (List.tabulate (18, K bn254_g2_scalar_step_tac) @ [
-   (bn254_g2_scalar_certificate_tac >|
-  List.tabulate (15, K bn254_g2_scalar_step_tac))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    bn254_g2_scalar_certificate_tac bn254_g2_scalar_step_tac
+    [22, 25, 22, 21, 22, 24, 20, 23, 24, 21, 26, 22, 24, 26, 18, 15] []
 QED
 
 (* The standard BN254 G2 generator has exact order bn254_n. *)
@@ -292,38 +263,9 @@ Theorem bls12381_g2_generator_annihilated:
   bls12381_g2_group.exp bls12381_g2_generator bls12381_n = ECInfinity
 Proof
   CONV_TAC (LAND_CONV (REWRITE_CONV bls12381_g2_scalar_defs)) >>
-  bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (28, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (24, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (24, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (24, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (25, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (20, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (22, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (21, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (27, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (20, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (30, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (29, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (32, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (31, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  (List.tabulate (16, K bls12381_g2_scalar_step_tac) @ [
-   (bls12381_g2_scalar_certificate_tac >|
-  List.tabulate (16, K bls12381_g2_scalar_step_tac))]))]))]))]))]))]))]))]))]))]))]))]))]))]))])
+  pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+    bls12381_g2_scalar_certificate_tac bls12381_g2_scalar_step_tac
+    [28, 24, 24, 24, 25, 20, 22, 21, 27, 20, 30, 29, 32, 31, 16, 16] []
 QED
 
 (* The standard BLS12-381 G2 generator has exact order bls12381_n. *)

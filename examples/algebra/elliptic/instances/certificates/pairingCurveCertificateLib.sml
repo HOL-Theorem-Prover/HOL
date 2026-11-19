@@ -23,6 +23,17 @@ val affine = inst [alpha |-> coefficient_type]
 val prime_tm = prim_mk_const {Thy = "divides", Name = "prime"}
 
 val ERR = mk_HOL_ERR "pairingCurveCertificateLib"
+
+fun CERTIFICATE_CHUNKS_TAC certificate step counts residuals =
+  let
+    val (initial, last) = Portable.front_last counts
+    fun chunk (n, rest) =
+      certificate THENL (List.tabulate (n, K step) @ [rest])
+  in
+    List.foldr chunk
+      (certificate THENL (List.tabulate (last, K step) @ residuals)) initial
+  end
+
 fun integer tm = Arbnum.toLargeInt (numSyntax.dest_numeral tm)
 fun numeral n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
 fun polynomial xs = listSyntax.mk_list (map numeral xs,numSyntax.num)

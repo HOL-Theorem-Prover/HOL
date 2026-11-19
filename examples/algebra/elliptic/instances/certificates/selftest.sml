@@ -43,8 +43,9 @@ val _ = proof_test "Scalar window skips an earlier unrelated field power"
 val operation = ellipticCertificateLib.BINARY_SCALAR_OPERATION_CERTIFICATE_TAC
   1 candidate curve member;
 val _ = proof_test "Scalar operations retain residuals across chunks"
-  (DISCH_TAC THEN operation THENL
-     [step, step, operation THENL [step, step, asm_rewrite_tac []]])
+  (DISCH_TAC THEN
+   pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+     operation step [2, 2] [asm_rewrite_tac []])
   ``(GF 5).prod.exp (f (ECAffine 4 0)) 2 = c ==>
     (GF 5).prod.exp (f ((sw_group (GF 5) 0 1).exp (ECAffine 2 2) 3)) 2 = c``;
 
@@ -133,10 +134,9 @@ val quadratic_step =
 (* 65537 has seventeen bits: the first chunk checks zero, one and fifteen
    doublings; the second checks a doubling and an addition, then a residual. *)
 val _ = proof_test "Quadratic scalar resumes and retains its residual"
-  (DISCH_TAC THEN quadratic_scalar THENL
-    (List.tabulate (17, K quadratic_step) @
-     [quadratic_scalar THENL
-       [quadratic_step, quadratic_step, asm_rewrite_tac []]]))
+  (DISCH_TAC THEN
+   pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+     quadratic_scalar quadratic_step [17, 2] [asm_rewrite_tac []])
   ``f (ECAffine [4n;2] [5n;6]) ==>
     f ((sw_group ^quadratic [] [1n]).exp (ECAffine [0n;1] [3n;1]) 65537)``;
 
@@ -147,10 +147,9 @@ val quadratic_power_step =
   pairingCurveCertificateLib.POWER_STEP_TAC
     quadratic_prime quadratic_field;
 val _ = proof_test "Quadratic power resumes and retains its residual"
-  (DISCH_TAC THEN quadratic_power THENL
-    (List.tabulate (17, K quadratic_power_step) @
-     [quadratic_power THENL
-       [quadratic_power_step, quadratic_power_step, asm_rewrite_tac []]]))
+  (DISCH_TAC THEN
+   pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC
+     quadratic_power quadratic_power_step [17, 2] [asm_rewrite_tac []])
   ``f [4n;4] ==> f (^quadratic.prod.exp [1n;1] 65537)``;
 
 val _ = exit_count0 failures;
