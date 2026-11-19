@@ -327,7 +327,8 @@ val option_specs : option_spec list =
     expected = "a non-negative integer",
     doc = "worker count (0 means detected processor count)",
     valid = nonnegative_int},
-   {name = "export_workers", default = fn () => Int.toString default_export_workers,
+   {name = "export_workers",
+    default = fn () => Int.toString default_export_workers,
     expected = "a non-negative integer",
     doc = "threads that finish generated problems (1 means inline on " ^
           "the calling thread, 0 means cores; at most cores)",
