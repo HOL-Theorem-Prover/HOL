@@ -135,9 +135,24 @@ sig
      complete.  The clock then starts at the launch of the workers.  The
      files equal the blocking export's, because a reconstruction replay
      draws fresh names from the counters the export draws from and so
-     waits until the producer has drawn its last name.  An export failure
-     stops the run and is raised on the caller after everything has
-     stopped. *)
+     waits until the producer has drawn its last name.  (A warning of the
+     export goes to the file that hides the output of a replay running at
+     the time.)
+
+     Stops.  At the soft deadline no slice is started and the export is
+     cancelled, as it has no consumer.  MaxProofs, the hard deadline, an
+     interrupt of the caller (also during the launch) and a failed export
+     stop the run: the provers are killed, the replays and the producer
+     interrupted, and run_in returns only when every thread it forked has
+     exited.  The producer takes an interrupt where it waits (for a worker
+     that finishes a problem) and between two problems, never inside the
+     preparation of one: the response is bounded by one preparation.  The
+     first fatal export error, if it comes before any stop (including the
+     soft deadline), is raised on the caller with no result and no
+     ScheduleDone; after a stop it is a late error of a cancelled export
+     and is dropped.  Progress events already reported and results already
+     cached remain.  A root owned by the caller then holds only the files
+     published before the stop. *)
   val run_in : string ->
     {options : hhConfig.hh_options, goal : goal,
      rankings : (string * string list) list,
