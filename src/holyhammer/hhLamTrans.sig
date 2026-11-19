@@ -17,4 +17,10 @@ sig
     mode -> term list -> term list * (string * term) list
   (* mode -> formulas -> (rewritten formulas, named lambda definitions) *)
 
+  (* The same with the fresh type variables of the combinators (and of
+     the unifications that apply them) taken from the given supply; translate
+     takes them from the global counter. *)
+  val translate_with :
+    hhNames.supply -> mode -> term list -> term list * (string * term) list
+
 end

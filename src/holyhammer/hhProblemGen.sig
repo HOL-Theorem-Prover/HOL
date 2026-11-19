@@ -73,6 +73,10 @@ sig
      process-global backing: lambda translation is goal-dependent. *)
   type export_memo
   val new_export_memo : unit -> export_memo
+  (* The same with the fresh type variables drawn from the given supply:
+     prepare_pb draws every name it needs from the memo's supply, whatever
+     the thread, and from nowhere else. *)
+  val new_export_memo_with : hhNames.supply -> export_memo
   val memo_lambda_runs : export_memo -> int
 
   (* An abstraction survived first-order lambda handling; the labels are

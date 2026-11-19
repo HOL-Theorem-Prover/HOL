@@ -145,25 +145,33 @@ struct
       hhLamTrans.Lifting
     else mode
 
-  fun pass_lambda format mode ({conjecture, facts} : named_terms) =
+  (* The passes that draw fresh names take their supply (hhNames) as the
+     first argument; the public passes take the global counter. *)
+  fun lambda_with names format mode ({conjecture, facts} : named_terms) =
     let
       val mode' = effective_mode format mode
       val formulas = conjecture :: map #2 facts
-      val (rewritten, definitions) = hhLamTrans.translate mode' formulas
+      val (rewritten, definitions) =
+        hhLamTrans.translate_with names mode' formulas
     in
       {conjecture = hd rewritten,
        facts = ListPair.zip (map #1 facts, tl rewritten) @ definitions}
     end
 
+  val pass_lambda = lambda_with hhNames.global
+
   fun is_monomorphic (hhTypeEnc.Native {poly = false, ...}) = true
     | is_monomorphic (hhTypeEnc.Guards {poly = false, ...}) = true
     | is_monomorphic _ = false
 
-  fun pass_monomorph encoding caps ({conjecture, facts} : named_terms) =
+  fun monomorph_with names encoding caps ({conjecture, facts} : named_terms) =
     if is_monomorphic encoding then
       {conjecture = conjecture,
-       facts = hhMonomorph.monomorph caps conjecture facts}
+       facts = hhMonomorph.monomorph_pool caps
+                 (hhMonomorph.mk_pool_with names conjecture) facts}
     else {conjecture = conjecture, facts = facts}
+
+  val pass_monomorph = monomorph_with hhNames.global
 
   (* Monomorphization against a reusable ground pool (the goal's). *)
   fun pass_monomorph_pool encoding caps pool facts =
@@ -1322,12 +1330,12 @@ struct
      draws nor consults the memo, theorem data or the translation cache.
      The tail reads the live signature and type database and builds the
      AST; its failures are raw (see describe_failure). *)
-  fun make_problem main_is_mono options lambda_terms =
+  fun make_problem names main_is_mono options lambda_terms =
     let
       val {format, type_enc, lam_trans, mono_iters, mono_instances} = options
       val caps = {max_iters = mono_iters, max_new_instances = mono_instances}
       val main_terms = if main_is_mono then lambda_terms
-                       else pass_monomorph type_enc caps lambda_terms
+                       else monomorph_with names type_enc caps lambda_terms
       (* firstorderize reads only the conjecture and facts, so the proxy
          names are not recorded.  The main problem is transformed once;
          helper lists are transformed alone and appended to it. *)
@@ -1348,7 +1356,7 @@ struct
       (* Helpers have the original problem as their monomorphization ground
          pool.  They are then firstorderized together with it, so application
          arities and the final symbol table are shared by every section. *)
-      val main_pool = hhMonomorph.mk_pool ground_pool
+      val main_pool = hhMonomorph.mk_pool_with names ground_pool
       fun translate_helpers source =
         if null source then []
         else
@@ -1362,7 +1370,7 @@ struct
             val (lambda_terms', retention_source) =
               if lam_trans = hhLamTrans.Combs then
                 let
-                  val helpers = #facts (pass_lambda format lam_trans
+                  val helpers = #facts (lambda_with names format lam_trans
                     (presimp format {conjecture = T, facts = source}))
                 in
                   ({conjecture = #conjecture main_terms,
@@ -1370,7 +1378,7 @@ struct
                 end
               else
                 let
-                  val translated = pass_lambda format lam_trans
+                  val translated = lambda_with names format lam_trans
                     (presimp format
                       {conjecture = #conjecture lambda_terms,
                        facts = #facts lambda_terms @ source})
@@ -1457,15 +1465,17 @@ struct
           simplified
         else simplified
     in
-      force_tail (make_problem pre_mono options
+      force_tail (make_problem hhNames.global pre_mono options
         (pass_lambda format lam_trans lambda_input))
     end
 
   type export_memo =
     {entries : (hhLamTrans.mode * named_terms * named_terms) list ref,
-     runs : int ref}
+     runs : int ref, names : hhNames.supply}
 
-  fun new_export_memo () = {entries = ref [], runs = ref 0}
+  fun new_export_memo_with names = {entries = ref [], runs = ref 0,
+                                    names = names}
+  fun new_export_memo () = new_export_memo_with hhNames.global
   fun memo_lambda_runs ({runs, ...} : export_memo) = !runs
 
   fun same_terms left right =
@@ -1474,13 +1484,14 @@ struct
       left_name = right_name andalso Term.aconv left_tm right_tm)
       (#facts left, #facts right)
 
-  fun memoized_lambda ({entries, runs} : export_memo) format mode terms =
+  fun memoized_lambda ({entries, runs, names} : export_memo) format mode
+      terms =
     let val key = effective_mode format mode in
       case List.find (fn (old_key, old_terms, _) => old_key = key andalso
           same_terms old_terms terms) (!entries) of
           SOME (_, _, result) => result
         | NONE =>
-            let val result = pass_lambda format mode terms in
+            let val result = lambda_with names format mode terms in
               entries := (key, terms, result) :: !entries;
               runs := !runs + 1;
               result
@@ -1523,15 +1534,16 @@ struct
       val {type_enc, lam_trans, mono_iters, mono_instances, ...} = options
       val pre_mono =
         lam_trans = hhLamTrans.Combs andalso is_monomorphic type_enc
+      val names = #names memo
       val lambda_input = if pre_mono then
-        pass_monomorph type_enc
+        monomorph_with names type_enc
           {max_iters = mono_iters, max_new_instances = mono_instances} input
         else input
       val lambda_terms = if pre_mono then
-        pass_lambda (#format options) lam_trans lambda_input
+        lambda_with names (#format options) lam_trans lambda_input
         else memoized_lambda memo (#format options) lam_trans lambda_input
     in
-      make_problem pre_mono options lambda_terms
+      make_problem names pre_mono options lambda_terms
     end
 
   (* The AST-only stage: no HOL terms, no fresh names. *)

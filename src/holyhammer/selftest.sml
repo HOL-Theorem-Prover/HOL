@@ -1935,6 +1935,37 @@ fun test_hhProblemGen_counter_window () =
 
 val _ = test_hhProblemGen_counter_window ()
 
+(* The private supply of fresh type variables: it agrees with the global
+   counter's numbering and format, draws nothing globally after its seed,
+   and its release moves the counter past the names handed out. *)
+fun test_hhNames () =
+  let
+    val seen = Type.gen_tyvar ()
+    val number = valOf (Type.gen_tyvar_number seen)
+    val first = counter ()
+    val {supply, release} = hhNames.private_supply ()
+    val a = supply ()
+    val b = supply ()
+    val c = supply ()
+    val during = counter ()
+    val _ = release ()
+    val after = counter ()
+  in
+    expect "gen_tyvar numbers: mk_gen_tyvar is the inverse"
+      (Type.mk_gen_tyvar number = seen andalso
+       Type.gen_tyvar_number Type.alpha = NONE andalso
+       Type.gen_tyvar_number (Type.mk_gen_tyvar 7) = SOME 7);
+    expect "private supply: the seed is one global draw, the names follow"
+      (map (valOf o Type.gen_tyvar_number) [a, b, c] =
+         [first + 1, first + 2, first + 3] andalso during = first + 2);
+    expect "private supply: release moves the counter past the names"
+      (after > first + 3);
+    expect "private supply: names are those of the global supply"
+      (Type.dest_vartype (Type.mk_gen_tyvar (first + 1)) =
+       "%%gen_tyvar%%" ^ Int.toString (first + 1))
+  end
+val _ = test_hhNames ()
+
 (* A "lambda survived" failure of the tail of a prepared problem is raised
    raw (it may run on a worker, where the term grammar must not be read)
    and becomes the text the caller-side first-orderization raises, written
@@ -6357,25 +6388,28 @@ fun test_schedule_pipelined parser =
            (all_ready root))
       end
 
-    (* R1: a replay starts only after the last prepare.  A replay draws
-       fresh names, as does a prepare; the pool tails and the provers
-       draw none.  So while the last prepare is held, after the proof is
-       found, the only draws are the two reads of the counters here.  The
-       expected tree is for the same counter start; the counter only moves
-       forward, so the run resumes after that export, within the same digit
-       length (checked), which fixes the bytes. *)
-    fun replay_after_prepares () =
+    (* A replay beside the producer.  The replay starts as soon as the
+       proof is found; the last prepare is held until it has verified, so
+       the replay runs, and draws names from the global counter, while the
+       producer still has a prepare to do.  The producer draws from a
+       supply of its own, so the files are the blocking files for the same
+       counter start, whatever the replay drew meanwhile.  The start is
+       given as a function of the number of names the blocking export
+       draws: one far from a power of ten, and one that puts a power of ten
+       inside the producer's window, where the bytes depend on the order of
+       the names. *)
+    fun replay_beside_prepares label start_of =
       let
         val opts = options 5 30 10 NONE
         val works = work_list opts
         val last = length works - 1
-        val start = quiet_start ()
+        val (_, used) = expected opts (quiet_start ())
+        val start = start_of used
         val (want, _) = expected opts start
         val st = new_state ()
         val {m, released, reached, events, root, ...} = st
-        val at_found = ref (0, 0)
-        val at_release = ref (0, 0)
-        val held_verified = ref true
+        val before_genvars = genvar_counter ()
+        val at_verified = ref 0
         val hold = fn i =>
           if i = last then
             (monitor_do m (fn () => reached := true);
@@ -6387,37 +6421,113 @@ fun test_schedule_pipelined parser =
              (fn () => exists_prefix "found|" (!events));
            monitor_until m "the last prepare was not reached"
              (fn () => !reached);
-           at_found := (counter (), genvar_counter ());
-           OS.Process.sleep (Time.fromMilliseconds 700);
-           at_release := (counter (), genvar_counter ());
-           monitor_do m (fn () =>
-             (held_verified := exists_prefix "verified|" (!events);
-              released := true))), [])
+           monitor_until m "the replay did not verify"
+             (fn () => exists_prefix "verified|" (!events));
+           at_verified := genvar_counter ();
+           monitor_do m (fn () => released := true)), [])
         val (result, failure) =
           run st proof opts rankings
             {pipelined = true, before_finish = fn _ => (),
              before_prepare = hold} no_wrap start
-        val finish = counter ()
         val files = tree root
         val _ = remove_tree root
       in
-        (expect "pipelined: no name is drawn while the last prepare is held"
-           (#1 (!at_release) = #1 (!at_found) + 1 andalso
-            #2 (!at_release) = #2 (!at_found) + 1);
-         expect "pipelined: no replay verifies before the last prepare"
-           (not (!held_verified) andalso not (Option.isSome failure) andalso
+        (expect ("pipelined: " ^ label ^ ", a replay verifies while the " ^
+                 "last prepare is held and draws names")
+           (not (Option.isSome failure) andalso
             length (#suggestions (valOf result)) = 1 andalso
-            exists_prefix "verified|" (!events));
-         expect "pipelined: files beside a real replay equal the blocking ones"
-           (size (Int.toString finish) = size (Int.toString start) andalso
-            files = want);
-         expect "pipelined: every problem ends Ready" (all_ready root))
+            !at_verified > before_genvars + 1);
+         expect ("pipelined: " ^ label ^ ", files beside a real replay " ^
+                 "equal the blocking ones")
+           (files = want);
+         expect ("pipelined: " ^ label ^ ", every problem ends Ready")
+           (all_ready root))
       end
 
-    (* The flag is set on an export error with the last prepare not yet
-       done (it fails after a proof was found): the replay waiting for it
-       is released by the stop, not by the flag alone, so it verifies
-       nothing, and the run raises the error and does not hang. *)
+    (* The producer draws its fresh names from a supply of its own: seen
+       from the global counter, nothing is drawn while it prepares (the
+       readings at the prepares are consecutive), and when it has ended the
+       counter is past the names it used, so that a later draw cannot
+       repeat one. *)
+    fun private_names () =
+      let
+        val opts = options 5 30 1 NONE
+        val works = work_list opts
+        val (_, used) = expected opts (quiet_start ())
+        val start = quiet_start ()
+        val st = new_state ()
+        val readings = ref ([] : int list)
+        val read = fn _ => readings := counter () :: !readings
+        val (result, failure) =
+          run st gave_up opts rankings
+            {pipelined = true, before_finish = fn _ => (),
+             before_prepare = read} no_wrap start
+        val after = counter ()
+        val seen = rev (!readings)
+        val _ = remove_tree (#root st)
+        fun consecutive (a :: (rest as b :: _)) = b = a + 1 andalso
+              consecutive rest
+          | consecutive _ = true
+      in
+        (expect "pipelined: the run completes"
+           (not (Option.isSome failure) andalso
+            length seen = length works);
+         expect "pipelined: the producer's prepares draw no global name"
+           (consecutive seen);
+         expect "pipelined: the counter ends past the producer's names"
+           (* the seed is the draw before the first reading *)
+           (after > hd seen - 1 + used - 1));
+        ()
+      end
+
+    (* Slices are bounded while the producer is unfinished: with 3 cores
+       and two pool workers one slice runs at once, and the bound is
+       lifted when the producer ends.  The last prepare is held for a
+       while, the provers sleep. *)
+    fun bounded_slices bounded =
+      let
+        val opts = options_cores 3 5 3 1 NONE
+        val works = work_list opts
+        val last = length works - 1
+        val st = new_state ()
+        val {m, released, reached, entered, root, ...} = st
+        val while_held = ref 0
+        val _ = #monos st := sleeper
+        val hold = fn i =>
+          if i = last then
+            (monitor_do m (fn () => reached := true);
+             monitor_until m "the last prepare was never released"
+               (fn () => !released))
+          else ()
+        val _ = Thread.fork (fn () =>
+          (monitor_until m "the last prepare was not reached"
+             (fn () => !reached);
+           OS.Process.sleep (Time.fromMilliseconds 600);
+           monitor_do m (fn () => (while_held := length (!entered);
+                                   released := true))), [])
+        val (result, failure) = with_ref (hhSchedule_Test.bound_slices,
+                                          bounded) (fn () =>
+          run st sleeper opts rankings
+            {pipelined = true, before_finish = fn _ => (),
+             before_prepare = hold} no_wrap (quiet_start ()))
+        val total = length (!entered)
+        val _ = remove_tree root
+      in
+        (expect "pipelined: the run ends at the deadline"
+           (not (Option.isSome failure) andalso
+            #stopped (valOf result) = hhSchedule.Timeout);
+         if bounded then
+           (expect "bound: one slice runs while the producer is unfinished"
+              (!while_held = 1);
+            expect "bound: the others start when it has ended"
+              (total >= 2))
+         else
+           expect "bound off: several slices run while it is unfinished"
+              (!while_held >= 2))
+      end
+
+    (* An export error with the last prepare not yet done (it fails after
+       a proof was found): the run raises the error and does not hang. *)
     fun replay_after_error () =
       let
         val opts = options 5 30 10 NONE
@@ -6445,13 +6555,11 @@ fun test_schedule_pipelined parser =
                 SOME exn => contains "injected prepare failure"
                               (General.exnMessage exn)
               | NONE => false);
-         expect "pipelined: no replay verifies after the export error"
-           (not (exists_prefix "verified|" (!events)));
          expect "pipelined: an unfinished problem ends Failed" states_ok)
       end
 
-    (* The flag is set when the producer is cancelled at the soft
-       deadline: the replay then runs and the later file is not made.  The
+    (* The producer is cancelled at the soft deadline: the replay runs and
+       the later file is not made.  The
        hold is at index 1, reached right after the first file, and lasts
        past the deadline of 1 s (the check of the producer precedes the
        hold), so the producer stops at the next prepare; the replay then
@@ -6483,7 +6591,7 @@ fun test_schedule_pipelined parser =
           state_of root (#2 (hd works)) = SOME hhSchedule_Test.Ready
         val _ = remove_tree root
       in
-        (expect "pipelined: cancellation at the deadline frees the replay"
+        (expect "pipelined: cancellation at the deadline lets the replay run"
            (not (Option.isSome failure) andalso not made andalso
             length (#suggestions (valOf result)) = 1);
          expect "pipelined: the unprepared problems end Cancelled"
@@ -6877,105 +6985,6 @@ fun test_schedule_pipelined parser =
            points)
       end
 
-    (* A caller interrupt while a replay waits for the last prepare (R1):
-       the wait ends, nothing verifies after it, and the run ends
-       Interrupted with ScheduleDone and no thread left.  The last
-       prepare is held, interruptibly, once a proof has been found. *)
-    fun interrupt_during_replay_wait () =
-      let
-        val opts = options 5 30 10 NONE
-        val last = length (work_list opts) - 1
-        val st = new_state ()
-        val {m, released, reached, events, caller, root, ...} = st
-        val hold = fn i =>
-          if i = last then
-            (monitor_do m (fn () => reached := true);
-             monitor_until m "the last prepare was never released"
-               (fn () => !released))
-          else ()
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "no proof was found"
-             (fn () => exists_prefix "found|" (!events));
-           monitor_until m "the last prepare was not reached"
-             (fn () => !reached);
-           OS.Process.sleep (Time.fromMilliseconds 300);
-           Thread.interrupt (valOf (!caller))), [])
-        val (fork, recorded) = recording_fork (fn default => default)
-        val (result, failure) =
-          run st proof opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} (hooked fork) (quiet_start ())
-        val _ = remove_tree root
-      in
-        (expect "interrupt: during the wait for the prepares, Interrupted"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Interrupted andalso
-            has_event "schedule-done|interrupted" (#events st) andalso
-            null (#suggestions (valOf result)) andalso
-            schedule_events_sane (rev (!events)));
-         expect "interrupt: during the wait nothing verifies"
-           (not (has_event "verified|" events));
-         expect "interrupt: during the wait every thread has exited"
-           (producer_gone (#seen st) andalso all_exited recorded))
-      end
-
-    (* The same at the hard deadline: the last prepare cannot be cut (it
-       spins past the hard deadline), so the replay waits until the hard
-       deadline, which ends the wait; nothing verifies and the run ends
-       Timeout once the prepare ends. *)
-    fun hard_deadline_replay_wait () =
-      let
-        val opts = options 5 1 10 NONE
-        val last = length (work_list opts) - 1
-        val st = new_state ()
-        val {m, released, reached, events, root, ...} = st
-        val launched = ref NONE
-        val stamp = fn name =>
-          if name = "worker-forked" andalso not (Option.isSome (!launched))
-          then monitor_do m (fn () => launched := SOME (Time.now ()))
-          else ()
-        val spin = fn i =>
-          if i = last then
-            (monitor_do m (fn () => reached := true);
-             spin_until released)
-          else ()
-        (* The hard deadline is 3 s after the launch; the prepare is
-           released 1.5 s later. *)
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "no proof was found"
-             (fn () => exists_prefix "found|" (!events));
-           monitor_until m "the last prepare was not reached"
-             (fn () => !reached andalso Option.isSome (!launched));
-           let
-             val release_at =
-               Time.+ (valOf (!launched), Time.fromMilliseconds 4500)
-             val wait = Time.- (release_at, Time.now ())
-           in
-             if Time.> (wait, Time.zeroTime) then OS.Process.sleep wait
-             else ()
-           end;
-           monitor_do m (fn () => released := true)), [])
-        val (fork, recorded) = recording_fork (fn default => default)
-        val (result, failure) =
-          run st proof opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = spin}
-            (with_test_hooks {launch = stamp, claim = fn _ => (),
-                              fork = fork})
-            (quiet_start ())
-        val _ = remove_tree root
-      in
-        (expect "stop: at the hard deadline a replay waiting for prepares ends"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Timeout andalso
-            has_event "schedule-done|timeout" (#events st) andalso
-            null (#suggestions (valOf result)) andalso
-            not (has_event "verified|" events) andalso
-            #t_total (valOf result) >= 2.9);
-         expect "stop: at the hard deadline every thread has exited"
-           (producer_gone (#seen st) andalso all_exited recorded))
-      end
-
     (* The producer is interrupted on its own (not by the run): a stop,
        not a quiet end of the export.  It is held at a prepare, the
        interrupt reaches it there, the run ends Interrupted with
@@ -7213,7 +7222,12 @@ fun test_schedule_pipelined parser =
       end
   in
     (List.app (fn _ => readiness ()) [1, 2, 3, 4, 5];
-     replay_after_prepares ();
+     replay_beside_prepares "far from a power of ten" (fn _ => quiet_start ());
+     replay_beside_prepares "across a power of ten" (fn used =>
+       power_above (quiet_start () + used) - used div 2);
+     private_names ();
+     bounded_slices true;
+     bounded_slices false;
      replay_after_error ();
      replay_after_cancel ();
      stop_after_proof ();
@@ -7224,8 +7238,6 @@ fun test_schedule_pipelined parser =
      stop_wins true;
      interrupt_during_export ();
      interrupt_during_launch ();
-     interrupt_during_replay_wait ();
-     hard_deadline_replay_wait ();
      producer_interrupted ();
      error_then_interrupt ();
      error_after_proof ();

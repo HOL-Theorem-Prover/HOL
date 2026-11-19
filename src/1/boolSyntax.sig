@@ -58,6 +58,7 @@ sig
   val mk_icomb               : term * term -> term
   val mk_IN                  : term * term -> term
   val mk_ucomb               : term * term -> term
+  val mk_ucomb_with          : (unit -> hol_type) -> term * term -> term
 
   (* Destruction routines *)
 
@@ -213,6 +214,9 @@ sig
   (* (Type) unification *)
   val gen_tyvar_sigma : hol_type list -> (hol_type,hol_type) Lib.subst
   val gen_tyvarify : term -> term
+  (* The same with the fresh type variables taken from the given supply
+     instead of Type.gen_tyvar. *)
+  val gen_tyvarify_with : (unit -> hol_type) -> term -> term
   val type_unify : hol_type -> hol_type -> (hol_type, hol_type) Lib.subst
   val sep_type_unify : hol_type -> hol_type ->
               (hol_type, hol_type) Lib.subst * (hol_type, hol_type) Lib.subst

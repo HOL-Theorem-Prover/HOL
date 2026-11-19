@@ -20,6 +20,11 @@ sig
      from.  [pool_indexed] tells whether the ground types were computed. *)
   type pool
   val mk_pool : term -> pool
+  (* The same, with the fresh type variables that renaming a premise apart
+     from the goal needs taken from the given supply (mk_pool takes them
+     from the global counter).  Extended pools and the runs against them
+     use the pool's supply. *)
+  val mk_pool_with : hhNames.supply -> term -> pool
   val extend_pool : pool -> term list -> pool
   val pool_indexed : pool -> bool
   val monomorph_pool :
