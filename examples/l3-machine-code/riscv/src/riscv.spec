@@ -72,51 +72,15 @@ exception UNDEFINED         :: string
 exception INTERNAL_ERROR    :: string
 
 ---------------------------------------------------------------------------
--- Memory types for Load/Store instructions
----------------------------------------------------------------------------
-
-type memWidth       = bits(3)
-
-memWidth BYTE       = 0
-memWidth HALFWORD   = 1
-memWidth WORD       = 3
-memWidth DOUBLEWORD = 7
-
----------------------------------------------------------------------------
 -- Processor architecture
 ---------------------------------------------------------------------------
 
-type arch_base = bits(2)
+-- Only RV64I is implemented (initIdent): XLEN is 64 in every mode.
 
 construct Architecture
 {
   RV32I, RV64I, RV128I
 }
-
--- The misa.MXL encoding (P §3.1.1 Table 11 p.27).  Only RV64I is
--- implemented: XLEN is 64 in every mode.
-
-arch_base archBase(a::Architecture) =
-    match a
-    { case RV32I      => 1
-      case RV64I      => 2
-      case RV128I     => 3
-    }
-
-Architecture architecture(ab::arch_base) =
-    match ab
-    { case 1          => RV32I
-      case 2          => RV64I
-      case 3          => RV128I
-      case _          => #UNDEFINED("Unknown architecture: " : [[ab] :: nat])
-    }
-
-string archName(a::Architecture) =
-    match a
-    { case RV32I      => "RV32I"
-      case RV64I      => "RV64I"
-      case RV128I     => "RV128I"
-    }
 
 ---------------------------------------------------------------------------
 -- Privilege levels
@@ -175,22 +139,6 @@ ext_status ext_status(e::ExtStatus) =
       case Initial  => 1
       case Clean    => 2
       case Dirty    => 3
-    }
-
-ExtStatus extStatus(e::ext_status) =
-    match e
-    { case 0        => Off
-      case 1        => Initial
-      case 2        => Clean
-      case 3        => Dirty
-    }
-
-string extStatusName(e::ExtStatus) =
-    match e
-    { case Off      => "Off"
-      case Initial  => "Initial"
-      case Clean    => "Clean"
-      case Dirty    => "Dirty"
     }
 
 ---------------------------------------------------------------------------
@@ -598,12 +546,11 @@ declare
 -- Number of cores
 declare totalCore :: nat
 
--- ID of the core executing current instruction
+-- ID of the core executing current instruction.  Nothing in the model
+-- changes it: a step runs the hart procID.  A store by one hart does not
+-- invalidate the load reservation of another (c_ReserveLoad), so LR and SC
+-- are modelled for one hart only.
 declare procID :: id
-
-unit scheduleCore(id :: nat) =
-    when id < totalCore
-    do procID <- [id]
 
 -- The following components provide read/write access to state of the
 -- core whose id equals procID.  For example, writing "gpr(r)" refers
@@ -674,14 +621,6 @@ component ExitCode :: regType
 }
 
 -- physical memory
-
-{- Original memory replaced by byte memory when exporting to HOL
-declare MEM :: pAddrIdx -> regType -- raw memory, laid out in blocks
-                                   -- of (|pAddr|-|pAddrIdx|) bits
-
-unit initMem(val::regType) =
-    MEM <- InitMap(val)
--}
 
 declare MEM8 :: pAddr -> byte
 
@@ -1273,12 +1212,10 @@ string csrName(csr::creg) =
     }
 
 ---------------------------------------------------------------------------
--- Tandem verification
+-- Trace record
 ---------------------------------------------------------------------------
--- This describes the state update due to every retired instruction,
--- which can be verified against an external oracle.  Currently, the
--- Cissr tool from Bluespec fills the role, and the record below is
--- designed against its API.
+-- This describes the state update due to every retired instruction, which
+-- an emulator can compare with an external oracle.
 
 record StateDelta
 { exc_taken     :: bool                 -- whether an exception (interrupt/trap) was taken
@@ -1450,22 +1387,13 @@ string log_w_mem_mask_misaligned(pAddrIdx::pAddrIdx, vAddr::vAddr, mask::regType
     "] <- (data: 0x" : hex64(data) : ", mask: 0x" : hex64(mask) :
     ", old: 0x"  : hex64(old) : ", new: 0x"  : hex64(new) : ")"
 
-string log_w_mem(pAddrIdx::pAddrIdx, vAddr::vAddr, data::regType) =
-    "MEM[0x" : hex64([pAddrIdx]) : "/" : hex64(vAddr) :
-    "] <- (data: 0x" : hex64(data) : ")"
-
 string log_r_mem(pAddrIdx::pAddrIdx, vAddr::vAddr, data::regType) =
     "data <- MEM[0x" : PadLeft(#"0", 10, [pAddrIdx]) : "/" : hex64(vAddr) :
     "]: 0x" : hex64(data)
 
-string log_exc(e::ExceptionType) =
-    " Exception " : excName(e) : " raised!"
-
-inline nat LOG_IO      = 0
 inline nat LOG_INSN    = 1
 inline nat LOG_REG     = 2
 inline nat LOG_MEM     = 3
-inline nat LOG_ADDRTR  = 4
 
 declare log :: (nat * string) list
 
@@ -1753,13 +1681,6 @@ rawInstType rawReadInst(pAddr::pAddr) =
     case _      => { Skip <- 2 ;
                      Half (MEM8 (pAddr + 1) : MEM8 (pAddr)) }
   }
-}
-
--- helper used to preload memory contents
-unit rawWriteMem(pAddr::pAddr, data::regType) =
-{ pAddrIdx = pAddr<63:3>
-; MEM(pAddrIdx) <- data
-; mark_log(LOG_MEM, log_w_mem(pAddrIdx, pAddr, data))
 }
 
 ---------------------------------------------------------------------------
@@ -4874,9 +4795,6 @@ string pUJtype(o::string, rd::reg, i::bits(N)) =
 
 string pN0type(o::string) =
     instr(o)
-
-string pN1type(o::string, r::reg) =
-    instr(o) : " " : reg(r)
 
 string pN2type(o::string, r1::reg, r2::reg) =
     instr(o) : " " : reg(r1) : ", " : reg(r2)
