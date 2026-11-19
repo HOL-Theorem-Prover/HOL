@@ -311,7 +311,7 @@ fun parse_engine_params value =
    max_proofs = int_field "max_proofs" value,
    export_workers =
      (case optional_field "export_workers" value of
-          NONE => 1
+          NONE => 2
         | SOME workers => JSONUtil.asInt workers)}
 
 fun parse_engine value =

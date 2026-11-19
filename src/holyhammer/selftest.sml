@@ -281,9 +281,12 @@ fun test_child root =
        hhConfig.hh_get "mono_instances" = "")
     fun workers_with settings =
       #export_workers (hhConfig.snapshot_with (("cores", "3") :: settings))
-    val _ = expect "export_workers: inline by default, 0 means cores, \
-      \capped by cores"
-      (#export_workers default_options = 1 andalso workers_with [] = 1 andalso
+    val _ = expect "export_workers: two by default, 1 means inline, 0 means \
+      \cores, capped by cores"
+      (#export_workers default_options =
+         Int.min (2, #cores default_options) andalso
+       workers_with [] = 2 andalso
+       workers_with [("export_workers", "1")] = 1 andalso
        workers_with [("export_workers", "0")] = 3 andalso
        workers_with [("export_workers", "2")] = 2 andalso
        workers_with [("export_workers", "16")] = 3)
