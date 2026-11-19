@@ -46,20 +46,20 @@ The options are `timeout`, `max_proofs`, `provers`, `slices`, `cores`,
 only its outcome: the verified tactic or why it failed.  With `verbose` set
 it also reports every slice as it starts and ends.
 
-The `timeout` is a wall-clock budget counted from the launch of the
-provers.  With many cores or a short timeout every problem is exported before
-that, on the calling thread, so the export is not charged to it.  With at
-most 4 cores and a timeout of at least 30 s (the cases where overlapping
-brought the first verified proof sooner without losing proofs when
-measured) the export overlaps the search, which starts the clock at the
-launch, and the export then uses the budget: at the soft deadline no slice
-is started and an export that no slice waits for any more is cancelled;
-slices already started, and the reconstruction of their proofs, keep their
-grace period up to the hard deadline.  The hard deadline, an interrupt and
-a failed export stop everything at once, `max_proofs` stops the provers and
-the export (a replay is not cut); the provers are killed, the exports
-cancelled and every thread has exited before the call returns (an export is
-cut at the end of the problem it is preparing).
+The `timeout` is a wall-clock budget counted from the launch of the provers.
+Every problem is exported before that, on the calling thread, so the export is
+not charged to it, except where the measured policy (see `export_mode` in
+`hhSchedule.sml`) overlaps the export with the search, for few cores, a long
+timeout and `max_proofs` 1; an empty schedule, a pinned caller and `debug_dir`
+always export first.  An overlapped run starts the clock at the launch and the
+export then uses the budget: at the soft deadline no slice is started and an
+export that no slice waits for any more is cancelled; slices already started,
+and the reconstruction of their proofs, keep their grace period up to the hard
+deadline.  The hard deadline, an interrupt and a failed export stop everything
+at once, `max_proofs` stops the provers and the export (a replay is not cut);
+the provers are killed, the exports cancelled and every thread has exited
+before the call returns (an export is cut at the end of the problem it is
+preparing).
 
 An export error wins over everything but a stop.  The first one to be
 reported (after the problems admitted before it have settled) is raised on

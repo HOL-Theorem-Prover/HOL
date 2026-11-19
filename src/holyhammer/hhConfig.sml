@@ -312,9 +312,8 @@ val option_specs : option_spec list =
   [{name = "timeout", default = fn () => "30",
     expected = "a positive integer",
     doc = "overall wall-clock budget in seconds, counted from the launch " ^
-          "of the provers (the export of the problems is charged to it " ^
-          "only when it overlaps the search: at most 4 cores, timeout " ^
-          "at least 30)",
+          "of the provers (the export of the problems is charged to it only " ^
+          "where it overlaps the search: see hhSchedule.export_mode)",
     valid = positive_int},
    {name = "max_proofs", default = fn () => "4",
     expected = "a positive integer",

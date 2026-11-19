@@ -9,7 +9,7 @@
    index), act where an item is handed to the pool ([after_submit]) or
    before it is prepared ([before_prepare]), act at the launch points of
    run_in ([launch_point]) and before a slice worker claims work
-   ([before_claim]), select the pipelined run_in ([pipelined]) and read
+   ([before_claim]), select the export of run_in ([export_choice]) and read
    the export state of the problems of the last pipelined run
    ([export_states]).  Production leaves the hooks at their defaults. *)
 structure hhSchedule_Test =
@@ -33,10 +33,11 @@ struct
   (* Called with the item's index on the thread that prepares, before the
      item is prepared (after the producer's own check for a stop). *)
   val before_prepare = ref (fn (_ : int) => ())
-  (* Selects the pipelined run_in (export overlapping the search) where
-     hhSchedule.export_mode allows it, whatever the measured policy (see
-     export_mode) says about the cores and the timeout. *)
-  val pipelined = ref false
+  (* Which export run_in takes where hhSchedule.export_mode allows a
+     choice: the measured policy (see export_mode), or either export
+     whatever the policy says. *)
+  datatype export_choice = Policy | ForceBlocking | ForcePipelined
+  val export_choice = ref Policy
   (* Whether the pipelined run_in bounds the slices running at once while
      the export is unfinished (see run_in).  On by default; the knob lets a
      measurement compare the bounded and the unbounded run. *)
@@ -517,45 +518,53 @@ fun pool_size pinned (options : hhConfig.hh_options) works =
                   generated)
   end
 
+(* The threads of the pool: a pool of at most one worker is the inline
+   export, which has none. *)
+fun pool_threads pinned options works =
+  let val workers = pool_size pinned options works in
+    if workers <= 1 then 0 else workers
+  end
+
 (* Which export a run_in uses.  The structural reasons come first: an empty
    schedule has nothing to export, a pinned caller would see a producer
    thread that is not pinned, and debug_dir keeps the whole problem set.
-   Otherwise the policy decides, from paired measurements of both exports
-   with real provers (30 corpus goals, three rounds, max_proofs 1):
-
-     cores   timeout   pipelined against blocking
-     1, 4    30 s      first verified proof in 0.62 and 0.82 of the time,
-                       no proof lost, less CPU and memory
-     1, 4    5 s       proofs lost: the export, which the pipelined run
-                       charges to the timeout, takes a share of the
-                       budget that the search needed
-     16      30 s      0.82 of the time but 15% more CPU, and 6 of 31 goals
-                       slower (the slices start in another order)
-     16      10 s      0.71 of the time but a proof lost at the timeout
-     16      5 s       0.62 of the time, no proof lost, 4 of 30 goals slower
-
-   So the pipelined export is chosen only for few cores (at most
-   pipelined_max_cores) and a long timeout (at least pipelined_min_timeout
-   seconds), where the export is a large share of the time to the first
-   proof and a small share of the timeout.  Nothing else was measured, so
-   everything else keeps the blocking export.  hhSchedule_Test.pipelined
-   asks for the pipelined export wherever the structural reasons allow it. *)
+   Then hhSchedule_Test.export_choice, if it forces one.  Otherwise the
+   policy decides, and the policy is what paired measurements of both
+   exports with real provers support, nothing more: the pipelined export
+   is chosen only with 1 or 4 cores (the counts measured), a timeout of at
+   least 30 s and max_proofs 1.  There it brought the first verified proof
+   sooner without losing proofs or using more CPU.  With a shorter timeout
+   the export, which the pipelined run charges to the timeout, took a share
+   of the budget that the search needed and proofs were lost; with 16
+   cores the gain came with more CPU and a first proof from a different
+   slice on some goals.  Everything unmeasured keeps the blocking export.
+   The measurements are kept outside the repository.  This is the one
+   place that states these numbers. *)
 datatype blocking_reason =
-    EmptySchedule | PinnedCaller | Debugging | ManyCores | ShortTimeout
+    EmptySchedule | PinnedCaller | Debugging | UnmeasuredCores | ShortTimeout
+  | MoreProofs | Forced
 datatype export_mode = Blocking of blocking_reason | Pipelined
 
-val pipelined_max_cores = 4
+val pipelined_cores = [1, 4]
 val pipelined_min_timeout = 30
+val pipelined_max_proofs = 1
 
 fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
   if schedule_length = 0 then Blocking EmptySchedule
   else if pinned then Blocking PinnedCaller
   else if Option.isSome (#debug_dir options) then Blocking Debugging
-  else if !hhSchedule_Test.pipelined then Pipelined
-  else if #cores options > pipelined_max_cores then Blocking ManyCores
-  else if #timeout options < pipelined_min_timeout then
-    Blocking ShortTimeout
-  else Pipelined
+  else
+    case !hhSchedule_Test.export_choice of
+        hhSchedule_Test.ForceBlocking => Blocking Forced
+      | hhSchedule_Test.ForcePipelined => Pipelined
+      | hhSchedule_Test.Policy =>
+          if not (List.exists (fn c => c = #cores options) pipelined_cores)
+          then Blocking UnmeasuredCores
+          else if #timeout options < pipelined_min_timeout then
+            Blocking ShortTimeout
+          else if #max_proofs options <> pipelined_max_proofs then
+            Blocking MoreProofs
+          else Pipelined
 
 (* Theorems with hypotheses are no premises (see hhLearn); explicit hh_pb
    lists bypass premise selection. *)
@@ -667,9 +676,9 @@ fun export_works publication names pinned (observer : export_observer)
         {prepare = prepare, submit = submit, await = await_pending,
          publish = publish, abandon = abandon_pending,
          release = release_finished} works
-    val workers = pool_size pinned options works
+    val workers = pool_threads pinned options works
   in
-    if workers <= 1 then run 0 submit_inline
+    if workers = 0 then run 0 submit_inline
     else
       hhPool.with_pool {workers = workers, fork = fork}
         (fn pool =>
@@ -759,7 +768,8 @@ fun run_in root {options, goal, rankings, progress} =
       case plan of
           SOME (works, _) =>
             if !hhSchedule_Test.bound_slices then
-              Int.max (1, #cores options - 1 - pool_size false options works)
+              Int.max (1, #cores options - 1
+                          - pool_threads false options works)
             else schedule_length
         | NONE => schedule_length
     val recon = ref ([] : success list)
@@ -1035,10 +1045,13 @@ fun run_in root {options, goal, rankings, progress} =
        export never sees; the goal and the theorems are shared but hold no
        generated name, as an export never changes them.  After the end of
        the producer a name drawn globally is past everything the memo
-       holds. *)
+       holds, and any generated name that the producer holds from before
+       its seed was drawn globally, below every private number.  The
+       producer runs in hhNames.scoped, which pins its thread for the
+       private format of the names (see hhNames). *)
     fun producer (works : work list, named_for) () =
       let
-        val {supply, release} = hhNames.private_supply ()
+        val {supply, release, scoped} = hhNames.private_supply ()
         fun cancelled () = with_mutex state_mutex (fn () =>
           !stopping orelse !producer_cancelled
           orelse not (time_before (Time.now ()) deadline))
@@ -1049,25 +1062,32 @@ fun run_in root {options, goal, rankings, progress} =
               if cancelled () then raise Export_cancelled else ())}
         datatype outcome = Quiet | Cut | Broke of exn
         val outcome =
-          (export_works publication supply false silent_observer options
-             goal named_for works;
+          (scoped (fn () =>
+             export_works publication supply false silent_observer options
+               goal named_for works);
            Quiet)
           handle Export_cancelled => Quiet
                | Interrupt => Cut
                | exn => Broke exn
-        (* No interrupt cuts the conclusion short. *)
+        (* No interrupt cuts the conclusion short.  A failure of release
+           is an export failure unless the export has ended otherwise. *)
         val failed = Thread_Attributes.uninterruptible_defer
           (fn _ => fn () =>
-            (release ();
-             case outcome of
-                 Quiet => false
-               | Cut =>
-                   (if with_mutex state_mutex (fn () =>
-                         !stopping orelse !producer_cancelled) then ()
-                    else stop_hard Interrupted;
-                    false)
-               | Broke exn => fail_export exn)
-            handle _ => false) ()
+            let
+              val outcome =
+                (release (); outcome) handle exn =>
+                  (case outcome of Broke _ => outcome | _ => Broke exn)
+            in
+              (case outcome of
+                   Quiet => false
+                 | Cut =>
+                     (if with_mutex state_mutex (fn () =>
+                           !stopping orelse !producer_cancelled) then ()
+                      else stop_hard Interrupted;
+                      false)
+                 | Broke exn => fail_export exn)
+              handle _ => false
+            end) ()
       in
         Thread_Attributes.uninterruptible_defer
           (fn _ => fn () => producer_finished failed) ()
@@ -1155,8 +1175,12 @@ fun run_in root {options, goal, rankings, progress} =
              ((run_slice item
                handle Interrupt => ()
                     | error => warn "slice" error);
-              with_mutex state_mutex (fn () =>
-                (active := !active - 1; signal ()));
+              (* only the cap, which only the pipelined export has, waits
+                 on the count *)
+              if Option.isSome plan then
+                with_mutex state_mutex (fn () =>
+                  (active := !active - 1; signal ()))
+              else ();
               worker_loop ()))
 
     fun worker () =

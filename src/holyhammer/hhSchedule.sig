@@ -128,35 +128,35 @@ sig
   (* The export of a run_in: Blocking, with the reason, or Pipelined.  An
      empty schedule, a pinned caller (pinned: Context.is_pinned () on the
      caller) and a debug_dir keep the blocking export, in that order of
-     precedence.  The internal selector hhSchedule_Test.pipelined chooses
-     the pipelined export otherwise.  Without it the policy of the measured
-     cases decides (see hhSchedule.sml): pipelined for at most 4 cores
-     and a timeout of at least 30 s, blocking for more cores (ManyCores) or
-     a shorter timeout (ShortTimeout). *)
+     precedence.  After them the internal selector
+     hhSchedule_Test.export_choice may force either export; otherwise the
+     policy of the measured cases decides, and chooses blocking with the
+     reason UnmeasuredCores, ShortTimeout or MoreProofs where it has not
+     measured the pipelined export (see hhSchedule.sml, which states the
+     cases). *)
   datatype blocking_reason =
-      EmptySchedule | PinnedCaller | Debugging | ManyCores | ShortTimeout
+      EmptySchedule | PinnedCaller | Debugging | UnmeasuredCores
+    | ShortTimeout | MoreProofs | Forced
   datatype export_mode = Blocking of blocking_reason | Pipelined
   val export_mode :
     {pinned : bool, options : hhConfig.hh_options, schedule_length : int} ->
     export_mode
   (* run_in exports the problems of the schedule and then runs it.  With
-     the pipelined export chosen by export_mode (an unpinned caller without
-     debug_dir and with a non-empty schedule, with few cores and a long
-     timeout, or whenever the internal selector hhSchedule_Test.pipelined
-     asks for it) the rankings are validated, the named theorems fetched,
-     the cache pruned and the provers probed on the calling thread, then
-     the export runs on a producer thread while the slices start as their
-     files are published, each file as soon as it is complete.  The
-     clock then starts at the launch of the workers.  While the producer
-     is unfinished at most max (1, cores - 1 - pool workers)
-     slices run, so that the provers do not starve it; the bound is lifted
-     when it ends.  The files equal the blocking export's for the same
-     start of the counter of fresh type variables: the producer draws its
-     names from a supply of its own, seeded by one draw of the global
-     counter, and advances the counter past its last name when it ends, so
-     a reconstruction replay, which draws from the global counter, starts as
-     soon as a proof is found.  (A warning of the export goes to the file
-     that hides the output of a replay running at the time.)
+     the pipelined export chosen by export_mode the rankings are
+     validated, the named theorems fetched, the cache pruned and the
+     provers probed on the calling thread, then the export runs on a
+     producer thread while the slices start as their files are published,
+     each file as soon as it is complete.  The clock then starts at the
+     launch of the workers.  While the producer is unfinished at most
+     max (1, cores - 1 - pool workers) slices run, so that the provers do
+     not starve it; the bound is lifted when it ends.  The files equal
+     the blocking export's for the same start of the counter of fresh type
+     variables: the producer draws its names from a supply of its own,
+     seeded by one draw of the global counter, and advances the counter
+     past its last name when it ends, so a reconstruction replay, which
+     draws from the global counter, starts as soon as a proof is found.
+     (A warning of the export goes to the file that hides the
+     output of a replay running at the time.)
 
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an

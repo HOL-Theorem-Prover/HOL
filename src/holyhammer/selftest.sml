@@ -1935,36 +1935,116 @@ fun test_hhProblemGen_counter_window () =
 
 val _ = test_hhProblemGen_counter_window ()
 
-(* The private supply of fresh type variables: it agrees with the global
-   counter's numbering and format, draws nothing globally after its seed,
-   and its release moves the counter past the names handed out. *)
+(* The private supply of fresh type variables: its names are the global
+   counter's, numbered from the seed on and formatted alike; it draws
+   nothing globally after its seed, whatever other threads draw; its release
+   moves the counter past the names handed out; it is usable only inside
+   its scope, which turns the kernel's complaint off for the scope's thread
+   alone. *)
 fun test_hhNames () =
   let
-    val seen = Type.gen_tyvar ()
-    val number = valOf (Type.gen_tyvar_number seen)
     val first = counter ()
-    val {supply, release} = hhNames.private_supply ()
-    val a = supply ()
-    val b = supply ()
-    val c = supply ()
-    val during = counter ()
+    val {supply, release, scoped} = hhNames.private_supply ()
+    val warnings = ref 0
+    fun complaint () =
+      (warnings := 0; ignore (Type.mk_vartype "%%not-standard"); !warnings)
+    fun number ty = valOf (Int.fromString (String.extract (Type.dest_vartype ty,
+      size "%%gen_tyvar%%", NONE)))
+    val old_outstream = !Feedback.WARNING_outstream
+    val _ = Feedback.WARNING_outstream := (fn _ => warnings := !warnings + 1)
+    val outside_before = complaint ()
+    val other_during = ref ~1
+    val drawn = ref ([] : Type.hol_type list)
+    val outside_raises = (supply (); false) handle Fail _ => true
+    val inside = ref ~1
+    val _ = scoped (fn () =>
+      let
+        (* another thread draws globally meanwhile and keeps its flags *)
+        val t = Thread.fork (fn () =>
+          (OS.Process.sleep (Time.fromMilliseconds 20);
+           ignore (List.tabulate (50, fn _ => Type.gen_tyvar ()));
+           other_during := complaint ()), [])
+        val a = supply ()
+        val _ = OS.Process.sleep (Time.fromMilliseconds 100)
+        val b = supply ()
+        val c = supply ()
+      in
+        inside := complaint (); drawn := [a, b, c]
+      end)
+    val outside_after = complaint ()
+    val _ = Feedback.WARNING_outstream := old_outstream
+    val numbers = map number (!drawn)
     val _ = release ()
     val after = counter ()
   in
-    expect "gen_tyvar numbers: mk_gen_tyvar is the inverse"
-      (Type.mk_gen_tyvar number = seen andalso
-       Type.gen_tyvar_number Type.alpha = NONE andalso
-       Type.gen_tyvar_number (Type.mk_gen_tyvar 7) = SOME 7);
     expect "private supply: the seed is one global draw, the names follow"
-      (map (valOf o Type.gen_tyvar_number) [a, b, c] =
-         [first + 1, first + 2, first + 3] andalso during = first + 2);
+      (case numbers of
+           [a, b, c] => a = first + 1 andalso b = a + 1 andalso c = b + 1
+         | _ => false);
+    expect "private supply: the names are generated type variables"
+      (List.all Type.is_gen_tyvar (!drawn) andalso
+       map Type.dest_vartype (!drawn) =
+         map (fn n => "%%gen_tyvar%%" ^ Int.toString n) numbers);
     expect "private supply: release moves the counter past the names"
-      (after > first + 3);
-    expect "private supply: names are those of the global supply"
-      (Type.dest_vartype (Type.mk_gen_tyvar (first + 1)) =
-       "%%gen_tyvar%%" ^ Int.toString (first + 1))
+      (after > List.last numbers);
+    expect "private supply: no complaint inside the scope, only for it"
+      (outside_before = 1 andalso !inside = 0 andalso !other_during = 1 andalso
+       outside_after = 1);
+    expect "private supply: used outside its scope it fails"
+      outside_raises
   end
 val _ = test_hhNames ()
+
+(* hhLamTrans.mk_ucomb_with replaces boolSyntax.mk_ucomb, which draws from
+   the global counter whatever the caller wants (the pipelined export draws
+   from a supply of its own).  With the global supply it gives the same
+   term and draws the same number of names, also where the types share
+   variables, leave variables unconstrained, or do not unify. *)
+fun test_hhLamTrans_ucomb () =
+  let
+    val alpha = Type.alpha
+    val beta = Type.beta
+    val gamma = Type.gamma
+    val num = Type.mk_type ("num", [])
+    fun mk name ty = Term.mk_var (name, ty)
+    fun combin name = Term.prim_mk_const {Thy = "combin", Name = name}
+    val cases =
+      [("K applied to a shared variable", combin "K", mk "x" alpha),
+       ("I applied to a numeral type", combin "I", mk "x" num),
+       ("S applied to a shared curried variable", combin "S",
+        mk "g" (Type.--> (alpha, Type.--> (beta, gamma)))),
+       ("a variable and its result type", mk "h" (Type.--> (alpha, beta)),
+        mk "y" beta),
+       ("o applied to a function with unconstrained variables", combin "o",
+        mk "p" (Type.--> (beta, gamma))),
+       ("C applied to a nested polymorphic type", combin "C",
+        mk "q" (Type.--> (Type.mk_type ("list", [alpha]),
+                          Type.--> (beta, alpha)))),
+       ("no unifier", mk "h" (Type.--> (num, Type.bool)), mk "z" Type.bool)]
+    fun result apply (f, a) =
+      let
+        val before = counter ()
+        val outcome = SOME (apply (f, a)) handle Feedback.HOL_ERR _ => NONE
+      in
+        (outcome, counter () - before - 1)
+      end
+    fun agree (_, f, a) =
+      let
+        val (r1, d1) = result boolSyntax.mk_ucomb (f, a)
+        val (r2, d2) = result (hhLamTrans.mk_ucomb_with hhNames.global) (f, a)
+      in
+        d1 = d2 andalso
+        (case (r1, r2) of
+             (NONE, NONE) => true
+           | (SOME t1, SOME t2) => Term.aconv t1 t2
+           | _ => false)
+      end
+  in
+    List.app (fn c => expect ("hhLamTrans.mk_ucomb_with: " ^ #1 c ^
+                              " agrees with boolSyntax.mk_ucomb") (agree c))
+      cases
+  end
+val _ = test_hhLamTrans_ucomb ()
 
 (* A "lambda survived" failure of the tail of a prepared problem is raised
    raw (it may run on a worker, where the term grammar must not be read)
@@ -6164,7 +6244,7 @@ fun test_schedule_hoisted_fetch () =
     remove_tree root
   end
 
-(* The pipelined run_in (selected by hhSchedule_Test.pipelined).  Fixture:
+(* The pipelined run_in (selected by hhSchedule_Test.export_choice).  Fixture:
    two fixture provers and five slices (two legacy, three generated) over
    the premises of a goal that Metis proves from LENGTH_APPEND.  Every
    prover reads its whole problem file when it starts; the blocking export
@@ -6224,7 +6304,9 @@ fun test_schedule_pipelined parser =
         (fn _ => (r := value; f ()))
     (* The selector and the test hooks are set for one run. *)
     fun with_hooks {pipelined, before_finish, before_prepare} f =
-      with_ref (hhSchedule_Test.pipelined, pipelined) (fn () =>
+      with_ref (hhSchedule_Test.export_choice,
+                if pipelined then hhSchedule_Test.ForcePipelined
+                else hhSchedule_Test.ForceBlocking) (fn () =>
         with_ref (hhSchedule_Test.before_finish, before_finish) (fn () =>
           with_ref (hhSchedule_Test.before_prepare, before_prepare) f))
     fun hooks pipelined = {pipelined = pipelined, before_finish = fn _ => (),
@@ -6390,10 +6472,13 @@ fun test_schedule_pipelined parser =
 
     (* A replay beside the producer.  The replay starts as soon as the
        proof is found; the last prepare is held until it has verified, so
-       the replay runs, and draws names from the global counter, while the
-       producer still has a prepare to do.  The producer draws from a
-       supply of its own, so the files are the blocking files for the same
-       counter start, whatever the replay drew meanwhile.  The start is
+       the replay runs while the producer still has a prepare to do, and
+       another thread draws many names from the global counter (a replay
+       draws some).  The producer draws from a supply of its own, so
+       the global counter shows nothing of its prepares (the readings at
+       them are consecutive, up to the last one taken before the draws)
+       and the files are the blocking files for the same counter start,
+       whatever was drawn meanwhile.  The start is
        given as a function of the number of names the blocking export
        draws: one far from a power of ten, and one that puts a power of ten
        inside the producer's window, where the bytes depend on the order of
@@ -6410,17 +6495,24 @@ fun test_schedule_pipelined parser =
         val {m, released, reached, events, root, ...} = st
         val before_genvars = genvar_counter ()
         val at_verified = ref 0
+        val readings = ref ([] : int list)
+        val drew = ref 0
         val hold = fn i =>
-          if i = last then
+          (readings := counter () :: !readings;
+           if i = last then
             (monitor_do m (fn () => reached := true);
              monitor_until m "the last prepare was never released"
                (fn () => !released))
-          else ()
+           else ())
         val _ = Thread.fork (fn () =>
           (monitor_until m "no proof was found"
              (fn () => exists_prefix "found|" (!events));
            monitor_until m "the last prepare was not reached"
              (fn () => !reached);
+           let val b = counter () in
+             ignore (List.tabulate (500, fn _ => Type.gen_tyvar ()));
+             drew := counter () - b
+           end;
            monitor_until m "the replay did not verify"
              (fn () => exists_prefix "verified|" (!events));
            at_verified := genvar_counter ();
@@ -6431,8 +6523,15 @@ fun test_schedule_pipelined parser =
              before_prepare = hold} no_wrap start
         val files = tree root
         val _ = remove_tree root
+        fun consecutive (a :: (rest as b :: _)) = b = a + 1 andalso
+              consecutive rest
+          | consecutive _ = true
       in
-        (expect ("pipelined: " ^ label ^ ", a replay verifies while the " ^
+        (expect ("pipelined: " ^ label ^ ", names are drawn globally while " ^
+                 "the last prepare is held, and the producer shows no draw")
+           (!drew >= 500 andalso length (!readings) = length works andalso
+            consecutive (rev (!readings)));
+         expect ("pipelined: " ^ label ^ ", a replay verifies while the " ^
                  "last prepare is held and draws names")
            (not (Option.isSome failure) andalso
             length (#suggestions (valOf result)) = 1 andalso
@@ -7250,10 +7349,17 @@ val _ = test_schedule_pool ()
 val _ = case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
             SOME _ => ()
           | NONE => test_schedule_pipelined (#parse_output (prover Eprover))
+(* An export choice for the run of f, restored whatever happens. *)
+fun with_choice choice f =
+  Portable.bracket (fn () => !hhSchedule_Test.export_choice)
+    (fn old => hhSchedule_Test.export_choice := old)
+    (fn _ => (hhSchedule_Test.export_choice := choice; f ()))
+
 (* The policy that picks the export of a run_in: the structural reasons in
-   their order of precedence, blocking by default, and the pipelined export
-   only where the selector asks for it.  The options vary in cores, the
-   timeout and export_workers without changing the choice. *)
+   their order of precedence, the measured policy (1 or 4 cores, a timeout
+   of at least 30 s, max_proofs 1), and the selector that forces either
+   export.  Options that the policy does not look at do not change the
+   choice. *)
 fun test_export_mode () =
   let
     open hhSchedule
@@ -7262,67 +7368,69 @@ fun test_export_mode () =
     fun mode options pinned length =
       export_mode {pinned = pinned, options = options,
                    schedule_length = length}
-    fun selected f =
-      Portable.bracket (fn () => !hhSchedule_Test.pipelined)
-        (fn old => hhSchedule_Test.pipelined := old)
-        (fn _ => (hhSchedule_Test.pipelined := true; f ()))
-    fun varied (cores, timeout) =
+    val forced = with_choice hhSchedule_Test.ForcePipelined
+    val blocked = with_choice hhSchedule_Test.ForceBlocking
+    fun varied (cores, timeout, proofs) =
       hhConfig.snapshot_with [("debug_dir", ""), ("cores", cores),
-        ("timeout", timeout)]
-    (* the cells of the policy: pipelined for at most 4 cores and a
-       timeout of at least 30 s (the measured cases) *)
-    val pipelined_cells = [("1", "30"), ("2", "30"), ("4", "30"),
-                           ("4", "300"), ("1", "31")]
-    val many_cores = [("5", "30"), ("16", "30"), ("16", "300"),
-                      ("8", "5")]
-    val short_timeout = [("1", "29"), ("4", "5"), ("2", "1")]
+        ("timeout", timeout), ("max_proofs", proofs)]
+    val pipelined_cells = [("1", "30", "1"), ("4", "30", "1"),
+                           ("4", "300", "1"), ("1", "31", "1")]
+    val unmeasured_cores = [("2", "30", "1"), ("3", "30", "1"),
+                            ("5", "30", "1"), ("16", "30", "1"),
+                            ("16", "5", "1")]
+    val short_timeout = [("1", "29", "1"), ("4", "5", "1"), ("4", "1", "1")]
+    val more_proofs = [("1", "30", "2"), ("4", "30", "4")]
     fun all_modes cells m =
       List.all (fn c => mode (varied c) false 24 = m) cells
+    fun policy f = with_choice hhSchedule_Test.Policy f
   in
-    expect "export_mode: few cores and a long timeout pipeline"
-      (all_modes pipelined_cells Pipelined);
-    expect "export_mode: many cores block"
-      (all_modes many_cores (Blocking ManyCores));
-    expect "export_mode: a short timeout blocks"
-      (all_modes short_timeout (Blocking ShortTimeout));
-    expect "export_mode: many cores are named before a short timeout"
-      (mode (varied ("16", "5")) false 24 = Blocking ManyCores);
-    expect "export_mode: the other options do not change the choice"
-      (mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
-         ("timeout", "30"), ("export_workers", "1"), ("slices", "3")])
-         false 24 = Pipelined);
-    expect "export_mode: the selector asks for the pipelined export"
-      (selected (fn () =>
-         all_modes (many_cores @ short_timeout) Pipelined));
+    policy (fn () =>
+      (expect "export_mode: the measured cases pipeline"
+         (all_modes pipelined_cells Pipelined);
+       expect "export_mode: unmeasured core counts block"
+         (all_modes unmeasured_cores (Blocking UnmeasuredCores));
+       expect "export_mode: a short timeout blocks"
+         (all_modes short_timeout (Blocking ShortTimeout));
+       expect "export_mode: more than one proof blocks"
+         (all_modes more_proofs (Blocking MoreProofs));
+       expect "export_mode: cores are named before the timeout"
+         (mode (varied ("16", "5", "1")) false 24 =
+            Blocking UnmeasuredCores);
+       expect "export_mode: the other options do not change the choice"
+         (mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
+            ("timeout", "30"), ("max_proofs", "1"), ("export_workers", "1"),
+            ("slices", "3")]) false 24 = Pipelined)));
+    expect "export_mode: the selector forces the pipelined export"
+      (forced (fn () =>
+         all_modes (unmeasured_cores @ short_timeout @ more_proofs)
+           Pipelined));
+    expect "export_mode: the selector forces the blocking export"
+      (blocked (fn () =>
+         all_modes pipelined_cells (Blocking Forced)));
     expect "export_mode: debug_dir keeps the blocking export"
       (mode debug false 24 = Blocking Debugging andalso
-       selected (fn () => mode debug false 24 = Blocking Debugging));
+       forced (fn () => mode debug false 24 = Blocking Debugging));
     expect "export_mode: a pinned caller keeps the blocking export"
       (mode plain true 24 = Blocking PinnedCaller andalso
-       selected (fn () => mode plain true 24 = Blocking PinnedCaller));
+       forced (fn () => mode plain true 24 = Blocking PinnedCaller));
     expect "export_mode: an empty schedule comes first"
       (mode debug true 0 = Blocking EmptySchedule andalso
-       selected (fn () => mode plain false 0 = Blocking EmptySchedule));
+       forced (fn () => mode plain false 0 = Blocking EmptySchedule));
     expect "export_mode: pinned comes before debug_dir"
       (mode debug true 24 = Blocking PinnedCaller);
     expect "export_mode: the selector is restored"
-      (not (!hhSchedule_Test.pipelined))
+      (!hhSchedule_Test.export_choice = hhSchedule_Test.Policy)
   end
 
 val _ = test_export_mode ()
 val _ = test_schedule_hoisted_fetch ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
-val _ = test_hhSchedule ()
+val _ = with_choice hhSchedule_Test.ForceBlocking test_hhSchedule
 
 (* The scheduler tests run once more on the pipelined path (the selector
    is restored afterwards, whatever happens). *)
-fun with_pipelined f =
-  Portable.bracket (fn () => !hhSchedule_Test.pipelined)
-    (fn old => hhSchedule_Test.pipelined := old)
-    (fn _ => (hhSchedule_Test.pipelined := true; f ()))
-
-val _ = with_pipelined test_hhSchedule
+val _ = with_choice hhSchedule_Test.ForcePipelined test_hhSchedule
 
 fun test_main_hh_lemmas_hook parser =
   let
@@ -7399,7 +7507,8 @@ fun test_holyHammer_scheduler_api () =
         end
 
 val _ = test_holyHammer_scheduler_api ()
-val _ = with_pipelined test_holyHammer_scheduler_api
+val _ =
+  with_choice hhSchedule_Test.ForcePipelined test_holyHammer_scheduler_api
 
 fun test_hhEval_integration () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of

@@ -291,11 +291,11 @@ New tools
     `hhConfig.hh_set`; `hhConfig.hh_params` reports all effective values and
     their provenance.  `holyHammer.set_timeout` remains as a deprecated alias
     for `hhConfig.hh_set ("timeout", ...)`.  The timeout counts from the
-    launch of the provers.  With more than 4 cores or a timeout under 30
-    seconds the export of their problem files is finished first and not
-    charged to it; with at most 4 cores and a timeout of 30 seconds or more
-    the provers start while the problems are still being exported and the
-    export counts against the timeout.
+    launch of the provers.  The export of their problem files is finished
+    first and not charged to it, except where the measured policy overlaps
+    the export with the search (few cores, a long timeout, `max_proofs` 1;
+    see `export_mode` in `hhSchedule.sml`): there the export counts against
+    the timeout.
 
 -   HOLyHammer schedules TPTP formats, type encodings, and lambda
     translations per prover slice.  Besides FOF, it now proves goals
