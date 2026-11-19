@@ -38,12 +38,18 @@ Proof
        field_add_assoc, field_add_comm, field_add_assoc_comm]
 QED
 
-Theorem sw_cubic_polynomial_root_free[local]:
+Theorem sw_cubic_polynomial_no_two_torsion[local]:
   !(r:'a field) a b.
-    Field r /\ a IN r.carrier /\ b IN r.carrier /\
+    ShortWeierstrassCurve r a b /\
     poly_roots r [b;a;r.sum.id;r.prod.id] = {} ==>
-    !x. x IN r.carrier ==> sw_curve_rhs r a b x <> r.sum.id
+    !P. P IN sw_points r a b /\
+        (sw_group r a b).exp P 2 = ECInfinity ==> P = ECInfinity
 Proof
+  rpt gen_tac >> strip_tac >>
+  match_mp_tac sw_root_free_no_two_torsion >>
+  conj_tac >- asm_rewrite_tac[] >>
+  `Field r /\ a IN r.carrier /\ b IN r.carrier` by
+    metis_tac[ShortWeierstrassCurve_def] >>
   rpt strip_tac >>
   `poly_eval r [b;a;r.sum.id;r.prod.id] x = r.sum.id` by
     metis_tac[sw_cubic_polynomial_eval] >>
@@ -73,13 +79,8 @@ Theorem secp256k1_no_two_torsion:
       (sw_group secp256k1_base_field secp256k1_a secp256k1_b).exp P 2 = ECInfinity ==>
       P = ECInfinity
 Proof
-  match_mp_tac sw_root_free_no_two_torsion >>
+  match_mp_tac sw_cubic_polynomial_no_two_torsion >>
   conj_tac >- ACCEPT_TAC secp256k1_curve >>
-  `Field secp256k1_base_field /\ secp256k1_a IN secp256k1_base_field.carrier /\
-    secp256k1_b IN secp256k1_base_field.carrier` by
-    metis_tac[secp256k1_curve, ShortWeierstrassCurve_def] >>
-  match_mp_tac sw_cubic_polynomial_root_free >>
-  asm_rewrite_tac[] >>
   simp[secp256k1_base_field_def, GF_eval, secp256k1_cubic_root_free]
 QED
 
@@ -135,13 +136,8 @@ Theorem p256_no_two_torsion:
       (sw_group p256_base_field p256_a p256_b).exp P 2 = ECInfinity ==>
       P = ECInfinity
 Proof
-  match_mp_tac sw_root_free_no_two_torsion >>
+  match_mp_tac sw_cubic_polynomial_no_two_torsion >>
   conj_tac >- ACCEPT_TAC p256_curve >>
-  `Field p256_base_field /\ p256_a IN p256_base_field.carrier /\
-    p256_b IN p256_base_field.carrier` by
-    metis_tac[p256_curve, ShortWeierstrassCurve_def] >>
-  match_mp_tac sw_cubic_polynomial_root_free >>
-  asm_rewrite_tac[] >>
   simp[p256_base_field_def, GF_eval, p256_cubic_root_free]
 QED
 
@@ -197,13 +193,8 @@ Theorem bn254_g1_no_two_torsion:
       (sw_group bn254_base_field bn254_g1_a bn254_g1_b).exp P 2 = ECInfinity ==>
       P = ECInfinity
 Proof
-  match_mp_tac sw_root_free_no_two_torsion >>
+  match_mp_tac sw_cubic_polynomial_no_two_torsion >>
   conj_tac >- ACCEPT_TAC bn254_g1_curve >>
-  `Field bn254_base_field /\ bn254_g1_a IN bn254_base_field.carrier /\
-    bn254_g1_b IN bn254_base_field.carrier` by
-    metis_tac[bn254_g1_curve, ShortWeierstrassCurve_def] >>
-  match_mp_tac sw_cubic_polynomial_root_free >>
-  asm_rewrite_tac[] >>
   simp[bn254_base_field_def, GF_eval, bn254_g1_cubic_root_free]
 QED
 

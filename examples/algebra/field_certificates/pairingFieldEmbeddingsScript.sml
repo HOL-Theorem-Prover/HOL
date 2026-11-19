@@ -117,6 +117,21 @@ Definition bls12381_fp2_to_fp12_def:
       bls12381_fp12_poly
 End
 
+(* Capture numeric quotient contexts once, after the embedding definitions. *)
+val bn254_numeric_prime = REWRITE_RULE [bn254_p_def] bn254_p_prime
+val bn254_fp12_modulus = rhs (concl (EVAL ``bn254_fp12_poly``))
+val bn254_fp12_arithmetic = pairingFieldCertificateLib.QUOTIENT_CONV
+  bn254_numeric_prime bn254_fp12_modulus
+val bn254_fp12_remainder = polynomialCertificateLib.REMAINDER_CONV
+  bn254_numeric_prime bn254_fp12_modulus
+
+val bls12381_numeric_prime = REWRITE_RULE [bls12381_p_def] bls12381_p_prime
+val bls12381_fp12_modulus = rhs (concl (EVAL ``bls12381_fp12_poly``))
+val bls12381_fp12_arithmetic = pairingFieldCertificateLib.QUOTIENT_CONV
+  bls12381_numeric_prime bls12381_fp12_modulus
+val bls12381_fp12_remainder = polynomialCertificateLib.REMAINDER_CONV
+  bls12381_numeric_prime bls12381_fp12_modulus
+
 Theorem bn254_fp12_w_member:
   bn254_fp12_w IN bn254_fp12.carrier /\ bn254_fp12_w <> bn254_fp12.sum.id
 Proof
@@ -139,9 +154,7 @@ Theorem bn254_fp12_i_relation:
 Proof
   REWRITE_TAC [bn254_fp12_i_def, bn254_fp12_w_def, bn254_fp12_def,
                bn254_fp12_poly_def, bn254_p_def] >>
-  CONV_TAC (pairingFieldCertificateLib.QUOTIENT_CONV
-    (REWRITE_RULE [bn254_p_def] bn254_p_prime)
-    (rhs (concl (EVAL ``bn254_fp12_poly``))))
+  CONV_TAC bn254_fp12_arithmetic
 QED
 Theorem bls12381_fp12_i_relation:
   bls12381_fp12.sum.op bls12381_fp12_i [1] =
@@ -149,9 +162,7 @@ Theorem bls12381_fp12_i_relation:
 Proof
   REWRITE_TAC [bls12381_fp12_i_def, bls12381_fp12_w_def, bls12381_fp12_def,
                bls12381_fp12_poly_def, bls12381_p_def] >>
-  CONV_TAC (pairingFieldCertificateLib.QUOTIENT_CONV
-    (REWRITE_RULE [bls12381_p_def] bls12381_p_prime)
-    (rhs (concl (EVAL ``bls12381_fp12_poly``))))
+  CONV_TAC bls12381_fp12_arithmetic
 QED
 
 (* For BN254, i=w^6-9 satisfies i^2+1=0 modulo X^12-18*X^6+82. *)
@@ -163,9 +174,7 @@ Proof
   REWRITE_TAC [bn254_fp2_poly_def, bn254_fp12_i_def,
                bn254_fp12_poly_def, bn254_p_def] >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  CONV_TAC (LAND_CONV (polynomialCertificateLib.REMAINDER_CONV
-    (REWRITE_RULE [bn254_p_def] bn254_p_prime)
-    (rhs (concl (EVAL ``bn254_fp12_poly``))))) >> REFL_TAC
+  CONV_TAC (LAND_CONV bn254_fp12_remainder) >> REFL_TAC
 QED
 (* For BLS12-381, i=w^6-1 satisfies i^2+1=0 modulo X^12-2*X^6+2. *)
 Theorem bls12381_fp2_modulus_vanishes:
@@ -176,9 +185,7 @@ Proof
   REWRITE_TAC [bls12381_fp2_poly_def, bls12381_fp12_i_def,
                bls12381_fp12_poly_def, bls12381_p_def] >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  CONV_TAC (LAND_CONV (polynomialCertificateLib.REMAINDER_CONV
-    (REWRITE_RULE [bls12381_p_def] bls12381_p_prime)
-    (rhs (concl (EVAL ``bls12381_fp12_poly``))))) >> REFL_TAC
+  CONV_TAC (LAND_CONV bls12381_fp12_remainder) >> REFL_TAC
 QED
 
 (* BN254 substitution a+b*i -> a+b*(w^6-9) defines a field
@@ -268,18 +275,14 @@ Theorem bn254_fp12_w_sixth:
 Proof
   REWRITE_TAC [bn254_fp12_w_def, bn254_fp12_def,
                bn254_fp12_poly_def, bn254_p_def] >>
-  CONV_TAC (pairingFieldCertificateLib.QUOTIENT_CONV
-    (REWRITE_RULE [bn254_p_def] bn254_p_prime)
-    (rhs (concl (EVAL ``bn254_fp12_poly``))))
+  CONV_TAC bn254_fp12_arithmetic
 QED
 Theorem bls12381_fp12_w_sixth:
   bls12381_fp12.prod.exp bls12381_fp12_w 6 = [0;0;0;0;0;0;1]
 Proof
   REWRITE_TAC [bls12381_fp12_w_def, bls12381_fp12_def,
                bls12381_fp12_poly_def, bls12381_p_def] >>
-  CONV_TAC (pairingFieldCertificateLib.QUOTIENT_CONV
-    (REWRITE_RULE [bls12381_p_def] bls12381_p_prime)
-    (rhs (concl (EVAL ``bls12381_fp12_poly``))))
+  CONV_TAC bls12381_fp12_arithmetic
 QED
 
 Theorem bn254_fp2_to_fp12_i:
@@ -289,9 +292,7 @@ Proof
                bn254_fp12_poly_def, bn254_p_def] >>
   CONV_TAC (LAND_CONV BETA_CONV) >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  CONV_TAC (LAND_CONV (polynomialCertificateLib.REMAINDER_CONV
-    (REWRITE_RULE [bn254_p_def] bn254_p_prime)
-    (rhs (concl (EVAL ``bn254_fp12_poly``))))) >> REFL_TAC
+  CONV_TAC (LAND_CONV bn254_fp12_remainder) >> REFL_TAC
 QED
 Theorem bls12381_fp2_to_fp12_i:
   bls12381_fp2_to_fp12 [0;1] = bls12381_fp12_i
@@ -300,9 +301,7 @@ Proof
                bls12381_fp12_poly_def, bls12381_p_def] >>
   CONV_TAC (LAND_CONV BETA_CONV) >>
   CONV_TAC certificateComputeLib.NAT_CONV >>
-  CONV_TAC (LAND_CONV (polynomialCertificateLib.REMAINDER_CONV
-    (REWRITE_RULE [bls12381_p_def] bls12381_p_prime)
-    (rhs (concl (EVAL ``bls12381_fp12_poly``))))) >> REFL_TAC
+  CONV_TAC (LAND_CONV bls12381_fp12_remainder) >> REFL_TAC
 QED
 
 val _ = export_theory();

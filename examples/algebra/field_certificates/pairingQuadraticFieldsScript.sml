@@ -260,9 +260,8 @@ Theorem bn254_fp2_coefficients_above_one:
         poly_coeff (GF bn254_p) x k = 0
 Proof
   rw[bn254_fp2_carrier] >>
-  `poly_deg (GF bn254_p) x < k` by decide_tac >>
-  Cases_on `x = []` >>
-  simp[poly_coeff_nonzero, GF_zero]
+  metis_tac[poly_coeff_nonzero, poly_coeff_zero, GF_zero,
+            LESS_LESS_EQ_TRANS]
 QED
 
 Theorem bls12381_fp2_coefficients_above_one:
@@ -270,9 +269,8 @@ Theorem bls12381_fp2_coefficients_above_one:
         poly_coeff (GF bls12381_p) x k = 0
 Proof
   rw[bls12381_fp2_carrier] >>
-  `poly_deg (GF bls12381_p) x < k` by decide_tac >>
-  Cases_on `x = []` >>
-  simp[poly_coeff_nonzero, GF_zero]
+  metis_tac[poly_coeff_nonzero, poly_coeff_zero, GF_zero,
+            LESS_LESS_EQ_TRANS]
 QED
 
 (* Applying the p-power Frobenius twice is the identity. *)

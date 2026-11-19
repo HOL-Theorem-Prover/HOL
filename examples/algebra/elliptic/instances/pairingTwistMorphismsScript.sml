@@ -97,6 +97,17 @@ Definition bls12381_twist_embedding_def:
     sw_map_point bls12381_fp2_to_fp12
 End
 
+(* Numeric contexts for the checked coefficient images below. *)
+val bn254_numeric_prime = REWRITE_RULE [bn254_p_def] bn254_p_prime
+val bn254_fp12_modulus = rhs (concl (EVAL ``bn254_fp12_poly``))
+val bn254_fp12_arithmetic = pairingFieldCertificateLib.QUOTIENT_CONV
+  bn254_numeric_prime bn254_fp12_modulus
+
+val bls12381_numeric_prime = REWRITE_RULE [bls12381_p_def] bls12381_p_prime
+val bls12381_fp12_modulus = rhs (concl (EVAL ``bls12381_fp12_poly``))
+val bls12381_fp12_arithmetic = pairingFieldCertificateLib.QUOTIENT_CONV
+  bls12381_numeric_prime bls12381_fp12_modulus
+
 Theorem pairing_extension_fields[local]:
   Field bn254_fp2 /\ Field bn254_fp12 /\
   Field bls12381_fp2 /\ Field bls12381_fp12
@@ -131,9 +142,7 @@ Proof
   REWRITE_TAC [bn254_fp12_w_sixth, bn254_fp2_to_fp12_def,
                bn254_g2_b_def, bn254_fp12_i_def, bn254_fp12_def,
                bn254_fp12_poly_def, bn254_p_def] >>
-  CONV_TAC (pairingFieldCertificateLib.QUOTIENT_CONV
-    (REWRITE_RULE [bn254_p_def] bn254_p_prime)
-    (rhs (concl (EVAL ``bn254_fp12_poly``))))
+  CONV_TAC bn254_fp12_arithmetic
 QED
 
 Theorem bls12381_twist_b_image:
@@ -143,9 +152,7 @@ Proof
   REWRITE_TAC [bls12381_fp12_w_sixth, bls12381_fp2_to_fp12_def,
                bls12381_g2_b_def, bls12381_fp12_i_def, bls12381_fp12_def,
                bls12381_fp12_poly_def, bls12381_p_def] >>
-  CONV_TAC (pairingFieldCertificateLib.QUOTIENT_CONV
-    (REWRITE_RULE [bls12381_p_def] bls12381_p_prime)
-    (rhs (concl (EVAL ``bls12381_fp12_poly``))))
+  CONV_TAC bls12381_fp12_arithmetic
 QED
 
 Theorem bls12381_twist_b_scaled:
