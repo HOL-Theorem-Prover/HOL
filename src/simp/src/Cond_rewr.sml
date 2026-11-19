@@ -1,7 +1,8 @@
 structure Cond_rewr :> Cond_rewr =
 struct
 
-open HolKernel boolLib liteLib Trace;
+open Feedback Lib Type Term Thm boolTheory boolSyntax Hol_pp Drule Tactical
+     Tactic Thm_cont Conv Rewrite Abbrev BoundedRewrites liteLib Trace;
 
 type controlled_thm = BoundedRewrites.controlled_thm
 
@@ -175,17 +176,15 @@ fun ac_term_ord(tm1,tm2) =
      {legacy : (term list -> term -> thm) -> term list -> conv,
       configured : config -> conv}
 
-   (* One construction (theorem analysis and matcher) serves two runners.
-      The legacy runner reads stack_limit at each application and orders
-      permutative rewrites by ac_term_ord; the configured runner takes
-      both from its argument, NONE depth again meaning stack_limit. *)
-   fun COND_REWR_CONVS (nm,th) bounded =
+   fun prepare th =
       let val eqn = snd (strip_imp (concl th))
           val isperm = is_var_perm (dest_eq eqn)
           val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
                        handle HOL_ERR _ => ERR("COND_REWR_CONV",
                          "bad theorem argument (not a conditional equation)")
-          fun apply solver stack depth term_ord tm =
+      in (isperm,instth) end
+
+   fun apply (nm,th,bounded,isperm,instth) depth term_ord solver stack tm =
        (let val conditional_eqn = instth tm
             val (conditions,eqn) = strip_imp (concl conditional_eqn)
             val _ = if exists (C (op_mem aconv) stack) conditions
@@ -231,19 +230,82 @@ fun ac_term_ord(tm1,tm2) =
             final_thm
         end
         handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
+
+   (* Keep the ordinary runner's depth check and term order inline. *)
+   fun COND_REWR_CONV (nm,th) bounded =
+      let val eqn = snd (strip_imp (concl th))
+          val isperm = is_var_perm (dest_eq eqn)
+          val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
+                       handle HOL_ERR _ => ERR("COND_REWR_CONV",
+                         "bad theorem argument (not a conditional equation)")
       in
-        {legacy = fn solver => fn stack => fn tm =>
-                     apply solver stack (!stack_limit) ac_term_ord tm,
-         configured = fn {solver,stack,cond_depth,term_ord} => fn tm =>
-                         apply solver stack
-                               (case cond_depth of
-                                    NONE => !stack_limit
-                                  | SOME n => n)
-                               term_ord tm}
+      fn solver => fn stack => fn tm =>
+       (let val conditional_eqn = instth tm
+            val (conditions,eqn) = strip_imp (concl conditional_eqn)
+            val _ = if exists (C (op_mem aconv) stack) conditions
+                        then (trace(1, TEXT "looping - cut");
+                              failwith "looping!") else ()
+            val _ = if length stack + length conditions > (!stack_limit)
+                    then (trace(1, TEXT "looping - stack limit reached");
+                          failwith "stack limit") else ()
+            val (l,r) = dest_eq eqn
+            val _ =
+              if Term.aconv l r then
+                (trace(4, IGNORE ("Rewrite loops", conditional_eqn));
+                 failwith "looping rewrite")
+              else ()
+
+            val _ = if isperm andalso ac_term_ord(l, r) <> GREATER andalso
+                       not bounded
+                    then
+                      (trace(4, IGNORE("possibly looping",conditional_eqn));
+                       failwith "permutative rewr: not applied")
+                    else ()
+            val _ = if null conditions then ()
+                    else trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
+            val new_stack = conditions@stack
+            fun solver' condition =
+                 let val _   = trace(2,SIDECOND_ATTEMPT condition)
+                     val res = solver new_stack condition
+                      handle e as HOL_ERR _
+                       =>  (trace(1,SIDECOND_NOT_SOLVED condition); raise e)
+                 in trace(2,SIDECOND_SOLVED res);
+                    res
+                 end
+            val condition_thms = map solver' conditions
+            val disch_eqn = rev_itlist (C MP) condition_thms conditional_eqn
+            val final_thm = if aconv l tm then disch_eqn
+                            else TRANS (ALPHA tm l) disch_eqn
+            val _ = if null conditions then
+              trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
+                    else ()
+            (* note_rewrite is a no-op unless someone is tracking *)
+            val _ = if null stack then note_rewrite th else ()
+        in trace(if isperm then 3 else 2,PRODUCE(tm,nm,final_thm));
+            final_thm
+        end
+        handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
       end
       handle e  => WRAP_ERR("COND_REWR_CONV (construction) ",e);
 
-   fun COND_REWR_CONV nmth bounded = #legacy (COND_REWR_CONVS nmth bounded)
+   fun COND_REWR_CONVS (nm,th) bounded =
+     let val (isperm,instth) = prepare th
+     in
+       (* The paired runners sample the default on entry to the conversion.
+          The ordinary runner above reads it only at the depth check. *)
+       {legacy = fn solver => fn stack => fn tm =>
+          apply (nm,th,bounded,isperm,instth)
+            (!stack_limit) ac_term_ord solver stack tm,
+        configured = fn {solver,stack,cond_depth,term_ord} => fn tm =>
+          let
+            val depth = case cond_depth of
+                NONE => !stack_limit
+              | SOME n => n
+          in
+            apply (nm,th,bounded,isperm,instth) depth term_ord solver stack tm
+          end}
+     end
+     handle e => WRAP_ERR("COND_REWR_CONV (construction) ",e)
 
 
 val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",
@@ -253,7 +315,7 @@ fun loops th = let
 in
   if is_var l then free_in l r
   else
-    can (find_term (aconv l)) r
+    can (HolKernel.find_term (aconv l)) r
 end handle HOL_ERR _ => failwith "loops"
 
 

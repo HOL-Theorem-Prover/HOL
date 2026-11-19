@@ -10,13 +10,19 @@
 structure simpCommon :> simpCommon =
 struct
 
-open HolKernel boolLib liteLib Trace Cond_rewr Travrules
+open Feedback Lib Term Thm boolSyntax Drule Tactical Tactic Conv Abbrev
+     BoundedRewrites Trace Cond_rewr Travrules
 
 infix oo
 
+val dest_imp = liteLib.dest_imp
+val is_imp = liteLib.is_imp
+val strip_imp = liteLib.strip_imp
+val op |> = liteLib.|>
+
 type thname = KernelSig.kernelname
 
-fun ERR x = STRUCT_ERR "simpLib" x
+fun ERR x = liteLib.STRUCT_ERR "simpLib" x
 
 fun option_cases f e (SOME x) = f x
   | option_cases f e NONE = e;
@@ -56,10 +62,10 @@ in
                key = SOME (free_varsl (hyp th),
                            lhs(#2 (strip_imp(concl th)))),
                nmopt = nmopt, th = th, tag = tag}) before
-  trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
+  trace(2, LZ_TEXT(fn () => "New rewrite: " ^ Hol_pp.thm_to_string th))
   handle HOL_ERR _ =>
          (trace (2, LZ_TEXT(fn () =>
-                               thm_to_string th ^
+                               Hol_pp.thm_to_string th ^
                                " dropped (conversion to rewrite failed)"));
           NONE)
 end
@@ -68,7 +74,8 @@ end
 (* Composable simpset fragments                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun normCong cong_th = PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] cong_th
+fun normCong cong_th =
+  Rewrite.PURE_REWRITE_RULE [GSYM boolTheory.AND_IMP_INTRO] cong_th
 
 (* ----------------------------------------------------------------------
     maintain a global database of (named) ssfrags
@@ -105,7 +112,7 @@ fun merge_names list =
          list NONE;
 
 fun merge_filters filters =
-    SOME (end_foldr (op oo) (mapfilter the filters))
+    SOME (liteLib.end_foldr (op oo) (mapfilter liteLib.the filters))
     handle HOL_ERR _ => NONE
 
 fun std_conv_ss {conv_ss, merge_ss} {name,conv,pats} =
@@ -172,15 +179,50 @@ fun entry_name_match (thypart, ssnm) pats =
       List.exists check1 pats
     end
 
+fun prepare_entry_name_match pats =
+    let
+      fun prepare (thy,base) =
+          let val rewrite = "rewrite:" ^ base
+          in (thy,base,rewrite,rewrite ^ ".") end
+      fun matches [] _ _ = false
+        | matches ((thy,base,rewrite,prefix)::rest) thypart name =
+            ((not (isSome thy) orelse thy = thypart) andalso
+             (base = name orelse rewrite = name orelse
+              String.isPrefix prefix name)) orelse matches rest thypart name
+    in
+      matches (map prepare pats)
+      handle Size =>
+        (* A very long pattern may have matched without adding a prefix. *)
+        fn thypart => fn name => entry_name_match (thypart,name) pats
+    end
+
+val split_dot = Substring.position "."
+
 fun munge_simpset_name p =
-    case String.fields (equal #".") p of
-        [_] => (NONE, p)
-      | [s1,s2] =>
-          if CharVector.all Char.isDigit s2 then (NONE, p)
-          else if mem s1 (ancestry "-") then (SOME s1, s2)
-          else raise ERR ("-*", "bad theory name: "^s1)
-      | [s1,s2,s3] => (SOME s1, s2 ^ "." ^ s3)
-      | _ => raise ERR ("-*", "User key has too many dots")
+    let val (thy,suffix) = split_dot (Substring.full p)
+    in
+      if Substring.isEmpty suffix then (NONE,p)
+      else
+        let
+          val name = Substring.triml 1 suffix
+          val (_,conjunct) = split_dot name
+        in
+          if Substring.isEmpty conjunct then
+            if Substring.isEmpty (#2 (Substring.splitl Char.isDigit name))
+            then (NONE,p)
+            else
+              let val s = Substring.string thy
+              in
+                if mem s (Theory.ancestry "-")
+                then (SOME s,Substring.string name)
+                else raise ERR ("-*", "bad theory name: "^s)
+              end
+          else if Substring.isEmpty
+                    (#2 (split_dot (Substring.triml 1 conjunct)))
+          then (SOME (Substring.string thy),Substring.string name)
+          else raise ERR ("-*", "User key has too many dots")
+        end
+    end
 
 (* ---------------------------------------------------------------------
  * USER_CONV wraps a bit of tracing around a user conversion: [enter]
@@ -330,7 +372,8 @@ fun user_conv_tracing {name,trace=trace_level} =
    val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
    fun applythm solver t (bound, th) = let
      val _ =
-         trace(7, LZ_TEXT (fn () => "Attempting rewrite: "^thm_to_string th))
+         trace(7, LZ_TEXT (fn () =>
+           "Attempting rewrite: " ^ Hol_pp.thm_to_string th))
      fun dec() = case bound of
                    BOUNDED r =>
                      let val n = !r in
@@ -356,9 +399,9 @@ fun user_conv_tracing {name,trace=trace_level} =
    end
 
    fun mk_icomb(f, x) = let
-     val (f_domty, _) = dom_rng (type_of f)
+     val (f_domty, _) = Type.dom_rng (type_of f)
      val xty = type_of x
-     val theta = match_type f_domty xty
+     val theta = Type.match_type f_domty xty
    in
      mk_comb(Term.inst theta f, x)
    end
@@ -369,7 +412,8 @@ fun user_conv_tracing {name,trace=trace_level} =
      val n = case context of redExn n => n
                            | _ => raise ERR ("apply", "Wrong sort of ctxt")
      val lookup_t = mk_icomb(relation,t)
-     val _ = trace(7, LZ_TEXT(fn () => "Looking up "^term_to_string lookup_t))
+     val _ = trace(7, LZ_TEXT(fn () =>
+                     "Looking up " ^ Hol_pp.term_to_string lookup_t))
      val matches = Net.match lookup_t n
      val _ = trace(7, LZ_TEXT(fn () => "Found "^Int.toString (length matches)^
                                        " matches"))
@@ -377,7 +421,7 @@ fun user_conv_tracing {name,trace=trace_level} =
      tryfind (applythm (solver stack) lookup_t) matches
    end
  in
-   Traverse.REDUCER {name = SOME ("reducer for "^term_to_string rel_t),
+   Traverse.REDUCER {name = SOME ("reducer for "^Hol_pp.term_to_string rel_t),
                      addcontext = addcontext,
                      apply = apply,
                      initial = initial_ctxt}
@@ -503,7 +547,7 @@ let
    val caa_tac =
        caa_tac0 false {elimvars = false, droptrues = false, strip = false,
                        oldestfirst = true}
-   val STRIP_ASSUME_TAC' = STRIP_ALL_THEN caa_tac
+   val STRIP_ASSUME_TAC' = Thm_cont.STRIP_ALL_THEN caa_tac
    fun drop r =
       fn n =>
          POP_ASSUM_LIST
@@ -535,7 +579,7 @@ end
 fun stdcon (c : simptac_config) th =
     if #elimvars c andalso eliminable (concl th) then VSUBST_TAC th
     else
-      (if #strip c then STRIP_ALL_THEN else I)
+      (if #strip c then Thm_cont.STRIP_ALL_THEN else I)
         (caa_tac0 (not (#oldestfirst c)) c)
         th
 
@@ -570,7 +614,7 @@ fun tyi_frag_parts tyinfo =
             | _ => {Thy = "", Name = tyname ^ " simpl. " ^ Int.toString i}
       fun reduce (th, (i,A)) =
           (i + 1, (SOME (name_of th i), th) :: A)
-      val (_, rewrs) = foldl reduce (1,[]) rws0
+      val (_, rewrs) = liteLib.foldl reduce (1,[]) rws0
     in
       {name = "Datatype "^tyname, thy = thy, convs = convs, rewrs = rewrs}
     end
@@ -584,62 +628,55 @@ fun type_ssfrag tyi_to_ssdata ty =
 (* Pretty printers for ssfrags and simpsets                                  *)
 (*---------------------------------------------------------------------------*)
 
-val CONSISTENT   = Portable.CONSISTENT
-val INCONSISTENT = Portable.INCONSISTENT;
+fun pp_text s = HOLPP.add_stringsz (s,UTF8.size s)
 
-fun pp_ssfrag0 {name, convs, dprocs, thm_blocks, ac, named_blocks} =
- let open Portable smpp
+(* Keep the outer block that Parse.mlower added to both printers. *)
+fun pp_ssfrag {name, convs, dprocs, thm_blocks, ac, named_blocks} =
+ let open HOLPP
      val name = (case name of SOME s => s | NONE => "<anonymous>")
      val dps = case merge_names dprocs
                 of NONE => []
                  | SOME n => [n]
-     val pp_term = lift (Parse.term_pp_with_delimiters Hol_pp.pp_term)
-     val pp_thm = lift pp_thm
+     val pp_term = Parse.term_pp_with_delimiters Hol_pp.pp_term
      fun pp_named_thm (nmopt, th) =
          let
            val nmstr = case nmopt of
                            NONE => "<anon>"
                          | SOME {Thy,Name} => if Thy = "" then Name
                                               else Thy ^ "$" ^ Name
-         in
-           block CONSISTENT 0 (
-             add_string ("[" ^ nmstr ^ "]") >> add_break(2,2) >> pp_thm th
-           )
+         in block CONSISTENT 0
+              [pp_text ("[" ^ nmstr ^ "]"), add_break (2,2), Hol_pp.pp_thm th]
          end
      fun pp_thm_pair (th1,th2) =
-        block CONSISTENT 0 (pp_thm th1 >> add_break(2,0) >> pp_thm th2)
+       block CONSISTENT 0
+         [Hol_pp.pp_thm th1, add_break (2,0), Hol_pp.pp_thm th2]
      fun pp_conv_info (thypart,n,SOME tm) =
-          block CONSISTENT 0 (
-            add_string (opttheory thypart n ^ ", keyed on pattern") >>
-            add_break(2,0) >> pp_term tm
-          )
-       | pp_conv_info (thypart,n,NONE) = add_string (opttheory thypart n)
-     val nl2 = add_newline >> add_newline
-     fun vspace l = if null l then nothing else nl2
-     fun vblock(header, ob_pr, obs) =
-       if null obs then nothing
+          block CONSISTENT 0
+            [pp_text (opttheory thypart n ^ ", keyed on pattern"),
+             add_break (2,0), pp_term tm]
+       | pp_conv_info (thypart,n,NONE) = pp_text (opttheory thypart n)
+     fun section pr (header,obs) =
+       if null obs then []
        else
-         block CONSISTENT 3 (
-          add_string (header^":") >>
-          add_newline >>
-          pr_list ob_pr add_newline obs
-         ) >> add_break(1,0)
-     fun vblocks pr = List.foldl (fn ((h,obs),p) => p >> vblock(h,pr,obs))
-                                 nothing
+         [block CONSISTENT 3
+            (pp_text (header ^ ":") :: NL :: pr_list pr [NL] obs),
+          add_break (1,0)]
+     fun sections pr = List.concat o map (section pr)
  in
-   block CONSISTENT 0 (
-     add_string ("Simplification set fragment: "^name) >> add_newline >>
-     vblock("Conversions",pp_conv_info,convs) >>
-     vblock("Decision procedures",add_string,dps) >>
-     vblocks pp_thm thm_blocks >>
-     vblock("AC rewrites",pp_thm_pair,ac) >>
-     vblocks pp_named_thm named_blocks
-   )
+   block CONSISTENT 0
+     [block CONSISTENT 0
+        (pp_text ("Simplification set fragment: " ^ name) :: NL ::
+         List.concat
+           [section pp_conv_info ("Conversions",convs),
+            section pp_text ("Decision procedures",dps),
+            sections Hol_pp.pp_thm thm_blocks,
+            section pp_thm_pair ("AC rewrites",ac),
+            sections pp_named_thm named_blocks])]
  end
 
-fun pp_simpset0 {net_names = keysl, frag_names, extra_sections} =
+fun pp_simpset {net_names = keysl, frag_names, extra_sections} =
   let
-    open Portable smpp
+    open HOLPP
     val empty_strset = Binaryset.empty String.compare
     val keys = Listsort.sort String.compare keysl
     val (rewrites0,others0) = Lib.partition (String.isPrefix "rewrite:") keys
@@ -657,32 +694,24 @@ fun pp_simpset0 {net_names = keysl, frag_names, extra_sections} =
                          | SOME n => (Binaryset.add(s,n), c))
                    (empty_strset, 0)
                    frag_names
-    val rmstring = ""
     fun count n s = case n of 1 => "1" ^ s | n => Int.toString n ^ s ^ "s"
     val anon_fragstring = case anonfrag_count of
                               0 => ":"
                             | c => " (with " ^ count c " anonymous fragment" ^
                                    " [remove using name \"\"]):"
     fun titled_strlist (title, l) =
-      block CONSISTENT 0 (
-        add_string title >> add_break(1,3) >>
-        block INCONSISTENT 0 (
-          pr_list add_string (add_string "," >> add_break(1,0)) l
-        )
-      )
+      block CONSISTENT 0
+        [pp_text title, add_break (1,3),
+         block INCONSISTENT 0 (pr_list pp_text [pp_text ",",add_break (1,0)] l)]
     val others = Binaryset.listItems (Binaryset.addList (empty_strset, others0))
   in
-    block CONSISTENT 0 (
-      pr_list titled_strlist (add_break(1,0)) ([
-        ("Included fragments"^anon_fragstring,
-         Binaryset.listItems fragname_set),
-        ("Rewrites"^anon_string, real_rewrites),
-        ("Other net names/keys:", others)
-      ] @ extra_sections)
-    )
+    block CONSISTENT 0
+      [block CONSISTENT 0
+         (pr_list titled_strlist [add_break (1,0)]
+            ([("Included fragments" ^ anon_fragstring,
+               Binaryset.listItems fragname_set),
+              ("Rewrites" ^ anon_string, real_rewrites),
+              ("Other net names/keys:", others)] @ extra_sections))]
   end;
-
-val pp_ssfrag = Parse.mlower o pp_ssfrag0
-val pp_simpset = Parse.mlower o pp_simpset0
 
 end (* struct *)

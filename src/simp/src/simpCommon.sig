@@ -58,6 +58,8 @@ sig
 
   val entry_name_match :
       string option * string -> (string option * string) list -> bool
+  val prepare_entry_name_match :
+      (string option * string) list -> string option -> string -> bool
   val munge_simpset_name : string -> string option * string
 
   val user_conv_tracing :

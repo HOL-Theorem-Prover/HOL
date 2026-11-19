@@ -40,8 +40,7 @@ Traverse.sml:  High-level specification of traversal strategy.
                  procedures.  If any succeeds, loop.
 
 TraverseCore.sml:
-               The traversal engine itself, shared by Traverse and
-               TraverseExt; polymorphic in the reducer type.
+               The configured traversal engine used by TraverseExt.
 
 TraverseExt.sml:
                Traversal for the extension engine: its reducer type,

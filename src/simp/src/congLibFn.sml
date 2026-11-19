@@ -66,8 +66,8 @@ functor congLibFn
                relation : Abbrev.term} -> Abbrev.thm list -> Abbrev.conv)
        end) : congLibFn =
 struct
-open HolKernel boolLib
-     liteLib Trace Opening Travrules Cond_rewr;
+open HolKernel Abbrev boolSyntax Drule Tactical Tactic Conv Travrules
+local open Trace Cond_rewr in end
 
 type reducer = E.reducer
 type simpset = E.simpset
@@ -175,7 +175,7 @@ local
         end
       else let
           val thm_relation = rator(rator(concl thm))
-          val _ = samerel thm_relation rel orelse
+          val _ = Opening.samerel thm_relation rel orelse
                   failwith ("not applicable")
           val thmLHS = rand (rator (concl thm))
           val match = match_terml [] boundvars thmLHS term
@@ -368,13 +368,14 @@ fun FULL_CONGRUENCE_SIMP_TAC cs ss l =
            MAP_EVERY ASSUME_TAC
                                  (rev (fst (split_after (l-n) asms)))
          in
-                 if (n > l) then STRUCT_ERR "congLib" ("drop", "Bad cut off number")
+                 if (n > l) then
+                   liteLib.STRUCT_ERR "congLib" ("drop", "Bad cut off number")
            else POP_ASSUM_LIST f (asms,g)
          end
 
            (* differs only in that it doesn't call DISCARD_TAC *)
            val STRIP_ASSUME_TAC' =
-         STRIP_ALL_THEN
+         boolLib.STRIP_ALL_THEN
                     (fn th => FIRST [CONTR_TAC th, ACCEPT_TAC th,
                                            ASSUME_TAC th])
      fun simp_asm (t,l') = CONGRUENCE_SIMP_RULE cs ss (l'@l) t::l'

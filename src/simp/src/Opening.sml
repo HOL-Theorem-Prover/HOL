@@ -1,7 +1,9 @@
 structure Opening :>  Opening =
 struct
 
-open HolKernel boolLib liteLib Trace;
+open Feedback Lib Type Term Thm boolSyntax Drule Conv Abbrev Trace;
+
+val dest_imp = liteLib.dest_imp
 
 
 fun samerel t1 t2 = can (match_term t1) t2
@@ -12,8 +14,8 @@ type congproc  = term -> (* relation *)
                   depther : thm list * term -> conv} -> conv
 
 
-fun WRAP_ERR x = STRUCT_WRAP "Opening" x;
-fun ERR x = STRUCT_ERR "Opening" x;
+fun WRAP_ERR x = liteLib.STRUCT_WRAP "Opening" x;
+fun ERR x = liteLib.STRUCT_ERR "Opening" x;
 
 (* ---------------------------------------------------------------------
  * is_congruence
@@ -59,8 +61,8 @@ fun is_congruence tm =
     is_eq tm orelse let
       val (rel,left,right) = dest_binop tm
     in
-      (can (ho_match_term [] empty_tmset left) right) andalso
-      (can (ho_match_term [] empty_tmset right) left)
+      (can (HolKernel.ho_match_term [] empty_tmset left) right) andalso
+      (can (HolKernel.ho_match_term [] empty_tmset right) left)
     end
    handle HOL_ERR _ => false
 
@@ -107,14 +109,15 @@ fun strip_ncomb 0 A tm = SOME (tm, A)
 
 
 fun strip_imp_until_rel is_result tm =
-  if is_var (rand tm) andalso is_result (rand tm) then ([],tm)
-  else
-    let
-      val (x,y) = dest_imp tm
-      val (z,w) = strip_imp_until_rel is_result y
-    in
-      (x::z,w)
-    end handle HOL_ERR _ => ([],tm);
+  let val right = rand tm
+  in
+    if is_var right andalso is_result right then ([],tm)
+    else
+      let
+        val (x,y) = dest_imp tm
+        val (z,w) = strip_imp_until_rel is_result y
+      in (x::z,w) end handle HOL_ERR _ => ([],tm)
+  end;
 
 (* ---------------------------------------------------------------------
  * beta_reduce_rebuilt
@@ -143,8 +146,8 @@ fun beta_reduce_rebuilt nconds abstraction thm =
     let
       fun reduce term =
         if aconv (rator term) abstraction then BETA_CONV term
-        else failwith "beta_reduce_rebuilt"
-      fun rebuilt 0 = RAND_CONV (DEPTH_CONV reduce)
+        else liteLib.failwith "beta_reduce_rebuilt"
+      fun rebuilt 0 = RAND_CONV (liteLib.DEPTH_CONV reduce)
         | rebuilt n = RAND_CONV (rebuilt (n - 1))
     in
       CONV_RULE (rebuilt nconds) thm
@@ -223,7 +226,7 @@ let
 
 in fn relation =>
   if not (samerel rel relation) andalso not (same_const rel relation) then
-    failwith "not applicable"
+    liteLib.failwith "not applicable"
   else
     fn {solver,depther,freevars} => fn tm =>
   let
@@ -284,11 +287,8 @@ in fn relation =>
             in
               (f,[x,y])
             end handle HOL_ERR _ => strip_comb bdy2
-        in
-          if length args = 2 andalso is_result (#1 (strip_comb (el 2 args)))
-          then let
-                val (orig,res) = case args of [x,y] => (x,y) | _ => raise Bind
-                val genv = #1 (strip_comb res)
+            fun discharge orig genv =
+              let
                 val assum_thms = map ASSUME assums
                 fun reprocess thm flag =
                   if flag then CONV_RULE (depther ([],equality)) thm
@@ -302,7 +302,7 @@ in fn relation =>
                   let val thm = refl {Rinst = oper, arg = orig}
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));(thm,false))
                   end
-                val absify = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars))
+                val absify = CONV_RULE (RAND_CONV (liteLib.MK_ABSL_CONV ho_vars))
                 val abs_rewr_thm =
                     if null ho_vars then rewr_thm
                     else
@@ -331,18 +331,27 @@ in fn relation =>
                     if may_leave_redex genv then
                       beta_reduce_rebuilt (n - 1) gen_abs_res rebuilt_thm
                     else rebuilt_thm
-            in process_subgoals (n-1,new_match_thm,more_flags,
-                                 allunch andalso not changed)
-            end
-          else let
+              in
+                process_subgoals (n-1,new_match_thm,more_flags,
+                                  allunch andalso not changed)
+              end
+            fun side_condition () = let
               fun output() =
                   "Instantiated congruence condition is a side condition: "^
-                  term_to_string condition
+                  Hol_pp.term_to_string condition
               val _ = trace (6, LZ_TEXT output)
               val side_condition_thm = solver condition
               val new_match_thm = MP match_thm side_condition_thm
             in process_subgoals (n-1,new_match_thm,more_flags,allunch)
             end
+        in
+          case args of
+              [orig,res] =>
+                let val genv = #1 (strip_comb res)
+                in if is_result genv then discharge orig genv
+                   else side_condition ()
+                end
+            | _ => side_condition ()
         end
 
     val (final_thm,allunch) =
@@ -368,7 +377,8 @@ val THREADED_CONGPROC = GEN_CONGPROC true
  * ---------------------------------------------------------------------*)
 
 fun EQ_CONGPROC relation =
- if not (same_const relation boolSyntax.equality) then failwith "not applicable"
+ if not (same_const relation boolSyntax.equality) then
+   liteLib.failwith "not applicable"
  else
  fn {depther,solver,freevars} => fn tm =>
  case dest_term tm

@@ -133,7 +133,9 @@ There is no conversion back.
 
 To avoid duplication, the two engines share their implementation:
 
-- `TraverseCore` is the traversal engine of both `Traverse` and `TraverseExt`, parameterised by how a reducer is applied.
+- `Traverse` implements ordinary parent-first traversal.
+  `TraverseExt` uses `TraverseCore` for both its default and configured
+  entry points.
 - `congLibFn` is the functor behind both `congLib` and `congExtLib`.
 - `simpCommon` holds the code shared by `simpLib` and `simpExtLib`.
 - `Cond_rewr.COND_REWR_CONVS` prepares a conditional rewrite once for both the ordinary and the configurable runner.

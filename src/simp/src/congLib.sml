@@ -4,7 +4,7 @@ congLibFn
      (* Importing congLib still loads the modules it opened before
         congLibFn *)
      local open liteLib computeLib Trace Travrules Cond_rewr in end
-     open HolKernel boolLib
+     open Conv
      type reducer = Traverse.reducer
      type simpset = simpLib.simpset
      fun lift r = r

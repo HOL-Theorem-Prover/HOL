@@ -171,6 +171,33 @@ val _ =
 fun testtac tac = #1 o runtac (VALID tac)
 val goal_print = HOLPP.pp_to_string 75 goalStack.pp_goal
 
+val _ =
+  let
+    val seen = ref ([] : string list)
+    val first = Cong (REFL T)
+    val last = Cong (REFL F)
+    val goal = ([], concl first)
+    val pattern = “marker$Cong (p:bool)”
+    val printer_name = "marker-selftest.RequirementOrder"
+    fun print _ _ _ (ppfns : term_pp_types.ppstream_funs) _ _ tm =
+      let val name = if lhs (rand tm) ~~ T then "first" else "last"
+      in seen := name :: !seen; #add_string ppfns name end
+    fun callback ths =
+      (if List.all (null o hyp) ths then seen := "callback" :: !seen
+       else die "requirement hypotheses reached the tactic";
+       ALL_TAC)
+    fun run () = testtac (process_taclist_then
+        {arg=[mk_Req0 first, mk_Req0 last]} callback) goal
+    val _ = tprint "process_taclist_then constructs each requirement in order"
+    val _ = Parse.temp_add_user_printer (printer_name, pattern, print)
+    val result = Exn.capture run ()
+    val _ = Parse.temp_remove_user_printer (printer_name, pattern)
+  in
+    if boolSyntax.goals_eq (Exn.release result) [goal] andalso
+       List.rev (!seen) = ["first", "last", "callback"] then OK ()
+    else die (String.concatWith ", " (List.rev (!seen)))
+  end
+
 val goals_print =
     HOLPP.pp_to_string 75(
       HOLPP.block HOLPP.CONSISTENT 0 o

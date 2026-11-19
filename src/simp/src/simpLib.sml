@@ -13,7 +13,9 @@ struct
 
 infix oo;
 
-open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net
+open Feedback Lib Type Term Thm boolTheory boolSyntax Hol_pp Drule Tactical
+     Tactic Thm_cont Conv Rewrite Abbrev BoundedRewrites liteLib Trace
+     Cond_rewr Travrules Traverse Ho_Net
 
 structure Set = Binaryset
 
@@ -54,17 +56,28 @@ fun appconv (c,UNBOUNDED) = c false (* do not eta expand! *)
       Portable.dec r)
     end
 
-val mk_rewr_convdata : thname option * controlled_thm ->
-                       tagged_convdata option =
-  simpCommon.mk_rewr_convdata
-    (fn {thypart,name,key,th,tag,...} =>
-        {thypart = thypart,
-         cd = {name  = name,
-               key   = key,
-               trace = 100, (* no need to provide extra tracing here;
-                               COND_REWR_CONV provides enough tracing
-                               itself *)
-               conv  = appconv (COND_REWR_CONV (name,th), tag)}})
+fun split_name {Thy,Name} = (SOME Thy, Name)
+fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
+  val th = SPEC_ALL thm
+  val (thypart,nm) =
+      case Option.map split_name nmopt of
+          NONE => (NONE, "rewrite:<anonymous>")
+        | SOME (thypart,b) => (thypart, "rewrite:"^b)
+in
+  SOME {thypart = thypart,
+        cd = {name  = nm,
+              key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
+              trace = 100, (* no need to provide extra tracing here;
+                              COND_REWR_CONV provides enough tracing itself *)
+              conv  = appconv (COND_REWR_CONV (nm,th), tag)}
+       } before
+  trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
+  handle HOL_ERR _ =>
+         (trace (2, LZ_TEXT(fn () =>
+                               thm_to_string th ^
+                               " dropped (conversion to rewrite failed)"));
+          NONE)
+end
 
 (*---------------------------------------------------------------------------*)
 (* Composable simpset fragments                                              *)
@@ -233,15 +246,21 @@ fun ssupd_net f (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit,
 
 fun optprint NONE = "NONE"
   | optprint (SOME s) = "SOME "^s
-fun name_match ({thypart,ci}:net_conv_info) (* thing in simpset's net *) pats =
-    simpCommon.entry_name_match (thypart, #name ci) pats
-
 fun filter_net_by_names nms net =
     let
-      val munged_pats = map simpCommon.munge_simpset_name nms
-    in
-      Ho_Net.vfilter (fn nd => not (name_match nd munged_pats)) net
-    end
+      val pats = map simpCommon.munge_simpset_name nms
+      val matcher = ref NONE
+      fun prepare thy name =
+          let val matches = simpCommon.prepare_entry_name_match pats
+          in matcher := SOME matches; matches thy name end
+      (* Prepare the prefixes only when a second entry can reuse them. *)
+      fun retained ({thypart,ci}:net_conv_info) =
+          case !matcher of
+              NONE =>
+                (matcher := SOME prepare;
+                 not (simpCommon.entry_name_match (thypart,#name ci) pats))
+            | SOME matches => not (matches thypart (#name ci))
+    in Ho_Net.vfilter retained net end
 
 fun dphas_name_from nms (REDUCER {name = SOME n,...}) = Lib.mem n nms
   | dphas_name_from _ _ = false
@@ -262,18 +281,30 @@ fun remove_simps nms ss = ss -* nms
 
 
   (* ---------------------------------------------------------------------
-   * USER_CONV wraps a bit of tracing around a user conversion.
+   * USER_CONV keeps the conversion and its tracing in one closure per
+   * installed rule.
    *
    * net_add_convs (internal function) adds conversions to the
    * initial context net.
    * ---------------------------------------------------------------------*)
 
- fun USER_CONV {name,key,trace,conv} =
-  let val {enter,leave,failed} =
-          simpCommon.user_conv_tracing {name=name,trace=trace}
+ fun USER_CONV {name,key,trace=trace_level,conv} =
+  let val trace_string1 = "trying "^name^" on"
+      val trace_string2 = name^" ineffectual"
+      val trace_string3 = name^" left term unchanged"
+      val trace_string4 = name^" raised an unusual exception (ignored)"
   in fn solver => fn stack => fn tm =>
-      (enter tm; leave (tm, conv solver stack tm))
-      handle e => failed e
+      let val _ = trace(trace_level+2,REDUCE(trace_string1,tm))
+          val thm = conv solver stack tm
+      in
+        trace(trace_level,PRODUCE(tm,name,thm));
+        thm
+      end
+      handle e as HOL_ERR _ =>
+             (trace (trace_level+2,TEXT trace_string2); raise e)
+           | e as Conv.UNCHANGED =>
+             (trace (trace_level+2,TEXT trace_string3); raise e)
+           | e => (trace (trace_level, TEXT trace_string4); raise e)
   end;
 
  val any = simpCommon.any
@@ -335,7 +366,9 @@ fun getlimit (SS ss) = #limit ss
 
 
  fun is_excluded (SS{excluded,...}) f =
-     simpCommon.is_excluded excluded (frag_name f)
+     case frag_name f of
+         SOME n => Binaryset.member(excluded, n)
+       | NONE => false
 
  fun op++(ss as SS sset, f as SSFRAG_CON ssf) = if is_excluded ss f then ss else
    let

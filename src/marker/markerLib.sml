@@ -147,16 +147,26 @@ fun require_check {req0, reqD, plain} =
         | SOME p => Ho_Rewrite.REQUIRE_DECREASE_TAC p o check
     end
 
-(* Only the last theorem's checks apply.  mk_require_tac is itself
-   recursive so that Poly/ML does not inline it: inlined, it lets RW_TAC
+(* Only the last theorem's checks apply. The worker is recursive so that
+   Poly/ML does not inline it: inlined, it lets RW_TAC
    and the like expand the whole simplifier tactic chain at every call
    site, and scripts become much slower to compile. *)
-fun mk_require_tac tac [] = tac []
-  | mk_require_tac tac [th] =
-      let val r = requirement th in require_check r (tac [#plain r]) end
-  | mk_require_tac tac (th :: rest) =
-      mk_require_tac (fn plains => tac (#plain (requirement th) :: plains))
-                     rest
+fun collect_requirements tac (acc,checked) [] = checked (List.rev acc)
+  | collect_requirements tac (acc,_) (th :: rest) =
+      let
+        val (check,th) =
+          case dest_Req0 th of
+              NONE => (tac,th)
+            | SOME p => (Ho_Rewrite.REQUIRE0_TAC p o tac,p)
+        val (check,th) =
+          case dest_ReqD th of
+              NONE => (check,th)
+            | SOME p => (Ho_Rewrite.REQUIRE_DECREASE_TAC p o check,p)
+      in
+        collect_requirements tac (th :: acc,check) rest
+      end
+
+fun mk_require_tac tac = collect_requirements tac ([],tac)
 
 (* Every theorem's checks *)
 fun require_all thl =
@@ -692,9 +702,9 @@ datatype directive =
   | DSplit of thm
   | DExclX of string
 
-fun has_marker_head marker th =
-    same_const marker (#1 (strip_comb (concl th)))
-    handle HOL_ERR _ => false
+fun marker_head tm = if is_comb tm then marker_head (rator tm) else tm
+
+fun has_marker_head marker th = same_const marker (marker_head (concl th))
 
 fun dest_directive th =
     let
@@ -706,26 +716,31 @@ fun dest_directive th =
                   SOME p => SOME (DReqD p)
                 | NONE => Option.map DBounded
                                      (total BoundedRewrites.DEST_BOUNDED th)
-      fun head () =
-          if has_marker_head AC_tm th then SOME (DAC (unAC th))
-          else if has_marker_head Cong_tm th then SOME (DCong (unCong th))
-          else if has_marker_head Split_tm th then SOME (DSplit (destSplit th))
-          else if aconv (concl th) NoAsms_t then SOME DNoAsms
-          else if has_marker_head IgnAsm_t th then
-            SOME (DIgnAsm (#1 (dest_var (rand (concl th)))))
-          else if is_abbr th then SOME (DAbbr (dest_abbr th))
-          else NONE
-      val named = [(destExcl, DExcl), (destExclSF, DExclSF),
-                   (destFRAG, DFRAG), (destExclX, DExclX),
-                   (total dest_label_ref, DLabel)]
     in
       case wrapper () of
           SOME d => SOME d
         | NONE =>
-          case head () of
-              SOME d => SOME d
-            | NONE => get_first (fn (dest, mk) => Option.map mk (dest th))
-                                named
+          let
+            val c = concl th
+            val head = marker_head c
+          in
+            if same_const AC_tm head then SOME (DAC (unAC th))
+            else if same_const Cong_tm head then SOME (DCong (unCong th))
+            else if same_const Split_tm head then SOME (DSplit (destSplit th))
+            else if aconv c NoAsms_t then SOME DNoAsms
+            else if same_const IgnAsm_t head then
+              SOME (DIgnAsm (#1 (dest_var (rand c))))
+            else if same_const boolSyntax.equality head then
+              if is_abbr th then SOME (DAbbr (dest_abbr th))
+              else Option.map DLabel (total dest_label_ref th)
+            else if same_const Excl_t head then Option.map DExcl (destExcl th)
+            else if same_const ExclSF_t head then
+              Option.map DExclSF (destExclSF th)
+            else if same_const FRAG_t head then Option.map DFRAG (destFRAG th)
+            else if same_const ExclX_t head then
+              Option.map DExclX (destExclX th)
+            else NONE
+          end
     end
 
 val is_directive = Option.isSome o dest_directive
@@ -811,9 +826,11 @@ fun filter_then asms aslPs thltac (gl as (asl0,g)) =
       thltac (map ASSUME asl @ asms) gl
     end
 
+fun prepare_taclist classify asl arg =
+    process_tacoptions (map classify arg) asl [] [] []
+
 fun process_taclist_then {arg} thltac (gl as (asl,g)) =
-    let val tacoptions = map dest_tacmarked arg
-        val {pre,asms,aslPs} = process_tacoptions tacoptions asl [] [] []
+    let val {pre,asms,aslPs} = prepare_taclist dest_tacmarked asl arg
     in
       Tactical.THEN(pre, filter_then asms aslPs (mk_require_tac thltac)) gl
     end
@@ -839,8 +856,7 @@ fun dest_bound_tacmarked th =
    justification. *)
 fun process_taclist_then_bind {arg} thltac (gl as (asl,g)) =
     let
-      val tacoptions = map dest_bound_tacmarked arg
-      val {pre,asms,aslPs} = process_tacoptions tacoptions asl [] [] []
+      val {pre,asms,aslPs} = prepare_taclist dest_bound_tacmarked asl arg
       val check = require_all arg
       val asms = map (#plain o requirement) asms
       fun recur next = filter_then [] aslPs next

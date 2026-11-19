@@ -1,5 +1,4 @@
-(* Extended traversal: TraverseCore's engine over the extended reducer type.
-   There is no reverse reducer/traversal adapter. *)
+(* TraverseCore's engine over the extended reducer type. *)
 structure TraverseExt :> TraverseExt =
 struct
 open HolKernel Drule Conv Abbrev;
