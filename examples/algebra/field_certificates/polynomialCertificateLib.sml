@@ -239,11 +239,9 @@ fun RABIN12_RULE prime f =
             polynomialCertificateTheory.polynomial_certificate_frobenius_compose
             finite)
         val premise = fst (dest_imp (concl rule))
-        val proof = TAC_PROOF (([],premise),
-          CONV_TAC (normalize_x prime ring) THEN
-          CONV_TAC certificateComputeLib.NAT_CONV THEN
-          REWRITE_TAC [left,right] THEN
-          CONV_TAC bounded_conv)
+        val proof = EQT_ELIM
+          ((normalize_x prime ring THENC certificateComputeLib.NAT_CONV THENC
+            REWRITE_CONV [left,right] THENC bounded_conv) premise)
         val step = CONV_RULE
           (LAND_CONV (normalize_x prime ring THENC
                       certificateComputeLib.NAT_CONV)) (MP rule proof)
@@ -258,11 +256,9 @@ fun RABIN12_RULE prime f =
     val rule = SPECL [f,b4,b6,u4,v4,u6,v6]
       (MATCH_MP polynomialCertificateTheory.polynomial_certificate_rabin12 finite)
     val premise = fst (dest_imp (concl rule))
-    val proof = TAC_PROOF (([],premise),
-      CONV_TAC (normalize_x prime ring) THEN
-      CONV_TAC certificateComputeLib.NAT_CONV THEN
-      REWRITE_TAC [t4,t6,t12] THEN
-      CONV_TAC bounded_conv)
+    val proof = EQT_ELIM
+      ((normalize_x prime ring THENC certificateComputeLib.NAT_CONV THENC
+        REWRITE_CONV [t4,t6,t12] THENC bounded_conv) premise)
   in MP rule proof end
 
 fun NO_ROOTS_RULE prime f =
@@ -273,10 +269,9 @@ fun NO_ROOTS_RULE prime f =
     val rule = SPECL [f,b,u,v]
       (MATCH_MP polynomialCertificateTheory.polynomial_certificate_no_roots finite)
     val premise = fst (dest_imp (concl rule))
-    val proof = TAC_PROOF (([],premise),
-      CONV_TAC (normalize_x prime ring) THEN
-      REWRITE_TAC [t] THEN
-      CONV_TAC bounded_conv)
+    val proof = EQT_ELIM
+      ((normalize_x prime ring THENC REWRITE_CONV [t] THENC bounded_conv)
+       premise)
   in MP rule proof end
 
 end

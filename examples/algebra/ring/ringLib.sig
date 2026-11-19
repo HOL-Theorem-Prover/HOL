@@ -12,4 +12,6 @@ sig
 
   val RING_RULE : term -> thm
   val RING_TAC  : tactic
+  (* Retain non-equational assumptions and only the selected equalities. *)
+  val RING_USING_TAC : term list -> tactic
 end

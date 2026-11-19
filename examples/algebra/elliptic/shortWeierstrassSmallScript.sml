@@ -169,7 +169,7 @@ Proof
        GF_eval, fieldTheory.field_is_ring]
 QED
 
-Theorem sw_GF5_prod_inv_table[local]:
+Theorem sw_GF5_prod_inv_table:
   (GF 5).prod.inv 1 = 1 /\
   (GF 5).prod.inv 2 = 3 /\
   (GF 5).prod.inv 3 = 2 /\

@@ -32,17 +32,15 @@ Overload "-"[local] = ``ring_sub (r:'a Ring)``
 Overload "*"[local] = ``ring_mul (r:'a Ring)``
 Overload "**"[local] = ``ring_pow (r:'a Ring)``
 
-val CURVE_RING_TAC =
-  ringLib.RING_TAC THEN
+val RING_CLOSURE_TAC =
   ASM_SIMP_TAC bool_ss
     [RING_0, RING_1, RING_NEG, RING_ADD, RING_SUB, RING_MUL,
      RING_POW, RING_OF_NUM, RING_OF_INT]
 
-fun USING_RING_TAC equations (asl, goal) =
-  CURVE_RING_TAC
-    (List.filter
-       (fn tm => not (is_eq tm) orelse List.exists (aconv tm) equations) asl,
-     goal)
+val CURVE_RING_TAC = ringLib.RING_TAC THEN RING_CLOSURE_TAC
+
+fun USING_RING_TAC equations =
+  ringLib.RING_USING_TAC equations THEN RING_CLOSURE_TAC
 
 (* For two curve solutions in a ring with (x2-x1)*di=1 and
    m=(y2-y1)*di, y2-y1=m*(x2-x1) and

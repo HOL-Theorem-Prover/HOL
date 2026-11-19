@@ -10,7 +10,7 @@ val _ = diemode := Remember failures;
 val prime = groupTheory.PRIME_5;
 val curve = sw_GF5_curve;
 val member = certificate_GF5_member;
-val inverses = certificate_GF5_inverses;
+val inverses = sw_GF5_prod_inv_table;
 val addition = SIMP_CONV (srw_ss())
   [sw_add_def, sw_slope_def, sw_add_x_def, sw_add_y_def,
    GF_eval, GF_sum_inv, inverses, monoidTheory.monoid_exp_def,

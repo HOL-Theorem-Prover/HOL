@@ -15,13 +15,6 @@ Proof
     [sw_GF5_points, IN_INSERT, NOT_IN_EMPTY]
 QED
 
-Theorem certificate_GF5_inverses:
-  (GF 5).prod.inv 1 = 1 /\ (GF 5).prod.inv 2 = 3 /\
-  (GF 5).prod.inv 3 = 2 /\ (GF 5).prod.inv 4 = 4
-Proof
-  rpt conj_tac >> irule sw_GF_prod_inv_witness >> simp[PRIME_5]
-QED
-
 Theorem certificate_GF49_field:
   Field (PolyModRing (GF 7) [1n;0;1])
 Proof

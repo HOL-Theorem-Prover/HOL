@@ -304,4 +304,3 @@ Proof
   CONV_TAC (LAND_CONV bls12381_fp12_remainder) >> REFL_TAC
 QED
 
-val _ = export_theory();

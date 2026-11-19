@@ -36,18 +36,19 @@ End
 
 (* Discharge polynomial identities in the existing commutative-ring model.
    Inverse equations are supplied explicitly by sw_field_prod_inv. *)
-fun scale_ring_tac (g as (asl,w)) =
-  let
-    val ops = CONJUNCTS (MATCH_MP sw_ring_ops
-      (ASSUME ``Field (r:'a field)``))
-    val rules = map GSYM ops
-  in
-    (RULE_ASSUM_TAC (REWRITE_RULE rules) >>
-     REWRITE_TAC rules >>
-     qabbrev_tac `scale_ring = toRing r` >>
-     ((W (fn (_,w) => MATCH_MP_TAC (ringLib.RING_RULE w)) >>
-       ASM_REWRITE_TAC []) ORELSE ringLib.RING_TAC)) g
-  end;
+val scale_ring_tac =
+  FIRST_ASSUM (fn field =>
+    let
+      val ops = CONJUNCTS (MATCH_MP sw_ring_ops field)
+      val rules = map GSYM ops
+      val r = rand (concl field)
+    in
+      RULE_ASSUM_TAC (REWRITE_RULE rules) >>
+      REWRITE_TAC rules >>
+      qabbrev_tac `scale_ring = toRing ^r` >>
+      ((W (fn (_,w) => MATCH_MP_TAC (ringLib.RING_RULE w)) >>
+        ASM_REWRITE_TAC []) ORELSE ringLib.RING_TAC)
+    end)
 
 Theorem sw_scale_fraction[local]:
   !(r:'a field) u v n d i j. Field r /\

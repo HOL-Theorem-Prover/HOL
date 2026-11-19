@@ -1379,13 +1379,6 @@ Proof
   simp[listTheory.EVERY_DEF] >> ringLib.RING_TAC
 QED
 
-fun sw_ring_using equations (asl, goal) =
-  ringLib.RING_TAC
-    (List.filter
-       (fn tm => not (is_eq tm) orelse
-                 List.exists (fn eq => aconv tm eq) equations) asl,
-     goal)
-
 (* Ring calculation comparing P+(P+2P) with 2P+2P. Under the
    stated coordinate/slope equations for P=(x,y), 2P=(X,Y),
    P+2P=(v,w), with X-x and v-x invertible, let
@@ -1411,9 +1404,10 @@ Proof
   rpt gen_tac >>
   PURE_REWRITE_TAC [listTheory.EVERY_DEF, LET_THM] >>
   BETA_TAC >> strip_tac >>
-  `m ** 2 = X + x + x` by sw_ring_using [``X = m ** 2 - x - x``] >>
+  `m ** 2 = X + x + x` by
+    ringLib.RING_USING_TAC [``X = m ** 2 - x - x``] >>
   `Y = ring_neg r (m * d) - y` by
-    sw_ring_using [``Y = m * (x - X) - y``, ``d = X - x``] >>
+    ringLib.RING_USING_TAC [``Y = m * (x - X) - y``, ``d = X - x``] >>
   `((m - n) * (m + l) - x + X) * d = ring_0 r` by
     (MATCH_MP_TAC (Q.SPECL
        [`r`, `x`, `y`, `X`, `Y`, `a`, `m`, `n`, `l`, `d`]
@@ -1422,7 +1416,7 @@ Proof
      rpt conj_tac >>
      FIRST [FIRST_ASSUM ACCEPT_TAC, ACCEPT_TAC TRUTH]) >>
   `(m - n) * (m + l) = x - X` by
-    sw_ring_using
+    ringLib.RING_USING_TAC
       [``((m - n) * (m + l) - x + X) * d = ring_0 (r:'a Ring)``,
        ``d * id = ring_1 (r:'a Ring)``] >>
   `v - x = (n - m) * (n + m) /\
@@ -1434,7 +1428,7 @@ Proof
      rpt conj_tac >>
      FIRST [FIRST_ASSUM ACCEPT_TAC, ACCEPT_TAC TRUTH]) >>
   `(m - n) * (m + l) = ring_neg r d` by
-    sw_ring_using
+    ringLib.RING_USING_TAC
       [``(m - n) * (m + l) = x - X``, ``d = X - x``] >>
   `k - l = m - n` by
     (MATCH_MP_TAC (Q.SPECL
@@ -1451,7 +1445,8 @@ Proof
        sw_assoc_outputs_algebra))) >>
   PURE_REWRITE_TAC [listTheory.EVERY_DEF] >> BETA_TAC >>
   rpt conj_tac >>
-  FIRST [FIRST_ASSUM ACCEPT_TAC, ACCEPT_TAC TRUTH, sw_ring_using []]
+  FIRST [FIRST_ASSUM ACCEPT_TAC, ACCEPT_TAC TRUTH,
+         ringLib.RING_USING_TAC []]
 QED
 
 (* Arithmetic below uses the field record r. Subtraction expands directly
@@ -1535,13 +1530,14 @@ Proof
       [Abbr `k`, Abbr `l`, Abbr `ia`, Abbr `ib`, sw_slope_def,
        ASSUME ``x1 <> vx``, ASSUME ``ux <> x3``] >>
   REWRITE_TAC [sw_add_x_def, sw_add_y_def] >>
-  MATCH_MP_TAC (BETA_RULE (REWRITE_RULE
-    [listTheory.EVERY_DEF, LET_THM, ringLibTheory.ring_sub,
-     MATCH_MP sw_ring_ops (ASSUME ``Field (r:'a field)``)]
-    (Q.SPECL
-      [`toRing r`, `x1`, `y1`, `x2`, `y2`, `x3`, `y3`, `a`,
-       `m`, `n`, `ux`, `uy`, `vx`, `vy`, `k`, `l`, `ia`, `ib`]
-      sw_assoc_coordinates_algebra))) >>
+  qpat_assum `Field r` (fn field =>
+    MATCH_MP_TAC (BETA_RULE (REWRITE_RULE
+      [listTheory.EVERY_DEF, LET_THM, ringLibTheory.ring_sub,
+       MATCH_MP sw_ring_ops field]
+      (Q.SPECL
+        [`toRing r`, `x1`, `y1`, `x2`, `y2`, `x3`, `y3`, `a`,
+         `m`, `n`, `ux`, `uy`, `vx`, `vy`, `k`, `l`, `ia`, `ib`]
+        sw_assoc_coordinates_algebra)))) >>
   RULE_ASSUM_TAC (REWRITE_RULE [sw_add_x_def, sw_add_y_def]) >>
   rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC
 QED
@@ -1613,13 +1609,14 @@ Proof
      metis_tac[field_add_element, field_neg_element, field_add_eq_zero,
                field_neg_eq]) >>
   REWRITE_TAC [sw_add_x_def, sw_add_y_def] >>
-  MATCH_MP_TAC (BETA_RULE (REWRITE_RULE
-    [listTheory.EVERY_DEF, LET_THM, ringLibTheory.ring_sub,
-     MATCH_MP sw_ring_ops (ASSUME ``Field (r:'a field)``)]
-    (Q.SPECL
-      [`toRing r`, `x`, `y`, `X`, `Y`, `a`, `m`, `n`, `v`, `w`,
-       `k`, `l`, `r.sum.op X (r.sum.inv x)`, `di`, `ia`]
-      sw_quadruple_coordinates_algebra))) >>
+  qpat_assum `Field r` (fn field =>
+    MATCH_MP_TAC (BETA_RULE (REWRITE_RULE
+      [listTheory.EVERY_DEF, LET_THM, ringLibTheory.ring_sub,
+       MATCH_MP sw_ring_ops field]
+      (Q.SPECL
+        [`toRing r`, `x`, `y`, `X`, `Y`, `a`, `m`, `n`, `v`, `w`,
+         `k`, `l`, `r.sum.op X (r.sum.inv x)`, `di`, `ia`]
+        sw_quadruple_coordinates_algebra)))) >>
   RULE_ASSUM_TAC (REWRITE_RULE [sw_add_x_def, sw_add_y_def]) >>
   rpt conj_tac >>
   FIRST [FIRST_ASSUM ACCEPT_TAC, FIRST_ASSUM (ACCEPT_TAC o SYM), REFL_TAC]
