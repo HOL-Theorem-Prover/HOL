@@ -52,9 +52,17 @@ sig
   val cost : map -> string -> real
 
   (* Merge `entries` into the project's build-logs/target-times,
-     last-observed wins, preserving entries this run did not touch.
-     Creates the directory if needed.  I/O errors are swallowed with a
-     note on stdErr; a failed merge never derails the build.
+     this run's value winning over the cache's, and preserving entries
+     this run did not touch.  Creates the directory if needed.  I/O
+     errors are swallowed with a note on stdErr; a failed merge never
+     derails the build.
+
+     `entries` is read left to right, so a key appearing twice in it
+     keeps the *later* pair and silently drops the earlier one.  A
+     caller that measures one key more than once -- as a multi-command
+     recipe does, one job per command line, all sharing a key -- must
+     therefore combine its own measurements before calling; see
+     `note_time' in multibuild.sml, which sums them.
 
      Writes the cache and only the cache -- never a seed, and never
      seed values that came back through `load'. *)

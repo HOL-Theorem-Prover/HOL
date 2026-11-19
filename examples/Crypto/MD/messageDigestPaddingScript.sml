@@ -5,8 +5,6 @@ Ancestors
 Libs
   wordsLib cv_transLib
 
-val () = cv_auto_trans n2l_n2lA;
-
 Definition pad_message_def:
   pad_message bits =
   let l = LENGTH bits in
@@ -65,4 +63,11 @@ Termination
 End
 
 val () = cv_auto_trans parse_message_def;
+
+Definition bytes_to_bits_def:
+  bytes_to_bits (bs:word8 list) =
+    FLAT (MAP (REVERSE o PAD_RIGHT 0 8 o word_to_bin_list) bs)
+End
+
+val () = cv_auto_trans bytes_to_bits_def;
 

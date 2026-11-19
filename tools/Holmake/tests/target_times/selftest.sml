@@ -153,7 +153,73 @@ val _ = if rel (SOME "/p/cake") "/elsewhere/x/y" = "/elsewhere/x/y"
         then OK() else die "unrelated path was rewritten"
 
 (* ------------------------------------------------------------------
+   merge_entries is last-wins within one call, so a caller that times a
+   key twice must combine the two itself.
+   ------------------------------------------------------------------ *)
+val _ = tprint "a repeated key in one call keeps the later pair"
+val _ = OS.Process.system ("rm -rf " ^ fresh)
+val _ = OS.FileSys.mkDir fresh
+val _ = target_times.merge_entries
+          {root = fresh, entries = [("src/dup/tgt", 1.0),
+                                    ("src/dup/tgt", 4.0)]}
+val mdup = target_times.load_seeds {seeds = [], root = SOME fresh}
+val _ = if Real.== (target_times.cost mdup "src/dup/tgt", 4.0) then OK()
+        else die "a repeated key did not resolve to the later pair"
+
+(* ------------------------------------------------------------------
+   End to end: a recipe of several command lines is one job per line,
+   and all of those jobs share the node's cost key, so the node's
+   recorded cost has to be their sum.  Recording a single one of them
+   instead silently understates every multi-command recipe in the tree
+   -- `src/HolRefute/theory-tests', whose first line is a cheap
+   `Holmake -C theory_tests clean', was logged at a few hundredths of a
+   second while the build it drives ran for a minute.
+
+   multiline/ builds `twoline' (cheap line then dear line) and
+   `oneline' (the same total work in one line) and the two recorded
+   costs are compared to each other, never to a wall-clock figure, so
+   the test says the same thing on any machine.  Keeping only
+   `twoline's first line puts the ratio at about 1/10.
+   ------------------------------------------------------------------ *)
+val Holmake = Systeml.HOLDIR ++ "bin" ++ "Holmake"
+val mldir = cwd ++ "multiline"
+val mlhol = mldir ++ ".hol"
+val mlcache = mlhol ++ "build-logs" ++ "target-times"
+
+fun value_of path k =
+  let
+    fun get [] = NONE
+      | get (l :: rest) =
+          (case String.tokens Char.isSpace l of
+               [k', v] => if k' = k then Real.fromString v else get rest
+             | _ => get rest)
+  in
+    get (String.tokens (fn c => c = #"\n") (slurp path))
+  end
+
+val _ = tprint "every command line of a recipe is counted"
+val _ = OS.Process.system ("rm -rf " ^ mlhol)
+val mlres =
+    Systeml.systeml [Holmake, "-C", mldir, "-j", "2", "all"]
+val _ =
+    if not (OS.Process.isSuccess mlres) then die "multiline build failed"
+    else
+      case (value_of mlcache "twoline", value_of mlcache "oneline") of
+          (NONE, _) => die "no cost recorded for twoline"
+        | (_, NONE) => die "no cost recorded for oneline"
+        | (SOME two, SOME one) =>
+          (* A machine fast enough to put `oneline' under the clock's
+             resolution would make the ratio meaningless rather than
+             false; say so rather than passing by luck. *)
+          if one < 0.05 then
+            die ("oneline too cheap to compare: " ^ Real.toString one)
+          else if two >= 0.5 * one then OK()
+          else die ("twoline " ^ Real.toString two ^ " vs oneline " ^
+                    Real.toString one ^ ": a command line went unrecorded")
+
+(* ------------------------------------------------------------------
    Cleanup
    ------------------------------------------------------------------ *)
 val _ = OS.Process.system ("rm -rf " ^ fresh)
+val _ = OS.Process.system ("rm -rf " ^ mlhol)
 val _ = OS.FileSys.remove seedpath

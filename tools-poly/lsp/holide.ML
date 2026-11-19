@@ -1155,11 +1155,34 @@ fun initialize {
                 | SOME dec => recompileAsCheat dec)
       | _ => ()
 
+  (* A synthesized identifier -- `Parse.type_abbrev' standing in for a
+     `Type' declaration, `boolLib.save_thm_at' for a `Theorem id = exp'
+     -- is anchored at the declaration's keyword and spanned by the
+     width of its own name, so the bytes it claims are whatever the
+     user happens to have written there.  Harmless while the nodes
+     above it were zero-width, because navigation never got that far;
+     once they span the declaration it reaches them, and hovering
+     inside a `Type' quotation answers with the source text under
+     `Parse.type_abbrev' and that function's type beside it.
+
+     An identifier the user wrote has its own text under its span.
+     Collapse the ones that do not, so `findChild' passes them by and
+     the real arguments beside them are reached instead. *)
+  fun unclaimSynthetic (Built (sp as (s, e), props, children)) = let
+    val children = map unclaimSynthetic children
+    fun written [] = true
+      | written (PIdContent nm :: _) = let
+        val s = FixedInt.toInt s and e = FixedInt.toInt e
+        in s >= 0 andalso e >= s andalso e <= size text andalso
+           String.substring (text, s, e - s) = nm end
+      | written (_ :: props) = written props
+    in Built (if written props then sp else (s, s), props, children) end
+
   fun emitBuilt () = let
     val decs = !decsRef
     val pts = rev (!ptRef)
     val (acc, _) = annotateDecs decs (PTTop pts) []
-    in app builtTree (rev acc) end
+    in app (builtTree o unclaimSynthetic) (rev acc) end
     handle Thread.Thread.Interrupt => raise Thread.Thread.Interrupt
          | _ => () (* annotation can fail if trees are out of sync *)
   fun loop () = (

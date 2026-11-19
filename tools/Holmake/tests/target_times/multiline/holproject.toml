@@ -1,0 +1,4 @@
+name = "target_times_multiline"
+
+# A project root of its own, so the cache this test writes is
+# multiline/.hol/build-logs/target-times and not HOLDIR's.

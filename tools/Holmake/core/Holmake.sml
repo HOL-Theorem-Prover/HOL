@@ -2524,7 +2524,8 @@ fun dirs_work () =
             roots (dirmode_roots hmd_targets) idmap0
       val depgraph =
           if toplevel_no_prereqs then
-            mk_dirneeded (hmdir.curdir()) (mkneeded must_build depgraph)
+            mk_dirneeded tgtfatal (hmdir.curdir())
+                         (mkneeded must_build depgraph)
           else
             mkneeded must_build depgraph
     in
@@ -2590,7 +2591,8 @@ fun projects_work () =
             | _ => List.mapPartial (resolve_tgtname depgraph0 true) targets
       val depgraph =
           if toplevel_no_prereqs then
-            mk_dirneeded (hmdir.curdir()) (mkneeded real_targets depgraph0)
+            mk_dirneeded tgtfatal (hmdir.curdir())
+                         (mkneeded real_targets depgraph0)
           else
             mkneeded real_targets depgraph0
     in
@@ -2648,7 +2650,8 @@ fun work() =
                       else generate_all_plausible_targets warn start_tgt
         val depgraph =
             if toplevel_no_prereqs then
-              mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
+              mk_dirneeded tgtfatal (hmdir.curdir())
+                           (mkneeded targets depgraph)
             else
               mkneeded targets depgraph
       in
@@ -2661,7 +2664,8 @@ fun work() =
         val targets = List.mapPartial (resolve_tgtname depgraph true) xs
         val depgraph =
             if toplevel_no_prereqs then
-              mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
+              mk_dirneeded tgtfatal (hmdir.curdir())
+                           (mkneeded targets depgraph)
             else
               mkneeded targets depgraph
         val _ = check_targets_are_in_graph depgraph targets
