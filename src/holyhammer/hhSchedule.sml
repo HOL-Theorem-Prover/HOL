@@ -534,16 +534,15 @@ fun pool_threads pinned options works =
    Then hhSchedule_Test.export_choice, if it forces one.  Otherwise the
    policy decides.  The policy is what paired measurements of both exports
    with real provers support, nothing more: a measured cell either passed
-   (no proof lost, no goal slower, no more CPU) and is pipelined, or it
-   failed or was not measured and keeps the blocking export.  The pipelined
+   met the pre-registered criteria and is pipelined, or it failed or was
+   not measured and keeps the blocking export.  The pipelined
    export is chosen only with max_proofs 1 and a (cores, timeout) pair of
    pipelined_region, the passing cells.  The pipelined run charges the
    export to the timeout and the export competes with the search for the
    CPU, which showed at more than one proof (later proofs lost, goals
    slower), at 1 core with a 60 s budget (a proof lost at the budget edge)
    and with 16 cores (more CPU, goals slower).  The measurements are kept
-   outside the repository, under .agent-files/evidence/speedup/phase3/grid
-   of the development tree.  This is the one place that states the
+   outside the repository.  This is the one place that states the
    region. *)
 datatype blocking_reason =
     EmptySchedule | PinnedCaller | Debugging | UnmeasuredCores

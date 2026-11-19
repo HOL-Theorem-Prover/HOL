@@ -7358,10 +7358,9 @@ fun with_choice choice f =
     (fn _ => (hhSchedule_Test.export_choice := choice; f ()))
 
 (* The policy that picks the export of a run_in: the structural reasons in
-   their order of precedence, the measured region (cores 1-3 at a timeout
-   of exactly 30 s, 4 cores at 30 s or more, max_proofs 1), and the
-   selector that forces either export.  Options that the policy does not
-   look at do not change the choice. *)
+   their order of precedence, the measured region (see
+   hhSchedule.export_mode), and the selector that forces either export.
+   Options that the policy does not look at do not change the choice. *)
 fun test_export_mode () =
   let
     open hhSchedule
@@ -7386,7 +7385,8 @@ fun test_export_mode () =
                               ("2", "60", "1"), ("3", "31", "1"),
                               ("3", "60", "1"), ("3", "29", "1"),
                               ("4", "29", "1"), ("4", "5", "1"),
-                              ("4", "1", "1")]
+                              ("4", "1", "1"), ("1", "60", "4"),
+                              ("2", "29", "1")]
     val more_proofs = [("1", "30", "2"), ("2", "30", "2"),
                        ("3", "30", "4"), ("4", "30", "4"),
                        ("4", "60", "2")]
@@ -7409,7 +7409,11 @@ fun test_export_mode () =
        expect "export_mode: the other options do not change the choice"
          (mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
             ("timeout", "30"), ("max_proofs", "1"), ("export_workers", "1"),
-            ("slices", "3")]) false 24 = Pipelined)));
+            ("slices", "3")]) false 24 = Pipelined andalso
+          List.all (fn w =>
+            mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
+              ("timeout", "30"), ("max_proofs", "1"),
+              ("export_workers", w)]) false 24 = Pipelined) ["0", "64"])));
     expect "export_mode: the selector forces the pipelined export"
       (forced (fn () =>
          all_modes (unmeasured_cores @ unmeasured_timeout @ more_proofs)
