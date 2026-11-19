@@ -34,8 +34,8 @@ struct
      item is prepared (after the producer's own check for a stop). *)
   val before_prepare = ref (fn (_ : int) => ())
   (* Selects the pipelined run_in (export overlapping the search) where
-     hhSchedule.export_mode allows it.  The measured policy never chooses
-     it on its own (see export_mode), so it is off outside the tests. *)
+     hhSchedule.export_mode allows it, whatever the measured policy (see
+     export_mode) says about the cores and the timeout. *)
   val pipelined = ref false
   (* Whether the pipelined run_in bounds the slices running at once while
      the export is unfinished (see run_in).  On by default; the knob lets a
@@ -520,26 +520,42 @@ fun pool_size pinned (options : hhConfig.hh_options) works =
 (* Which export a run_in uses.  The structural reasons come first: an empty
    schedule has nothing to export, a pinned caller would see a producer
    thread that is not pinned, and debug_dir keeps the whole problem set.
-   Otherwise the policy decides, and it chooses blocking.  Measured against
-   the blocking export with real provers, the pipelined export never
-   delivered the first verified proof sooner: the provers started at once
-   compete with the producer for the cores (at 1, 2, 4, 8 and 16 cores and
-   at timeouts from 2 s to 30 s), a replay waits for the producer's last
-   fresh name anyway, and it costs more CPU; with the timeout counted from
-   the launch of the provers a small timeout also loses slices.  Forking a
-   prover while the producer allocates was also seen to hang a run.  So the
-   pipelined export is used only where hhSchedule_Test.pipelined asks for
-   it. *)
+   Otherwise the policy decides, from paired measurements of both exports
+   with real provers (30 corpus goals, three rounds, max_proofs 1):
+
+     cores   timeout   pipelined against blocking
+     1, 4    30 s      first verified proof in 0.62 and 0.82 of the time,
+                       no proof lost, less CPU and memory
+     1, 4    5 s       proofs lost: the export, which the pipelined run
+                       charges to the timeout, takes a share of the
+                       budget that the search needed
+     16      30 s      0.82 of the time but 15% more CPU, and 6 of 31 goals
+                       slower (the slices start in another order)
+     16      10 s      0.71 of the time but a proof lost at the timeout
+     16      5 s       0.62 of the time, no proof lost, 4 of 30 goals slower
+
+   So the pipelined export is chosen only for few cores (at most
+   pipelined_max_cores) and a long timeout (at least pipelined_min_timeout
+   seconds), where the export is a large share of the time to the first
+   proof and a small share of the timeout.  Nothing else was measured, so
+   everything else keeps the blocking export.  hhSchedule_Test.pipelined
+   asks for the pipelined export wherever the structural reasons allow it. *)
 datatype blocking_reason =
-    EmptySchedule | PinnedCaller | Debugging | Unprofitable
+    EmptySchedule | PinnedCaller | Debugging | ManyCores | ShortTimeout
 datatype export_mode = Blocking of blocking_reason | Pipelined
+
+val pipelined_max_cores = 4
+val pipelined_min_timeout = 30
 
 fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
   if schedule_length = 0 then Blocking EmptySchedule
   else if pinned then Blocking PinnedCaller
   else if Option.isSome (#debug_dir options) then Blocking Debugging
   else if !hhSchedule_Test.pipelined then Pipelined
-  else Blocking Unprofitable
+  else if #cores options > pipelined_max_cores then Blocking ManyCores
+  else if #timeout options < pipelined_min_timeout then
+    Blocking ShortTimeout
+  else Pipelined
 
 (* Theorems with hypotheses are no premises (see hhLearn); explicit hh_pb
    lists bypass premise selection. *)

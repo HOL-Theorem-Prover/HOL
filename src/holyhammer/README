@@ -47,11 +47,12 @@ only its outcome: the verified tactic or why it failed.  With `verbose` set
 it also reports every slice as it starts and ends.
 
 The `timeout` is a wall-clock budget counted from the launch of the
-provers.  By default every problem is exported before that, on the calling
-thread, so the export is not charged to it.  A run that overlaps the export
-with the search (an internal mode, off because it did not bring the first
-verified proof sooner when measured) starts the clock at the
-launch and the export then uses the budget: at the soft deadline no slice
+provers.  With many cores or a short timeout every problem is exported before
+that, on the calling thread, so the export is not charged to it.  With at
+most 4 cores and a timeout of at least 30 s (the cases where overlapping
+brought the first verified proof sooner without losing proofs when
+measured) the export overlaps the search, which starts the clock at the
+launch, and the export then uses the budget: at the soft deadline no slice
 is started and an export that no slice waits for any more is cancelled;
 slices already started, and the reconstruction of their proofs, keep their
 grace period up to the hard deadline.  The hard deadline, an interrupt and
@@ -71,9 +72,10 @@ any search, and the events already reported, `Verified` included, stay
 observable.  The problems of an overlapped run that stops early are partly
 exported: a root that the caller owns (`hhSchedule.run_in`) holds only the
 files published until then.  The files that are published equal those of
-the default run, because a replay of a proof, which draws fresh names, waits
-until the last problem has been prepared, and what the export prints while
-a replay runs goes to the file that hides the replay's output.
+the default run, because the export draws its fresh names from a supply of
+its own, so that a replay of a proof, which draws fresh names too, cannot
+change them, and what the export prints while a replay runs goes to the file
+that hides the replay's output.
 
 `export_workers` is the number of threads that finish the
 generated problems (the draw-free tail, then format and write) before the

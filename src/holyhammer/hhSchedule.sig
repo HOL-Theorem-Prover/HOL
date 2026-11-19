@@ -128,24 +128,25 @@ sig
   (* The export of a run_in: Blocking, with the reason, or Pipelined.  An
      empty schedule, a pinned caller (pinned: Context.is_pinned () on the
      caller) and a debug_dir keep the blocking export, in that order of
-     precedence.  Otherwise the policy decides, and it chooses blocking
-     (Unprofitable): in measurements with real provers the pipelined export
-     never delivered the first verified proof sooner, so it is used only
-     when the internal selector hhSchedule_Test.pipelined asks for it. *)
+     precedence.  The internal selector hhSchedule_Test.pipelined chooses
+     the pipelined export otherwise.  Without it the policy of the measured
+     cases decides (see hhSchedule.sml): pipelined for at most 4 cores
+     and a timeout of at least 30 s, blocking for more cores (ManyCores) or
+     a shorter timeout (ShortTimeout). *)
   datatype blocking_reason =
-      EmptySchedule | PinnedCaller | Debugging | Unprofitable
+      EmptySchedule | PinnedCaller | Debugging | ManyCores | ShortTimeout
   datatype export_mode = Blocking of blocking_reason | Pipelined
   val export_mode :
     {pinned : bool, options : hhConfig.hh_options, schedule_length : int} ->
     export_mode
   (* run_in exports the problems of the schedule and then runs it.  With
-     the internal selector hhSchedule_Test.pipelined set (off by default,
-     see export_mode), an unpinned caller without debug_dir and with a
-     non-empty schedule gets the pipelined run: the rankings are validated,
-     the named theorems fetched, the cache pruned and the provers probed on the
-     calling thread, then the export runs on a producer thread while the
-     slices start as their files are published, each file as soon as it is
-     complete.  The clock then starts at the launch of the workers.  While
+     the pipelined export chosen by export_mode (an unpinned caller without
+     debug_dir and with a non-empty schedule, with few cores and a long
+     timeout, or whenever the internal selector hhSchedule_Test.pipelined
+     asks for it) the rankings are validated, the named theorems fetched,
+     the cache pruned and the provers probed on the calling thread, then
+     the export runs on a producer thread while the slices start as their
+     files are published, each file as soon as it is complete.  The clock then starts at the launch of the workers.  While
      the producer is unfinished at most max (1, cores - 1 - pool workers)
      slices run, so that the provers do not starve it; the bound is lifted
      when it ends.  The files equal the blocking export's for the same

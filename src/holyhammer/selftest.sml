@@ -7266,20 +7266,34 @@ fun test_export_mode () =
       Portable.bracket (fn () => !hhSchedule_Test.pipelined)
         (fn old => hhSchedule_Test.pipelined := old)
         (fn _ => (hhSchedule_Test.pipelined := true; f ()))
-    fun varied (cores, timeout, workers) =
+    fun varied (cores, timeout) =
       hhConfig.snapshot_with [("debug_dir", ""), ("cores", cores),
-        ("timeout", timeout), ("export_workers", workers)]
-    val settings = [("1", "2", "1"), ("2", "5", "2"), ("4", "30", "4"),
-                    ("16", "300", "2")]
+        ("timeout", timeout)]
+    (* the cells of the policy: pipelined for at most 4 cores and a
+       timeout of at least 30 s (the measured cases) *)
+    val pipelined_cells = [("1", "30"), ("2", "30"), ("4", "30"),
+                           ("4", "300"), ("1", "31")]
+    val many_cores = [("5", "30"), ("16", "30"), ("16", "300"),
+                      ("8", "5")]
+    val short_timeout = [("1", "29"), ("4", "5"), ("2", "1")]
+    fun all_modes cells m =
+      List.all (fn c => mode (varied c) false 24 = m) cells
   in
-    expect "export_mode: blocking by default"
-      (mode plain false 24 = Blocking Unprofitable);
-    expect "export_mode: no option changes the default choice"
-      (List.all (fn s => mode (varied s) false 24 = Blocking Unprofitable)
-         settings);
+    expect "export_mode: few cores and a long timeout pipeline"
+      (all_modes pipelined_cells Pipelined);
+    expect "export_mode: many cores block"
+      (all_modes many_cores (Blocking ManyCores));
+    expect "export_mode: a short timeout blocks"
+      (all_modes short_timeout (Blocking ShortTimeout));
+    expect "export_mode: many cores are named before a short timeout"
+      (mode (varied ("16", "5")) false 24 = Blocking ManyCores);
+    expect "export_mode: the other options do not change the choice"
+      (mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
+         ("timeout", "30"), ("export_workers", "1"), ("slices", "3")])
+         false 24 = Pipelined);
     expect "export_mode: the selector asks for the pipelined export"
-      (selected (fn () => mode plain false 24 = Pipelined andalso
-         List.all (fn s => mode (varied s) false 24 = Pipelined) settings));
+      (selected (fn () =>
+         all_modes (many_cores @ short_timeout) Pipelined));
     expect "export_mode: debug_dir keeps the blocking export"
       (mode debug false 24 = Blocking Debugging andalso
        selected (fn () => mode debug false 24 = Blocking Debugging));
