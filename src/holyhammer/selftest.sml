@@ -1872,6 +1872,12 @@ fun counter () =
   valOf (Int.fromString (String.extract (Type.dest_vartype
     (Type.gen_tyvar ()), size "%%gen_tyvar%%", NONE)))
 
+(* The same for the term-variable counter (Term.genvar), which a proof
+   replay draws from as well. *)
+fun genvar_counter () =
+  valOf (Int.fromString (String.extract (#1 (Term.dest_var
+    (Term.genvar Type.alpha)), size "%%genvar%%", NONE)))
+
 fun advance_to target =
   let
     fun advance n = if n <= 0 then () else (Type.gen_tyvar (); advance (n - 1))
@@ -6251,6 +6257,18 @@ fun test_schedule_pipelined parser =
     fun lookup files path =
       Option.map #2 (List.find (fn (name, _) => name = path) files)
 
+    (* The export states of the last pipelined run, by relative path. *)
+    fun export_states root =
+      map (fn (path, state) => (relative root path, state))
+        (!hhSchedule_Test.export_states)
+    fun state_of root path = lookup (export_states root) path
+    fun all_ready root =
+      List.all (fn (_, state) => state = hhSchedule_Test.Ready)
+        (export_states root)
+    fun none_pending root =
+      List.all (fn (_, state) => state <> hhSchedule_Test.Pending)
+        (export_states root)
+
     (* Readiness: a generated job held before its publication keeps
        neither the earlier legacy slice nor the later files back. *)
     fun readiness () =
@@ -6261,7 +6279,8 @@ fun test_schedule_pipelined parser =
         val (held, held_path, _) =
           valOf (List.find (fn (_, _, generated) => generated) works)
         val admitted = Int.min (n - 1, held + 2)
-        val (want, _) = expected opts (quiet_start ())
+        val start = quiet_start ()
+        val (want, _) = expected opts start
         val st = new_state ()
         val {m, released, entered, events, root, ...} = st
         val gate = fn i =>
@@ -6276,7 +6295,7 @@ fun test_schedule_pipelined parser =
         val (result, failure) =
           run st gave_up opts rankings
             {pipelined = true, before_finish = gate,
-             before_prepare = fn _ => ()} no_wrap (quiet_start ())
+             before_prepare = fn _ => ()} no_wrap start
         val seen = rev (!entered)
         val early = List.filter (fn (_, _, late) => not late) seen
         val files = tree root
@@ -6301,93 +6320,125 @@ fun test_schedule_pipelined parser =
            (List.all (fn (path, text, _) => lookup want path = SOME text)
               seen);
          expect "pipelined: the published files are the blocking files"
-           (files = want andalso tmp_clean_names files))
+           (files = want andalso tmp_clean_names files);
+         expect "pipelined: every problem ends Ready"
+           (all_ready root))
       end
 
-    (* R1: a replay starts only after the last prepare. *)
+    (* R1: a replay starts only after the last prepare.  A replay draws
+       fresh names, as does a prepare; the pool tails and the provers
+       draw none.  So while the last prepare is held, after the proof is
+       found, the only draws are the two reads of the counters here.  The
+       expected tree is for the same counter start; the counter only moves
+       forward, so the run resumes after that export, within the same digit
+       length (checked), which fixes the bytes. *)
     fun replay_after_prepares () =
       let
         val opts = options 5 30 10 NONE
         val works = work_list opts
         val last = length works - 1
-        val (want, _) = expected opts (quiet_start ())
+        val start = quiet_start ()
+        val (want, _) = expected opts start
         val st = new_state ()
-        val {m, released, events, root, ...} = st
+        val {m, released, reached, events, root, ...} = st
+        val at_found = ref (0, 0)
+        val at_release = ref (0, 0)
         val held_verified = ref true
         val hold = fn i =>
           if i = last then
-            monitor_until m "the last prepare was never released"
-              (fn () => !released)
+            (monitor_do m (fn () => reached := true);
+             monitor_until m "the last prepare was never released"
+               (fn () => !released))
           else ()
         val _ = Thread.fork (fn () =>
           (monitor_until m "no proof was found"
              (fn () => exists_prefix "found|" (!events));
+           monitor_until m "the last prepare was not reached"
+             (fn () => !reached);
+           at_found := (counter (), genvar_counter ());
            OS.Process.sleep (Time.fromMilliseconds 700);
+           at_release := (counter (), genvar_counter ());
            monitor_do m (fn () =>
              (held_verified := exists_prefix "verified|" (!events);
               released := true))), [])
         val (result, failure) =
           run st proof opts rankings
             {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} no_wrap (quiet_start ())
+             before_prepare = hold} no_wrap start
+        val finish = counter ()
         val files = tree root
         val _ = remove_tree root
       in
-        (expect "pipelined: no replay verifies before the last prepare"
+        (expect "pipelined: no name is drawn while the last prepare is held"
+           (#1 (!at_release) = #1 (!at_found) + 1 andalso
+            #2 (!at_release) = #2 (!at_found) + 1);
+         expect "pipelined: no replay verifies before the last prepare"
            (not (!held_verified) andalso not (Option.isSome failure) andalso
             length (#suggestions (valOf result)) = 1 andalso
             exists_prefix "verified|" (!events));
          expect "pipelined: files beside a real replay equal the blocking ones"
-           (files = want))
+           (size (Int.toString finish) = size (Int.toString start) andalso
+            files = want);
+         expect "pipelined: every problem ends Ready" (all_ready root))
       end
 
-    (* The flag is set on an export error: the run raises and does not
-       hang with a replay waiting. *)
+    (* The flag is set on an export error with the last prepare not yet
+       done (it fails after a proof was found): the replay waiting for it
+       is released by the stop, not by the flag alone, so it verifies
+       nothing, and the run raises the error and does not hang. *)
     fun replay_after_error () =
       let
-        val opts = options 5 30 1 NONE
+        val opts = options 5 30 10 NONE
         val works = work_list opts
-        val (first, _, _) =
-          valOf (List.find (fn (_, _, generated) => generated) works)
+        val last = length works - 1
+        val (_, last_path, _) = List.last works
         val st = new_state ()
         val {m, events, root, ...} = st
         val fail = fn i =>
-          if i = first then
+          if i = last then
             (monitor_until m "no proof was found"
                (fn () => exists_prefix "found|" (!events));
-             raise Fail "injected tail failure")
+             raise Fail "injected prepare failure")
           else ()
         val (_, failure) =
           run st proof opts rankings
-            {pipelined = true, before_finish = fail,
-             before_prepare = fn _ => ()} no_wrap (quiet_start ())
+            {pipelined = true, before_finish = fn _ => (),
+             before_prepare = fail} no_wrap (quiet_start ())
+        val states_ok = none_pending root andalso
+          state_of root last_path = SOME hhSchedule_Test.Failed
         val _ = remove_tree root
       in
-        expect "pipelined: an export error ends the run with the error"
-          (case failure of
-               SOME exn => contains "injected tail failure"
-                             (General.exnMessage exn)
-             | NONE => false)
+        (expect "pipelined: an export error ends the run with the error"
+           (case failure of
+                SOME exn => contains "injected prepare failure"
+                              (General.exnMessage exn)
+              | NONE => false);
+         expect "pipelined: no replay verifies after the export error"
+           (not (exists_prefix "verified|" (!events)));
+         expect "pipelined: an unfinished problem ends Failed" states_ok)
       end
 
     (* The flag is set when the producer is cancelled at the soft
-       deadline: the replay then runs and the later file is not made. *)
+       deadline: the replay then runs and the later file is not made.  The
+       hold is at index 1, reached right after the first file, and lasts
+       past the deadline of 1 s (the check of the producer precedes the
+       hold), so the producer stops at the next prepare; the replay then
+       has the grace time left to verify. *)
     fun replay_after_cancel () =
       let
         val opts = options 5 1 1 NONE
         val works = work_list opts
-        val last = length works - 1
         val st = new_state ()
         val {m, released, reached, root, ...} = st
         val hold = fn i =>
-          if i = last - 1 then
+          if i = 1 then
             (monitor_do m (fn () => reached := true);
              monitor_until m "the held prepare was never released"
                (fn () => !released))
           else ()
         val _ = Thread.fork (fn () =>
           (monitor_until m "the hold was not reached" (fn () => !reached);
-           OS.Process.sleep (Time.fromMilliseconds 1300);
+           OS.Process.sleep (Time.fromMilliseconds 1100);
            monitor_do m (fn () => released := true)), [])
         val (result, failure) =
           run st proof opts rankings
@@ -6395,11 +6446,16 @@ fun test_schedule_pipelined parser =
              before_prepare = hold} no_wrap (quiet_start ())
         val (_, last_path, _) = List.last works
         val made = OS.FileSys.access (join root last_path, [])
+        val states_ok = none_pending root andalso
+          state_of root last_path = SOME hhSchedule_Test.Cancelled andalso
+          state_of root (#2 (hd works)) = SOME hhSchedule_Test.Ready
         val _ = remove_tree root
       in
-        expect "pipelined: cancellation at the deadline frees the replay"
-          (not (Option.isSome failure) andalso not made andalso
-           length (#suggestions (valOf result)) = 1)
+        (expect "pipelined: cancellation at the deadline frees the replay"
+           (not (Option.isSome failure) andalso not made andalso
+            length (#suggestions (valOf result)) = 1);
+         expect "pipelined: the unprepared problems end Cancelled"
+           states_ok)
       end
 
     (* Where the export runs. *)
@@ -6466,6 +6522,15 @@ val _ = test_schedule_hoisted_fetch ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
 val _ = test_hhSchedule ()
+
+(* The scheduler tests run once more on the pipelined path (the selector
+   is restored afterwards, whatever happens). *)
+fun with_pipelined f =
+  Portable.bracket (fn () => !hhSchedule_Test.pipelined)
+    (fn old => hhSchedule_Test.pipelined := old)
+    (fn _ => (hhSchedule_Test.pipelined := true; f ()))
+
+val _ = with_pipelined test_hhSchedule
 
 fun test_main_hh_lemmas_hook parser =
   let
@@ -6542,6 +6607,7 @@ fun test_holyHammer_scheduler_api () =
         end
 
 val _ = test_holyHammer_scheduler_api ()
+val _ = with_pipelined test_holyHammer_scheduler_api
 
 fun test_hhEval_integration () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of

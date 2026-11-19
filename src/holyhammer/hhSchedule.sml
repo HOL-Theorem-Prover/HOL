@@ -4,11 +4,23 @@
 (* ========================================================================= *)
 
 (* Kept outside the public [hhSchedule] signature so [selftest.sml] can start
-   the workers of the export pool its own way ([fork]) and act on a worker
+   the workers of the export pool its own way ([fork]), act on a worker
    before it finishes an item ([before_finish], applied to the item's
-   index).  Production leaves both at their defaults. *)
+   index), act where an item is handed to the pool ([after_submit]) or
+   before it is prepared ([before_prepare]), select the pipelined run_in
+   ([pipelined]) and read the export state of the problems of the last
+   pipelined run ([export_states]).  Production leaves the hooks at their
+   defaults. *)
 structure hhSchedule_Test =
 struct
+  (* The export of one problem file in a pipelined run: Pending until its
+     file is published (Ready), or until the export stops for good before
+     reaching it (Cancelled: the run is stopping or past its soft deadline,
+     or the export was interrupted) or fails (Failed). *)
+  datatype export_state = Pending | Ready | Failed | Cancelled
+  (* The state of every distinct problem path of the last pipelined run,
+     as it was when the run ended. *)
+  val export_states = ref ([] : (string * export_state) list)
   val fork = ref hhPool.default_fork
   (* Called on the worker with the item's index, after the temporary is
      opened and just before the tail runs, so that an exception raised
@@ -268,7 +280,10 @@ fun ordered_work root options rankings schedule =
                        return it as a pending item;
      await q           at resolution, in order: wait for the pending item
                        and return what it staged;
-     publish (w, f)    in order, on the caller.
+     publish (w, f)    in order, on the caller.  An implementation may
+                       commit an item earlier (at submit, or on a worker):
+                       publish then only reports it, as the pipelined
+                       export does by telling readiness again.
    Finishing work draws no fresh names and uses neither the memo nor
    the caches; it may read the live signature (see hhSchedule.sig).
    submit and await must be interchangeable in timing: an implementation
@@ -487,6 +502,10 @@ fun pool_size pinned (options : hhConfig.hh_options) works =
                   generated)
   end
 
+(* Theorems with hypotheses are no premises (see hhLearn); explicit hh_pb
+   lists bypass premise selection. *)
+fun premises_of named = List.filter (null o hyp o #2) named
+
 (* The theorems of a selection, fetched lazily the first time a key is
    used. *)
 fun lazy_named rankings =
@@ -498,9 +517,7 @@ fun lazy_named rankings =
         | NONE =>
             let
               val selected = first_n count (ranking_for rankings filter)
-              (* Theorems with hypotheses are no premises (see hhLearn);
-                 explicit hh_pb lists bypass premise selection. *)
-              val named = List.filter (null o hyp o #2)
+              val named = premises_of
                 (smlRedirect.hidef mlThmData.thml_of_namel selected)
             in
               named_memo := (key, named) :: !named_memo;
@@ -540,7 +557,7 @@ fun hoisted_named rankings (works : work list) =
       end
     val fetched = map fetch (distinct keys)
     fun named_for (filter, count) =
-      List.filter (null o hyp o #2)
+      premises_of
         (List.concat (first_n count (valOf
            (Option.map #2 (List.find (fn (old, _) => old = filter) fetched)))))
   in
@@ -551,7 +568,10 @@ fun hoisted_named rankings (works : work list) =
    schedule order as they resolve.  Early: an item is published as soon
    as it is finished, and ready is told of each published item; before and
    after bracket the preparation of each item (before may raise to stop
-   the export). *)
+   the export).  Hence the pool-backed commit happens at submit (staged
+   legacy files and copies) or on the pool worker (generated problems),
+   and the in-order publish of run_staged then only tells ready again; an
+   export without a pool (one worker) commits at that in-order publish. *)
 datatype publication =
     Ordered
   | Early of
@@ -560,7 +580,7 @@ datatype publication =
 
 (* prepare (and everything that draws fresh names or touches HOL state
    other than reading the signature) runs on the thread that calls this
-   function, before any worker exists.  Both thml_of_namel and the
+   function, before any pool worker exists.  Both thml_of_namel and the
    exporters touch HOL process-global state.  Only the finishing work of
    generated problems (the tail of the preparation, then format and write)
    moves to the workers of a pool, which is closed (its workers stopped and
@@ -698,29 +718,55 @@ fun run_in root {options, goal, rankings, progress} =
     val launch_done = ref false
     val recon_done = ref false
     val recon_thread = ref (NONE : Thread.thread option)
-    (* The pipelined export.  A problem is ready once its file is
-       published; a slice is claimed only when its problem is.  The
-       producer is active from its launch until it is terminal (it
-       finished, failed, was cancelled or interrupted).  prepares_done is
-       set once the producer will draw no more fresh names (after its last
-       prepare, or on any terminal state): a reconstruction replay draws
-       from the same counters and waits for it, so that every name is drawn
-       in the order of the blocking path. *)
-    val ready_paths = ref ([] : string list)
+    (* The pipelined export.  Every problem path has an export state
+       (Pending until its file is published, then Ready; Cancelled or
+       Failed when the producer ends without it); a slice is claimed only
+       when its problem is Ready.  Without the pipelined export every
+       problem is Ready from the start.  The producer is active from its
+       launch until it is terminal (it finished, failed, was cancelled or
+       interrupted).  prepares_done is set once the producer will draw no
+       more fresh names (after its last prepare, or on any terminal state):
+       a reconstruction replay draws from the same counters and waits for
+       it, so that every name is drawn in the order of the blocking
+       path. *)
+    datatype export_state = datatype hhSchedule_Test.export_state
+    val exports =
+      let
+        val initial = if pipelined then Pending else Ready
+        fun add (slice, seen) =
+          let val path = problem_path root slice in
+            if List.exists (fn (other, _) => other = path) seen then seen
+            else (path, initial) :: seen
+          end
+      in
+        ref (List.rev (List.foldl (fn ((_, slice), seen) => add (slice, seen))
+                         [] schedule))
+      end
     val producer_active = ref false
     val prepares_done = ref (not pipelined)
     val producer_error = ref (NONE : exn option)
 
     fun signal () = ConditionVar.broadcast state_changed
 
-    fun is_ready (_, slice) =
-      not pipelined orelse
-      List.exists (fn path => path = problem_path root slice)
-        (!ready_paths)
+    (* The export state of a problem path (the mutex is held). *)
+    fun export_state path =
+      case List.find (fn (other, _) => other = path) (!exports) of
+          SOME (_, state) => state
+        | NONE => Failed
 
-    (* The producer has published every problem it will publish when it
-       is terminal, so an entry that is not ready then never will be. *)
-    fun no_more_producing () = not pipelined orelse not (!producer_active)
+    (* The Pending problems end in the given state when the producer is
+       terminal (the mutex is held). *)
+    fun end_exports state =
+      exports := map (fn (path, Pending) => (path, state) | other => other)
+                     (!exports)
+
+    fun entry_state (_, slice) = export_state (problem_path root slice)
+
+    fun is_ready entry = entry_state entry = Ready
+
+    (* A Pending entry may still become ready; an entry whose problem
+       failed or was cancelled never will. *)
+    fun may_become_ready entry = entry_state entry = Pending
 
     (* The earliest entry whose problem is ready, with the entries left. *)
     fun take_ready [] = NONE
@@ -738,21 +784,26 @@ fun run_in root {options, goal, rankings, progress} =
         case take_ready (!work) of
             SOME (item, rest) => (work := rest; SOME item)
           | NONE =>
-              if null (!work) orelse no_more_producing () then NONE
+              if not (List.exists may_become_ready (!work)) then NONE
               else
                 (ignore (ConditionVar.waitUntil
                            (state_changed, state_mutex, deadline));
                  claim ())
 
-    fun get_work () =
+    (* Runs f with the mutex held.  Unlike with_mutex, f's waits stay
+       interruptible: an exception, an interrupt included, releases the
+       mutex and propagates. *)
+    fun with_locked f =
       let
         val _ = Mutex.lock state_mutex
-        val item = claim ()
+        val result = f ()
         val _ = Mutex.unlock state_mutex
       in
-        item
+        result
       end
       handle exn => (Mutex.unlock state_mutex handle _ => (); raise exn)
+
+    fun get_work () = with_locked claim
 
     fun worker_finished () =
       with_mutex state_mutex (fn () =>
@@ -769,8 +820,10 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun mark_ready (work : work) =
       with_mutex state_mutex (fn () =>
-        (if List.exists (fn path => path = #path work) (!ready_paths) then ()
-         else ready_paths := #path work :: !ready_paths;
+        (exports := map (fn (path, Pending) =>
+                              (path, if path = #path work then Ready
+                                     else Pending)
+                          | other => other) (!exports);
          signal ()))
 
     fun set_prepares_done () =
@@ -783,6 +836,7 @@ fun run_in root {options, goal, rankings, progress} =
              SOME _ => if Option.isSome (!producer_error) then ()
                        else producer_error := failure
            | NONE => ();
+         end_exports (if Option.isSome failure then Failed else Cancelled);
          prepares_done := true; producer_active := false; signal ()))
 
     fun register_running kill =
@@ -951,6 +1005,15 @@ fun run_in root {options, goal, rankings, progress} =
     fun worker () =
       ((worker_loop () handle _ => ()); worker_finished ())
 
+    (* The search is over: every worker is finished and the producer is
+       terminal (the mutex is held). *)
+    fun search_finished_locked () =
+      !launch_done andalso !workers_left = 0 andalso not (!producer_active)
+
+    (* Everything has stopped, reconstruction included (the mutex is
+       held). *)
+    fun finished_locked () = search_finished_locked () andalso !recon_done
+
     fun take_success () =
       let
         fun wait () =
@@ -963,17 +1026,12 @@ fun run_in root {options, goal, rankings, progress} =
                     (retries := rest; SOME (Retry retry))
                   else (retries := []; wait ())
               | ([], []) =>
-                  if !launch_done andalso !workers_left = 0
-                     andalso not (!producer_active) then NONE
+                  if search_finished_locked () then NONE
                   else
                     (ConditionVar.wait (state_changed, state_mutex); wait ())
-        val _ = Mutex.lock state_mutex
-        val result = wait ()
-        val _ = Mutex.unlock state_mutex
       in
-        result
+        with_locked wait
       end
-      handle exn => (Mutex.unlock state_mutex handle _ => (); raise exn)
 
     (* A replay draws fresh names, so it starts only when the producer
        will draw no more (see prepares_done).  False when the run stops or
@@ -982,20 +1040,16 @@ fun run_in root {options, goal, rankings, progress} =
     fun wait_for_prepares () =
       let
         fun wait () =
-          if !prepares_done then true
-          else if !stopping orelse
-                  not (time_before (Time.now ()) hard_deadline) then false
+          if !stopping orelse
+             not (time_before (Time.now ()) hard_deadline) then false
+          else if !prepares_done then true
           else
             (ignore (ConditionVar.waitUntil
                        (state_changed, state_mutex, hard_deadline));
              wait ())
-        val _ = Mutex.lock state_mutex
-        val proceed = wait ()
-        val _ = Mutex.unlock state_mutex
       in
-        proceed
+        with_locked wait
       end
-      handle exn => (Mutex.unlock state_mutex handle _ => (); raise exn)
 
     fun reconstruct item =
       let
@@ -1070,10 +1124,7 @@ fun run_in root {options, goal, rankings, progress} =
       ((recon_loop () handle _ => ());
        with_mutex state_mutex (fn () => (recon_done := true; signal ())))
 
-    fun completed () =
-      with_mutex state_mutex
-        (fn () => !launch_done andalso !workers_left = 0 andalso
-                  not (!producer_active) andalso !recon_done)
+    fun completed () = with_mutex state_mutex finished_locked
 
     fun await () =
       if completed () then ()
@@ -1088,18 +1139,13 @@ fun run_in root {options, goal, rankings, progress} =
         let
           val wake = time_min hard_deadline
             (Time.+ (Time.now (), Time.fromMilliseconds 100))
-          val _ = Mutex.lock state_mutex
-          val _ =
-            if !launch_done andalso !workers_left = 0 andalso
-               not (!producer_active) andalso !recon_done
-            then ()
+          val _ = with_locked (fn () =>
+            if finished_locked () then ()
             else ignore (ConditionVar.waitUntil (state_changed, state_mutex,
-                                                  wake))
-          val _ = Mutex.unlock state_mutex
+                                                  wake)))
         in
           await ()
         end
-        handle exn => (Mutex.unlock state_mutex handle _ => (); raise exn)
 
     fun finish stopped =
       let
@@ -1151,6 +1197,9 @@ fun run_in root {options, goal, rankings, progress} =
            handle Interrupt =>
              (interrupt (); true)
                 | error => (interrupt (); raise error))
+        val _ = if pipelined then hhSchedule_Test.export_states :=
+                  with_mutex state_mutex (fn () => !exports)
+                else ()
         val _ = case with_mutex state_mutex (fn () => !producer_error) of
                     SOME error => raise error
                   | NONE => ()
