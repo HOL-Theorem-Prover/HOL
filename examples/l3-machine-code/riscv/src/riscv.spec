@@ -809,32 +809,27 @@ Rounding option rnd_mode_dynamic(rnd::fprnd) =
       case _          => None
     }
 
--- currently implemented rounding modes
-ieee_rounding option l3round(rnd::Rounding) =
-    match rnd
-    { case RNE        => Some(roundTiesToEven)
-      case RTZ        => Some(roundTowardZero)
-      case RDN        => Some(roundTowardNegative)
-      case RUP        => Some(roundTowardPositive)
-      case RMM        => None  -- roundTiesToMaxMagnitude is neither in L3 nor
-                               -- in HOL's binary_ieee (see validRounding)
-      case RDYN       => None  -- invalid
+-- The rounding mode of an instruction: its rm field, or fcsr.frm when the
+-- field is 7 (U §6.1.2).  It is never RDYN.
+Rounding option round(rnd::fprnd) =
+    match rnd_mode_static(rnd)
+    { case Some(RDYN) => rnd_mode_dynamic(fcsr.FRM)
+      case r          => r
     }
 
--- composed rounding mode
-ieee_rounding option round(rnd::fprnd) =
-    match rnd_mode_static(rnd)
-    { case Some(RDYN) => match rnd_mode_dynamic(fcsr.FRM)
-                         { case Some(frm) => l3round(frm)
-                           case None      => None
-                         }
-      case Some(frm)  => l3round(frm)
-      case None       => None
+-- The IEEE rounding mode of RNE, RTZ, RDN and RUP.  RMM, round to nearest
+-- with ties to max magnitude, has none, in L3 or in HOL's binary_ieee: see
+-- "Rounding to nearest, ties to max magnitude" below.
+ieee_rounding ieeeRounding(rnd::Rounding) =
+    match rnd
+    { case RTZ        => roundTowardZero
+      case RDN        => roundTowardNegative
+      case RUP        => roundTowardPositive
+      case _          => roundTiesToEven
     }
 
 -- rm of an instruction whose result is exact (FCVT.D.S, FCVT.D.W, FCVT.D.WU):
--- it is decoded as usual, so RMM is legal, but it is never used to round
--- (U §6.1.2)
+-- it is decoded as usual, but it is never used to round (U §6.1.2)
 bool validRounding(rnd::fprnd) =
     match rnd_mode_static(rnd)
     { case Some(RDYN) => IsSome(rnd_mode_dynamic(fcsr.FRM))
@@ -899,6 +894,236 @@ unit accrueFlags(f::ieee_flags) =
 ; when f.Underflow    do setFP_Underflow()
 ; when f.Precision    do setFP_Inexact()
 }
+
+-- The sign of a zero result of a conversion is that of its operand, and an
+-- integer zero converts to +0 (IEEE 754-2008 6.3).  HOL's conversions go
+-- through the real value, which has no sign: they give +0, or -0 under
+-- roundTowardNegative.
+
+bits(32) FP32_ZeroSign(v::bits(32), neg::bool) =
+    if FP32_IsZero(v) then (if neg then FP32_NegZero else FP32_PosZero) else v
+
+bits(64) FP64_ZeroSign(v::bits(64), neg::bool) =
+    if FP64_IsZero(v) then (if neg then FP64_NegZero else FP64_PosZero) else v
+
+-- FCVT.D.S is exact
+bits(64) FP64_FromFP32(a::bits(32)) =
+    FP64_ZeroSign(FP32_ToFP64(a), FP32_Sign(a))
+
+---------------------------------------------------------------------------
+-- Rounding to nearest, ties to max magnitude (RMM)
+---------------------------------------------------------------------------
+
+-- Neither L3 nor HOL's binary_ieee has this rounding mode, so the result
+-- under RMM is computed from the result n under
+-- roundTiesToEven.  The two differ only when the exact value lies halfway
+-- between two neighbouring values of the format and n is the one nearer
+-- zero; RMM then gives the other one, which is n + 1 as a bit pattern.
+-- The flags of n are right for RMM in both cases: the result is inexact
+-- under both modes, a value halfway between two subnormal values is tiny
+-- under both, and when n overflows so does RMM.
+--
+-- Whether the exact value is halfway is decided in integers.  FP32_Scaled
+-- and FP64_Scaled give a finite value in units of the least positive value
+-- of its format, 2^-149 and 2^-1074, and the caller gives the exact value
+-- of its operation as x / k of that unit, for integers x and k > 0.  This
+-- is only tested for an inexact n, whose operands are finite.  When n is
+-- the largest finite value, n + 1 is the pattern of an infinity, which
+-- FP32_Scaled and FP64_Scaled read as the next power of two; the exact
+-- value is then below halfway, since at it roundTiesToEven overflows.
+
+-- the flags and the value of an operation
+type fp32_result = ieee_flags * bits(32)
+type fp64_result = ieee_flags * bits(64)
+
+int absInt(x::int) = if x < 0 then -x else x
+
+int FP32_Scaled(a::bits(32)) =
+{ e = [a<30:23>]::nat
+; m = [0`1 : a<22:0>]::int
+; n = if e == 0 then m else (m + 0i2 ** 23) * 0i2 ** (e - 1)
+; if a<31> then -n else n
+}
+
+int FP64_Scaled(a::bits(64)) =
+{ e = [a<62:52>]::nat
+; m = [0`1 : a<51:0>]::int
+; n = if e == 0 then m else (m + 0i2 ** 52) * 0i2 ** (e - 1)
+; if a<63> then -n else n
+}
+
+-- n, or n + 1 if x / k is halfway between them and n is nearer zero
+bits(32) FP32_NearestAway(n::bits(32), x::int, k::int) =
+{ a = absInt(x)
+; m = absInt(FP32_Scaled(n))
+; if m * k < a and 2 * a == (m + absInt(FP32_Scaled(n + 1))) * k
+  then n + 1 else n
+}
+
+bits(64) FP64_NearestAway(n::bits(64), x::int, k::int) =
+{ a = absInt(x)
+; m = absInt(FP64_Scaled(n))
+; if m * k < a and 2 * a == (m + absInt(FP64_Scaled(n + 1))) * k
+  then n + 1 else n
+}
+
+fp32_result FP32_TiesAway(r::fp32_result, x::int, k::int) =
+{ (f, n) = r
+; (f, if f.Precision then FP32_NearestAway(n, x, k) else n)
+}
+
+fp64_result FP64_TiesAway(r::fp64_result, x::int, k::int) =
+{ (f, n) = r
+; (f, if f.Precision then FP64_NearestAway(n, x, k) else n)
+}
+
+-- The arithmetic operations under a rounding mode of RISC-V.  A square
+-- root needs no such function: it is never halfway between two values (the
+-- square of a value with one more significant bit than the format has is
+-- not in the format), so RMM rounds it as roundTiesToEven does.
+
+fp32_result FP32_AddR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Add_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) + FP32_Scaled(b), 1)
+    else FP32_Add_(ieeeRounding(rnd), a, b)
+
+fp32_result FP32_SubR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Sub_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) - FP32_Scaled(b), 1)
+    else FP32_Sub_(ieeeRounding(rnd), a, b)
+
+fp32_result FP32_MulR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Mul_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) * FP32_Scaled(b), 0i2 ** 149)
+    else FP32_Mul_(ieeeRounding(rnd), a, b)
+
+fp32_result FP32_DivR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Div_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) * 0i2 ** 149, absInt(FP32_Scaled(b)))
+    else FP32_Div_(ieeeRounding(rnd), a, b)
+
+-- a * b + c
+fp32_result FP32_MulAddR(rnd::Rounding, a::bits(32), b::bits(32), c::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_MulAdd_(roundTiesToEven, a, b, c),
+                       FP32_Scaled(a) * FP32_Scaled(b) +
+                       FP32_Scaled(c) * 0i2 ** 149, 0i2 ** 149)
+    else FP32_MulAdd_(ieeeRounding(rnd), a, b, c)
+
+fp64_result FP64_AddR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Add_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) + FP64_Scaled(b), 1)
+    else FP64_Add_(ieeeRounding(rnd), a, b)
+
+fp64_result FP64_SubR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Sub_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) - FP64_Scaled(b), 1)
+    else FP64_Sub_(ieeeRounding(rnd), a, b)
+
+fp64_result FP64_MulR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Mul_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) * FP64_Scaled(b), 0i2 ** 1074)
+    else FP64_Mul_(ieeeRounding(rnd), a, b)
+
+fp64_result FP64_DivR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Div_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) * 0i2 ** 1074, absInt(FP64_Scaled(b)))
+    else FP64_Div_(ieeeRounding(rnd), a, b)
+
+-- a * b + c
+fp64_result FP64_MulAddR(rnd::Rounding, a::bits(64), b::bits(64), c::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_MulAdd_(roundTiesToEven, a, b, c),
+                       FP64_Scaled(a) * FP64_Scaled(b) +
+                       FP64_Scaled(c) * 0i2 ** 1074, 0i2 ** 1074)
+    else FP64_MulAdd_(ieeeRounding(rnd), a, b, c)
+
+-- FCVT.S.D: the unit of a double is 2^-925 of that of a single.  The sign
+-- of a zero is set first, so that n + 1 has the sign of the operand.
+fp32_result FP64_ToFP32R(rnd::Rounding, a::bits(64)) =
+{ (f, v) = FP64_ToFP32_(ieeeRounding(rnd), a)
+; n = FP32_ZeroSign(v, FP64_Sign(a))
+; (f, if rnd == RMM and f.Precision
+      then FP32_NearestAway(n, FP64_Scaled(a), 0i2 ** 925) else n)
+}
+
+-- An integer i to a single or a double
+
+bits(32) FP32_FromIntR(rnd::Rounding, i::int) =
+    if i == 0 then FP32_PosZero
+    else if rnd == RMM
+    then FP32_NearestAway(FP32_FromInt(roundTiesToEven, i), i * 0i2 ** 149, 1)
+    else FP32_FromInt(ieeeRounding(rnd), i)
+
+bits(64) FP64_FromIntR(rnd::Rounding, i::int) =
+    if i == 0 then FP64_PosZero
+    else if rnd == RMM
+    then FP64_NearestAway(FP64_FromInt(roundTiesToEven, i), i * 0i2 ** 1074, 1)
+    else FP64_FromInt(ieeeRounding(rnd), i)
+
+-- An unsigned 64-bit x to a single.  FP32.fromInt of L3's SML runtime
+-- takes only signed 64-bit values (above 2^63-1 it raises Fail).  The SML
+-- export therefore converts x >= 2^63 as x/2, rounded to odd so that every
+-- rounding mode gives the same result, times 2.0 (exact); the HOL export
+-- converts x directly.
+bits(32) FP32_FromU64(r::ieee_rounding, x::dword) =
+    if PROVER_EXPORT or not x<63> then FP32_FromInt(r, [0`1 : x]::int)
+    else FP32_Mul(r, FP32_FromInt(r, [(x >>+ 1) || (x && 1)]::int), 0x40000000)
+
+bits(32) FP32_FromU64R(rnd::Rounding, x::dword) =
+    if x == 0 then FP32_PosZero
+    else if rnd == RMM
+    then FP32_NearestAway(FP32_FromU64(roundTiesToEven, x),
+                          ([0`1 : x]::int) * 0i2 ** 149, 1)
+    else FP32_FromU64(ieeeRounding(rnd), x)
+
+-- A signed 64-bit x to a double.  FP64.fromInt of L3's SML runtime
+-- (Poly/ML's Real.fromLargeInt) rounds a value below -2^62 towards the
+-- wrong infinity in RDN and RUP.  The SML export therefore converts such
+-- an x as -(|x|/2, rounded to odd) times 2.0 (exact), as FP32_FromU64
+-- does; the HOL export converts x directly.
+bits(64) FP64_FromS64(r::ieee_rounding, x::dword) =
+    if PROVER_EXPORT or x<63:62> != 0b10 then FP64_FromInt(r, [x]::int)
+    else FP64_Mul(r, FP64_FromInt(r, -([((-x) >>+ 1) || ((-x) && 1)]::int)),
+                  0x4000000000000000)
+
+bits(64) FP64_FromS64R(rnd::Rounding, x::dword) =
+    if x == 0 then FP64_PosZero
+    else if rnd == RMM
+    then FP64_NearestAway(FP64_FromS64(roundTiesToEven, x),
+                          ([x]::int) * 0i2 ** 1074, 1)
+    else FP64_FromS64(ieeeRounding(rnd), x)
+
+-- A single or a double to an integer; None for a NaN or an infinity.
+-- Under RMM the magnitude is rounded to floor(|a| + 1/2).
+
+int option FP32_ToIntR(rnd::Rounding, a::bits(32)) =
+    if rnd == RMM
+    then if FP32_IsFinite(a)
+         then { x = FP32_Scaled(a)
+              ; Some(if x < 0 then -((0i2 ** 148 - x) div 0i2 ** 149)
+                     else (x + 0i2 ** 148) div 0i2 ** 149)
+              }
+         else None
+    else FP32_ToInt(ieeeRounding(rnd), a)
+
+int option FP64_ToIntR(rnd::Rounding, a::bits(64)) =
+    if rnd == RMM
+    then if FP64_IsFinite(a)
+         then { x = FP64_Scaled(a)
+              ; Some(if x < 0 then -((0i2 ** 1073 - x) div 0i2 ** 1074)
+                     else (x + 0i2 ** 1073) div 0i2 ** 1074)
+              }
+         else None
+    else FP64_ToInt(ieeeRounding(rnd), a)
 
 ---------------------------------------------------------------------------
 -- CSR Register address map
@@ -3171,7 +3396,7 @@ define FPStore > FSW(rs1::reg, rs2::reg, offs::imm12) =
 define FArith > FADD_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_Add_(r, FPRS(rs1), FPRS(rs2))
+           { case Some(r) => { (f, v) = FP32_AddR(r, FPRS(rs1), FPRS(rs2))
                              ; accrueFlags(f)
                              ; writeFPRS(rd, canonS(v))
                              }
@@ -3186,7 +3411,7 @@ define FArith > FADD_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 define FArith > FSUB_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_Sub_(r, FPRS(rs1), FPRS(rs2))
+           { case Some(r) => { (f, v) = FP32_SubR(r, FPRS(rs1), FPRS(rs2))
                              ; accrueFlags(f)
                              ; writeFPRS(rd, canonS(v))
                              }
@@ -3201,7 +3426,7 @@ define FArith > FSUB_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 define FArith > FMUL_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_Mul_(r, FPRS(rs1), FPRS(rs2))
+           { case Some(r) => { (f, v) = FP32_MulR(r, FPRS(rs1), FPRS(rs2))
                              ; accrueFlags(f)
                              ; writeFPRS(rd, canonS(v))
                              }
@@ -3216,7 +3441,7 @@ define FArith > FMUL_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 define FArith > FDIV_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_Div_(r, FPRS(rs1), FPRS(rs2))
+           { case Some(r) => { (f, v) = FP32_DivR(r, FPRS(rs1), FPRS(rs2))
                              ; accrueFlags(f)
                              ; writeFPRS(rd, canonS(v))
                              }
@@ -3232,7 +3457,7 @@ define FArith > FSQRT_S(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
            { case Some(r) => { a = FPRS(rs)
-                             ; (f, v) = FP32_Sqrt_(r, a)
+                             ; (f, v) = FP32_Sqrt_(ieeeRounding(r), a)
                              -- no flag for a quiet NaN (IEEE 754-2008 6.2); HOL's
                              -- float_sqrt raises NV for a negative one
                              ; when not FP32_IsNan(a) or FP32_IsSignalingNan(a)
@@ -3289,7 +3514,7 @@ define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
 define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_MulAdd_(r, FPRS(rs1), FPRS(rs2), FPRS(rs3))
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FPRS(rs1), FPRS(rs2), FPRS(rs3))
                              ; accrueFlags(f)
                              ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                              ; writeFPRS(rd, canonS(v))
@@ -3306,7 +3531,7 @@ define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_MulAdd_(r, FPRS(rs1), FPRS(rs2), FP32_Neg(FPRS(rs3)))
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FPRS(rs1), FPRS(rs2), FP32_Neg(FPRS(rs3)))
                              ; accrueFlags(f)
                              ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                              ; writeFPRS(rd, canonS(v))
@@ -3324,7 +3549,7 @@ define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_MulAdd_(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FP32_Neg(FPRS(rs3)))
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FP32_Neg(FPRS(rs3)))
                              ; accrueFlags(f)
                              ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                              ; writeFPRS(rd, canonS(v))
@@ -3342,7 +3567,7 @@ define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP32_MulAdd_(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FPRS(rs3))
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FPRS(rs3))
                              ; accrueFlags(f)
                              ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
                              ; writeFPRS(rd, canonS(v))
@@ -3361,7 +3586,7 @@ define FConv > FCVT_S_W(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
            { case Some(r) => { i = [GPR(rs)<31:0>]::int
-                             ; v = FP32_FromInt(r, i)
+                             ; v = FP32_FromIntR(r, i)
                              -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
@@ -3379,7 +3604,7 @@ define FConv > FCVT_S_WU(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
            { case Some(r) => { i = [0`1 : GPR(rs)<31:0>]::int
-                             ; v = FP32_FromInt(r, i)
+                             ; v = FP32_FromIntR(r, i)
                              -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
@@ -3399,7 +3624,7 @@ define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP32_ToInt(r, inp)
+                             ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -3434,7 +3659,7 @@ define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP32_ToInt(r, inp)
+                             ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -3467,7 +3692,7 @@ define FConv > FCVT_S_L(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
            { case Some(r) => { i = [GPR(rs)]::int
-                             ; v = FP32_FromInt(r, i)
+                             ; v = FP32_FromIntR(r, i)
                              -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
@@ -3486,14 +3711,7 @@ define FConv > FCVT_S_LU(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { x = GPR(rs)
                              ; i = [0`1 : x]::int
-                             -- FP32.fromInt of L3's SML runtime takes only signed 64-bit
-                             -- values (above 2^63-1 it raises Fail).  The SML export
-                             -- therefore converts x >= 2^63 as x/2, rounded to odd so
-                             -- that every rounding mode gives the same result, times
-                             -- 2.0 (exact); the HOL export converts x directly.
-                             ; v = if PROVER_EXPORT or not x<63> then FP32_FromInt(r, i)
-                                   else FP32_Mul(r, FP32_FromInt(r, [(x >>+ 1) || (x && 1)]::int),
-                                                 0x40000000)
+                             ; v = FP32_FromU64R(r, x)
                              -- U §6.1.7: NX when the result is not exact
                              ; when FP32_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
@@ -3513,7 +3731,7 @@ define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP32_ToInt(r, inp)
+                             ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -3548,7 +3766,7 @@ define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRS(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP32_ToInt(r, inp)
+                             ; val = match FP32_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -3772,7 +3990,7 @@ define FPStore > FSD(rs1::reg, rs2::reg, offs::imm12) =
 define FArith > FADD_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_Add_(r, FPRD(rs1), FPRD(rs2))
+           { case Some(r) => { (f, v) = FP64_AddR(r, FPRD(rs1), FPRD(rs2))
                              ; accrueFlags(f)
                              ; writeFPRD(rd, canonD(v))
                              }
@@ -3787,7 +4005,7 @@ define FArith > FADD_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 define FArith > FSUB_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_Sub_(r, FPRD(rs1), FPRD(rs2))
+           { case Some(r) => { (f, v) = FP64_SubR(r, FPRD(rs1), FPRD(rs2))
                              ; accrueFlags(f)
                              ; writeFPRD(rd, canonD(v))
                              }
@@ -3802,7 +4020,7 @@ define FArith > FSUB_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 define FArith > FMUL_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_Mul_(r, FPRD(rs1), FPRD(rs2))
+           { case Some(r) => { (f, v) = FP64_MulR(r, FPRD(rs1), FPRD(rs2))
                              ; accrueFlags(f)
                              ; writeFPRD(rd, canonD(v))
                              }
@@ -3817,7 +4035,7 @@ define FArith > FMUL_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
 define FArith > FDIV_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_Div_(r, FPRD(rs1), FPRD(rs2))
+           { case Some(r) => { (f, v) = FP64_DivR(r, FPRD(rs1), FPRD(rs2))
                              ; accrueFlags(f)
                              ; writeFPRD(rd, canonD(v))
                              }
@@ -3833,7 +4051,7 @@ define FArith > FSQRT_D(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
            { case Some(r) => { a = FPRD(rs)
-                             ; (f, v) = FP64_Sqrt_(r, a)
+                             ; (f, v) = FP64_Sqrt_(ieeeRounding(r), a)
                              -- no flag for a quiet NaN (IEEE 754-2008 6.2); HOL's
                              -- float_sqrt raises NV for a negative one
                              ; when not FP64_IsNan(a) or FP64_IsSignalingNan(a)
@@ -3890,7 +4108,7 @@ define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
 define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_MulAdd_(r, FPRD(rs1), FPRD(rs2), FPRD(rs3))
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FPRD(rs1), FPRD(rs2), FPRD(rs3))
                              ; accrueFlags(f)
                              ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                              ; writeFPRD(rd, canonD(v))
@@ -3907,7 +4125,7 @@ define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_MulAdd_(r, FPRD(rs1), FPRD(rs2), FP64_Neg(FPRD(rs3)))
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FPRD(rs1), FPRD(rs2), FP64_Neg(FPRD(rs3)))
                              ; accrueFlags(f)
                              ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                              ; writeFPRD(rd, canonD(v))
@@ -3925,7 +4143,7 @@ define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_MulAdd_(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FP64_Neg(FPRD(rs3)))
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FP64_Neg(FPRD(rs3)))
                              ; accrueFlags(f)
                              ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                              ; writeFPRD(rd, canonD(v))
@@ -3943,7 +4161,7 @@ define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_MulAdd_(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FPRD(rs3))
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FPRD(rs3))
                              ; accrueFlags(f)
                              ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
                              ; writeFPRD(rd, canonD(v))
@@ -3984,7 +4202,7 @@ define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP64_ToInt(r, inp)
+                             ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -4019,7 +4237,7 @@ define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP64_ToInt(r, inp)
+                             ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -4053,15 +4271,7 @@ define FConv > FCVT_D_L(rd::reg, rs::reg, fprnd::fprnd) =
     else { match round(fprnd)
            { case Some(r) => { x = GPR(rs)
                              ; i = [x]::int
-                             -- FP64.fromInt of L3's SML runtime (Poly/ML's
-                             -- Real.fromLargeInt) rounds a value below -2^62 towards
-                             -- the wrong infinity in RDN and RUP.  The SML export
-                             -- therefore converts such an x as -(|x|/2, rounded to
-                             -- odd) times 2.0 (exact), as in FCVT.S.LU; the HOL export
-                             -- converts x directly.
-                             ; v = if PROVER_EXPORT or x<63:62> != 0b10 then FP64_FromInt(r, i)
-                                   else FP64_Mul(r, FP64_FromInt(r, -([((-x) >>+ 1) || ((-x) && 1)]::int)),
-                                                 0x4000000000000000)
+                             ; v = FP64_FromS64R(r, x)
                              -- U §6.1.7: NX when the result is not exact
                              ; when FP64_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
@@ -4079,7 +4289,7 @@ define FConv > FCVT_D_LU(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
            { case Some(r) => { i = [0`1 : GPR(rs)]::int
-                             ; v = FP64_FromInt(r, i)
+                             ; v = FP64_FromIntR(r, i)
                              -- U §6.1.7: NX when the result is not exact
                              ; when FP64_ToInt(roundTowardZero, v) != Some(i)
                                do setFP_Inexact()
@@ -4099,7 +4309,7 @@ define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP64_ToInt(r, inp)
+                             ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -4134,7 +4344,7 @@ define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
            { case Some(r) => { inp = FPRD(rs)
                              -- None for a NaN or an infinity, which saturate below
                              -- (U §6.1.7, Table 29) before val is used
-                             ; val = match FP64_ToInt(r, inp)
+                             ; val = match FP64_ToIntR(r, inp)
                                      { case Some(i) => i
                                        case None    => 0
                                      }
@@ -4166,7 +4376,7 @@ define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
 define FConv > FCVT_S_D(rd::reg, rs::reg, fprnd::fprnd) =
     if not fpEnabled() then signalException(Illegal_Instr)
     else { match round(fprnd)
-           { case Some(r) => { (f, v) = FP64_ToFP32_(r, FPRD(rs))
+           { case Some(r) => { (f, v) = FP64_ToFP32R(r, FPRD(rs))
                              ; accrueFlags(f)
                              ; writeFPRS(rd, canonS(v))
                              }
@@ -4184,7 +4394,7 @@ define FConv > FCVT_D_S(rd::reg, rs::reg, fprnd::fprnd) =
     then { a = FPRS(rs)
          -- only a signalling NaN raises a flag (NV)
          ; when FP32_IsSignalingNan(a) do setFP_Invalid()
-         ; writeFPRD(rd, canonD(FP32_ToFP64(a)))
+         ; writeFPRD(rd, canonD(FP64_FromFP32(a)))
          }
     else signalException(Illegal_Instr)
 

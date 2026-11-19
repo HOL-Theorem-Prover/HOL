@@ -383,7 +383,8 @@ local
            | NONE => raise ERR "field_conv" "")
   val rule = Conv.DEPTH_CONV (wordsLib.word_EQ_CONV ORELSEC field_conv)
              THENC REWRITE_CONV [riscv_stepTheory.v2w_0_rwts,
-                                 riscv_stepTheory.frm_rounding_v2w]
+                                 riscv_stepTheory.frm_rounding_v2w,
+                                 riscv_stepTheory.rounding_ieee]
   val eval_simp_rule =
     utilsLib.ALL_HYP_CONV_RULE rule o Conv.CONV_RULE (Conv.RHS_CONV rule)
   fun eval tm rwt =

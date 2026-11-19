@@ -1558,44 +1558,42 @@ val read_word32 = uprove
    Floating-point rounding modes
    ------------------------------------------------------------------------ *)
 
-(* The rounding modes that L3 implements, by their rm encoding: RNE, RTZ,
-   RDN and RUP.  An instruction that rounds is illegal with rm = 4 (RMM,
-   which neither L3 nor HOL's binary_ieee implements), 5 or 6, and with
-   rm = 7 (dynamic) when fcsr.frm is not one of the four.  So its step
+(* The rounding modes by their rm encoding: RNE, RTZ, RDN, RUP and RMM.  An
+   instruction with an rm field is illegal with rm = 5 or 6, and with
+   rm = 7 (dynamic) when fcsr.frm is not one of the five.  So its step
    theorem for a static rm needs nothing more, and the one for rm = 7 needs
-   ~word_bit 2 fcsr.frm. *)
+   fcsr.frm <+ 5w. *)
 Definition frm_rounding_def:
   frm_rounding (frm: word3) =
-    if frm = 0w then roundTiesToEven
-    else if frm = 1w then roundTowardZero
-    else if frm = 2w then roundTowardNegative
-    else roundTowardPositive
+    if frm = 0w then RNE
+    else if frm = 1w then RTZ
+    else if frm = 2w then RDN
+    else if frm = 3w then RUP
+    else RMM
 End
 
 (* For the step theorems of instructions whose rm field is static ... *)
 Theorem round_static:
-  fprnd <> 4w /\ fprnd <> 5w /\ fprnd <> 6w /\ fprnd <> 7w ==>
+  fprnd <> 5w /\ fprnd <> 6w /\ fprnd <> 7w ==>
   (round fprnd s = SOME (frm_rounding fprnd))
 Proof
   wordsLib.Cases_on_word_value `fprnd`
-  \\ simp [round_def, rnd_mode_static_def, l3round_def, frm_rounding_def]
+  \\ simp [round_def, rnd_mode_static_def, frm_rounding_def]
 QED
 
 (* ... and dynamic. *)
 Theorem round_dynamic:
-  (fprnd = 7w) /\ ~word_bit 2 (s.c_UCSR s.procID).fpcsr.FRM ==>
+  (fprnd = 7w) /\ (s.c_UCSR s.procID).fpcsr.FRM <+ 5w ==>
   (round fprnd s = SOME (frm_rounding (s.c_UCSR s.procID).fpcsr.FRM))
 Proof
   rw [round_def, rnd_mode_static_def, fcsr_def]
   \\ wordsLib.Cases_on_word_value `(s.c_UCSR s.procID).fpcsr.FRM`
-  \\ fs [rnd_mode_dynamic_def, l3round_def, frm_rounding_def]
+  \\ fs [rnd_mode_dynamic_def, frm_rounding_def]
 QED
 
 (* FCVT.D.W, FCVT.D.WU and FCVT.D.S are exact: they never round, and only
-   test that their rm field is a valid encoding (validRounding).  So RMM
-   (4) is legal for them, as a static mode and as fcsr.frm, and the step
-   theorem for rm = 7 needs fcsr.frm <+ 5w, which is exactly the legality
-   of the dynamic mode (riscv.spec, validRounding). *)
+   test that their rm field is a valid encoding (validRounding), under the
+   same conditions. *)
 Theorem validRounding_static:
   fprnd <> 5w /\ fprnd <> 6w /\ fprnd <> 7w ==> validRounding fprnd s
 Proof
@@ -1614,13 +1612,42 @@ QED
 
 (* Used by riscv_stepLib once the rm field of a static theorem is known. *)
 Theorem frm_rounding_v2w:
-  (frm_rounding (v2w [F; F; F]) = roundTiesToEven) /\
-  (frm_rounding (v2w [F; F; T]) = roundTowardZero) /\
-  (frm_rounding (v2w [F; T; F]) = roundTowardNegative) /\
-  (frm_rounding (v2w [F; T; T]) = roundTowardPositive)
+  (frm_rounding (v2w [F; F; F]) = RNE) /\
+  (frm_rounding (v2w [F; F; T]) = RTZ) /\
+  (frm_rounding (v2w [F; T; F]) = RDN) /\
+  (frm_rounding (v2w [F; T; T]) = RUP) /\
+  (frm_rounding (v2w [T; F; F]) = RMM)
 Proof
   EVAL_TAC
 QED
+
+(* Under RNE, RTZ, RDN and RUP the arithmetic of the model is that of the
+   IEEE rounding mode; riscv_stepLib rewrites a static rounding mode with
+   these.  Under RMM, and with a dynamic rounding mode, a step theorem
+   keeps the function of the model (riscv.spec, "Rounding to nearest, ties
+   to max magnitude"). *)
+Theorem rounding_ieee =
+  let
+    val rnds = [``RNE``, ``RTZ``, ``RDN``, ``RUP``]
+    val defs =
+      [FP32_AddR_def, FP32_SubR_def, FP32_MulR_def, FP32_DivR_def,
+       FP32_MulAddR_def, FP32_ToIntR_def,
+       FP64_AddR_def, FP64_SubR_def, FP64_MulR_def, FP64_DivR_def,
+       FP64_MulAddR_def, FP64_ToIntR_def]
+    fun inst def r =
+      let
+        val th = Drule.SPEC_ALL def
+        val rnd = hd (pairSyntax.strip_pair (Term.rand (utilsLib.lhsc th)))
+      in
+        Conv.RIGHT_CONV_RULE (SIMP_CONV (srw_ss()) [ieeeRounding_def])
+          (Thm.INST [rnd |-> r] th)
+      end
+  in
+    Drule.LIST_CONJ
+      (List.concat (List.map (fn d => List.map (inst d) rnds) defs) @
+       List.map (fn r => SIMP_CONV (srw_ss()) [ieeeRounding_def]
+                           ``ieeeRounding ^r``) rnds)
+  end
 
 (* ------------------------------------------------------------------------
    Floating-point exception flags
