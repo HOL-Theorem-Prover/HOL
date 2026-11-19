@@ -37,6 +37,12 @@ val _ = require_msg (check_result (aconv “48r”))
                     “float_to_real $ SND $
                        float_mul_add roundTiesToEven ^f14 ^f3 ^f6”
 
+val _ = tprint "float_value_CONV evaluates a ground float_value"
+val _ = require_msg (check_result (aconv “Float 14r : float_value”))
+                    term_to_string
+                    (rhs o concl o float_value_CONV)
+                    “float_value ^f14”
+
 (* IBM's FPgen has: b32*+ =0 i +1.000000P-126 -1.2801D9P-113 -Zero -> -Zero xu
     -- via Michael Roe on https://github.com/HOL-Theorem-Prover/HOL/issues/1011
 *)
