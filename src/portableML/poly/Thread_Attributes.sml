@@ -161,11 +161,11 @@ fun uninterruptible_wait f =
         if !pending then SOME (g y)
         else
           (SOME (restore g y)
-           handle Interrupt => (pending := true; NONE))
+           handle Exn.Interrupt => (pending := true; NONE))
       val result = Exn.capture (f observe) x
     in
       case result of
-          Exn.Res value => if !pending then raise Interrupt else value
+          Exn.Res value => if !pending then raise Exn.Interrupt else value
         | Exn.Exn _ => Exn.release result
     end);
 
