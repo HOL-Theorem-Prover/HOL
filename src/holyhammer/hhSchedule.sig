@@ -125,11 +125,24 @@ sig
   val export_problems : string -> hhConfig.hh_options -> goal ->
     (string * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit
+  (* The export of a run_in: Blocking, with the reason, or Pipelined.  An
+     empty schedule, a pinned caller (pinned: Context.is_pinned () on the
+     caller) and a debug_dir keep the blocking export, in that order of
+     precedence.  Otherwise the policy decides, and it chooses blocking
+     (Unprofitable): in measurements with real provers the pipelined export
+     never delivered the first verified proof sooner, so it is used only
+     when the internal selector hhSchedule_Test.pipelined asks for it. *)
+  datatype blocking_reason =
+      EmptySchedule | PinnedCaller | Debugging | Unprofitable
+  datatype export_mode = Blocking of blocking_reason | Pipelined
+  val export_mode :
+    {pinned : bool, options : hhConfig.hh_options, schedule_length : int} ->
+    export_mode
   (* run_in exports the problems of the schedule and then runs it.  With
-     the internal selector hhSchedule_Test.pipelined set (off by default),
-     an unpinned caller without debug_dir and with a non-empty schedule
-     gets the pipelined run: the rankings are validated, the named
-     theorems fetched, the cache pruned and the provers probed on the
+     the internal selector hhSchedule_Test.pipelined set (off by default,
+     see export_mode), an unpinned caller without debug_dir and with a
+     non-empty schedule gets the pipelined run: the rankings are validated,
+     the named theorems fetched, the cache pruned and the provers probed on the
      calling thread, then the export runs on a producer thread while the
      slices start as their files are published, each file as soon as it is
      complete.  The clock then starts at the launch of the workers.  The

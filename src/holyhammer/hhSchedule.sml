@@ -33,8 +33,9 @@ struct
   (* Called with the item's index on the thread that prepares, before the
      item is prepared (after the producer's own check for a stop). *)
   val before_prepare = ref (fn (_ : int) => ())
-  (* Selects the pipelined run_in (export overlapping the search).  The
-     blocking run_in stays the default until a policy chooses. *)
+  (* Selects the pipelined run_in (export overlapping the search) where
+     hhSchedule.export_mode allows it.  The measured policy never chooses
+     it on its own (see export_mode), so it is off outside the tests. *)
   val pipelined = ref false
   (* Called at the launch points of a run_in: with "<thread>-registered"
      after the bookkeeping of a thread to launch (before it is forked) and
@@ -512,6 +513,30 @@ fun pool_size pinned (options : hhConfig.hh_options) works =
                   generated)
   end
 
+(* Which export a run_in uses.  The structural reasons come first: an empty
+   schedule has nothing to export, a pinned caller would see a producer
+   thread that is not pinned, and debug_dir keeps the whole problem set.
+   Otherwise the policy decides, and it chooses blocking.  Measured against
+   the blocking export with real provers, the pipelined export never
+   delivered the first verified proof sooner: the provers started at once
+   compete with the producer for the cores (at 1, 2, 4, 8 and 16 cores and
+   at timeouts from 2 s to 30 s), a replay waits for the producer's last
+   fresh name anyway, and it costs more CPU; with the timeout counted from
+   the launch of the provers a small timeout also loses slices.  Forking a
+   prover while the producer allocates was also seen to hang a run.  So the
+   pipelined export is used only where hhSchedule_Test.pipelined asks for
+   it. *)
+datatype blocking_reason =
+    EmptySchedule | PinnedCaller | Debugging | Unprofitable
+datatype export_mode = Blocking of blocking_reason | Pipelined
+
+fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
+  if schedule_length = 0 then Blocking EmptySchedule
+  else if pinned then Blocking PinnedCaller
+  else if Option.isSome (#debug_dir options) then Blocking Debugging
+  else if !hhSchedule_Test.pipelined then Pipelined
+  else Blocking Unprofitable
+
 (* Theorems with hypotheses are no premises (see hhLearn); explicit hh_pb
    lists bypass premise selection. *)
 fun premises_of named = List.filter (null o hyp o #2) named
@@ -678,13 +703,11 @@ fun run_in root {options, goal, rankings, progress} =
     fun emit event =
       (with_mutex report_mutex (fn () => report event)
        handle Interrupt => () | error => warn "progress callback" error)
-    (* Decided once, on the calling thread: a forked producer is never
-       pinned, so a pinned caller keeps the blocking export, as does a
-       debug_dir (which keeps the whole problem set) and the empty
-       schedule. *)
-    val pipelined = !hhSchedule_Test.pipelined andalso schedule_length > 0
-      andalso not (Context.is_pinned ())
-      andalso not (Option.isSome (#debug_dir options))
+    (* Decided once, on the calling thread (a forked producer is never
+       pinned, so the answer about the caller is asked here). *)
+    val pipelined = export_mode
+      {pinned = Context.is_pinned (), options = options,
+       schedule_length = schedule_length} = Pipelined
     (* Everything that must stay on the calling thread comes first: the
        validation of the rankings and, when pipelined, the named fetches
        (they use process-global state that the reconstruction thread uses

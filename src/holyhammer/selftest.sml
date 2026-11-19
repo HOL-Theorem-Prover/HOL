@@ -7238,6 +7238,52 @@ val _ = test_schedule_pool ()
 val _ = case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
             SOME _ => ()
           | NONE => test_schedule_pipelined (#parse_output (prover Eprover))
+(* The policy that picks the export of a run_in: the structural reasons in
+   their order of precedence, blocking by default, and the pipelined export
+   only where the selector asks for it.  The options vary in cores, the
+   timeout and export_workers without changing the choice. *)
+fun test_export_mode () =
+  let
+    open hhSchedule
+    val plain = hhConfig.snapshot_with [("debug_dir", "")]
+    val debug = hhConfig.snapshot_with [("debug_dir", "debug-dir")]
+    fun mode options pinned length =
+      export_mode {pinned = pinned, options = options,
+                   schedule_length = length}
+    fun selected f =
+      Portable.bracket (fn () => !hhSchedule_Test.pipelined)
+        (fn old => hhSchedule_Test.pipelined := old)
+        (fn _ => (hhSchedule_Test.pipelined := true; f ()))
+    fun varied (cores, timeout, workers) =
+      hhConfig.snapshot_with [("debug_dir", ""), ("cores", cores),
+        ("timeout", timeout), ("export_workers", workers)]
+    val settings = [("1", "2", "1"), ("2", "5", "2"), ("4", "30", "4"),
+                    ("16", "300", "2")]
+  in
+    expect "export_mode: blocking by default"
+      (mode plain false 24 = Blocking Unprofitable);
+    expect "export_mode: no option changes the default choice"
+      (List.all (fn s => mode (varied s) false 24 = Blocking Unprofitable)
+         settings);
+    expect "export_mode: the selector asks for the pipelined export"
+      (selected (fn () => mode plain false 24 = Pipelined andalso
+         List.all (fn s => mode (varied s) false 24 = Pipelined) settings));
+    expect "export_mode: debug_dir keeps the blocking export"
+      (mode debug false 24 = Blocking Debugging andalso
+       selected (fn () => mode debug false 24 = Blocking Debugging));
+    expect "export_mode: a pinned caller keeps the blocking export"
+      (mode plain true 24 = Blocking PinnedCaller andalso
+       selected (fn () => mode plain true 24 = Blocking PinnedCaller));
+    expect "export_mode: an empty schedule comes first"
+      (mode debug true 0 = Blocking EmptySchedule andalso
+       selected (fn () => mode plain false 0 = Blocking EmptySchedule));
+    expect "export_mode: pinned comes before debug_dir"
+      (mode debug true 24 = Blocking PinnedCaller);
+    expect "export_mode: the selector is restored"
+      (not (!hhSchedule_Test.pipelined))
+  end
+
+val _ = test_export_mode ()
 val _ = test_schedule_hoisted_fetch ()
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
