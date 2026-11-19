@@ -525,7 +525,12 @@ fun is_esrch error = OS.errorName error = "ESRCH"
 local
   open Foreign
   val libc = loadExecutable ()
-  fun symbol name = getSymbol libc name
+  (* Foreign resolves a symbol lazily, at its first call; symbolAsAddress
+     forces it now, so that a missing function fails loading this module
+     (with Foreign.Foreign naming it) rather than the first prover run. *)
+  fun symbol name =
+    let val sym = getSymbol libc name
+    in ignore (symbolAsAddress sym); sym end
   val file_actions_init =
     buildCall1 (symbol "posix_spawn_file_actions_init", cPointer, cInt)
   val file_actions_dup2 = buildCall3
@@ -539,50 +544,40 @@ local
     buildCall2 (symbol "posix_spawnattr_setpgroup", (cPointer, cInt), cInt)
   val attr_destroy =
     buildCall1 (symbol "posix_spawnattr_destroy", cPointer, cInt)
+  (* The string vectors are NULL-terminated: NONE is the null pointer. *)
   val c_spawn = buildCall6
     (symbol "posix_spawn",
-     (cPointer, cString, cPointer, cPointer, cPointer, cPointer), cInt)
+     (cStar cInt, cString, cPointer, cPointer,
+      cVectorPointer (cOptionPtr cString),
+      cVectorPointer (cOptionPtr cString)), cInt)
   (* POSIX_SPAWN_SETPGROUP has this value on Linux and on macOS. *)
   val spawn_setpgroup = 2
   (* The opaque posix_spawn types are smaller than this on every
      supported platform. *)
   val opaque_size = 0w1024
 
-  fun free_strings (array, count) =
-    (List.app (fn i => Memory.free (Memory.getAddress (array, i)))
-       (List.tabulate (count, Word.fromInt));
-     Memory.free array)
+  (* The posix_spawn family returns an error number rather than setting
+     errno. *)
+  fun check name status =
+    if status = 0 then ()
+    else raise OS.SysErr
+      (name, SOME (Posix.Error.fromWord (SysWord.fromInt status)))
 
-  (* A NULL-terminated char ** holding copies of strs.  The offsets of
-     the Memory address accessors count pointers, not bytes. *)
-  fun alloc_strings strs =
-    let
-      val count = length strs
-      val array = Memory.malloc (Word.fromInt (8 * (count + 1)))
-      fun copy (i, str) =
-        let
-          val size = String.size str
-          val buffer = Memory.malloc (Word.fromInt (size + 1))
-        in
-          CharVector.appi (fn (j, c) =>
-            Memory.set8 (buffer, Word.fromInt j, Word8.fromInt (Char.ord c)))
-            str;
-          Memory.set8 (buffer, Word.fromInt size, 0w0);
-          Memory.setAddress (array, Word.fromInt i, buffer)
-        end
-    in
-      Memory.setAddress (array, Word.fromInt count, Memory.null);
-      List.foldl (fn (str, i) => (copy (i, str); i + 1)) 0 strs;
-      (array, count)
-    end
+  fun c_vector strs = Vector.fromList (List.map SOME strs @ [NONE])
 
-  fun with_strings strs f =
+  (* Run f on a fresh initialised opaque object, which is destroyed and
+     freed when f returns or raises.  If init fails, the memory is only
+     freed.  Neither this nor f may be interrupted: callers mask
+     interrupts. *)
+  fun with_object name (init, destroy) f =
     let
-      val allocated = alloc_strings strs
-      val result = f (#1 allocated) handle exn =>
-        (free_strings allocated; raise exn)
+      val object = Memory.malloc opaque_size
+      val _ = check name (init object) handle exn =>
+        (Memory.free object; raise exn)
+      fun release () = (destroy object; Memory.free object)
+      val result = f object handle exn => (release (); raise exn)
     in
-      free_strings allocated; result
+      release (); result
     end
 
   fun fd_int fd = SysWord.toInt (Posix.FileSys.fdToWord fd)
@@ -590,34 +585,28 @@ in
 
 (* Start path with arguments args (including argv[0]) and environment env, in
    a new process group, with the descriptor output as both its stdout and
-   stderr.  NONE if the program could not be executed. *)
+   stderr.  NONE if the program could not be executed.  Raises OS.SysErr if
+   the spawn attributes cannot be set up.  Must run with interrupts
+   deferred: an interrupt between the spawn and the return of its pid would
+   orphan the child. *)
 fun spawn path args env output =
-  let
-    val file_actions = Memory.malloc opaque_size
-    val attr = Memory.malloc opaque_size
-    val pid_cell = Memory.malloc 0w4
-    fun finish () =
-      (file_actions_destroy file_actions; attr_destroy attr;
-       Memory.free file_actions; Memory.free attr; Memory.free pid_cell)
-    fun go () =
-      let
-        val _ = file_actions_init file_actions
-        val _ = attr_init attr
-        val _ = attr_setflags (attr, spawn_setpgroup)
-        val _ = attr_setpgroup (attr, 0)
-        val _ = file_actions_dup2 (file_actions, fd_int output, 1)
-        val _ = file_actions_dup2 (file_actions, fd_int output, 2)
-        val status = with_strings args (fn argv =>
-          with_strings env (fn envp =>
-            c_spawn (pid_cell, path, file_actions, attr, argv, envp)))
-      in
-        if status <> 0 then NONE
-        else SOME (Posix.Process.wordToPid
-          (SysWord.fromInt (Word32.toIntX (Memory.get32 (pid_cell, 0w0)))))
-      end
-  in
-    go () before finish () handle exn => (finish (); raise exn)
-  end
+  with_object "posix_spawn_file_actions_init"
+    (file_actions_init, file_actions_destroy) (fn file_actions =>
+  with_object "posix_spawnattr_init" (attr_init, attr_destroy) (fn attr =>
+    let
+      val dup2 = "posix_spawn_file_actions_adddup2"
+      val pid = ref 0
+      val _ = check "posix_spawnattr_setflags"
+        (attr_setflags (attr, spawn_setpgroup))
+      val _ = check "posix_spawnattr_setpgroup" (attr_setpgroup (attr, 0))
+      val _ = check dup2 (file_actions_dup2 (file_actions, fd_int output, 1))
+      val _ = check dup2 (file_actions_dup2 (file_actions, fd_int output, 2))
+      val status = c_spawn (pid, path, file_actions, attr,
+                            c_vector args, c_vector env)
+    in
+      if status <> 0 then NONE
+      else SOME (Posix.Process.wordToPid (SysWord.fromInt (!pid)))
+    end))
 
 end
 
@@ -635,7 +624,8 @@ fun failed_process started : process_running =
 fun start_process path args limit : process_running =
   let
     val started = Time.now ()
-    val spawned = with_mutex spawn_mutex (fn () =>
+    val spawned = Thread_Attributes.uninterruptible_defer (fn _ => fn () =>
+      with_mutex spawn_mutex (fn () =>
       let
         val {infd = read_fd, outfd = write_fd} = Posix.IO.pipe ()
         val close_on_exec = Posix.IO.FD.flags [Posix.IO.FD.cloexec]
@@ -646,12 +636,22 @@ fun start_process path args limit : process_running =
           handle exn => (Posix.IO.close read_fd; Posix.IO.close write_fd;
                          raise exn)
         val _ = Posix.IO.close write_fd
+        (* posix_spawn puts the child in its own group.  Doing it here too
+           closes the race in which a caller kills immediately after
+           run_async returns, on a C library (glibc before 2.24) whose
+           posix_spawn returns before the child has run, and the group does
+           not exist yet.  There an exec failure is also not a return value
+           but the child's exit status 127, which run_async reports as
+           could not execute prover; the child may be gone before setpgid. *)
+        val _ = Option.app (fn pid =>
+          (Posix.ProcEnv.setpgid {pid = SOME pid, pgid = SOME pid}
+           handle OS.SysErr _ => ())) pid
       in
         (case pid of
              SOME _ => note_spawn ()
            | NONE => Posix.IO.close read_fd);
         Option.map (fn pid => (pid, read_fd)) pid
-      end)
+      end)) ()
   in
     case spawned of
         NONE => failed_process started

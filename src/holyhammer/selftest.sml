@@ -2737,7 +2737,7 @@ fun test_runner () =
     val _ = expect "runner group kill reaps grandchild" grandchild_gone
     val _ = remove_tree forking_dir
     val merged = fake_config "runner-merge" "/bin/sh"
-      ["-c", "echo out; echo err >&2; echo \"path=$PATH\""] (#parse_output e)
+      ["-c", "echo out; echo err >&2; echo \"home=$HOME\""] (#parse_output e)
     val merged_dir = OS.FileSys.tmpName ()
     val _ = remove_tree merged_dir
     val merged_result = hhProver.run merged
@@ -2745,10 +2745,11 @@ fun test_runner () =
        debug_dir = SOME merged_dir}
     val merged_text = String.concat
       (read_lines (#output_file merged_result))
+    val home = Option.getOpt (OS.Process.getEnv "HOME", "")
     val _ = expect "runner merges stderr and passes the environment"
       (contains "out\n" merged_text andalso
        contains "err\n" merged_text andalso
-       contains ("path=" ^ valOf (OS.Process.getEnv "PATH")) merged_text)
+       contains ("home=" ^ home ^ "\n") merged_text)
     val _ = remove_tree merged_dir
     val exec_failure : hhProver.prover_config =
       {name = "runner-exec-failure", exec_names = ["/bin/true"],
@@ -2758,9 +2759,17 @@ fun test_runner () =
          ("/definitely/missing/holyhammer-prover", []),
        parse_output = #parse_output e,
        mono_instances = 100, slices = [], legacy = false}
+    (* the first run probes (and so spawns) the executable *)
+    val _ = hhProver.run exec_failure timeout_request
+    val spawns_before = hhProver.spawn_count ()
     val exec_result = hhProver.run exec_failure timeout_request
-    val _ = expect "runner exec failure returns RunFailure"
-      (case #szs exec_result of hhProver.RunFailure _ => true | _ => false)
+    val _ = expect "runner exec failure reports could not execute prover"
+      (case #szs exec_result of
+           hhProver.RunFailure message =>
+             message = "could not execute prover"
+         | _ => false)
+    val _ = expect "runner exec failure is not counted as a spawn"
+      (hhProver.spawn_count () = spawns_before)
     val missing : hhProver.prover_config =
       {name = "runner-missing", exec_names = ["missing-hh-prover"],
        env_var = "", version_args = [], parse_version = fn _ => NONE,
