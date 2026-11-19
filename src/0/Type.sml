@@ -390,17 +390,6 @@ fun gen_tyvar () = Tyv(num2name(nameStrm()))
 
 fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
   | is_gen_tyvar _ = false;
-
-(* The type variable that gen_tyvar hands out for the number i, and the
-   number of one it handed out: they let a private supply of names agree
-   with the global counter's (see hhNames). *)
-fun mk_gen_tyvar i = Tyv (num2name i)
-
-fun gen_tyvar_number (Tyv name) =
-      if String.isPrefix gen_tyvar_prefix name then
-        Int.fromString (String.extract (name, size gen_tyvar_prefix, NONE))
-      else NONE
-  | gen_tyvar_number _ = NONE
 end;
 
 fun size acc tylist =

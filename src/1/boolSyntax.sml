@@ -563,9 +563,9 @@ local
       tyS' @
       (List.map (fn {redex, residue} => redex |-> type_subst tyS' residue) tyS)
 
-  fun type_new_vars gen vars =
+  fun type_new_vars vars =
     let
-      val gvars = List.map (fn _ => gen ()) vars
+      val gvars = List.map (fn _ => gen_tyvar ()) vars
     in
       (gvars, ListPair.map op|->(vars,gvars), ListPair.map op|->(gvars,vars))
     end
@@ -606,10 +606,10 @@ local
 
   fun var_type_unify vars ty1 ty2 = solve' vars [] (ty1, ty2) []
 
-  fun sep_var_type_unify gen (vars1, ty1) (vars2, ty2) =
+  fun sep_var_type_unify (vars1, ty1) (vars2, ty2) =
     let
-      val (gvars1, old_to_new1, new_to_old1) = type_new_vars gen vars1
-      val (gvars2, old_to_new2, new_to_old2) = type_new_vars gen vars2
+      val (gvars1, old_to_new1, new_to_old1) = type_new_vars vars1
+      val (gvars2, old_to_new2, new_to_old2) = type_new_vars vars2
       val ty1' = type_subst old_to_new1 ty1
       val ty2' = type_subst old_to_new2 ty2
       val sub = var_type_unify (gvars1 @ gvars2) ty1' ty2'
@@ -626,32 +626,26 @@ in
   fun type_unify ty1 ty2 =
     var_type_unify (union (type_vars ty1) (type_vars ty2)) ty1 ty2
 
-  fun sep_type_unify_with gen ty1 ty2 =
-    sep_var_type_unify gen (type_vars ty1, ty1) (type_vars ty2, ty2)
+  fun sep_type_unify ty1 ty2 =
+    sep_var_type_unify (type_vars ty1, ty1) (type_vars ty2, ty2)
 
-  fun sep_type_unify ty1 ty2 = sep_type_unify_with gen_tyvar ty1 ty2
-
-  fun mk_ucomb_with gen (f, a) =
+  fun mk_ucomb (f, a) =
     let
       val fty = Term.type_of f
       val aty = Term.type_of a
       val (dty, rty) = dom_rng fty
-      val (dsub, asub) = sep_type_unify_with gen dty aty
+      val (dsub, asub) = sep_type_unify dty aty
     in
       mk_comb (Term.inst dsub f, Term.inst asub a)
     end
 
-  val mk_ucomb = mk_ucomb_with gen_tyvar
-
   fun list_mk_ucomb (f, args) = List.foldl (mk_ucomb o swap) f args
 
   (* only generates one list *)
-  fun gen_tyvar_sigma_with gen (tys : hol_type list) =
-      map (fn ty => {redex = ty, residue = gen ()}) tys
-  fun gen_tyvar_sigma tys = gen_tyvar_sigma_with gen_tyvar tys
-  fun gen_tyvarify_with gen tm =
-      Term.inst (gen_tyvar_sigma_with gen (type_vars_in_term tm)) tm
-  fun gen_tyvarify tm = gen_tyvarify_with gen_tyvar tm
+  fun gen_tyvar_sigma (tys : hol_type list) =
+      map (fn ty => {redex = ty, residue = gen_tyvar()}) tys
+  fun gen_tyvarify tm =
+      Term.inst (gen_tyvar_sigma (type_vars_in_term tm)) tm
 
 end
 

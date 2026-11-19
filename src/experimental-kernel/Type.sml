@@ -103,14 +103,6 @@ fun gen_tyvar () = Tyv (state(next nameStrm))
 fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
   | is_gen_tyvar _ = false;
 
-fun mk_gen_tyvar i = Tyv (num2name i)
-
-fun gen_tyvar_number (Tyv name) =
-      if String.isPrefix gen_tyvar_prefix name then
-        Int.fromString (String.extract (name, size gen_tyvar_prefix, NONE))
-      else NONE
-  | gen_tyvar_number _ = NONE
-
 fun first_decl caller s = let
   val possibilities = KernelSig.listName (typesig()) s
 in

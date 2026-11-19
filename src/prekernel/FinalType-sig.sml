@@ -12,8 +12,6 @@ sig
  val dest_vartype  : hol_type -> string
  val is_vartype    : hol_type -> bool
  val is_gen_tyvar  : hol_type -> bool
- val mk_gen_tyvar  : int -> hol_type
- val gen_tyvar_number : hol_type -> int option
 
  val mk_type       : string * hol_type list -> hol_type
  val dest_type     : hol_type -> string * hol_type list
