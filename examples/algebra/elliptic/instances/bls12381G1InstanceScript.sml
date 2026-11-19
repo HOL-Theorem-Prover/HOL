@@ -97,38 +97,7 @@ Theorem bls12381_g1_generator_annihilated:
 Proof
   bls12381_g1_scalar_normalize >>
   bls12381_g1_scalar_certificate
-  >| [bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step,
-      bls12381_g1_scalar_step, bls12381_g1_scalar_step]
+  >| List.tabulate (64, K bls12381_g1_scalar_step)
 QED
 
 (* The standard generator G has exact order bls12381_n. *)

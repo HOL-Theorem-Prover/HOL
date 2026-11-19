@@ -97,38 +97,7 @@ Theorem secp256k1_generator_annihilated:
 Proof
   secp256k1_scalar_normalize >>
   secp256k1_scalar_certificate
-  >| [secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step,
-      secp256k1_scalar_step, secp256k1_scalar_step]
+  >| List.tabulate (64, K secp256k1_scalar_step)
 QED
 
 (* The standard generator G has exact order secp256k1_n. *)

@@ -108,42 +108,11 @@ Theorem secp256k1_endo_generator:
 Proof
   secp256k1_endo_scalar_normalize >>
   secp256k1_endo_scalar_certificate
-  >| [secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
-      secp256k1_endo_scalar_step, secp256k1_endo_scalar_step,
+  >| (List.tabulate (64, K secp256k1_endo_scalar_step) @ [
       REWRITE_TAC [secp256k1_endo_def, sw_cm_map_def, secp256k1_beta_def,
         secp256k1_generator_def, secp256k1_base_field_def,
         secp256k1_p_def, GF_eval] >>
-      CONV_TAC (certificateComputeLib.EVAL_CONV ())]
+      CONV_TAC (certificateComputeLib.EVAL_CONV ())])
 QED
 
 (* For every secp256k1 curve point P, phi(P)=[lambda]P. *)

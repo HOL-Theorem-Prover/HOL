@@ -97,38 +97,7 @@ Theorem p256_generator_annihilated:
 Proof
   p256_scalar_normalize >>
   p256_scalar_certificate
-  >| [p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step,
-      p256_scalar_step, p256_scalar_step]
+  >| List.tabulate (64, K p256_scalar_step)
 QED
 
 (* The standard generator G has exact order p256_n. *)

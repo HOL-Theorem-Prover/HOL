@@ -97,38 +97,7 @@ Theorem bn254_g1_generator_annihilated:
 Proof
   bn254_g1_scalar_normalize >>
   bn254_g1_scalar_certificate
-  >| [bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step,
-      bn254_g1_scalar_step, bn254_g1_scalar_step]
+  >| List.tabulate (64, K bn254_g1_scalar_step)
 QED
 
 (* The standard generator G has exact order bn254_n. *)
