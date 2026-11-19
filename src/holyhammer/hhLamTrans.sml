@@ -56,8 +56,48 @@ struct
   (* Do not open the combin theory: doing so changes the session grammar.
      Constants are looked up only when combs is selected.  HOL4 calls the B
      combinator "o"; it has B's defining equation o f g x = f (g x). *)
+  (* boolSyntax.mk_ucomb and gen_tyvarify draw their fresh type variables
+     from the global counter, which the pipelined export must not (see
+     hhNames); these are the same functions with the draws taken from a
+     supply (with the global supply the same terms, drawn in the same
+     order).  The unification itself is boolSyntax.type_unify. *)
+  fun gen_tyvarify names tm =
+    Term.inst
+      (map (fn ty => {redex = ty, residue = names ()})
+         (type_vars_in_term tm)) tm
+
+  (* boolSyntax.sep_type_unify: rename the type variables of both types
+     apart, unify, and map the solution back. *)
+  fun sep_type_unify names ty1 ty2 =
+    let
+      val vars1 = type_vars ty1
+      val vars2 = type_vars ty2
+      val new1 = map (fn _ => names ()) vars1
+      val new2 = map (fn _ => names ()) vars2
+      fun rename olds news = ListPair.map op|-> (olds, news)
+      val sub =
+        type_unify (type_subst (rename vars1 new1) ty1)
+                   (type_subst (rename vars2 new2) ty2)
+      val (sub1, sub2) = partition (C mem new1 o #redex) sub
+      val back = rename new1 vars1 @ rename new2 vars2
+      fun clean sub =
+        filter (fn {redex, residue} => redex <> residue)
+          (map (fn {redex, residue} =>
+                  type_subst back redex |-> type_subst back residue) sub)
+    in
+      (clean sub1, clean sub2)
+    end
+
+  fun mk_ucomb_with names (f, a) =
+    let
+      val (dty, _) = dom_rng (Term.type_of f)
+      val (dsub, asub) = sep_type_unify names dty (Term.type_of a)
+    in
+      mk_comb (Term.inst dsub f, Term.inst asub a)
+    end
+
   fun combin names name =
-    gen_tyvarify_with names (prim_mk_const {Thy = "combin", Name = name})
+    gen_tyvarify names (prim_mk_const {Thy = "combin", Name = name})
 
   fun ucomb names f x = mk_ucomb_with names (f, x)
 

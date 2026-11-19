@@ -23,4 +23,8 @@ sig
   val translate_with :
     hhNames.supply -> mode -> term list -> term list * (string * term) list
 
+  (* boolSyntax.mk_ucomb with the fresh type variables taken from the
+     supply: with hhNames.global the same term as boolSyntax.mk_ucomb. *)
+  val mk_ucomb_with : hhNames.supply -> term * term -> term
+
 end

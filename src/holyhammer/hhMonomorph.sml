@@ -354,7 +354,7 @@ struct
        forced = fn () => Option.isSome (!cell)}
     end
 
-  type pool = {names : hhNames.supply,
+  type pool = {fresh : hhNames.supply,
                goal : term susp,
                rigid : hol_type list susp,
                index : (string, hol_type list) Redblackmap.dict susp}
@@ -369,7 +369,7 @@ struct
 
   fun mk_pool_with names goal =
     let val rigid = susp (fn () => Term.type_vars_in_term goal) in
-      {names = names, goal = susp (fn () => goal), rigid = rigid,
+      {fresh = names, goal = susp (fn () => goal), rigid = rigid,
        index = susp (fn () => index_of (#force rigid ()) goal)}
     end
 
@@ -400,13 +400,13 @@ struct
               extras
           else index_of (#force rigid ()) (#force goal ()))
       in
-        {names = #names pool, goal = goal, rigid = rigid, index = index}
+        {fresh = #fresh pool, goal = goal, rigid = rigid, index = index}
       end
 
   fun monomorph_pool {max_iters, max_new_instances} (pool : pool) premises =
     let
       val rigid = #force (#rigid pool) ()
-      val infos = Portable.mapi (classify (#names pool) rigid) premises
+      val infos = Portable.mapi (classify (#fresh pool) rigid) premises
       val names = schema_names infos
       val initial =
         if null names then names
