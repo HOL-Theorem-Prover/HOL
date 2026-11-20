@@ -1,0 +1,8 @@
+ifdef POLY
+
+buildheap-exe-linkfail.log: doit.sh
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/hol), $@)
+
+EXTRA_CLEANS = buildheap-exe-linkfail.log
+
+endif

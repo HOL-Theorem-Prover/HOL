@@ -161,6 +161,9 @@ New features
 Bugs fixed
 ----------
 
+-   `hol buildheap --exe` exited with status 0 when linking the executable failed, so callers took a missing or broken executable for a built one.
+    It now exits with a failure status.
+
 - HolRefute's model finder now builds adaptive scopes one solver batch at
   a time, avoids repeated cardinality-repair and monotonicity work, and
   reports counted reasons when Kodkod problems cannot be assembled.
