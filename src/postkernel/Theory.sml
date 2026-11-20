@@ -213,7 +213,7 @@ in
    fun newest s =
        case Symtab.lookup (#by_name (read ())) s of
            SOME (p :: _) => p
-         | _ => Lib.first (fn _ => false) []
+         | _ => raise ERR "Graph.newest" "not found"
 end
 end; (* structure Graph *)
 
