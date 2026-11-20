@@ -1806,15 +1806,20 @@ fun unify_error {earlier, later, reason} env = let
   open Preterm
   val (nm,lty,llocn) = dest_ptvar later
   val (_, ety,elocn) = dest_ptvar earlier
-  fun tystr ty =
-      type_to_string (Pretype.toType (Pretype.apply_subst env ty))
-      handle _ => "<unresolved>"
+  val txt = Msg.txt
+  (* Resolving the pretype can fail and is done here, where the
+     fallback belongs; only the printing is suspended, so the message
+     still carries the type for a reader that wants more than its
+     name. *)
+  fun tymsg ty =
+      Msg.ty (Pretype.toType (Pretype.apply_subst env ty))
+      handle _ => txt "<unresolved>"
 in
-  String.concat
-    ["\nClauses give ", Lib.quote nm, " different types.\n",
-     "  ", locn.toShortString elocn, ": ", tystr ety, "\n",
-     "  ", locn.toShortString llocn, ": ", tystr lty, "\n",
-     "  Reason: ", reason, "\n"]
+  Msg.concat
+    [txt "\nClauses give ", txt (Lib.quote nm), txt " different types.\n",
+     txt "  ", txt (locn.toShortString elocn), txt ": ", tymsg ety, txt "\n",
+     txt "  ", txt (locn.toShortString llocn), txt ": ", tymsg lty, txt "\n",
+     txt "  Reason: ", reason, txt "\n"]
 end
 
 fun ptdefn_freevars pt = let
@@ -1838,7 +1843,7 @@ fun defn_absyn_to_term a = let
   val alist = Absyn.strip_conj a
   open errormonad
   infix ++?
-  val tycheck = Preterm.typecheck_phase1 (SOME (term_to_string, type_to_string))
+  val tycheck = Preterm.typecheck_phase1 (SOME (Msg.tm, Msg.ty))
   val ptsM =
       mmap
         (fn a => absyn_to_preterm a >- (fn ptm => tycheck ptm >> return ptm))
@@ -1857,11 +1862,15 @@ fun defn_absyn_to_term a = let
                 "couldn't unify these two type operators", with no hint
                 that two clauses are being reconciled at all. *)
              (fn (tc, l) => fn e =>
-                 errormonad.Error
-                   (typecheck_error.Misc
-                      (unify_error {earlier = pv', later = pv,
-                                    reason = typecheck_error.errorMsg tc} e),
-                    l)) >>
+                 let
+                   val why = typecheck_error.errorMessage tc
+                 in
+                   errormonad.Error
+                     (typecheck_error.Misc
+                        (unify_error {earlier = pv', later = pv,
+                                      reason = why} e),
+                      l)
+                 end) >>
              return env)
     | foldthis (_, env) = raise Fail "defn_absyn_to_term: can't happen"
   open Preterm
