@@ -166,16 +166,24 @@ sig
      and a proof that arrives with strictly fewer lemmas than the one
      being reconstructed preempts it: the reconstruction, in any phase
      before its outcome (a suggestion or a failure) is recorded, is
-     interrupted, the cheaper proof is reconstructed, and the preempted
-     one restarts later from the shortest lemma list its reconstruction
-     had already replayed, so the progress is kept.  Nothing is
-     preempted at or after the soft deadline.  The interrupt takes
-     effect at the next wait of the reconstruction thread: normally at
-     once, as replays and minimisation attempts run in a time-limited
-     worker, but a compilation can delay it by tens to hundreds of
-     milliseconds.  A preempted reconstruction reports no event, and
-     Verified suggestions stay in the order of completion.  A stop is
-     not a preemption.
+     interrupted, and the cheaper proof is reconstructed.  The cost of
+     the one being reconstructed is the length of the latest list it has
+     verified, so an arrival no cheaper than that list preempts nothing.
+     The preempted proof is requeued, and its list stays its identity
+     (for the suggestion, the lists found again by other slices, and the
+     variants), with its progress: the latest verified list and the
+     lemmas of it found needed (hhReconstruct.progress).  Its restart
+     replays that list again, which measures its time again, and goes on
+     with the minimisation where it stopped; the lemmas already found
+     needed are not tried again.  Such a restart is kept past the soft
+     deadline, when the other retries are dropped, as it only needs to
+     finish.  Nothing is preempted at or after the soft deadline.  The
+     interrupt takes effect at the next wait of the reconstruction
+     thread: normally at once, as replays and minimisation attempts run
+     in a time-limited worker, but a compilation can delay it by tens to
+     hundreds of milliseconds.  A preempted reconstruction reports no
+     event, and Verified suggestions stay in the order of completion.  A
+     stop is not a preemption.
 
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an

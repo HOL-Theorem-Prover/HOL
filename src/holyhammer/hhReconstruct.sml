@@ -35,12 +35,15 @@ fun timeout_tactic t tac g =
   end
   handle Interrupt => raise Interrupt | _ => NONE
 
+type progress = {lemmas : string list, kept : int}
+
 type settings =
   {minimize : bool, preplay_timeout : real, minimize_timeout : real,
    minimize_deadline : Time.time option,
-   on_verified : (string list -> unit) option}
+   on_verified : (progress -> unit) option, resume : progress option}
 
-type reconstruction = {stac : string, tac : tactic, t_replay : real}
+type reconstruction =
+  {stac : string, tac : tactic, t_replay : real, lemmas : string list}
 
 (* Compiles stac and runs it on g with the time limit t.  Returns the
    tactic and the replay time when it proves g. *)
@@ -102,8 +105,12 @@ fun out_of_time NONE = false
 (* Drops the lemmas one at a time, keeping a lemma when the replay
    without it fails.  Every intermediate list is verified, so stopping at
    the deadline returns a verified list; progress is called with each
-   list as it is verified. *)
-fun minimize_lemmas minimize_timeout deadline progress g lemmas best =
+   list as it is verified, and when a lemma is found to be needed, so
+   that the position reached is reported.  The lemmas before the first
+   (kept) are already known to be needed; lemmas is the verified list,
+   best the result of its replay. *)
+fun minimize_lemmas minimize_timeout deadline progress g
+                    (lemmas : string list) kept_count best =
   let
     fun loop kept [] best = (kept, best)
       | loop kept (lemma :: rest) (best as (_, time)) =
@@ -112,11 +119,17 @@ fun minimize_lemmas minimize_timeout deadline progress g lemmas best =
             let val candidate = kept @ rest in
               case replay (attempt_timeout minimize_timeout time)
                      (mk_metis_call candidate) g of
-                  SOME found => (progress candidate; loop kept rest found)
-                | NONE => loop (kept @ [lemma]) rest best
+                  SOME found =>
+                    (progress {lemmas = candidate, kept = length kept};
+                     loop kept rest found)
+                | NONE =>
+                    (progress {lemmas = kept @ lemma :: rest,
+                               kept = length kept + 1};
+                     loop (kept @ [lemma]) rest best)
             end
   in
-    loop [] lemmas best
+    loop (List.take (lemmas, kept_count)) (List.drop (lemmas, kept_count))
+         best
   end
 
 (* A permutative equation, such as commutativity, has sides that are
@@ -159,40 +172,58 @@ fun preplay preplay_timeout lemmas g =
         end
 
 fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
-                          minimize_deadline, on_verified} : settings)
+                          minimize_deadline, on_verified, resume} : settings)
                          lemmas g =
   if not (!reconstruct_flag)
   then (print_endline (mk_metis_call lemmas);
         raise ERR "hh_minimize" "reconstruction off")
   else
     let
-      fun progress lemmas =
-        Option.app (fn report => report lemmas) on_verified
-      fun result stac (tac, time) : reconstruction =
-        {stac = stac, tac = tac, t_replay = time}
+      fun progress p = Option.app (fn report => report p) on_verified
+      fun result stac kept (tac, time) : reconstruction =
+        {stac = stac, tac = tac, t_replay = time, lemmas = kept}
+      (* A resumed reconstruction starts from the list it had verified,
+         and keeps the lemmas it had found needed if that list is
+         replayed as it is. *)
+      val (start, known) =
+        case resume of
+            SOME {lemmas = verified, kept} => (verified, kept)
+          | NONE => (lemmas, 0)
     in
       (* Replay before minimising: a list Metis cannot replay fails at
-         once instead of being minimised attempt by attempt. *)
-      case preplay preplay_timeout lemmas g of
+         once instead of being minimised attempt by attempt.  The replay
+         is timed again, as the load may have changed. *)
+      case preplay preplay_timeout start g of
           NONE => raise ERR "hh_reconstruct" "reconstruction failed"
         | SOME (replayed, full) =>
-            (progress replayed;
-            if not minimize then result (mk_metis_call replayed) full
-            else
-              let
-                val (kept, best) = minimize_lemmas minimize_timeout
-                  minimize_deadline progress g replayed full
-                val raw = mk_metis_call kept
-                val pretty =
-                  psMinimize.unsafe_prettify_stac
-                    (mk_metis_call (map bound_name kept))
-              in
-                (* The short names are resolved in the current namespace,
-                   so the printed form is verified on its own. *)
-                case replay preplay_timeout pretty g of
-                    SOME found => result pretty found
-                  | NONE => result raw best
-              end)
+            let
+              val kept = if replayed = start then known else 0
+            in
+              progress {lemmas = replayed, kept = kept};
+              if not minimize
+              then result (mk_metis_call replayed) replayed full
+              else
+                let
+                  val (needed, best) = minimize_lemmas minimize_timeout
+                    minimize_deadline progress g replayed kept full
+                  val raw = mk_metis_call needed
+                  val pretty =
+                    psMinimize.unsafe_prettify_stac
+                      (mk_metis_call (map bound_name needed))
+                in
+                  (* The minimisation is complete, which a preemption in
+                     the final replay resumes from (not when the deadline
+                     cut it short). *)
+                  if out_of_time minimize_deadline then ()
+                  else progress {lemmas = needed, kept = length needed};
+                  (* The short names are resolved in the current
+                     namespace, so the printed form is verified on its
+                     own. *)
+                  case replay preplay_timeout pretty g of
+                      SOME found => result pretty needed found
+                    | NONE => result raw needed best
+                end
+            end
     end
 
 fun hh_reconstruct lemmas g =
@@ -201,7 +232,8 @@ fun hh_reconstruct lemmas g =
       hh_reconstruct_with
         {minimize = true, preplay_timeout = !reconstruction_timeout,
          minimize_timeout = !minimization_timeout,
-         minimize_deadline = NONE, on_verified = NONE} lemmas g
+         minimize_deadline = NONE, on_verified = NONE,
+         resume = NONE} lemmas g
   in
     (stac, tac)
   end

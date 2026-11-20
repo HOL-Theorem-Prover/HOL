@@ -93,9 +93,13 @@ at the timeout.
 
 The proof reconstructed and reported first is the one with the fewest
 lemmas.  A cheaper proof that arrives while a costlier one is being
-reconstructed preempts it, and the costlier one restarts later from the
-shortest list it had already replayed, so its progress is kept.  Nothing
-is preempted at or after the soft deadline.
+reconstructed preempts it, unless the reconstruction has already
+verified a list no longer than the arrival's.  The preempted proof is
+requeued with its progress: the shortest list it had verified and the
+lemmas of it found needed.  Its restart replays that list again and
+continues the minimisation where it stopped, and, unlike the other
+retries, it is kept past the soft deadline.  Nothing is preempted at or
+after the soft deadline.
 
 The `filter` values are:
 

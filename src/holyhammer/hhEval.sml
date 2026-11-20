@@ -1450,7 +1450,8 @@ fun reconstruction_settings () : hhReconstruct.settings =
   let val options = hhConfig.snapshot () in
     {minimize = true, preplay_timeout = #preplay_timeout options,
      minimize_timeout = #minimize_timeout options,
-     minimize_deadline = NONE, on_verified = NONE}
+     minimize_deadline = NONE, on_verified = NONE,
+     resume = NONE}
   end
 
 fun reconstruct condition result goal =
