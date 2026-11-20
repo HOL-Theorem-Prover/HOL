@@ -9,7 +9,8 @@
    index), act where an item is handed to the pool ([after_submit]) or
    before it is prepared ([before_prepare]), act at the launch points of
    run_in ([launch_point]) and before a slice worker claims work
-   ([before_claim]), select the export of run_in ([export_choice]) and read
+   ([before_claim]), replace the reconstruction of a proof ([reconstruct]),
+   select the export of run_in ([export_choice]) and read
    the export state of the problems of the last pipelined run
    ([export_states]).  Production leaves the hooks at their defaults. *)
 structure hhSchedule_Test =
@@ -51,6 +52,8 @@ struct
   (* Called on a slice worker before each claim of work, with a test of
      whether the run is stopping. *)
   val before_claim = ref (fn (_ : unit -> bool) => ())
+  (* The reconstruction of a lemma list on the reconstruction thread. *)
+  val reconstruct = ref hhReconstruct.hh_reconstruct_with
 end
 
 structure hhSchedule :> hhSchedule =
@@ -787,6 +790,7 @@ fun run_in root {options, goal, rankings, progress} =
             else schedule_length
         | NONE => schedule_length
     val recon = ref ([] : success list)
+    val reconstruct_with = !hhSchedule_Test.reconstruct
     val slices_run = ref
       ([] : (hhProver.slice * hhProver.szs * real * bool) list)
     val suggestions = ref ([] : suggestion list)
@@ -796,10 +800,20 @@ fun run_in root {options, goal, rankings, progress} =
     val tried_keys = ref ([] : string list)
     (* With preplay_drop_one, a list Metis cannot replay queues its
        drop-one variants here.  They are tried only while no new list
-       waits, and no longer once one variant of the same list verifies. *)
+       waits, no longer once one variant of the same list verifies, and
+       not past the soft deadline: a variant is not a proof a prover
+       found, and each can cost two preplay timeouts, so the variants of
+       a list would keep the call going for as long as there are lemmas. *)
     val retries = ref ([] : {origin : string, success : success} list)
     val recovered = ref ([] : string list)
+    (* stopping: the run ends and reconstruction with it (MaxProofs, the
+       caller's interrupt, a failed export).  halted: the provers are
+       killed and nothing starts, which the hard deadline does without
+       ending the reconstruction of the proofs found. *)
     val stopping = ref false
+    val halted = ref false
+    (* When every worker and the producer had finished (see signal). *)
+    val search_ended = ref (NONE : Time.time option)
     val reason = ref (NONE : stop_reason option)
     val running = ref ([] : (int * bool ref * (unit -> unit)) list)
     val next_running = ref 0
@@ -844,7 +858,11 @@ fun run_in root {options, goal, rankings, progress} =
     val launch_point = !hhSchedule_Test.launch_point
     val before_claim = !hhSchedule_Test.before_claim
 
-    fun signal () = ConditionVar.broadcast state_changed
+    fun signal () =
+      ((if Option.isSome (!search_ended) orelse not (!launch_done)
+           orelse !workers_left > 0 orelse !producer_active then ()
+        else search_ended := SOME (Time.now ()));
+       ConditionVar.broadcast state_changed)
 
     (* The export state of a problem path (the mutex is held). *)
     fun export_state path =
@@ -940,7 +958,7 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun register_running kill =
       with_mutex state_mutex (fn () =>
-        if !stopping then NONE
+        if !stopping orelse !halted then NONE
         else
           let val id = !next_running in
             next_running := id + 1;
@@ -971,19 +989,28 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun interrupt_recon () = Option.app interrupt_thread (!recon_thread)
 
-    fun kill_all stop_reason =
+    (* Kills the provers and stops the producer.  A final stop (SOME
+       reason) also ends the run and drops the queued proofs; the halt of
+       the hard deadline (NONE) leaves reconstruction to finish them. *)
+    fun stop_search final =
       let
         val (kills, producer) = with_mutex state_mutex (fn () =>
           let
             val _ =
-              case !reason of
-                  NONE => reason := SOME stop_reason
-                | SOME _ => ()
-            val _ = stopping := true
+              case final of
+                  SOME stop_reason =>
+                    (case !reason of
+                         NONE => reason := SOME stop_reason
+                       | SOME _ => ();
+                     stopping := true;
+                     recon := [])
+                | NONE => ()
+            val kills =
+              if !halted andalso not (Option.isSome final) then []
+              else map (fn (_, cancelled, kill) =>
+                (cancelled := true; kill)) (!running)
+            val _ = halted := true
             val _ = work := []
-            val _ = recon := []
-            val kills = map (fn (_, cancelled, kill) =>
-              (cancelled := true; kill)) (!running)
             val _ = signal ()
           in
             (kills, if !producer_active then !producer_thread else NONE)
@@ -992,6 +1019,8 @@ fun run_in root {options, goal, rankings, progress} =
         List.app (fn kill => kill () handle _ => ()) kills;
         Option.app interrupt_thread producer
       end
+
+    fun kill_all stop_reason = stop_search (SOME stop_reason)
 
     (* The soft deadline (or any later stop) cancels the export: nothing
        claims a problem past it, so its remaining problems have no
@@ -1265,13 +1294,16 @@ fun run_in root {options, goal, rankings, progress} =
         if skip then ()
         else
           ((let
-              (* Minimisation stops at the deadline, so that a verified
-                 proof found late is still returned before the hard
-                 deadline interrupts this thread. *)
+              (* Nothing interrupts this reconstruction but a stop of the
+                 run: a proof a prover found is reconstructed until it
+                 verifies or fails, at most two preplay timeouts (the
+                 list, then without its permutative equations), the
+                 minimisation, which stops at the soft deadline and keeps
+                 the shortest verified list, and the final replay. *)
               val ({stac, tac, t_replay}, t_recon) =
                 add_time
                   (smlRedirect.hidef
-                    (hhReconstruct.hh_reconstruct_with
+                    (reconstruct_with
                       {minimize = #minimize options,
                        preplay_timeout = #preplay_timeout options,
                        minimize_timeout = #minimize_timeout options,
@@ -1313,22 +1345,23 @@ fun run_in root {options, goal, rankings, progress} =
     fun completed () = with_mutex state_mutex finished_locked
 
     (* Waits for the run to finish.  The soft deadline cancels the export,
-       the hard deadline stops everything that is left: the provers are
-       killed and the replay and the producer interrupted. *)
+       the hard deadline kills the provers that are left and stops the
+       producer, and the wait goes on until the reconstruction has
+       finished the proofs found: no deadline ends it, only a stop does
+       (MaxProofs, the caller's interrupt, a failed export). *)
     fun await () =
       if completed () then ()
-      else if not (time_before (Time.now ()) hard_deadline) then
-        (stop_hard Timeout;
-         OS.Process.sleep (Time.fromMilliseconds 10);
-         await ())
       else
         let
           val now = Time.now ()
           val soft = time_before now deadline
+          val hard = time_before now hard_deadline
           val _ = if soft then () else cancel_exports ()
-          val wake = time_min hard_deadline
-            (time_min (if soft then deadline else hard_deadline)
-               (Time.+ (now, Time.fromMilliseconds 100)))
+          val _ = if hard then () else stop_search NONE
+          val wake = Time.+ (now, Time.fromMilliseconds 100)
+          val wake = if soft then time_min deadline wake
+                     else if hard then time_min hard_deadline wake
+                     else wake
           val _ = with_locked (fn () =>
             if finished_locked () then ()
             else ignore (ConditionVar.waitUntil (state_changed, state_mutex,
@@ -1441,8 +1474,11 @@ fun run_in root {options, goal, rankings, progress} =
             case !reason of
                 SOME value => value
               | NONE =>
-                  if time_before (Time.now ()) deadline then Exhausted
-                  else Timeout
+                  (case !search_ended of
+                       SOME ended =>
+                         if time_before ended deadline then Exhausted
+                         else Timeout
+                     | NONE => Timeout)
       in
         finish stopped
       end

@@ -295,7 +295,11 @@ New tools
     first and not charged to it, except where the measured policy overlaps
     the export with the search (the conditions are stated by `export_mode`
     in `hhSchedule.sml`): there the export counts against
-    the timeout.
+    the timeout.  The timeout bounds the proof search: the provers are
+    stopped at it (after a short grace period), and minimisation stops at
+    it, but every proof the provers found by then is reconstructed until
+    one verifies, so a call can return after the timeout.  The default
+    `preplay_timeout` is now 2.5 seconds.
 
 -   HOLyHammer schedules TPTP formats, type encodings, and lambda
     translations per prover slice.  Besides FOF, it now proves goals

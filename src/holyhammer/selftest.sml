@@ -185,7 +185,7 @@ fun test_child root =
     val _ = expect "unknown unset option is a HOL_ERR"
       (option_error ["unknown", "valid keys"]
         (fn () => hhConfig.hh_unset "not_an_option"))
-    val _ = hhConfig.hh_set ("preplay_timeout", "2.5")
+    val _ = hhConfig.hh_set ("preplay_timeout", "1.75")
     val _ = hhConfig.hh_set ("minimize_timeout", "3.5")
     val _ = hhConfig.hh_set ("max_facts", "17")
     val _ = List.app
@@ -237,7 +237,7 @@ fun test_child root =
        #cache_max_entries options = 100000 andalso
        #debug_dir options = SOME (join root "debug"))
     val _ = expect "snapshot parses reconstruction timeouts"
-      (Real.abs (#preplay_timeout options - 2.5) < 0.000001
+      (Real.abs (#preplay_timeout options - 1.75) < 0.000001
        andalso
        Real.abs (#minimize_timeout options - 3.5) < 0.000001)
     val _ = expect "hh_params reports all four provenance layers"
@@ -406,6 +406,11 @@ fun test_environment_default value =
     val _ = expect "effective timeout default is 30"
       (#timeout options = 30 andalso hhConfig.hh_get "timeout" = "30" andalso
        has_parameter "timeout" "30" "default")
+    val _ = expect "effective preplay_timeout default is 2.5"
+      (Real.abs (#preplay_timeout options - 2.5) < 0.000001 andalso
+       hhConfig.hh_get "preplay_timeout" = "2.5" andalso
+       has_parameter "preplay_timeout" "2.5" "default" andalso
+       Real.abs (!hhReconstruct.reconstruction_timeout - 2.5) < 0.000001)
     val _ = expect "default cores and slices are computed"
       (#cores options > 0 andalso #slices options = 24 * #cores options)
     val _ = expect "empty option defaults map to NONE"
@@ -3392,7 +3397,7 @@ fun test_hhEval root =
     val worker_options =
       [("filter", "mepo"), ("format", "tf0"),
        ("type_enc", "mono_native"), ("lam_trans", "lifting"),
-       ("preplay_timeout", "2.5"), ("minimize_timeout", "3.5"),
+       ("preplay_timeout", "1.75"), ("minimize_timeout", "3.5"),
        ("mono_instances", "17"), ("debug_dir", "quoted \"directory\"")]
     val script = with_hh_options worker_options (fn () =>
       hhEval.write_evalscript expdir "list" [condition] 7)
@@ -4881,6 +4886,172 @@ fun with_ref (r, value) f =
   Portable.bracket (fn () => !r) (fn old => r := old)
     (fn _ => (r := value; f ()))
 
+(* The deadlines do not abandon a proof that a prover found: the timeout
+   (1 s here, so the hard deadline is 3 s after the launch) stops the
+   provers, but every found list is reconstructed until one verifies.
+   The reconstruction is a test function (hhSchedule_Test.reconstruct)
+   that logs and takes the time a case wants; the fixture provers print
+   lists of lemma names (schedule-lemmas-*.out). *)
+fun test_schedule_deadline_recon sleeper_parser =
+  let
+    val name = "hh-schedule-deadline-recon"
+    fun parse lines =
+      case String.tokens (fn c => c = #"," orelse Char.isSpace c)
+             (String.concat lines) of
+          [] => (hhProver.SzsTimeout, NONE)
+        | lemmas => (hhProver.SzsTheorem, SOME lemmas)
+    val one = ("0", "schedule-lemmas-1.out")
+    val two = ("0", "schedule-lemmas-2.out")
+    val three = ("0", "schedule-lemmas-3.out")
+    fun after delay (_, file) = (delay, file)
+    (* A prover that prints nothing for 20 s: its own time limit kills it
+       at the hard deadline. *)
+    val slow = ("20", "schedule-lemmas-1.out")
+    val log = ref ([] : string list)
+    val log_mutex = Mutex.mutex ()
+    fun note line =
+      (Mutex.lock log_mutex; log := line :: !log; Mutex.unlock log_mutex)
+    fun key lemmas = String.concatWith "," lemmas
+    (* How a reconstruction goes: it succeeds after some milliseconds
+       (Delay), fails after some (DelayFail), or waits until it is cut
+       (Cut), which the test fails after 15 s. *)
+    datatype behaviour = Delay of int | DelayFail of int | Cut
+    fun pause ms = OS.Process.sleep (Time.fromMilliseconds (Int.toLarge ms))
+    fun wait_for_cut lemmas =
+      let
+        val limit = Time.+ (Time.now (), Time.fromSeconds 15)
+        fun loop () =
+          (Thread.testInterrupt ();
+           if Time.compare (Time.now (), limit) = GREATER
+           then (note ("stuck|" ^ key lemmas); raise Fail "stuck")
+           else (pause 5; loop ()))
+      in
+        loop ()
+        handle Interrupt => (note ("cut|" ^ key lemmas); raise Interrupt)
+      end
+    fun test_reconstruct behave _ lemmas _ =
+      let
+        val _ = note ("start|" ^ key lemmas)
+        val _ = case behave lemmas of
+                    Delay ms => pause ms
+                  | DelayFail ms => (pause ms; raise Fail "failed")
+                  | Cut => wait_for_cut lemmas
+      in
+        {stac = "fake " ^ key lemmas, tac = Tactical.ALL_TAC,
+         t_replay = 0.0}
+      end
+    fun config slices : hhProver.prover_config =
+      printer_config name
+        (map (fn (delay, file) => fixture_slice Vampire [delay, file] 1) slices)
+        (fn _ => ()) parse
+    fun progress (hhSchedule.Verified suggestion) =
+          note ("verified|" ^ #stac suggestion)
+      | progress _ = ()
+    fun request slices sleeping max_proofs drop_one =
+      {options = reconstruction_options
+         {minimize = true, preplay_drop_one = drop_one}
+         (fixture_options (if sleeping then [Eprover, Vampire] else [Vampire])
+            (length slices + (if sleeping then 1 else 0))
+            (length slices + (if sleeping then 1 else 0)) 1
+            max_proofs false "" NONE),
+       goal = ([], boolSyntax.T), rankings = [("none", [])],
+       progress = SOME progress}
+    fun with_setup slices behave f =
+      with_ref (hhSchedule_Test.reconstruct, test_reconstruct behave)
+        (fn () => with_fixtures
+           [(Vampire, config slices),
+            (Eprover, sleeper_config Eprover (name ^ "-sleeper")
+                        sleeper_parser)]
+           (fn () => (log := []; f ())))
+    fun run slices sleeping max_proofs drop_one behave =
+      with_setup slices behave (fn () =>
+        let
+          val start = Time.now ()
+          val result =
+            hhSchedule.run (request slices sleeping max_proofs drop_one)
+        in
+          (result, List.rev (!log),
+           Time.toReal (Time.- (Time.now (), start)))
+        end)
+    (* A proof is found just before the soft deadline, and its
+       reconstruction runs past the hard deadline and verifies.  The
+       provers had finished before the soft deadline: Exhausted. *)
+    val (ra, loga, elapsed_a) = run [after "0.9" three] false 2 false
+      (fn _ => Delay 3300)
+    val _ = expect "deadline: a reconstruction outlives the hard deadline"
+      (loga = ["start|c1,c2,c3", "verified|fake c1,c2,c3"] andalso
+       #stopped ra = hhSchedule.Exhausted andalso
+       length (#suggestions ra) = 1 andalso elapsed_a > 4.0)
+    (* The provers are still killed at the hard deadline while the
+       reconstruction goes on: the sleeper, a prover that runs until it is
+       killed, ends 3 s after the launch (its own limit would be 5 s), and
+       the proof found at once verifies later.  The search was cut by the
+       timeout: Timeout. *)
+    val (re, loge, elapsed_e) = run [three] true 2 false
+      (fn _ => Delay 4200)
+    val killed = List.filter (fn (_, _, time, _) => time > 1.0)
+                             (#slices_run re)
+    val _ = expect "deadline: the provers are killed at the hard deadline"
+      (loge = ["start|c1,c2,c3", "verified|fake c1,c2,c3"] andalso
+       (case killed of
+            [(_, szs, time, _)] =>
+              szs <> hhProver.SzsTheorem andalso time > 2.5 andalso
+              time < 3.9
+          | _ => false) andalso elapsed_e > 4.0 andalso
+       #stopped re = hhSchedule.Timeout andalso
+       length (#suggestions re) = 1)
+    (* Every proof found is tried, in the order of arrival, also past the
+       hard deadline (the third starts after it), then the run ends. *)
+    val (rb, logb, elapsed_b) = run [one, after "0.2" two, after "0.4" three,
+                                     slow] false 4 false (fn _ => DelayFail 1500)
+    val _ = expect "deadline: all found proofs are tried, in arrival order"
+      (logb = ["start|a1", "start|b1,b2", "start|c1,c2,c3"] andalso
+       null (#suggestions rb) andalso #stopped rb = hhSchedule.Timeout andalso
+       elapsed_b > 4.4)
+    (* A drop-one variant is derived, not found by a prover: when the list
+       fails before the soft deadline the variants are tried (the first
+       verifies), and past it they are dropped. *)
+    val (rc, logc, _) = run [two] false 2 true
+      (fn lemmas => if length lemmas = 2 then DelayFail 300 else Delay 0)
+    val _ = expect "deadline: a variant is tried before the soft deadline"
+      (logc = ["start|b1,b2", "start|b2", "verified|fake b2"] andalso
+       length (#suggestions rc) = 1)
+    val (rd, logd, _) = run [two] false 2 true (fn _ => DelayFail 1200)
+    val _ = expect "deadline: a variant is dropped past the soft deadline"
+      (logd = ["start|b1,b2"] andalso null (#suggestions rd) andalso
+       #stopped rd = hhSchedule.Exhausted)
+    (* The caller's interrupt stops a reconstruction running past the hard
+       deadline promptly; run returns only once everything has exited. *)
+    val result_i = ref NONE
+    val interrupted_at = ref Time.zeroTime
+    val finished_at = ref Time.zeroTime
+    val _ = with_setup [three] (fn _ => Cut) (fn () =>
+      let
+        val thread = Thread.fork
+          (fn () =>
+             (result_i :=
+                SOME (hhSchedule.run (request [three] true 1 false));
+              finished_at := Time.now ()), [])
+        val _ = await_schedule_test "no reconstruction started"
+          (fn () => not (null (!log)))
+        val _ = pause 3400
+        val _ = interrupted_at := Time.now ()
+        val _ = Thread.interrupt thread
+        val _ = await_schedule_test "interrupted run did not finish"
+          (fn () => not (Thread.isActive thread))
+      in
+        ()
+      end)
+    val _ = expect "deadline: an interrupt past the hard deadline cuts"
+      (List.rev (!log) = ["start|c1,c2,c3", "cut|c1,c2,c3"] andalso
+       Time.toReal (Time.- (!finished_at, !interrupted_at)) < 2.0 andalso
+       (case !result_i of
+            SOME value => #stopped value = hhSchedule.Interrupted
+          | NONE => false))
+  in
+    ()
+  end
+
 fun test_hhSchedule () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       SOME _ => ()
@@ -4900,6 +5071,7 @@ fun test_hhSchedule () =
           val _ = test_schedule_isolation parser
           val _ = test_schedule_timeout parser
           val _ = test_schedule_filter_rankings parser
+          val _ = test_schedule_deadline_recon parser
         in
           expect "scheduler hermetic suite stays within its wall-time bound"
             (Time.toReal (Time.- (Time.now (), started)) < 60.0)
