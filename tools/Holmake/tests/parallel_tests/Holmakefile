@@ -66,7 +66,8 @@ DIRNAMES = \
   lastmaker_propagation
 
 ifdef POLY
-DIRNAMES += cache_reflink \
+DIRNAMES += buildheap_exe_linkfail \
+            cache_reflink \
             dircolumn \
             cachefetch \
             cachekey_transitive_parent \
