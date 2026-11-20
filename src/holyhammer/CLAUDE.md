@@ -63,8 +63,8 @@ rely on its contents being present or committed.
   problem.
 - **`hhSchedule`** — runs slices across cores, emits `event`s, drives
   reconstruction, and returns verified `suggestion`s; stops the search at
-  the timeout, and reconstructs the lists found until `max_proofs` verify
-  before the timeout, or the first verifies after it.
+  the timeout, and reconstructs the lists found until `max_proofs` verify,
+  or, past the timeout, one has (an earlier one included).
 - **`hhReconstruct`** — replays the ATP's used axioms as a HOL4 tactic
   (Metis today) and minimizes.  *This layer is under active rework
   toward a preplay ladder — check current code before assuming its

@@ -4926,7 +4926,8 @@ fun with_ref (r, value) f =
 (* The deadlines do not abandon a proof that a prover found: the timeout
    (1 s here, so the hard deadline is 3 s after the launch) stops the
    provers, but every found list is reconstructed, until max_proofs have
-   verified before the soft deadline or one verifies after it.
+   verified, or, once the soft deadline has passed, one has (one verified
+   earlier included).
    The reconstruction is a test function (hhSchedule_Test.reconstruct)
    that logs and takes the time a case wants; the fixture provers print
    lists of lemma names (schedule-lemmas-*.out). *)
@@ -5059,10 +5060,12 @@ fun test_schedule_deadline_recon sleeper_parser =
        prover killed (not waited for until the hard deadline). *)
     val (rg, logg, _) = run [one, after "0.3" two, slow] false 4 false
       (fn _ => Delay 1500)
-    val slow_time =
-      case List.filter (fn (_, _, time, _) => time > 0.5) (#slices_run rg) of
+    fun slow_time_of result =
+      case List.filter (fn (_, szs, _, _) => szs <> hhProver.SzsTheorem)
+                       (#slices_run result) of
           [(_, _, time, _)] => time
         | _ => 100.0
+    val slow_time = slow_time_of rg
     val _ = expect "deadline: past the soft deadline the first proof ends it"
       (logg = ["start|a1", "verified|fake a1"] andalso
        length (#suggestions rg) = 1 andalso
@@ -5084,7 +5087,15 @@ fun test_schedule_deadline_recon sleeper_parser =
       (logh = ["start|a1", "verified|fake a1", "start|b1,b2"] andalso
        length (#suggestions rh) = 1 andalso
        #stopped rh = hhSchedule.Exhausted andalso
-       elapsed_h > 1.6 andalso elapsed_h < 2.6)
+       elapsed_h > 1.6)
+    (* The same with the run waiting for a prover instead of a queued
+       list: the proof verified at 0.1 s ends the run at the soft deadline,
+       and the slow prover is killed then, not at the hard deadline. *)
+    val (rj, logj, _) = run [one, slow] false 4 false (fn _ => Delay 100)
+    val _ = expect "deadline: an earlier proof ends the wait for the provers"
+      (logj = ["start|a1", "verified|fake a1"] andalso
+       length (#suggestions rj) = 1 andalso
+       #stopped rj = hhSchedule.Timeout andalso slow_time_of rj < 2.5)
     (* A drop-one variant is derived, not found by a prover: when the list
        fails before the soft deadline the variants are tried (the first
        verifies), and past it they are dropped. *)

@@ -1333,8 +1333,9 @@ fun run_in root {options, goal, rankings, progress} =
                  prover = #prover slice, slice = slice,
                  t_prover = t_prover, t_recon = t_recon,
                  t_replay = t_replay}
-              (* Before the soft deadline max_proofs proofs are collected;
-                 past it the first one that verifies ends the run. *)
+              (* max_proofs proofs end the run whenever reached; past the
+                 soft deadline one verified proof (this one, or an earlier
+                 one) ends it. *)
               val (reached, late) = with_mutex state_mutex (fn () =>
                 (suggestions := suggestion :: !suggestions;
                  Option.app (fn parent => recovered := parent :: !recovered)
@@ -1367,7 +1368,8 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun completed () = with_mutex state_mutex finished_locked
 
-    (* Past the soft deadline with a proof verified, and not yet ended. *)
+    (* A proof has verified and the run has not been ended (the caller
+       checks the soft deadline). *)
     fun verified_pending_end () =
       with_mutex state_mutex (fn () =>
         not (!stopping) andalso not (null (!suggestions)))
@@ -1377,7 +1379,8 @@ fun run_in root {options, goal, rankings, progress} =
        producer, and the wait goes on until the reconstruction has
        finished the proofs found: no deadline ends it.  A stop does
        (MaxProofs, the caller's interrupt, a failed export), and so does
-       a verified proof past the soft deadline. *)
+       a verified proof once the soft deadline has passed, one verified
+       before it included: the run is then ended at the deadline. *)
     fun await () =
       if completed () then ()
       else

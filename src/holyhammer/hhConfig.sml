@@ -321,8 +321,9 @@ val option_specs : option_spec list =
           "the launch of the provers (the export of the problems is " ^
           "charged to it only where it overlaps the search: see " ^
           "hhSchedule.export_mode); the proofs found are reconstructed " ^
-          "until max_proofs verify before the timeout, or one verifies " ^
-          "after it, so a call can return after the timeout, and " ^
+          "until max_proofs verify (the run ends whenever that many " ^
+          "have), and past the timeout until one has (also one that " ^
+          "verified earlier), so a call can return after the timeout; " ^
           "minimisation stops at it",
     valid = positive_int},
    {name = "max_proofs", default = fn () => "4",
