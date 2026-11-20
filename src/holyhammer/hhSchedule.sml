@@ -816,12 +816,15 @@ fun run_in root {options, goal, rankings, progress} =
     val recon = ref ([] : success list)
     (* The item being reconstructed, with its cost, from the moment the
        reconstruction thread takes it until its outcome is recorded, and
-       the key it put in tried_keys.  preempt is set, together with the
-       interrupt of the thread, by the arrival of a cheaper proof (see
-       note_result); the thread then requeues the item (see
-       recon_step). *)
+       the key it put in tried_keys, and the shortest lemma list that
+       its reconstruction has replayed so far (see on_verified in
+       hhReconstruct).  preempt is set, together with the interrupt of
+       the thread, by the arrival of a cheaper proof (see note_result);
+       the thread then requeues the item with that list (see
+       settle_interrupt). *)
     val current = ref (NONE : (recon_item * int) option)
     val current_key = ref (NONE : string option)
+    val replayed = ref (NONE : string list option)
     val preempt = ref false
     val reconstruct_with = !hhSchedule_Test.reconstruct
     val slices_run = ref
@@ -1170,12 +1173,14 @@ fun run_in root {options, goal, rankings, progress} =
        the mutex together with the interrupt, and only while an item is
        current, whose outcome is recorded under the mutex as well; so the
        interrupt reaches the item it was meant for, or is drained by the
-       thread (see end_item). *)
+       thread (see clear_current and drain_interrupt in recon_step).
+       Nothing is preempted at or after the soft deadline, when what is
+       being reconstructed may be the last chance of a proof. *)
     fun preempt_for cost =
       case !current of
           SOME (_, running) =>
             if cost < running andalso not (!preempt) andalso
-               not (!stopping)
+               not (!stopping) andalso time_before (Time.now ()) deadline
             then (preempt := true; interrupt_recon ())
             else ()
         | NONE => ()
@@ -1277,7 +1282,8 @@ fun run_in root {options, goal, rankings, progress} =
 
     (* Takes the item (the mutex is held) as the current one. *)
     fun start item =
-      (current := SOME (item, item_cost item); SOME item)
+      (current := SOME (item, item_cost item); replayed := NONE;
+       SOME item)
 
     fun take_success () =
       let
@@ -1303,7 +1309,8 @@ fun run_in root {options, goal, rankings, progress} =
        true when a preemption was requested for it. *)
     fun clear_current () =
       let val requested = !preempt in
-        current := NONE; current_key := NONE; preempt := false; requested
+        current := NONE; current_key := NONE; replayed := NONE;
+        preempt := false; requested
       end
 
     (* Takes the interrupt of a preemption that arrived after the item
@@ -1349,7 +1356,10 @@ fun run_in root {options, goal, rankings, progress} =
                       {minimize = #minimize options,
                        preplay_timeout = #preplay_timeout options,
                        minimize_timeout = #minimize_timeout options,
-                       minimize_deadline = SOME deadline}
+                       minimize_deadline = SOME deadline,
+                       on_verified = SOME (fn list =>
+                         with_mutex state_mutex (fn () =>
+                           replayed := SOME list))}
                       lemmas))
                   goal
               val suggestion : suggestion =
@@ -1372,21 +1382,28 @@ fun run_in root {options, goal, rankings, progress} =
             end)
            handle Interrupt => raise Interrupt
                 | error =>
-                    (* An error while a preemption is pending may be the
-                       cut computation's: the item is requeued. *)
-                    if with_mutex state_mutex (fn () => !preempt)
-                    then raise Interrupt
-                    (* A variant that fails is expected and not reported. *)
-                    else if Option.isSome origin then ()
-                    else
-                      (warn "reconstruction" error;
-                       queue_variants ()))
+                    (* A failure is an outcome like a success: past the
+                       point where a preemption can cut it, which leaves
+                       an interrupt that is taken now. *)
+                    let
+                      val preempted = with_mutex state_mutex clear_current
+                    in
+                      if preempted then drain_interrupt () else ();
+                      (* A variant that fails is expected and not
+                         reported. *)
+                      if Option.isSome origin then ()
+                      else (warn "reconstruction" error; queue_variants ())
+                    end)
       end
 
     (* The item is preempted: back to the head of its queue, which keeps
        the arrival order of equal costs, as a taken item was the first
        of the cheapest; its key is forgotten, as it has not been
-       reconstructed.  True when the interrupt was a preemption (the mutex
+       reconstructed.  If the reconstruction had replayed a list, that
+       list (verified, so no costlier than the item's) replaces the
+       item's, and the restart resumes from it.  It is queued as the kind
+       of item it was, and a requeued item is no arrival, so it preempts
+       nothing.  True when the interrupt was a preemption (the mutex
        is not held).  A stop is not: with a stop (stopping is set before
        its interrupt) the interrupt ends the thread as before, though a
        pending preemption has been requested too. *)
@@ -1395,15 +1412,24 @@ fun run_in root {options, goal, rankings, progress} =
         let
           val item = !current
           val key = !current_key
+          val progress = !replayed
           val requested = clear_current ()
+          fun resume (slice, lemmas, time) =
+            case progress of
+                SOME list => (slice, list, time)
+              | NONE => (slice, lemmas, time)
         in
           if not requested orelse !stopping then false
           else
             (Option.app (fn k =>
                tried_keys := List.filter (fn other => other <> k)
                                          (!tried_keys)) key;
-             Option.app (fn (Fresh success, _) => recon := success :: !recon
-                          | (Retry retry, _) => retries := retry :: !retries)
+             Option.app
+               (fn (Fresh success, _) => recon := resume success :: !recon
+                 | (Retry {origin, success}, _) =>
+                     retries :=
+                       {origin = origin, success = resume success} ::
+                       !retries)
                item;
              signal (); true)
         end)
@@ -1416,29 +1442,39 @@ fun run_in root {options, goal, rankings, progress} =
        phase before its outcome is recorded: the replay, the
        minimisation, the final replay) preempts it: note_result sets
        preempt and interrupts this thread under the mutex, the item is
-       requeued here and restarts from scratch later, and the cheaper one
-       is taken next.  A preemption needs a strictly lower cost, so a run
-       has at most as many as the lemma counts allow.  No event reports a
-       preempted reconstruction; a stop (MaxProofs, the hard deadline,
-       the caller's interrupt) is not a preemption and ends this thread as
-       before (settle_interrupt).
+       requeued here, and the cheaper one is taken next.  A preemption
+       keeps the progress made: the reconstruction reports each list it
+       has replayed (on_verified), the latest is recorded under the mutex,
+       and the requeued item carries it instead of its original list, so
+       the restart resumes from a verified, usually shorter, list.  No
+       preemption happens at or after the soft deadline.  Only an arrival
+       preempts (note_result), once per arrival (the preempt flag), and
+       arrivals are finite, so a run has at most schedule_length
+       preemptions and every item is eventually reconstructed (the
+       restart of a preempted item is no arrival, and resuming only
+       lowers its cost).  No event reports a preempted reconstruction; a
+       stop (MaxProofs, the hard deadline, the caller's interrupt) is not
+       a preemption and ends this thread as before (settle_interrupt).
 
        The interrupt is a preemption only if preempt is set, which
        happens only while an item is current, both under the mutex.  The
-       outcome of an item (the suggestion, and so the end of its being
-       current) is recorded under that mutex too, so an arrival cannot cut
-       a verified item, and a preemption requested just before the commit
-       leaves a pending interrupt that is taken at once (drain_interrupt),
-       not by the next item.  A cut leaves nothing behind: the thread is
-       interruptible only at its waits.  smlTimeout.timeLimit, where a
-       replay spends its time, kills its worker and restores the thread's
-       attributes before it re-raises the interrupt of the waiting thread;
-       smlRedirect.hide_in_file pops its output file when its function
-       raises; hhReconstruct re-raises Interrupt wherever it handles
-       exceptions.  (The hard deadline, which interrupts this thread as
-       well, relies on the same.)  An error that is not an Interrupt while
-       a preemption is pending, as when a compilation swallowed the
-       interrupt, is treated as the cut. *)
+       outcome of an item (a suggestion or a failure, and so the end of
+       its being current) is recorded under that mutex too, so an arrival
+       cannot cut an item with an outcome, and a preemption requested just
+       before the commit leaves a pending interrupt that is taken at once
+       (drain_interrupt), not by the next item.  A cut leaves nothing
+       behind: the thread is interruptible only at its waits.
+       smlTimeout.timeLimit, where a replay spends its time, kills its
+       worker and restores the thread's attributes before it re-raises
+       the interrupt of the waiting thread; smlRedirect.hide_in_file pops
+       its output file when its function raises; hhReconstruct re-raises
+       Interrupt wherever it handles exceptions.  (The hard deadline,
+       which interrupts this thread as well, relies on the same.)  A
+       preemption takes effect at the next wait of the thread: normally at
+       once, as replays and minimisation attempts run in a timeLimit
+       worker while the thread waits, but a compilation (tactic_of_sml,
+       the PolyML.compiler runs of bound_name) delays it by tens to
+       hundreds of milliseconds. *)
     fun recon_step () =
       (case take_success () of
           NONE => false

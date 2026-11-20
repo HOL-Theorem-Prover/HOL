@@ -91,6 +91,12 @@ fails to replay is tried again once without each of its lemmas in turn.
 These retries run only while no new list waits for reconstruction, and stop
 at the timeout.
 
+The proof reconstructed and reported first is the one with the fewest
+lemmas.  A cheaper proof that arrives while a costlier one is being
+reconstructed preempts it, and the costlier one restarts later from the
+shortest list it had already replayed, so its progress is kept.  Nothing
+is preempted at or after the soft deadline.
+
 The `filter` values are:
 
 * `knn`, the existing dependency-aware nearest-neighbour selector;

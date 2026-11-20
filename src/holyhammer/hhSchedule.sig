@@ -165,10 +165,17 @@ sig
      It takes the proof of fewest lemmas first (ties in arrival order),
      and a proof that arrives with strictly fewer lemmas than the one
      being reconstructed preempts it: the reconstruction, in any phase
-     before its outcome is recorded, is interrupted, the cheaper proof is
-     reconstructed, and the preempted one starts afresh later.  A
-     preempted reconstruction reports no event, and Verified suggestions
-     stay in the order of completion.  A stop is not a preemption.
+     before its outcome (a suggestion or a failure) is recorded, is
+     interrupted, the cheaper proof is reconstructed, and the preempted
+     one restarts later from the shortest lemma list its reconstruction
+     had already replayed, so the progress is kept.  Nothing is
+     preempted at or after the soft deadline.  The interrupt takes
+     effect at the next wait of the reconstruction thread: normally at
+     once, as replays and minimisation attempts run in a time-limited
+     worker, but a compilation can delay it by tens to hundreds of
+     milliseconds.  A preempted reconstruction reports no event, and
+     Verified suggestions stay in the order of completion.  A stop is
+     not a preemption.
 
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an
