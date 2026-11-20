@@ -218,25 +218,9 @@ New tools
 New examples
 ------------
 
--   `examples/algebra/elliptic/instances` supplies checked secp256k1, P-256,
-    BN254 and BLS12-381 groups, standard-generator orders, full cardinalities,
-    cofactors, concrete endomorphisms and twist embeddings. Companion scalar
-    checkers live in its independently buildable `certificates` subpackage,
-    with small-field regressions selected at selftest level 1. They reuse the
-    generic curve and field/certificate packages and existing primality proofs,
-    without introducing reverse dependencies. Long full-cardinality
-    certificates are selected separately at selftest level 3.
-    No optimized arithmetic, serialization or
-    pairing evaluation is introduced.
-
--   [`examples/algebra/elliptic`](../examples/algebra/elliptic/README.md)
-    develops nonsingular short-Weierstrass curves in characteristic other
-    than 2 or 3 over the existing field records. It provides the Abelian
-    curve group, rational torsion, field-map and coordinate-scaling
-    transport, ordinary homogeneous coordinates, elementary cardinality
-    bounds and order-three endomorphism certificates, with GF(5) examples.
-    The generic package runs at selftest level 1, independently of named
-    cryptographic instances and the legacy `examples/elliptic` hierarchy.
+-   Added short-Weierstrass elliptic-curve groups, torsion, morphisms and
+    cardinality results, with certified finite-field arithmetic and concrete
+    secp256k1, P-256, BN254 and BLS12-381 instances. 
 
 -   The algebra examples now connect fields to the HOL Light-compatible
     ring interface, with inverse laws and a homogeneous-coordinate
@@ -246,15 +230,6 @@ New examples
     certificates, using the shared `expMod` implementation and its `cv_std`
     translations, with examples for elliptic-curve primes. Decimal certificate
     keys are normalized before lookup, including keys with leading zeros.
-
--   `examples/algebra/field_certificates` provides named base/scalar fields
-    for secp256k1, P-256, BN254 and BLS12-381, reusing `namedPrimes`, and
-    BN254/BLS12-381 quadratic and degree-twelve polynomial quotient fields
-    with explicit injective field embeddings. Polynomial remainder, modular
-    power, Rabin irreducibility and no-roots certificates are kernel checked;
-    natural modular powers use shared `expMod`/`cv_std` automation.
-    The standalone Poly/ML package has no elliptic-curve dependency and is
-    selected by the native algebra aggregate and standard PR selftest builds.
 
 -   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
 
