@@ -15,20 +15,29 @@ datatypes.exe: datatypes.uo NativePrelude.uo
 
 # Integration suite of the extension engine; it imports both engines, so it
 # is never linked into the ordinary selftest.
-.PHONY: check datatypes-check
-check: selftest.exe
+.PHONY: check core-check datatypes-check
+check: core-check
+
+core-check: selftest.exe
 	./selftest.exe
 
 datatypes-check: datatypes.exe
 	./datatypes.exe
 
 # The option/pair/list cases need theories built after simp.
-# tools/sequences/base-hol reruns this directory after list/src, when they
-# are available.
+# The early simp build runs core-check. tools/sequences/base-hol reaches
+# this directory after list/src to run the remaining datatype tests.
 ifneq ($(wildcard $(HOLDIR)/sigobj/listTheory.uo),)
 check: datatypes-check
+STAGED_CHECK = datatypes-check
+else
+STAGED_CHECK = core-check
 endif
 
 ifdef HOLSELFTESTLEVEL
+ifdef HOLBUILD
+all: $(STAGED_CHECK)
+else
 all: check
+endif
 endif

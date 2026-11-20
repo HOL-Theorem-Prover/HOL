@@ -69,9 +69,11 @@ val private_events =
    ("replayLeft",[remove "base",add "left"]),
    ("replayRight",[add "base",remove "alias"]),
    ("replayDiamond",[remove "left",add "diamond"])]
-val _ = List.app (fn (thy,ds) => Theory.LoadableThyData.temp_encoded_update
+fun record_chunk thy ds = Theory.LoadableThyData.temp_encoded_update
   {thy=thy,thydataty="splitLib.persistent.rules.v1",shared_readmaps=maps,
-   data=HOLsexp.tagged_encode "split-rules-v1" HOLsexp.List ds}) private_events
+   data=HOLsexp.tagged_encode "split-rules-v1" HOLsexp.List ds}
+val _ = List.app (fn (thy,ds) => List.app (fn d => record_chunk thy [d]) ds)
+  private_events
 val _ = splitLib.enable_split_attribute ()
 fun names () = map #1 (splitLib.named_split_thms ())
 val _ = check "private initialization matches characterized ordered diamond replay"
@@ -86,4 +88,12 @@ val _ = check "equal-theorem aliases retain distinct names"
 val _ = check "raw REMOVE keys retain their writing theory"
   (SplitData.theory_data "replayRight" =
     [SplitData.Add {Thy=thy,Name="base"},SplitData.Remove (thy ^ "$alias")])
+val _ = record_chunk "replayRight" [remove "base",add "alias"]
+val _ = check "merged encoded chunks retain chronological order"
+  (SplitData.theory_data "replayRight" =
+    [SplitData.Add {Thy=thy,Name="base"},SplitData.Remove (thy ^ "$alias"),
+     SplitData.Remove (thy ^ "$base"),SplitData.Add {Thy=thy,Name="alias"}])
+val _ = load "replayRight"
+val _ = check "later chunk replays after the original ordered deltas"
+  (names () = map (fn n => thy ^ "$" ^ n) ["alias","diamond"])
 val _ = OS.Process.exit OS.Process.success

@@ -71,7 +71,7 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
    fun merge_travrules tl = let
      val ts = map dest tl
-     fun uniquify l = let
+     fun sort_unique l = let
        val sorted = Listsort.sort (inv_img_cmp rel_of_preorder Term.compare) l
        fun recurse acc [] = acc
          | recurse acc [h] = h::acc
@@ -83,6 +83,11 @@ fun ERR x = STRUCT_ERR "Travrules" x;
      in
        recurse [] sorted
      end
+     (* Appending an ordinary equality-only fragment supplies the same
+        preorder twice. Keep the fresh singleton produced by the merge. *)
+     fun uniquify (l as [p,q]) =
+           if Portable.pointer_eq (p,q) then [q] else sort_unique l
+       | uniquify l = sort_unique l
    in
      TRAVRULES {relations=uniquify (flatten (map #relations ts)),
                 congprocs=foldl (op @) [] (map #congprocs ts),

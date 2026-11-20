@@ -5,7 +5,9 @@ binds the extension modules to the usual names (`simpLib`, `boolSimps`,
 ...) and the ordinary ones to `OrdinarySimp`, `OrdinaryBool`, ..., so it
 is kept separate from the ordinary `src/simp/src/selftest.sml`.
 
-The option, pair and list cases are in `datatypes.sml`, which needs those
-theories.  It is therefore built only once `listTheory` exists:
-`src/simp/src` runs this directory without it, and
-`tools/sequences/base-hol` runs it again, with it, after `src/list/src`.
+The option, pair and list cases are in `datatypes.sml`. The top-level
+selftest build runs the core tests from `src/simp/src` and the datatype
+tests after `src/list/src`. Standalone runs use `Holmake check` or
+`Holmake HOLSELFTESTLEVEL=1 all` in this directory, or the
+`native-extension` target in `src/simp/src`. Each runs the core tests
+and also runs the datatype tests when `listTheory` is available.

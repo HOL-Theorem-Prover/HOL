@@ -147,10 +147,15 @@ api-audit: simpLib.uo congLib.uo simpExtLib.uo congExtLib.uo boolSimps.uo
 	  -C ../tests/api-audit check,api-audit.log)
 
 # The extension engine's integration suite, with its ordinary controls.
+ifdef HOLBUILD
+NATIVE_CHECK = core-check
+else
+NATIVE_CHECK = check
+endif
 .PHONY: native-extension
 native-extension: simpExtLib.uo congExtLib.uo boolSimps.uo
 	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
-	  -C ../tests/native-extension check,native-extension.log)
+	  -C ../tests/native-extension $(NATIVE_CHECK),native-extension.log)
 
 # Separate extension tests do not become imports of ordinary selftest.
 .PHONY: traverse-ext

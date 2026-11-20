@@ -14,9 +14,9 @@ datatype raw_delta = Add of KernelSig.kernelname | Remove of string
    same theorem values as the previous split implementation. *)
 
 type registration =
-  {segment : string -> raw_delta list,
-   append : raw_delta list -> unit,
-   set : raw_delta list -> unit,
+  {reversed_segment : string -> raw_delta list,
+   record : raw_delta -> unit,
+   set_reversed : raw_delta list -> unit,
    get : Context.t -> thm Symtab.table,
    update : (thm Symtab.table -> thm Symtab.table) -> unit,
    validate : thm -> unit}
@@ -42,10 +42,13 @@ fun decode_delta s =
         SOME (Add {Thy=thy,Name=name})
     | SOME [HOLsexp.Symbol "remove", HOLsexp.String key] => SOME (Remove key)
     | _ => NONE
+(* Keep the newest delta first in memory so recording one delta is
+   constant-time. The wire format and replay order are oldest first. *)
 fun encode ds = HOLsexp.tagged_encode "split-rules-v1"
-  (HOLsexp.list_encode encode_delta) ds
-val decode = HOLsexp.tagged_decode "split-rules-v1"
-  (HOLsexp.list_decode decode_delta)
+  (HOLsexp.list_encode encode_delta) (List.rev ds)
+fun decode data = Option.map List.rev
+  (HOLsexp.tagged_decode "split-rules-v1"
+     (HOLsexp.list_decode decode_delta) data)
 
 fun apply validate (Add name) db =
       let val th = DB.fetch_knm name
@@ -53,7 +56,8 @@ fun apply validate (Add name) db =
   | apply _ (Remove key) db = Symtab.delete_safe key db
 fun replay (r : registration) thy =
   #update r (fn db => List.foldl
-    (fn (d,db) => apply (#validate r) d db) db (#segment r thy))
+    (fn (d,db) => apply (#validate r) d db) db
+    (List.rev (#reversed_segment r thy)))
 
 (* The sole process-global closure captures only stable private slot
    handles. Every event selects all operations from the active context. *)
@@ -65,15 +69,15 @@ fun dispatch td =
             TheoryDelta.TheoryLoaded thy => replay r thy
           | _ =>
               let
-                val ds = #segment r (Theory.current_theory ())
+                val ds = #reversed_segment r (Theory.current_theory ())
                 (* Match AncestryData.gen_other_tds: only the recorded
                    stream is pruned; local/live rules are left alone.
                    REMOVE keys are never dropped or resolved again. *)
                 fun current (Add name) = can DB.fetch_knm name
                   | current (Remove _) = true
-                val kept = List.filter current ds
               in
-                if length kept = length ds then () else #set r kept
+                if List.all current ds then ()
+                else #set_reversed r (List.filter current ds)
               end
 
 fun listener () = List.find (fn (n,_) => n = listener_name)
@@ -117,9 +121,10 @@ fun initialize {validate} =
     fun allocate () =
       let
         val (to_data,from_data) = LTD.new
-          {thydataty=tag, pp=K "<split rules v1>", merge=op @,
+          {thydataty=tag, pp=K "<split rules v1>",
+           merge=fn (older,newer) => newer @ older,
            terms=K [], strings=K [], read=K decode, write=K encode}
-        fun segment thy =
+        fun reversed_segment thy =
           case LTD.segment_data {thy=thy,thydataty=tag} of
               NONE => []
             | SOME data =>
@@ -127,8 +132,10 @@ fun initialize {validate} =
                      SOME ds => ds
                    | NONE => raise ERR "theory_data"
                        "Foreign split data witness")
-        fun append ds = LTD.write_data_update {thydataty=tag,data=to_data ds}
-        fun set ds = LTD.set_theory_data {thydataty=tag,data=to_data ds}
+        fun record d =
+          LTD.write_data_update {thydataty=tag,data=to_data [d]}
+        fun set_reversed ds =
+          LTD.set_theory_data {thydataty=tag,data=to_data ds}
         val update = Context.Data.modify rules_slot
         fun handler stored {name,attrname,args,thm} =
           let
@@ -146,11 +153,12 @@ fun initialize {validate} =
             val value = if stored then DB.fetch_knm knm else thm
             val _ = #validate current value
           in
-            if stored then #append current [Add knm] else ();
+            if stored then #record current (Add knm) else ();
             #update current (Symtab.update (KernelSig.name_toString knm,value))
           end
         val attribute = {storedf=handler true,localf=handler false}
-        val r = {segment=segment, append=append, set=set,
+        val r = {reversed_segment=reversed_segment, record=record,
+                 set_reversed=set_reversed,
                  get=Context.Data.get rules_slot,
                  update=update,validate=validate}
       in
@@ -187,7 +195,7 @@ fun exclude name =
       | SOME r =>
           let val key = KernelSig.name_toString (ThmSetData.toKName name)
           in
-            #append r [Remove key];
+            #record r (Remove key);
             #update r (Symtab.delete_safe key)
           end
   end
@@ -200,7 +208,9 @@ fun named_rules () =
       | SOME r => Symtab.dest (#get r ctxt)
   end
 fun theory_data thy =
-  case active (Context.snapshot ()) of NONE => [] | SOME r => #segment r thy
+  case active (Context.snapshot ()) of
+      NONE => []
+    | SOME r => List.rev (#reversed_segment r thy)
 fun current_data () = theory_data (Theory.current_theory ())
 
 end

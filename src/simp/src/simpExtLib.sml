@@ -970,12 +970,12 @@ fun del_split name ss =
 fun splitter_looper ss (asms, goal) =
   let
     val excluded = #excl_loopers (strategy_of ss)
+    val unfiltered = Binaryset.isEmpty excluded
     fun enabled name = not (Binaryset.member (excluded, name))
     fun enabled_named (name, th) = enabled (split_looper_display name th)
+    val named = splitLib.named_split_thms ()
     val persistent =
-      splitLib.named_split_thms ()
-      |> List.filter enabled_named
-      |> map #2
+      map #2 (if unfiltered then named else List.filter enabled_named named)
     fun type_enabled ty =
       let
         val {Thy,Tyop,...} = dest_thy_type ty
@@ -984,11 +984,10 @@ fun splitter_looper ss (asms, goal) =
         enabled ("split.case " ^ full) andalso
         enabled ("split.case " ^ Tyop)
       end
+    val groups = splitLib.goal_split_rule_groups (goal :: asms)
     val datatype_rules =
-      splitLib.goal_split_rule_groups (goal :: asms)
-      |> List.filter (type_enabled o #1)
-      |> map #2
-      |> List.concat
+      List.concat (map #2
+        (if unfiltered then groups else List.filter (type_enabled o #1) groups))
   in
     splitLib.SPLIT_TAC (persistent @ datatype_rules) (asms, goal)
   end
@@ -1279,14 +1278,14 @@ fun mk_tactic_solver (name,tac) =
 
  fun compile_native_rewrite event mk_rewrs {item=(nm,th),token} =
    let
-     val item as (_,input_control) = dest_tagged_rewrite th
+     val item as (plain,input_control) = dest_tagged_rewrite th
      val rules = compile_native event mk_rewrs token 0 (nm,item)
      fun owns (_,RewriteSource {bound=NONE,...}) = true
        | owns (_,RewriteSource {bound=SOME (counter,_),...}) =
            case input_control of
                BOUNDED r => Portable.pointer_eq (r,counter)
              | UNBOUNDED => false
-   in (rules,List.all owns rules) end
+   in (plain,rules,List.all owns rules) end
 
  (* Preserve simpLib's ++ schedule: decode every ordinary tag, derive all
     AC rules, run every rewrite maker, and only then make conversions.
@@ -1320,17 +1319,17 @@ fun mk_tactic_solver (name,tac) =
      val fragment = name_ss "PREPARED_REWRITES" (rewrites theorems)
      val event = source_token ()
      fun rule (slot as {item=(_,th),...}) =
-       let val (rules,slot_local) =
+       let val (plain,rules,slot_local) =
              compile_native_rewrite event (#mk_rewrs data) slot
-       in (th,rules,slot_local) end
+       in (th,plain,rules,slot_local) end
      val compiled = map rule (#rewrs (D fragment))
-     val native = {rules=List.concat (map #2 compiled),
-                   slot_local=List.all #3 compiled}
+     val native = {rules=List.concat (map #3 compiled),
+                   slot_local=List.all #4 compiled}
    in
      RewriteBundle
        {parts=[(fragment,event,native)],
-        rules=map (fn (th,rules,_) => (th,map #2 rules)) compiled,
-        context=map (#1 o dest_tagged_rewrite) theorems}
+        rules=map (fn (th,_,rules,_) => (th,map #2 rules)) compiled,
+        context=map #2 compiled}
    end
 
  fun rewrite_bundle_rules (RewriteBundle {rules,...}) = rules
@@ -1376,7 +1375,8 @@ fun mk_tactic_solver (name,tac) =
             all_native
        end
    val native = case rebind of NONE => retained | SOME bind => bind retained
-   val native_sources = map #2 native @ #native_sources sset
+   val new_sources = map #2 native
+   val native_sources = new_sources @ #native_sources sset
    fun compile_view find_source (entry as (source,view,cached)) =
      case find_source source of
          NONE => (NONE,entry)
@@ -1401,6 +1401,19 @@ fun mk_tactic_solver (name,tac) =
            in (compiled,(source,view,SOME compiled)) end
    val compiled_views =
      if null views then []
+     else if isSome native_override andalso use_full_source_index views then
+       let
+         (* Bundle installation accepts only views of its own sources.
+            Avoid indexing ambient sources unless a local match is missing
+            and another source at the same origin might match. *)
+         val own = source_finder new_sources #1 views
+         val ambient =
+           Susp.delay (fn () => source_finder (#native_sources sset) #1 views)
+         fun find source =
+           case own source of
+               NONE => Susp.force ambient source
+             | found => found
+       in map (compile_view find) views end
      else map (compile_view (source_finder native_sources #1 views)) views
    val newconvdata = convs @ map #1 native @
      List.mapPartial #1 compiled_views
@@ -1430,22 +1443,27 @@ fun mk_tactic_solver (name,tac) =
      in
        List.concat (map context rewrs)
      end
-   (* Only a slot that lost an ordinary rewrite needs new context facts.
-      AC components never contribute their source theorem to this context. *)
-   val reduced_slots = List.foldl
-     (fn ((_,RewriteSource {origin,...}),slots) =>
-       if #component origin = 0 then Binaryset.add (slots,#slot origin)
-       else slots)
-     (Binaryset.empty Int.compare) removed_native
-   val context_thms =
-     if Binaryset.isEmpty reduced_slots then map (#2 o #item) rewrs
-     else reduced_context reduced_slots
-   val context_thms =
-     if isSome native_override then map (#1 o dest_tagged_rewrite) context_thms
-     else context_thms
+   (* A slot that lost an ordinary rewrite reconstructs its context facts,
+      including validation of their declared bounds. AC components never
+      contribute their source theorem to this context. *)
    val new_dprocs =
-     map (TraverseExt.addctxt context_thms) dprocs' @ dprocs @
-                    relreducers
+     if null dprocs' andalso null removed_native then dprocs @ relreducers
+     else
+       let
+         val reduced_slots = List.foldl
+           (fn ((_,RewriteSource {origin,...}),slots) =>
+             if #component origin = 0 then Binaryset.add (slots,#slot origin)
+             else slots)
+           (Binaryset.empty Int.compare) removed_native
+         val context_thms =
+           if Binaryset.isEmpty reduced_slots then map (#2 o #item) rewrs
+           else reduced_context reduced_slots
+         val context_thms =
+           if isSome native_override then
+             map (#1 o dest_tagged_rewrite) context_thms
+           else context_thms
+       in map (TraverseExt.addctxt context_thms) dprocs' @ dprocs @ relreducers
+       end
 
    val reltravs = map rsd_travrules relsimps
    val relrels = List.concat (map travrel reltravs)
@@ -2205,8 +2223,9 @@ fun process_tags0 {report,preserve} ss thl =
       else
         let
           val base =
-            remove_ssfrags_with_controls preserve exclfrags ss
-            handle Conv.UNCHANGED => ss
+            if null exclfrags then ss
+            else remove_ssfrags_with_controls preserve exclfrags ss
+                 handle Conv.UNCHANGED => ss
           val cong_ac =
             SSFRAG_CON
               {name=SOME "Cong and/or AC", convs=[], rewrs=[],

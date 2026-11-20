@@ -102,8 +102,10 @@ fun all_named_frags slot = Symtab.keys (fragDB slot)
 (* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
 
+(* Merging a named fragment creates a fresh name option. *)
 fun merge_names [] = NONE
-  | merge_names [name] = name
+  | merge_names [NONE] = NONE
+  | merge_names [SOME name] = SOME name
   | merge_names names =
     case List.mapPartial I names of
         [] => NONE

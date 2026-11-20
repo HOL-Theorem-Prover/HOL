@@ -389,8 +389,10 @@ fun getlimit (SS ss) = #limit ss
       assume the provided dprocs in the frag have already been
       primed *)
    val relreducers = map rsd_reducer relsimps
-   val new_dprocs = map (Traverse.addctxt (map #2 rewrs)) dprocs' @ dprocs @
-                    relreducers
+   val existing_dprocs =
+       if null dprocs' then []
+       else map (Traverse.addctxt (map #2 rewrs)) dprocs'
+   val new_dprocs = existing_dprocs @ dprocs @ relreducers
 
    val reltravs = map rsd_travrules relsimps
    val relrels = List.concat (map travrel reltravs)
