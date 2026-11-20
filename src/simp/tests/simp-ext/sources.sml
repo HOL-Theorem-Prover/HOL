@@ -463,6 +463,59 @@ val _ = List.app (fn reverse => let
 in check "opaque context reconstruction requires rebuild"
      (#rebuild delta andalso #context_sensitive delta) end) [false,true]
 
+val _ = let
+  val batches = ref ([] : thm list list)
+  exception Context
+  val observer = E.CONTEXT_REDUCER
+    {name=SOME "suspension context observer",initial=Context,
+     addcontext=fn (ctxt,more) => (batches := more :: !batches; ctxt),
+     apply=fn _ => NO_CONV}
+  val base = S.++ (ext_pure_ss,S.dproc_ss observer)
+  val pair = CONJ a b
+  val fragment = S.rewrites [pair,TRUTH]
+  val ss = S.++ (S.++ (base,fragment),S.merge_ss [fragment,fragment])
+  val all = handles ss
+  fun suspend requested =
+    (batches := []; ignore (S.suspend_rewrite_sources requested ss);
+     List.rev (!batches))
+  fun same_batches expected actual =
+    ListPair.allEq (ListPair.allEq (uncurry same)) (expected,actual)
+  val _ = check "suspension rebuilds only affected context slots"
+    (case all of [first,_,_,_,older_first,_] =>
+       same_batches [[cb,TRUTH],[cb,TRUTH,pair,TRUTH]]
+         (suspend [first,first,older_first])
+     | _ => false)
+in check "suspending every handle retains non-rewrite context facts"
+     (same_batches [[TRUTH],[TRUTH,TRUTH]] (suspend all))
+end
+
+val _ = let
+  val input_counter = ref NONE
+  fun maker (th,tag as BoundedRewrites.BOUNDED counter) =
+        (case !input_counter of
+             NONE => (input_counter := SOME counter; [(th,tag)])
+           | SOME first =>
+               (first := 3; [(th,BoundedRewrites.BOUNDED first)]))
+    | maker item = [item]
+  val maker_frag = S.SSFRAG
+    {name=SOME "cross-slot quota maker",convs=[],rewrs=[],ac=[],congs=[],
+     dprocs=[],filter=SOME maker}
+  val base = S.++ (S.++ (S.empty_ss,maker_frag),drop)
+  val bundle = S.prepare_rewrite_bundle base [Ntimes a 2,Ntimes b 7]
+  val installed = S.install_rewrite_bundle bundle [] base
+  val _ = valOf (!input_counter) := 0
+  val replay = S.remove_ssfrags ["sources-drop"] installed
+  val cv = projection true replay
+  val _ = result "replay resets a cross-slot quota to its first allowance"
+    cv (input b) b
+  val _ = result "replayed cross-slot quota remains available once"
+    cv (input a) a
+  val _ = result "both replayed slots consume the same quota"
+    cv (input b) (REFL (input b))
+in result "cross-slot quota replay leaves the installed quota alone"
+     (projection true installed) (input a) (REFL (input a))
+end
+
 (* Context changes report arbitrary conversion keys in either direction;
    keyless/opaque traversal changes demand rebuilding. Native source changes
    are inspected separately, but invalidating a view must rebuild its opaque
@@ -519,6 +572,15 @@ val _ = let
   val replay = S.remove_ssfrags_preserving_controls ["sources-drop"] ss
   val _ = delta "compatible view replay needs no rebuild"
     ss replay [] false false
+  val bundle = S.prepare_rewrite_bundle base [a]
+  val handle_a = hd (#2 (hd (S.rewrite_bundle_rules bundle)))
+  val viewed = S.install_rewrite_bundle bundle [(handle_a,av)] base
+  val viewed = S.++ (viewed,drop)
+  val _ = delta "ordinary replay of a prepared view reports a rebuild"
+    viewed (S.remove_ssfrags ["sources-drop"] viewed) [] true false
+  val _ = delta "control-preserving replay of a prepared view is stable"
+    viewed (S.remove_ssfrags_preserving_controls ["sources-drop"] viewed)
+    [] false false
   val ac = S.++ (base,S.ac_ss [(CONJ_COMM,CONJ_ASSOC)])
   val _ = delta "AC traversal addition demands rebuild" base ac [] true false
 in () end

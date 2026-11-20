@@ -51,6 +51,7 @@ fun same_rewrite_source
   Option.map #2 b1 = Option.map #2 b2
 
 fun source_event (RewriteSource {origin,...}) = #event origin
+fun source_is_bounded (RewriteSource {bound,...}) = Option.isSome bound
 
 fun source_index include_source sources =
   List.foldl
@@ -135,6 +136,11 @@ type tagged_convdata =
    source : (thname option * thm) option,
    prepared : Cond_rewrExt.prepared option,
    bound : (int ref * int) option}
+
+(* slot_local means each bounded result uses its own slot's fresh input
+   counter. Different slots then cannot share a counter. *)
+type prepared_native =
+  {rules : (tagged_convdata * rewrite_source) list, slot_local : bool}
 
 fun lift_convdata {name,key,trace,conv} : contextual_convdata =
   {name=name, key=key, trace=trace,
@@ -233,7 +239,7 @@ and ssfrag = SSFRAG_CON of {
 }
 and history_item =
     ADDFRAG of ssfrag * int *
-      (tagged_convdata * rewrite_source) list option * rewrite_source list
+      prepared_native option * rewrite_source list
                  | DELETE_EVENT of rule_exclusion list
                  | ADDWEAKENER of weakener_data
                  | STRATEGY_EVENT of strategy_event
@@ -1272,7 +1278,15 @@ fun mk_tactic_solver (name,tac) =
    compile_native_named event slot component (mk_named_rewrs mk_rewrs item)
 
  fun compile_native_rewrite event mk_rewrs {item=(nm,th),token} =
-   compile_native event mk_rewrs token 0 (nm,dest_tagged_rewrite th)
+   let
+     val item as (_,input_control) = dest_tagged_rewrite th
+     val rules = compile_native event mk_rewrs token 0 (nm,item)
+     fun owns (_,RewriteSource {bound=NONE,...}) = true
+       | owns (_,RewriteSource {bound=SOME (counter,_),...}) =
+           case input_control of
+               BOUNDED r => Portable.pointer_eq (r,counter)
+             | UNBOUNDED => false
+   in (rules,List.all owns rules) end
 
  (* Preserve simpLib's ++ schedule: decode every ordinary tag, derive all
     AC rules, run every rewrite maker, and only then make conversions.
@@ -1296,8 +1310,7 @@ fun mk_tactic_solver (name,tac) =
    end
 
  datatype rewrite_bundle = RewriteBundle of
-   {parts : (ssfrag * int *
-             (tagged_convdata * rewrite_source) list) list,
+   {parts : (ssfrag * int * prepared_native) list,
     rules : (thm * rewrite_source list) list,
     context : thm list}
 
@@ -1307,13 +1320,16 @@ fun mk_tactic_solver (name,tac) =
      val fragment = name_ss "PREPARED_REWRITES" (rewrites theorems)
      val event = source_token ()
      fun rule (slot as {item=(_,th),...}) =
-       (th,compile_native_rewrite event (#mk_rewrs data) slot)
+       let val (rules,slot_local) =
+             compile_native_rewrite event (#mk_rewrs data) slot
+       in (th,rules,slot_local) end
      val compiled = map rule (#rewrs (D fragment))
-     val native = List.concat (map #2 compiled)
+     val native = {rules=List.concat (map #2 compiled),
+                   slot_local=List.all #3 compiled}
    in
      RewriteBundle
        {parts=[(fragment,event,native)],
-        rules=map (fn (th,rules) => (th,map #2 rules)) compiled,
+        rules=map (fn (th,rules,_) => (th,map #2 rules)) compiled,
         context=map (#1 o dest_tagged_rewrite) theorems}
    end
 
@@ -1332,8 +1348,7 @@ fun mk_tactic_solver (name,tac) =
         {parts=parts,rules=List.concat (map #rules data),
          context=List.concat (map #context data)} end
 
- fun add_frag_native native_override prepared suspended rebind event
-       (ss, f) =
+ fun add_frag_native native_override suspended rebind event (ss, f) =
    if is_excluded ss f then ss
    else let
    (* Do not destructure/rebox a prohibited addition's input: the no-op
@@ -1351,16 +1366,16 @@ fun mk_tactic_solver (name,tac) =
                     SOME f => f oo mk_rewrs'
                   | _ => mk_rewrs'
    val all_native = case native_override of
-       SOME compiled => compiled
+       SOME {rules,...} => rules
      | NONE => compile_frag_native event mk_rewrs' ac rewrs
-   val retained =
-     if null suspended then all_native
+   val (retained,removed_native) =
+     if null suspended then (all_native,[])
      else
        let val removed = source_finder suspended #2 all_native
-       in List.filter (fn (_,source) => not (isSome (removed source)))
+       in List.partition (fn (_,source) => not (isSome (removed source)))
             all_native
        end
-   val native = case rebind of NONE => retained | SOME bind => map bind retained
+   val native = case rebind of NONE => retained | SOME bind => bind retained
    val native_sources = map #2 native @ #native_sources sset
    fun compile_view find_source (entry as (source,view,cached)) =
      case find_source source of
@@ -1396,38 +1411,37 @@ fun mk_tactic_solver (name,tac) =
       assume the provided dprocs in the frag have already been
       primed *)
    val relreducers = map rsd_reducer relsimps
-   fun by_slot sources = List.foldl
-     (fn ((_,source as RewriteSource {origin,...}),found) =>
-       if #component origin <> 0 then found
-       else
-         let val slot = #slot origin
-             val previous = Option.getOpt (Binarymap.peek (found,slot),[])
-         in Binarymap.insert (found,slot,source::previous) end)
-     (Binarymap.mkDict Int.compare) sources
-   fun reduced_context () =
+   fun reduced_context slots =
      let
-       val original_slots = by_slot all_native
-       val retained_slots = by_slot native
+       val affected = List.mapPartial
+         (fn (_,source as RewriteSource {origin,...}) =>
+           if #component origin = 0 andalso
+              Binaryset.member (slots,#slot origin) then SOME source
+           else NONE) native
+       val retained_slots = grouped_by Int.compare
+         (fn RewriteSource {origin,...} => #slot origin) affected
+       fun payload (RewriteSource {rewrite=(_,th),bound,...}) =
+         case bound of NONE => th
+           | SOME (_,declared) => BoundedRewrites.Ntimes th declared
        fun context {item=(_,theorem),token} =
-         let
-           val original = Option.getOpt
-             (Binarymap.peek (original_slots,token),[])
-           val retained = Option.getOpt
-             (Binarymap.peek (retained_slots,token),[])
-           fun payload (RewriteSource {rewrite=(_,th),bound,...}) =
-             case bound of NONE => th
-               | SOME (_,declared) => BoundedRewrites.Ntimes th declared
-         in
-           if length original = length retained then [theorem]
-           else map payload (List.rev retained)
-         end
+         if Binaryset.member (slots,token) then
+           map payload (group_items retained_slots token)
+         else [theorem]
      in
        List.concat (map context rewrs)
      end
-   val context_thms = if null suspended then map (#2 o #item) rewrs
-                      else reduced_context ()
+   (* Only a slot that lost an ordinary rewrite needs new context facts.
+      AC components never contribute their source theorem to this context. *)
+   val reduced_slots = List.foldl
+     (fn ((_,RewriteSource {origin,...}),slots) =>
+       if #component origin = 0 then Binaryset.add (slots,#slot origin)
+       else slots)
+     (Binaryset.empty Int.compare) removed_native
    val context_thms =
-     if prepared then map (#1 o dest_tagged_rewrite) context_thms
+     if Binaryset.isEmpty reduced_slots then map (#2 o #item) rewrs
+     else reduced_context reduced_slots
+   val context_thms =
+     if isSome native_override then map (#1 o dest_tagged_rewrite) context_thms
      else context_thms
    val new_dprocs =
      map (TraverseExt.addctxt context_thms) dprocs' @ dprocs @
@@ -1447,7 +1461,7 @@ fun mk_tactic_solver (name,tac) =
    let
      val history = ADDFRAG
        (setfrag_views (map #2 compiled_views) f,event,
-        if prepared then SOME all_native else NONE,suspended)
+        native_override,suspended)
        :: history
      val rewrite_sources =
        List.mapPartial #source newconvdata @ #rewrite_sources sset
@@ -1465,12 +1479,12 @@ fun mk_tactic_solver (name,tac) =
    end
  end
 
- fun add_frag prepared event args =
-   add_frag_native NONE prepared [] NONE event args
+ fun add_frag event args =
+   add_frag_native NONE [] NONE event args
 
  fun op++ (ss,fragment) =
    if is_excluded ss fragment then ss
-   else add_frag false (source_token ()) (ss,fragment)
+   else add_frag (source_token ()) (ss,fragment)
 
  fun install_rewrite_bundle (RewriteBundle {parts,...}) views
        (ss as SS data) =
@@ -1492,11 +1506,12 @@ fun mk_tactic_solver (name,tac) =
            case group_items views_by_event event of
                [] => []
              | candidates =>
-                 let val find = source_finder (map #2 native) #1 candidates
+                 let val find =
+                       source_finder (map #2 (#rules native)) #1 candidates
                  in List.filter (isSome o find o #1) candidates end
          val fragment =
            setfrag_views (map (fn (s,th) => (s,th,NONE)) owned) fragment
-       in add_frag_native (SOME native) true [] NONE event
+       in add_frag_native (SOME native) [] NONE event
             (SS {mk_rewrs = #mk_rewrs data, history = #history data,
                  initial_net = #initial_net data,
                  rewrite_sources = #rewrite_sources data,
@@ -1517,27 +1532,45 @@ fun set_mk_rewrs mk_rewrs (SS s) =
 
 (* Ordinary replay resets declared quotas, including a quota shared by
    several compiled conjuncts. Prepared shapes need no rewrite-maker call. *)
-fun freshen_prepared_native native =
+fun freshen_prepared_native {rules,slot_local} =
   let
-    val counters = ref []
-    fun fresh counter declared =
-      case List.find (fn (old,_) => Portable.pointer_eq (old,counter))
-                     (!counters) of
-          SOME (_,current) => current
-        | NONE =>
+    val fresh =
+      if slot_local then
+        (* Each slot has its own counter and its rules remain contiguous. *)
+        let
+          val last = ref NONE
+          fun next slot declared =
             let val current = ref declared
-            in counters := (counter,current) :: !counters; current end
+            in last := SOME (slot,current); current end
+        in fn slot => fn _ => fn declared =>
+          case !last of
+              SOME (previous,current) =>
+                if slot = previous then current
+                else next slot declared
+            | NONE => next slot declared
+        end
+      else
+        (* A custom maker may have shared a counter across distinct slots. *)
+        let val counters = ref []
+        in fn _ => fn counter => fn declared =>
+          case List.find (fn (old,_) => Portable.pointer_eq (old,counter))
+                         (!counters) of
+              SOME (_,current) => current
+            | NONE =>
+                let val current = ref declared
+                in counters := (counter,current) :: !counters; current end
+        end
     fun reset (pair as (data,RewriteSource {origin,rewrite,bound})) =
       case bound of
           NONE => pair
         | SOME (counter,declared) =>
             let
-              val current = fresh counter declared
+              val current = fresh (#slot origin) counter declared
               val data = rebind_convdata data (current,declared)
             in (data,RewriteSource
                  {origin=origin,rewrite=rewrite,bound=SOME (current,declared)})
             end
-  in map reset native end
+  in {rules=map reset rules,slot_local=slot_local} end
 
 fun build_from_history_with rebind h0 =
     let
@@ -1548,8 +1581,7 @@ fun build_from_history_with rebind h0 =
                   val native = case rebind of
                       NONE => Option.map freshen_prepared_native cached
                     | SOME _ => cached
-                in add_frag_native native (Option.isSome cached)
-                     suspended rebind event (ss,sf) end
+                in add_frag_native native suspended rebind event (ss,sf) end
             | DELETE_EVENT excls =>
                 delete_exclusions (map replay_exclusion excls) ss
             | ADDWEAKENER wd => add_weakener wd ss
@@ -1570,26 +1602,30 @@ fun setexcluded e (SS s) =
       travrules = #travrules s, limit = #limit s,
       excluded = e, strategy = #strategy s}
 
-fun rebind_source_controls current (pair as (data,source)) =
-  case Binarymap.peek (current,source) of
-      NONE => pair
-    | SOME (previous as RewriteSource {bound,...}) =>
-        if not (same_rewrite_source (previous,source)) then pair
-        else
-          case bound of
-              NONE => pair
-            | SOME (counter,declared) =>
-                let
-                  val RewriteSource {origin,rewrite,...} = source
-                in
-                  if case #bound data of
-                       SOME (r,_) => Portable.pointer_eq (r,counter)
-                     | NONE => false
-                  then pair
-                  else (rebind_convdata data (counter,declared),
-                        RewriteSource
-                          {origin=origin,rewrite=rewrite,bound=bound})
-                end
+fun rebind_source_controls get_current =
+  let
+    val current = Susp.delay get_current
+    fun rebind index
+          (pair as (data,source as RewriteSource {origin,rewrite,...})) =
+      if not (source_is_bounded source) then pair
+      else
+        case Binarymap.peek (index,source) of
+            SOME (previous as RewriteSource
+                    {bound=bound as SOME (counter,declared),...}) =>
+              if not (same_rewrite_source (previous,source)) orelse
+                 (case #bound data of
+                      SOME (r,_) => Portable.pointer_eq (r,counter)
+                    | NONE => false)
+              then pair
+              else (rebind_convdata data (counter,declared),
+                    RewriteSource {origin=origin,rewrite=rewrite,bound=bound})
+          | _ => pair
+  in
+    fn native =>
+      if List.exists (source_is_bounded o #2) native then
+        map (rebind (Susp.force current)) native
+      else native
+  end
 
 fun suspend_rewrite_sources [] ss = ss
   | suspend_rewrite_sources requested (ss as SS data) =
@@ -1616,9 +1652,11 @@ fun suspend_rewrite_sources [] ss = ss
                        | removed =>
                            ADDFRAG (fragment,event,prepared,removed @ previous))
                 | suspend item = item
+              (* Use the full index if a bounded survivor needs it. All
+                 entries must participate in last-at-origin selection. *)
               val rebind = rebind_source_controls
-                (if use_full_source_index requested then current
-                 else source_index (K true) sources)
+                (fn () => if use_full_source_index requested then current
+                          else source_index (K true) sources)
             in
               build_from_history_with (SOME rebind)
                 (map suspend (#history data))
@@ -1637,12 +1675,8 @@ fun remove_ssfrags_with_controls preserve names
       val _ = length history' < length history orelse
               raise Conv.UNCHANGED
       val rebind = if not preserve then NONE else
-        SOME (rebind_source_controls (List.foldl
-          (fn (source as RewriteSource {bound,...},found) =>
-            case bound of
-                NONE => found
-              | SOME _ => Binarymap.insert (found,source,source))
-          (Binarymap.mkDict rewrite_source_compare) native_sources))
+        SOME (rebind_source_controls
+          (fn () => source_index source_is_bounded native_sources))
     in
       build_from_history_with rebind history'
         |> fupdlimit (fn _ => limit) |> setexcluded excluded
@@ -1675,12 +1709,13 @@ fun filter_rewrites_with_controls preserve keep
               fun retain {item,...} =
                 if keep item then true else (removed := true; false)
               val retained = List.filter retain rewrs
-              fun filter_cached native =
+              fun filter_cached {rules,slot_local} =
                 let
                   val slots = Binaryset.addList (Binaryset.empty Int.compare,
                     map #token retained @ map #token ac)
-                in List.filter (fn (_,RewriteSource {origin,...}) =>
-                     Binaryset.member (slots,#slot origin)) native end
+                  val rules = List.filter (fn (_,RewriteSource {origin,...}) =>
+                    Binaryset.member (slots,#slot origin)) rules
+                in {rules=rules,slot_local=slot_local} end
             in
               if !removed then
                 (changed := true;
@@ -1695,11 +1730,8 @@ fun filter_rewrites_with_controls preserve keep
       else
         let
           val rebind = if not preserve then NONE else
-            SOME (rebind_source_controls (List.foldl
-              (fn (source as RewriteSource {bound,...},found) =>
-                case bound of NONE => found
-                  | SOME _ => Binarymap.insert (found,source,source))
-              (Binarymap.mkDict rewrite_source_compare) native_sources))
+            SOME (rebind_source_controls
+              (fn () => source_index source_is_bounded native_sources))
         in build_from_history_with rebind history'
              |> fupdlimit (fn _ => limit) |> setexcluded excluded end
     end
@@ -1855,7 +1887,8 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
         (active_views_of (#history old) (#native_sources old),
          active_views_of (#history current) (#native_sources current)))
     fun same_prepared (NONE,NONE) = true
-      | same_prepared (SOME a,SOME b) = Portable.pointer_eq (a,b)
+      | same_prepared (SOME (a:prepared_native),SOME (b:prepared_native)) =
+          Portable.pointer_eq (#rules a,#rules b)
       | same_prepared _ = false
     fun same_structure (ADDFRAG (_,a,p,_),ADDFRAG (_,b,q,_)) =
           a = b andalso same_prepared (p,q)

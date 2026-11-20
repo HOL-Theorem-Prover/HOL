@@ -18,14 +18,13 @@ type split_rule =
    arity : int,
    asm : bool}
 
-type split_key = {head : term, asm : bool}
 (* Bucketed by the head constant's name.  [same_const] identifies only
    constants of the same name, so the name is a prefilter that never
    hides a key: the keys sharing one name are still told apart by
    [same_key] below.  Bucketing is what keeps a lookup from running
    [Type.match_type] against every rule in the set, which the splitter
    would otherwise pay for at every node of every term it scans. *)
-type cmap = (split_key * split_rule list) list Symtab.table
+type cmap = (term * split_rule list) list Symtab.table
 
 fun rule_parts th =
   let
@@ -324,31 +323,35 @@ fun goal_split_rules terms =
 fun same_type_shape (ty1, ty2) =
   can (Type.match_type ty1) ty2 andalso can (Type.match_type ty2) ty1
 
-fun same_key ({head=h1,asm=a1} : split_key,
-              {head=h2,asm=a2} : split_key) =
-  a1 = a2 andalso same_const h1 h2 andalso
-  same_type_shape (type_of h1, type_of h2)
+fun same_key (h1,h2) =
+  same_const h1 h2 andalso same_type_shape (type_of h1, type_of h2)
 
 fun head_key head =
   let val {Thy,Name,...} = dest_thy_const head
   in persistent_name {Thy=Thy, Name=Name}
   end
 
-fun insert_rule (rule : split_rule) cmap =
+fun insert_rule (rule : split_rule) (cmap : cmap) =
   let
-    val rule_key = {head= #head rule, asm= #asm rule}
-    fun insert [] = [(rule_key, [rule])]
+    val head = #head rule
+    fun insert [] = [(head, [rule])]
       | insert ((key, rules) :: rest) =
-          if same_key (rule_key, key) then (key, rule :: rules) :: rest
+          if same_key (head, key) then (key, rule :: rules) :: rest
           else (key, rules) :: insert rest
   in
-    Symtab.map_default (head_key (#head rule), []) insert cmap
+    Symtab.map_default (head_key head, []) insert cmap
   end
 
-fun cmap_of_split_rules rules =
-  foldl (fn (rule, cmap) => insert_rule rule cmap) Symtab.empty rules
+fun index_rules rules =
+  let
+    fun index (rule : split_rule, (concls, asms)) =
+      if #asm rule then (concls, insert_rule rule asms)
+      else (insert_rule rule concls, asms)
+  in
+    foldl index (Symtab.empty, Symtab.empty) rules
+  end
 
-fun cmap_of_rules thms = cmap_of_split_rules (map analyse_rule thms)
+fun index_theorems thms = index_rules (map analyse_rule thms)
 
 (* Paths are in [Conv.PATH_CONV] notation: "l" rator, "r" rand, "a" body. *)
 datatype path_step = Body | Argument of int * int
@@ -367,14 +370,14 @@ type split_pack =
    depth : int,
    visit : int}
 
-fun fold_candidates want_asm cmap head collect packs =
+fun fold_candidates cmap head collect packs =
   case Symtab.lookup_list cmap (head_key head) of
       [] => packs
     | entries =>
         let
           val head_type = type_of head
-          fun add (({head=key_head,asm} : split_key, rules), packs) =
-            if asm = want_asm andalso same_const key_head head andalso
+          fun add ((key_head, rules), packs) =
+            if same_const key_head head andalso
                can (Type.match_type (type_of key_head)) head_type
             then foldl collect packs rules
             else packs
@@ -395,7 +398,7 @@ fun enter_path steps =
 fun matching (rule : split_rule) redex =
   can (match_term (#pattern rule)) redex
 
-fun scan want_asm cmap tm =
+fun scan cmap tm =
   let
     val root_type = type_of tm
 
@@ -457,7 +460,7 @@ fun scan want_asm cmap tm =
               | NONE => acc
           val here =
             if is_const head then
-              fold_candidates want_asm cmap head collect packs
+              fold_candidates cmap head collect packs
             else packs
           fun descend (arg, (i, packs)) =
             let
@@ -518,7 +521,7 @@ fun first_success packs tm =
 fun split_conv cmap tm =
   let
     val packs = if Symtab.is_empty cmap then []
-                else sort pack_le (scan false cmap tm)
+                else sort pack_le (scan cmap tm)
     (* Isabelle tries only the first sorted pack.  Trying later packs
        when instantiation fails avoids one rejected rule shadowing an
        otherwise applicable rule, while retaining one split per call. *)
@@ -526,7 +529,7 @@ fun split_conv cmap tm =
     first_success packs tm
   end
 
-fun SPLIT_CONV thms = split_conv (cmap_of_rules thms)
+fun SPLIT_CONV thms = split_conv (#1 (index_theorems thms))
 
 fun clean_asm_eq th =
   let
@@ -547,20 +550,18 @@ fun clean_asm_eq th =
 
 fun asm_eq cmap asm =
   let
-    val packs = sort pack_le (scan true cmap (mk_neg asm))
+    val packs = sort pack_le (scan cmap (mk_neg asm))
   in
     clean_asm_eq (first_success packs (mk_neg asm))
   end
 
 fun split_asm_tac cmap =
   let
-    val heads =
-      List.mapPartial
-        (fn ({head,asm}, _) => if asm then SOME head else NONE)
-        (List.concat (map #2 (Symtab.dest cmap)))
+    val heads = Symtab.fold
+      (fn (_,entries) => fn acc => foldl (fn ((head,_),acc) => head::acc)
+                                       acc entries) cmap []
     fun indexed_head head =
-      List.exists
-        (fn ({head=key_head,asm}, _) => asm andalso same_const key_head head)
+      List.exists (fn (key_head,_) => same_const key_head head)
         (Symtab.lookup_list cmap (head_key head))
     (* A short list avoids constructing a key string at each constant. *)
     val has_head =
@@ -598,14 +599,14 @@ fun split_asm_tac cmap =
     tac
   end
 
-fun SPLIT_ASM_TAC thms = split_asm_tac (cmap_of_rules thms)
+fun SPLIT_ASM_TAC thms = split_asm_tac (#2 (index_theorems thms))
 
 (* Analyse the rules once and share the result between both attempts. *)
 fun SPLIT_RULE_TAC rules =
-  let val cmap = cmap_of_split_rules rules
+  let val (concls,asms) = index_rules rules
   in
-    CHANGED_TAC (CONV_TAC (split_conv cmap)) ORELSE
-    CHANGED_TAC (split_asm_tac cmap)
+    CHANGED_TAC (CONV_TAC (split_conv concls)) ORELSE
+    CHANGED_TAC (split_asm_tac asms)
   end
 
 fun SPLIT_TAC thms = SPLIT_RULE_TAC (map analyse_rule thms)

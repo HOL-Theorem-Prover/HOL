@@ -88,6 +88,24 @@ fun initial_context ({rewriters,dprocs,travrules=TRAVRULES tsdata,relation,
  *
  * ---------------------------------------------------------------------*)
 
+(* Congruence factories can observe the order of [free_varsl]. Its
+   rightmost nonempty list keeps its order; earlier lists prepend new
+   variables, in reverse order. Use a set for membership on long lists. *)
+fun context_freevars hyps =
+  if length hyps < 64 then free_varsl hyps
+  else
+    let
+      fun insert (v, acc as (seen,vars)) =
+        if HOLset.member (seen,v) then acc
+        else (HOLset.add (seen,v),v::vars)
+      fun collect (tm, (seen,[])) =
+            let val vars = free_vars tm
+            in (HOLset.addList (seen,vars),vars) end
+        | collect (tm,acc) = List.foldl insert acc (free_vars tm)
+    in
+      #2 (List.foldr collect (empty_varset,[]) hyps)
+    end
+
 fun add_context collect_thms
       ({rewriters,dprocs,addcontext,...} : 'r traversal) = let
   val rewrite_collectors' = map addcontext rewriters
@@ -98,7 +116,7 @@ fun add_context collect_thms
   in
     if null thms then context
     else let
-        val more_freevars = free_varsl (flatten (map hyp thms))
+        val more_freevars = context_freevars (flatten (map hyp thms))
         val _ = map (fn thm => trace(2,MORE_CONTEXT thm)) thms
         fun mk_privcontext maker privcontext = maker (privcontext,thms)
         val newcontexts1 =

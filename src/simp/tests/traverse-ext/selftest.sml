@@ -408,6 +408,24 @@ val _ = let
   end
   val _ = order_test true
   val _ = order_test false
+  val _ = let
+    val vars = List.tabulate
+      (64,fn i => mk_var ("ext_v" ^ Int.toString i,bool))
+    val supplied = map ASSUME
+      (boolSyntax.T :: mk_conj (p,a) :: vars @ [p,mk_conj (a,b),boolSyntax.T])
+    val seen = ref ([] : term list)
+    val inspect : Opening.congproc = fn _ => fn {freevars,...} => fn tm =>
+      (seen := freevars; NO_CONV tm)
+    val rules = Travrules.TRAVRULES
+      {relations=[Travrules.EQ_preorder],congprocs=[inspect],weakenprocs=[]}
+    val cv = T.TRAVERSE_WITH_CONTEXT T.ParentFirst
+      (data rules [] [] NONE,T.default_config)
+      {reducer_context=TRUTH::supplied,solver_context=[]}
+  in
+    ignore (total cv c);
+    check "extended reducer facts preserve congruence free-variable order"
+      (terms (!seen) (free_varsl (List.concat (map hyp supplied))))
+  end
   (* No generic provider: solver-only hypotheses still prevent capture. *)
   val x = ``ext_capture_x:bool``
   val capture = ASSUME ``ext_capture_c = (ext_capture_x:bool)``
