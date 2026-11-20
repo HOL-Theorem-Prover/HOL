@@ -85,10 +85,17 @@ fun bound_name lemma =
   end
   handle Interrupt => raise Interrupt | _ => lemma
 
-(* As in Sledgehammer's minimiser, an attempt may take at most twice the
-   time of the last successful replay, plus some slack; minimize_timeout
-   caps it.  A failing attempt, the common case for a needed fact,
-   otherwise runs out the whole minimize_timeout. *)
+(* An attempt may take at most twice the time of the replay the
+   minimisation starts from, plus some slack; minimize_timeout caps it.
+   A failing attempt, the common case for a needed fact, otherwise runs
+   out the whole minimize_timeout.  Sledgehammer's minimiser bases the
+   limit on the last successful replay, but then a marginal success (an
+   attempt that only just fits) raises the limit of every later attempt,
+   and the next ones run out a longer limit: the time of a minimisation
+   depends on whether one attempt beats its limit by a few milliseconds.
+   Here the limit is fixed once, from the verified replay of the full
+   list, so a minimised list replays within 2 t0 + slack of the original
+   one, however many drops succeed. *)
 val attempt_factor = 2.0
 val attempt_slack = 0.2
 
@@ -99,23 +106,29 @@ fun out_of_time NONE = false
   | out_of_time (SOME deadline) = Time.>= (Time.now (), deadline)
 
 (* Drops the lemmas one at a time, keeping a lemma when the replay
-   without it fails.  Every intermediate list is verified, so stopping at
-   the deadline returns a verified list. *)
-fun minimize_lemmas minimize_timeout deadline g lemmas best =
+   without it fails.  try limit candidate is the replay, within limit
+   seconds, of the candidate list, and gives its tactic and time when it
+   succeeds.  Every attempt gets the same limit, from the time of the
+   replay of best, the verified result for the full list.  Every
+   intermediate list is verified, so stopping at the deadline returns a
+   verified list. *)
+fun drop_one_minimize try limit deadline lemmas best =
   let
     fun loop kept [] best = (kept, best)
-      | loop kept (lemma :: rest) (best as (_, time)) =
+      | loop kept (lemma :: rest) best =
           if out_of_time deadline then (kept @ lemma :: rest, best)
           else
-            let val candidate = kept @ rest in
-              case replay (attempt_timeout minimize_timeout time)
-                     (mk_metis_call candidate) g of
-                  SOME found => loop kept rest found
-                | NONE => loop (kept @ [lemma]) rest best
-            end
+            case try limit (kept @ rest) of
+                SOME found => loop kept rest found
+              | NONE => loop (kept @ [lemma]) rest best
   in
     loop [] lemmas best
   end
+
+fun minimize_lemmas minimize_timeout deadline g lemmas (best as (_, time)) =
+  drop_one_minimize
+    (fn limit => fn candidate => replay limit (mk_metis_call candidate) g)
+    (attempt_timeout minimize_timeout time) deadline lemmas best
 
 (* A permutative equation, such as commutativity, has sides that are
    instances of each other but not equal.  Metis cannot orient it, and

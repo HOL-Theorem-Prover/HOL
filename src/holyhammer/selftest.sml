@@ -3869,6 +3869,21 @@ fun test_hhReconstruct () =
       (fetched "hh_int_add0" andalso fetched "hh_other_add0")
     val _ = expect "an ancestor's lemma is named by a copy bound to its name"
       (String.isSuffix " [ADD_0]" (stac_in "arithmetic" "ADD_0"))
+    (* The limit of every minimisation attempt comes from the replay of
+       the full list (0.5 s: 1.2 s), not from the last success: dropping
+       "a" replays in 1.1 s, a marginal success, and the attempts after
+       it must not get 2 * 1.1 + 0.2. *)
+    val limits = ref ([] : real list)
+    fun fake limit candidate =
+      (limits := limit :: !limits;
+       if candidate = ["b", "c", "d"] then SOME ("tactic", 1.1) else NONE)
+    val (kept, (_, best_time)) =
+      hhReconstruct.drop_one_minimize fake (2.0 * 0.5 + 0.2) NONE
+        ["a", "b", "c", "d"] ("tactic", 0.5)
+    val _ = expect "every minimisation attempt keeps the original limit"
+      (ListPair.allEq Real.== (!limits, [1.2, 1.2, 1.2, 1.2]) andalso
+       kept = ["b", "c", "d"] andalso
+       Real.== (best_time, 1.1))
   in
     ()
   end
