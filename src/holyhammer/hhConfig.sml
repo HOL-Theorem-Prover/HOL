@@ -308,15 +308,19 @@ val valid_provers = Option.isSome o parse_provers
 
 val default_export_workers = 2
 
+(* The default of the preplay_timeout option, in seconds. *)
+val default_preplay_timeout = 2.5
+
 val option_specs : option_spec list =
   [{name = "timeout", default = fn () => "30",
     expected = "a positive integer",
     doc = "wall-clock budget of the proof search in seconds, counted from " ^
           "the launch of the provers (the export of the problems is " ^
           "charged to it only where it overlaps the search: see " ^
-          "hhSchedule.export_mode); the proofs found by then are all " ^
-          "reconstructed until one verifies, so a call can return after " ^
-          "the timeout, and minimisation stops at it",
+          "hhSchedule.export_mode); the proofs found are reconstructed " ^
+          "until max_proofs verify before the timeout, or one verifies " ^
+          "after it, so a call can return after the timeout, and " ^
+          "minimisation stops at it",
     valid = positive_int},
    {name = "max_proofs", default = fn () => "4",
     expected = "a positive integer",
@@ -370,7 +374,8 @@ val option_specs : option_spec list =
    {name = "minimize", default = fn () => "true",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",
     doc = "minimize reconstructed proofs", valid = Option.isSome o bool_value},
-   {name = "preplay_timeout", default = fn () => "2.5",
+   {name = "preplay_timeout",
+    default = fn () => Real.toString default_preplay_timeout,
     expected = "a positive real number",
     doc = "time limit for each replay of a proof, in seconds",
     valid = positive_real},

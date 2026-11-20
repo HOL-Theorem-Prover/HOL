@@ -20,8 +20,7 @@ val ERR = mk_HOL_ERR "hhReconstruct"
 
 val reconstruct_flag = ref true
 val minimization_timeout = ref 1.0
-(* The default of the preplay_timeout option of hhConfig. *)
-val reconstruction_timeout = ref 2.5
+val reconstruction_timeout = ref hhConfig.default_preplay_timeout
 
 (*----------------------------------------------------------------------------
    Minimization and pretty-printing

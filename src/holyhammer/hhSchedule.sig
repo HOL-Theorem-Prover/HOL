@@ -167,19 +167,24 @@ sig
      hard deadline (soft plus grace) the provers still running are killed
      and the producer stopped.  The reconstruction is not bounded by
      either: every list a prover has found is reconstructed, in the order
-     of arrival, until max_proofs proofs verify or every list has been
-     reconstructed or has failed, so a call can return after the timeout.
-     A list costs at most two preplay_timeouts (the list, then without
-     its permutative equations), its minimisation, which stops at the soft
-     deadline and keeps the shortest verified list, and the final replay
-     (one more preplay_timeout); the lists are at most as many as the
-     slices of the schedule.  The retries of preplay_drop_one are not
-     found by a prover, and each can cost two preplay_timeouts, so they
-     are dropped at the soft deadline.  The run ends with MaxProofs if the
-     verified proofs reach max_proofs; otherwise with Exhausted if the
-     search had finished (every slice run, the export done) before the
-     soft deadline, and with Timeout if not, whether or not the
-     reconstruction finds a proof.
+     of arrival, so a call can return after the timeout.  Before the soft
+     deadline max_proofs applies: MaxProofs ends the run when that many
+     proofs have verified.  Past it the first proof that verifies ends
+     the run (the provers still running are killed, the lists still
+     queued dropped); until one does, the reconstruction goes on until
+     every list has been reconstructed or has failed.  Each replay takes
+     about preplay_timeout at most, with its compilation; a list costs
+     about two (the list, then without its permutative equations), its
+     minimisation, which stops at the soft deadline and keeps the
+     shortest verified list, and the final replay (one more); the lists
+     are at most as many as the slices of the schedule.  The retries of
+     preplay_drop_one are not found by a prover, and each can cost two
+     replays, so they are dropped at the soft deadline.  The run ends
+     with MaxProofs if the verified proofs reach max_proofs; otherwise
+     with Exhausted if the search had finished (every slice run, the
+     export done) before the soft deadline, and with Timeout if not,
+     whether or not the reconstruction finds a proof (also when a proof
+     past the soft deadline ended the run).
 
      Stops.  MaxProofs, an interrupt of the caller (also during the
      launch) and a failed export stop the run: the provers are killed (a
@@ -187,12 +192,13 @@ sig
      but not by MaxProofs, which a replay itself triggers) and the
      producer interrupted, and run_in returns only when every thread it
      forked has exited.  The hard deadline kills the provers and stops the
-     producer only (see the clock).  The producer takes an interrupt
-     where it waits (for a worker that finishes a problem) and between two
-     problems, never inside the preparation of one (copy_file reads a whole
-     file through BinIO.inputAll and so may take an interrupt, which is
-     safe: the copy is written atomically): the response is bounded by one
-     preparation.
+     producer only, and a proof verified past the soft deadline ends the
+     run without a reason of its own (see the clock).  The producer takes
+     an interrupt where it waits (for a worker that finishes a problem)
+     and between two problems, never inside the preparation of one
+     (copy_file reads a whole file through BinIO.inputAll and so may take
+     an interrupt, which is safe: the copy is written atomically): the
+     response is bounded by one preparation.
 
      The error race.  The first fatal export error to be reported (the
      order in which the export surfaces the errors, after the problems

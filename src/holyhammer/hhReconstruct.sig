@@ -3,9 +3,8 @@ sig
 
   include Abbrev
 
-  (* Settings.  reconstruction_timeout, 2.5 s, is the replay limit of
-     hh_reconstruct, the default of the preplay_timeout option of
-     hhConfig. *)
+  (* Settings.  reconstruction_timeout, the replay limit of
+     hh_reconstruct, starts at hhConfig.default_preplay_timeout. *)
   val reconstruct_flag : bool ref
   val minimization_timeout : real ref
   val reconstruction_timeout : real ref

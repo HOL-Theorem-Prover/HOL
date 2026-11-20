@@ -808,7 +808,7 @@ fun run_in root {options, goal, rankings, progress} =
     val recovered = ref ([] : string list)
     (* stopping: the run ends and reconstruction with it (MaxProofs, the
        caller's interrupt, a failed export).  halted: the provers are
-       killed and nothing starts, which the hard deadline does without
+       killed and no prover starts, which the hard deadline does without
        ending the reconstruction of the proofs found. *)
     val stopping = ref false
     val halted = ref false
@@ -991,36 +991,47 @@ fun run_in root {options, goal, rankings, progress} =
 
     (* Kills the provers and stops the producer.  A final stop (SOME
        reason) also ends the run and drops the queued proofs; the halt of
-       the hard deadline (NONE) leaves reconstruction to finish them. *)
+       the hard deadline (NONE) leaves reconstruction to finish them, and
+       is done once. *)
     fun stop_search final =
       let
         val (kills, producer) = with_mutex state_mutex (fn () =>
-          let
-            val _ =
-              case final of
-                  SOME stop_reason =>
-                    (case !reason of
-                         NONE => reason := SOME stop_reason
-                       | SOME _ => ();
-                     stopping := true;
-                     recon := [])
-                | NONE => ()
-            val kills =
-              if !halted andalso not (Option.isSome final) then []
-              else map (fn (_, cancelled, kill) =>
-                (cancelled := true; kill)) (!running)
-            val _ = halted := true
-            val _ = work := []
-            val _ = signal ()
-          in
-            (kills, if !producer_active then !producer_thread else NONE)
-          end)
+          if !halted andalso not (Option.isSome final) then ([], NONE)
+          else
+            let
+              val _ =
+                case final of
+                    SOME stop_reason =>
+                      (case !reason of
+                           NONE => reason := SOME stop_reason
+                         | SOME _ => ();
+                       stopping := true;
+                       recon := [])
+                  | NONE => ()
+              val kills =
+                map (fn (_, cancelled, kill) =>
+                  (cancelled := true; kill)) (!running)
+              val _ = halted := true
+              val _ = work := []
+              val _ = signal ()
+            in
+              (kills, if !producer_active then !producer_thread else NONE)
+            end)
       in
-        List.app (fn kill => kill () handle _ => ()) kills;
+        List.app (fn kill =>
+          (kill () handle Interrupt => raise Interrupt | _ => ())) kills;
         Option.app interrupt_thread producer
       end
 
     fun kill_all stop_reason = stop_search (SOME stop_reason)
+
+    (* The run ends with no reason of its own (Exhausted or Timeout, by
+       when the search ended): the proofs still queued are dropped and the
+       provers killed.  The reconstruction that calls it is the last. *)
+    fun end_run () =
+      (with_mutex state_mutex (fn () =>
+         (stopping := true; recon := []; signal ()));
+       stop_search NONE)
 
     (* The soft deadline (or any later stop) cancels the export: nothing
        claims a problem past it, so its remaining problems have no
@@ -1294,12 +1305,13 @@ fun run_in root {options, goal, rankings, progress} =
         if skip then ()
         else
           ((let
-              (* Nothing interrupts this reconstruction but a stop of the
-                 run: a proof a prover found is reconstructed until it
-                 verifies or fails, at most two preplay timeouts (the
-                 list, then without its permutative equations), the
-                 minimisation, which stops at the soft deadline and keeps
-                 the shortest verified list, and the final replay. *)
+              (* Nothing interrupts this reconstruction but the caller's
+                 interrupt or a failed export: a proof a prover found is
+                 reconstructed until it verifies or fails, in about two
+                 preplay timeouts (the list, then without its permutative
+                 equations), the minimisation, which stops at the soft
+                 deadline and keeps the shortest verified list, and the
+                 final replay. *)
               val ({stac, tac, t_replay}, t_recon) =
                 add_time
                   (smlRedirect.hidef
@@ -1315,14 +1327,19 @@ fun run_in root {options, goal, rankings, progress} =
                  prover = #prover slice, slice = slice,
                  t_prover = t_prover, t_recon = t_recon,
                  t_replay = t_replay}
-              val reached = with_mutex state_mutex (fn () =>
+              (* Before the soft deadline max_proofs proofs are collected;
+                 past it the first one that verifies ends the run. *)
+              val (reached, late) = with_mutex state_mutex (fn () =>
                 (suggestions := suggestion :: !suggestions;
                  Option.app (fn parent => recovered := parent :: !recovered)
                    origin;
-                 length (!suggestions) >= #max_proofs options))
+                 (length (!suggestions) >= #max_proofs options,
+                  not (time_before (Time.now ()) deadline))))
               val _ = emit (Verified suggestion)
             in
-              if reached then kill_all MaxProofs else ()
+              if reached then kill_all MaxProofs
+              else if late then end_run ()
+              else ()
             end)
            handle Interrupt => raise Interrupt
                 | error =>
@@ -1347,8 +1364,9 @@ fun run_in root {options, goal, rankings, progress} =
     (* Waits for the run to finish.  The soft deadline cancels the export,
        the hard deadline kills the provers that are left and stops the
        producer, and the wait goes on until the reconstruction has
-       finished the proofs found: no deadline ends it, only a stop does
-       (MaxProofs, the caller's interrupt, a failed export). *)
+       finished the proofs found: no deadline ends it.  A stop does
+       (MaxProofs, the caller's interrupt, a failed export), and so does
+       a verified proof past the soft deadline. *)
     fun await () =
       if completed () then ()
       else

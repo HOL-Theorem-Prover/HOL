@@ -410,7 +410,7 @@ fun test_environment_default value =
       (Real.abs (#preplay_timeout options - 2.5) < 0.000001 andalso
        hhConfig.hh_get "preplay_timeout" = "2.5" andalso
        has_parameter "preplay_timeout" "2.5" "default" andalso
-       Real.abs (!hhReconstruct.reconstruction_timeout - 2.5) < 0.000001)
+       Real.abs (hhConfig.default_preplay_timeout - 2.5) < 0.000001)
     val _ = expect "default cores and slices are computed"
       (#cores options > 0 andalso #slices options = 24 * #cores options)
     val _ = expect "empty option defaults map to NONE"
@@ -3910,8 +3910,9 @@ fun printer_config_formats formats name slices note parser
 fun printer_config name slices note parser =
   printer_config_formats ["fof"] name slices note parser
 
-fun sleeper_config prover name parser : hhProver.prover_config =
-  let val slice = fixture_slice prover [] 1 in
+fun sleeper_config_sized size prover name parser
+    : hhProver.prover_config =
+  let val slice = fixture_slice prover [] size in
     {name = name, exec_names = [schedule_sleeper], env_var = "",
      version_args = ["--version"], parse_version = fn _ => SOME "test",
      tested_versions = ["test"], supported_formats = ["fof"],
@@ -3919,6 +3920,9 @@ fun sleeper_config prover name parser : hhProver.prover_config =
      parse_output = parser, mono_instances = 100,
      slices = [slice], legacy = false}
   end
+
+fun sleeper_config prover name parser =
+  sleeper_config_sized 1 prover name parser
 
 fun fixture_options provers slices cores timeout max_proofs cache cache_dir
     debug_dir : hhConfig.hh_options =
@@ -4888,7 +4892,8 @@ fun with_ref (r, value) f =
 
 (* The deadlines do not abandon a proof that a prover found: the timeout
    (1 s here, so the hard deadline is 3 s after the launch) stops the
-   provers, but every found list is reconstructed until one verifies.
+   provers, but every found list is reconstructed, until max_proofs have
+   verified before the soft deadline or one verifies after it.
    The reconstruction is a test function (hhSchedule_Test.reconstruct)
    that logs and takes the time a case wants; the fixture provers print
    lists of lemma names (schedule-lemmas-*.out). *)
@@ -4960,7 +4965,7 @@ fun test_schedule_deadline_recon sleeper_parser =
       with_ref (hhSchedule_Test.reconstruct, test_reconstruct behave)
         (fn () => with_fixtures
            [(Vampire, config slices),
-            (Eprover, sleeper_config Eprover (name ^ "-sleeper")
+            (Eprover, sleeper_config_sized 3 Eprover (name ^ "-sleeper")
                         sleeper_parser)]
            (fn () => (log := []; f ())))
     fun run slices sleeping max_proofs drop_one behave =
@@ -4973,20 +4978,20 @@ fun test_schedule_deadline_recon sleeper_parser =
           (result, List.rev (!log),
            Time.toReal (Time.- (Time.now (), start)))
         end)
-    (* A proof is found just before the soft deadline, and its
-       reconstruction runs past the hard deadline and verifies.  The
-       provers had finished before the soft deadline: Exhausted. *)
-    val (ra, loga, elapsed_a) = run [after "0.9" three] false 2 false
-      (fn _ => Delay 3300)
+    (* A proof is found before the soft deadline, and its reconstruction
+       runs past the hard deadline and verifies.  The provers had finished
+       before the soft deadline: Exhausted. *)
+    val (ra, loga, elapsed_a) = run [after "0.6" three] false 2 false
+      (fn _ => Delay 4200)
     val _ = expect "deadline: a reconstruction outlives the hard deadline"
       (loga = ["start|c1,c2,c3", "verified|fake c1,c2,c3"] andalso
        #stopped ra = hhSchedule.Exhausted andalso
        length (#suggestions ra) = 1 andalso elapsed_a > 4.0)
     (* The provers are still killed at the hard deadline while the
        reconstruction goes on: the sleeper, a prover that runs until it is
-       killed, ends 3 s after the launch (its own limit would be 5 s), and
-       the proof found at once verifies later.  The search was cut by the
-       timeout: Timeout. *)
+       killed, ends 3 s after the launch (a slice of size 3 has its own
+       limit only after about 5 s), and the proof found at once verifies
+       later.  The search was cut by the timeout: Timeout. *)
     val (re, loge, elapsed_e) = run [three] true 2 false
       (fn _ => Delay 4200)
     val killed = List.filter (fn (_, _, time, _) => time > 1.0)
@@ -5002,12 +5007,29 @@ fun test_schedule_deadline_recon sleeper_parser =
        length (#suggestions re) = 1)
     (* Every proof found is tried, in the order of arrival, also past the
        hard deadline (the third starts after it), then the run ends. *)
-    val (rb, logb, elapsed_b) = run [one, after "0.2" two, after "0.4" three,
-                                     slow] false 4 false (fn _ => DelayFail 1500)
+    val (rb, logb, elapsed_b) =
+      run [one, after "0.3" two, after "0.6" three, slow] false 4 false
+        (fn _ => DelayFail 1500)
     val _ = expect "deadline: all found proofs are tried, in arrival order"
       (logb = ["start|a1", "start|b1,b2", "start|c1,c2,c3"] andalso
        null (#suggestions rb) andalso #stopped rb = hhSchedule.Timeout andalso
        elapsed_b > 4.4)
+    (* Before the soft deadline max_proofs proofs are collected. *)
+    val (rf, logf, _) = run [one, after "0.1" two, after "0.2" three]
+      false 2 false (fn _ => Delay 100)
+    val _ = expect "deadline: before the soft deadline several are collected"
+      (logf = ["start|a1", "verified|fake a1", "start|b1,b2",
+               "verified|fake b1,b2"] andalso
+       length (#suggestions rf) = 2 andalso #stopped rf = hhSchedule.MaxProofs)
+    (* Past it the first proof that verifies ends the run, although
+       max_proofs is not reached: the second list is dropped and the slow
+       prover killed (not waited for until the hard deadline). *)
+    val (rg, logg, elapsed_g) = run [one, after "0.1" two, slow] false 4 false
+      (fn _ => Delay 1500)
+    val _ = expect "deadline: past the soft deadline the first proof ends it"
+      (logg = ["start|a1", "verified|fake a1"] andalso
+       length (#suggestions rg) = 1 andalso
+       #stopped rg = hhSchedule.Timeout andalso elapsed_g < 2.6)
     (* A drop-one variant is derived, not found by a prover: when the list
        fails before the soft deadline the variants are tried (the first
        verifies), and past it they are dropped. *)

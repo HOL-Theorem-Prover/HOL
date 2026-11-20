@@ -62,8 +62,9 @@ rely on its contents being present or committed.
 - **`hhCache`** — memoizes prover runs keyed by prover+version+argv+
   problem.
 - **`hhSchedule`** — runs slices across cores, emits `event`s, drives
-  reconstruction, and returns verified `suggestion`s; stops on first
-  success / `max_proofs` / timeout.
+  reconstruction, and returns verified `suggestion`s; stops the search at
+  the timeout, and reconstructs the lists found until `max_proofs` verify
+  before the timeout, or the first verifies after it.
 - **`hhReconstruct`** — replays the ATP's used axioms as a HOL4 tactic
   (Metis today) and minimizes.  *This layer is under active rework
   toward a preplay ladder — check current code before assuming its
