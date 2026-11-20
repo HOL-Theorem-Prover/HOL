@@ -3751,22 +3751,18 @@ fun test_holyHammer_e () =
 
 (* Metis replays the lemma lists below in milliseconds, or runs until
    it is stopped. *)
-fun reconstruct_resumed resume minimize timeout deadline progress lemmas
-                        goal =
+fun reconstruct_timed minimize timeout deadline lemmas goal =
   let
     val started = Time.now ()
     val result =
       SOME (smlRedirect.hidef (hhReconstruct.hh_reconstruct_with
         {minimize = minimize, preplay_timeout = timeout,
-         minimize_timeout = timeout, minimize_deadline = deadline,
-         on_verified = progress, resume = resume}
+         minimize_timeout = timeout, minimize_deadline = deadline}
         lemmas) goal)
       handle Interrupt => raise Interrupt | Feedback.HOL_ERR _ => NONE
   in
     (result, Time.toReal (Time.- (Time.now (), started)))
   end
-
-val reconstruct_timed = reconstruct_resumed NONE
 
 fun replays_in_kernel goal ({tac, ...} : hhReconstruct.reconstruction) =
   (ignore (Tactical.TAC_PROOF (goal, tac)); true)
@@ -3781,7 +3777,7 @@ fun test_hhReconstruct () =
              "LEFT_ADD_DISTRIB", "ADD1"]
     (* Each of the seven attempts used to run out the full timeout. *)
     val (failed, failed_time) =
-      reconstruct_timed true 0.5 NONE NONE false_lemmas false_goal
+      reconstruct_timed true 0.5 NONE false_lemmas false_goal
     val _ = expect "reconstruction of an unreplayable list fails at once"
       (not (Option.isSome failed) andalso failed_time < 2.0)
     (* The step case of LENGTH (flatten t) = size t, with the tree's
@@ -3797,7 +3793,7 @@ fun test_hhReconstruct () =
       map (fn name => "listTheory." ^ name)
         ["APPEND_ASSOC", "LENGTH", "LENGTH_APPEND"]
     val (repaired, _) =
-      reconstruct_timed false 0.3 NONE NONE step_lemmas step_goal
+      reconstruct_timed false 0.3 NONE step_lemmas step_goal
     val _ = expect "a list blocked by a permutative lemma replays without it"
       (case repaired of
            SOME (result as {stac, ...}) =>
@@ -3810,11 +3806,8 @@ fun test_hhReconstruct () =
       arith ["ADD_ASSOC", "LEFT_ADD_DISTRIB", "ADD_COMM", "MULT_COMM",
              "MULT_ASSOC"]
     (* Without LEFT_ADD_DISTRIB, Metis runs until it is stopped. *)
-    val reported = ref ([] : hhReconstruct.progress list)
     val (minimized, minimize_time) =
-      reconstruct_timed true 10.0 NONE
-        (SOME (fn progress => reported := progress :: !reported))
-        lemmas goal
+      reconstruct_timed true 10.0 NONE lemmas goal
     val _ = expect "minimisation attempts are bounded by the replay time"
       (case minimized of
            SOME (result as {stac, t_replay, ...}) =>
@@ -3824,91 +3817,8 @@ fun test_hhReconstruct () =
          | NONE => false)
     val _ = expect "minimisation without a needed lemma stays fast"
       (minimize_time < 5.0)
-    (* Every progress is a verified list and the position reached in it:
-       the full list first, then lists that never grow, with a growing
-       number of lemmas known to be needed; the last is complete and
-       holds the lemmas of the result. *)
-    val _ = expect "the progress is reported from the full list to the result"
-      (case (List.rev (!reported), minimized) of
-           (first :: rest, SOME {lemmas = result, ...}) =>
-             first = {lemmas = lemmas, kept = 0} andalso
-             not (null rest) andalso
-             #1 (List.foldl
-                   (fn ({lemmas = l, kept = k}, (ok, (size, known))) =>
-                      (ok andalso length l <= size andalso k >= known andalso
-                       k <= length l, (length l, k)))
-                   (true, (length lemmas, 0)) rest) andalso
-             List.last rest = {lemmas = result, kept = length result} andalso
-             List.exists (fn {lemmas = l, kept} =>
-               kept > 0 andalso kept < length l) rest andalso
-             length result < length lemmas
-         | _ => false)
-    (* A resumed reconstruction replays the list of the progress, not the
-       argument (which has MULT_ASSOC besides), and does not try again the
-       lemmas found needed: the first two are kept, though ADD_ASSOC is
-       not needed. *)
-    val resumed = ref ([] : hhReconstruct.progress list)
-    val resume_list =
-      arith ["ADD_ASSOC", "LEFT_ADD_DISTRIB", "ADD_COMM", "MULT_COMM"]
-    val resume_from = {lemmas = resume_list, kept = 2}
-    val (continued, _) =
-      reconstruct_resumed (SOME resume_from) true 10.0 NONE
-        (SOME (fn progress => resumed := progress :: !resumed)) lemmas goal
-    val _ = expect "a resumed minimisation skips the lemmas known needed"
-      (case continued of
-           SOME (result as {lemmas = result_lemmas, ...}) =>
-             result_lemmas = resume_list andalso
-             replays_in_kernel goal result andalso
-             (case List.rev (!resumed) of
-                  first :: rest =>
-                    first = resume_from andalso
-                    List.all (fn {lemmas = l, kept} =>
-                      kept >= 2 andalso
-                      List.take (l, 2) = List.take (resume_list, 2)) rest
-                | [] => false)
-         | NONE => false)
-    (* A progress of a complete minimisation has nothing left to try. *)
-    val finished = ref ([] : hhReconstruct.progress list)
-    val complete = arith ["LEFT_ADD_DISTRIB", "ADD_COMM", "MULT_COMM"]
-    val (done_already, _) =
-      reconstruct_resumed (SOME {lemmas = complete, kept = 3}) true 10.0 NONE
-        (SOME (fn progress => finished := progress :: !finished))
-        lemmas goal
-    val _ = expect "a resumed complete minimisation tries nothing more"
-      (case done_already of
-           SOME (result as {lemmas = result_lemmas, ...}) =>
-             result_lemmas = complete andalso
-             replays_in_kernel goal result andalso
-             List.rev (!finished) = [{lemmas = complete, kept = 3}]
-         | NONE => false)
-    (* The replay bounds.  After each progress, the reconstruction
-       reports one progress for each lemma still to try, and replays the
-       printed form once more: attempts_left counts them, and the bound
-       of a reconstruction from the start adds the preplay's two replays
-       (the first of which is the report of the full list).  The bound
-       holds for the replays the reconstructions above ran, and is exact
-       for the attempts. *)
-    fun later_reports reports =
-      List.tabulate (length reports, fn i => length reports - 1 - i)
-    fun attempts_exact reports =
-      ListPair.all (fn ({lemmas = l, kept}, later) =>
-                      hhReconstruct.attempts_left {lemmas = l, kept = kept} =
-                      later + 1)
-        (reports, later_reports reports)
-    val _ = expect "attempts_left counts the replays left after each progress"
-      (attempts_exact (List.rev (!reported)) andalso
-       attempts_exact (List.rev (!resumed)) andalso
-       attempts_exact (List.rev (!finished)))
-    val _ = expect "replays_left bounds the replays of a reconstruction"
-      (hhReconstruct.replays_left lemmas NONE = 2 + length lemmas + 1 andalso
-       hhReconstruct.replays_left lemmas NONE >=
-         1 + (length (!reported) - 1) + 1 andalso
-       hhReconstruct.replays_left lemmas (SOME resume_from) =
-         1 + (length (List.rev (!resumed)) - 1) + 1 andalso
-       hhReconstruct.replays_left lemmas (SOME {lemmas = complete, kept = 3})
-         = 1 + (length (!finished) - 1) + 1)
     val (unminimized, _) =
-      reconstruct_timed true 10.0 (SOME (Time.now ())) NONE lemmas goal
+      reconstruct_timed true 10.0 (SOME (Time.now ())) lemmas goal
     val _ = expect "minimisation past its deadline keeps the verified list"
       (case unminimized of
            SOME (result as {stac, ...}) =>
@@ -3933,7 +3843,7 @@ fun test_hhReconstruct () =
        "val ADD_0 = Drule.GEN_ALL (Drule.SPEC_ALL arithmeticTheory.ADD_0);")
     val add0_goal = ([], ``x + 0 = x``)
     fun stac_in theory name =
-      case #1 (reconstruct_timed true 1.0 NONE NONE [theory ^ "Theory." ^ name]
+      case #1 (reconstruct_timed true 1.0 NONE [theory ^ "Theory." ^ name]
                   add0_goal) of
           SOME (result as {stac, ...}) =>
             if replays_in_kernel add0_goal result then stac else ""
@@ -4971,413 +4881,6 @@ fun with_ref (r, value) f =
   Portable.bracket (fn () => !r) (fn old => r := old)
     (fn _ => (r := value; f ()))
 
-(* Reconstruction order: the proof with the fewest replays to run is
-   reconstructed first, and an arrival that needs fewer replays than a
-   reconstruction past its preplay has left preempts it
-   (hhReconstruct.replays_left, attempts_left).
-   The reconstruction is a test function (hhSchedule_Test.reconstruct)
-   that logs, and blocks where a case wants a reconstruction in progress
-   while a proof arrives.  The fixture provers print a list of lemma names
-   (schedule-cost-*.out) that the cost counts.  The costs are
-   replays_left of 1, 2, 2 (another list), 3 and 6 lemmas: 4, 5, 5, 6, 9. *)
-fun test_schedule_recon_order () =
-  let
-    val name = "hh-schedule-recon-order"
-    fun parse lines =
-      (hhProver.SzsTheorem,
-       SOME (String.tokens (fn c => c = #"," orelse Char.isSpace c)
-               (String.concat lines)))
-    val one = ("0", "schedule-cost-1.out")
-    val two = ("0", "schedule-cost-2.out")
-    val two_b = ("0", "schedule-cost-2b.out")
-    val three = ("0", "schedule-cost-3.out")
-    val six = ("0", "schedule-cost-6.out")
-    val six_list = ["t1", "t2", "t3", "t4", "t5", "t6"]
-    fun after delay (_, file) = (delay, file)
-    val log = ref ([] : string list)
-    val found = ref 0
-    val log_mutex = Mutex.mutex ()
-    fun note line =
-      (Mutex.lock log_mutex; log := line :: !log; Mutex.unlock log_mutex)
-    fun key lemmas = String.concatWith "," lemmas
-    (* How a reconstruction goes: at once, or after waiting for a number
-       of found proofs, or until it is cut (it fails the test after 10 s),
-       or until it is cut inside smlTimeout.timeout, as a replay is
-       (Timed, after reporting deep), or after reporting a progress and
-       then waiting to be cut
-       (Report), or after reporting a progress and then waiting for a
-       number of found proofs (ReportFound), or with no interruption
-       point until a proof has arrived and a preemption been requested,
-       ending in success or in a failure (Spin, after reporting deep), or
-       by failing (Failing) or
-       by sleeping some milliseconds (Delay).  The behaviour gets the
-       lemma list and how many times it has been started.  The result
-       is a tactic named after the list it replays: the list of the
-       progress it is resumed from, if any. *)
-    (* A progress that any arrival preempts: 7 replays are left. *)
-    val deep = {lemmas = six_list, kept = 0}
-    datatype behaviour =
-        Instant | Found of int | Cut | Timed
-      | Report of hhReconstruct.progress
-      | ReportFound of hhReconstruct.progress * int
-      | Spin of bool | Failing | Delay of int
-    fun fake used =
-      {stac = "fake " ^ key used, tac = Tactical.ALL_TAC, t_replay = 0.0,
-       lemmas = used}
-    val resume_log =
-      ref ([] : (string list * hhReconstruct.progress option) list)
-    (* ProofFound is emitted before the proof is queued; the spin and the
-       waits allow for the difference. *)
-    fun settled n = !found >= n
-    fun spin_until_requested n =
-      let
-        val reached = ref NONE
-        fun loop () =
-          if not (settled n) then loop ()
-          else
-            case !reached of
-                NONE => (reached := SOME (Time.now ()); loop ())
-              | SOME at =>
-                  if Time.toMilliseconds (Time.- (Time.now (), at)) < 300
-                  then loop () else ()
-      in
-        loop ()
-      end
-    fun wait_for condition lemmas =
-      let
-        val limit = Time.+ (Time.now (), Time.fromSeconds 10)
-        fun loop () =
-          (Thread.testInterrupt ();
-           if condition () then OS.Process.sleep (Time.fromMilliseconds 200)
-           else if Time.compare (Time.now (), limit) = GREATER
-           then (note ("stuck|" ^ key lemmas); raise Fail "stuck")
-           else (OS.Process.sleep (Time.fromMilliseconds 5); loop ()))
-      in
-        loop ()
-        handle Interrupt => (note ("cut|" ^ key lemmas); raise Interrupt)
-      end
-    fun cut_in_timeout lemmas =
-      (smlTimeout.timeout 10.0 (fn () => while true do ()) ()
-       handle Interrupt => (note ("cut|" ^ key lemmas); raise Interrupt))
-    fun test_reconstruct behave (settings : hhReconstruct.settings) lemmas _ =
-      let
-        val times = length (List.filter (fn l => l = "start|" ^ key lemmas)
-                                        (!log))
-        val _ = note ("start|" ^ key lemmas)
-        val _ = resume_log := (lemmas, #resume settings) :: !resume_log
-        val used = case #resume settings of
-                       SOME {lemmas = verified, ...} => verified
-                     | NONE => lemmas
-        fun report progress =
-          Option.app (fn report => report progress) (#on_verified settings)
-        val _ = case behave lemmas times of
-                    Instant => ()
-                  | Found n => wait_for (fn () => !found >= n) lemmas
-                  | Cut => wait_for (fn () => false) lemmas
-                  | Timed => (report deep; cut_in_timeout lemmas)
-                  | Report progress =>
-                      (report progress; wait_for (fn () => false) lemmas)
-                  | ReportFound (progress, n) =>
-                      (report progress;
-                       wait_for (fn () => !found >= n) lemmas)
-                  | Failing => raise Fail "failed"
-                  | Delay ms =>
-                      OS.Process.sleep (Time.fromMilliseconds (Int.toLarge ms))
-                  | Spin ok =>
-                      (report deep; spin_until_requested 2;
-                       if ok then () else raise Fail "spun")
-      in
-        fake used
-      end
-    fun config slices : hhProver.prover_config =
-      printer_config name
-        (map (fn (delay, file) => fixture_slice Z3 [delay, file] 1) slices)
-        (fn _ => ()) parse
-    fun progress event =
-      (case event of
-           hhSchedule.ProofFound _ => found := !found + 1
-         | _ => ();
-       case event of
-           hhSchedule.Verified suggestion =>
-             note ("verified|" ^ #stac suggestion)
-         | _ => ())
-    val drop_one = ref false
-    fun options slices max_proofs timeout =
-      reconstruction_options
-        {minimize = true, preplay_drop_one = !drop_one}
-        (fixture_options [Z3] (length slices) (length slices) timeout
-           max_proofs false "" NONE)
-    fun reset () = (log := []; found := 0; resume_log := [])
-    fun request slices max_proofs timeout =
-      {options = options slices max_proofs timeout,
-       goal = ([], boolSyntax.T), rankings = [("none", [])],
-       progress = SOME progress}
-    (* f runs with the fixture provers for the slices and the reconstruction
-       behaviour, and a clean log. *)
-    fun with_setup slices behave f =
-      with_ref (hhSchedule_Test.reconstruct, test_reconstruct behave) (fn () =>
-        with_fixtures [(Z3, config slices)] (fn () => (reset (); f ())))
-    fun run slices max_proofs timeout behave =
-      with_setup slices behave (fn () =>
-        let
-          val start = Time.now ()
-          val result = hhSchedule.run (request slices max_proofs timeout)
-        in
-          (result, List.rev (!log),
-           Time.toReal (Time.- (Time.now (), start)))
-        end)
-    fun count line log = length (List.filter (fn l => l = line) log)
-    (* 1. Queued proofs: the cheapest first, equal costs in arrival order.
-       The cost 1 proof is being reconstructed (nothing is cheaper) while
-       the proofs of cost 3, 2 and 2 arrive, in that order. *)
-    val (r1, log1, _) = run
-      [one, after "0.3" three, after "0.6" two, after "0.9" two_b] 4 20
-      (fn lemmas => fn _ =>
-        if lemmas = ["p1"] then Found 4 else Instant)
-    val _ = expect "recon order: the cheapest queued proof goes first"
-      (log1 = ["start|p1", "verified|fake p1", "start|q1,q2",
-               "verified|fake q1,q2", "start|r1,r2",
-               "verified|fake r1,r2", "start|s1,s2,s3",
-               "verified|fake s1,s2,s3"] andalso
-       #stopped r1 = hhSchedule.MaxProofs)
-    (* 2. An arrival that needs fewer replays than a reconstruction past
-       its preplay has left preempts it, and the preempted proof is
-       reconstructed afterwards (max_proofs 2) or never (1). *)
-    val t_key = key six_list
-    fun report_first lemmas times =
-      if lemmas = six_list andalso times = 0 then Report deep else Instant
-    val (r2, log2, _) = run [six, after "0.4" two] 2 20 report_first
-    val _ = expect "recon order: a cheaper arrival preempts, the other follows"
-      (log2 = ["start|" ^ t_key, "cut|" ^ t_key, "start|q1,q2",
-               "verified|fake q1,q2", "start|" ^ t_key,
-               "verified|fake " ^ t_key] andalso
-       length (#suggestions r2) = 2 andalso #stopped r2 = hhSchedule.MaxProofs)
-    val (r2b, log2b, _) = run [six, after "0.4" two] 1 20 report_first
-    val _ = expect "recon order: max_proofs 1 drops the preempted"
-      (log2b = ["start|" ^ t_key, "cut|" ^ t_key, "start|q1,q2",
-                "verified|fake q1,q2"] andalso
-       #stopped r2b = hhSchedule.MaxProofs)
-    (* 2c. The preemption cuts a replay waiting in smlTimeout.timeout. *)
-    val (r2c, log2c, elapsed2c) = run [six, after "0.4" two] 2 20
-      (fn lemmas => fn times =>
-        if lemmas = six_list andalso times = 0 then Timed else Instant)
-    val _ = expect "recon order: a preemption cuts a time-limited replay"
-      (log2c = ["start|" ^ t_key, "cut|" ^ t_key, "start|q1,q2",
-                "verified|fake q1,q2", "start|" ^ t_key,
-                "verified|fake " ^ t_key] andalso
-       length (#suggestions r2c) = 2 andalso elapsed2c < 8.0)
-    (* 2i. A reconstruction still in its preplay, which has reported no
-       progress, is never preempted, whatever arrives. *)
-    val (r2i, log2i, _) = run [six, after "0.4" one] 2 20
-      (fn lemmas => fn _ => if lemmas = six_list then Found 2 else Instant)
-    val _ = expect "recon order: a reconstruction in its preplay is not cut"
-      (log2i = ["start|" ^ t_key, "verified|fake " ^ t_key, "start|p1",
-                "verified|fake p1"] andalso
-       length (#suggestions r2i) = 2)
-    (* 2d. The preempted item resumes from the progress of its
-       reconstruction, and its list stays its identity: the suggestion
-       has it, and a slice that finds it again later is no new proof. *)
-    val progress_s = {lemmas = ["t1", "t2", "t3", "t4", "t5"], kept = 1}
-    val s_key = key (#lemmas progress_s)
-    val (r2d, log2d, _) = run [six, after "0.4" one, after "1.0" six] 3 20
-      (fn lemmas => fn times =>
-        if lemmas = six_list andalso times = 0
-        then Report progress_s else Instant)
-    val resumes2d = List.rev (!resume_log)
-    val _ = expect "recon order: a preempted item resumes from its progress"
-      (log2d = ["start|" ^ t_key, "cut|" ^ t_key, "start|p1",
-                "verified|fake p1", "start|" ^ t_key,
-                "verified|fake " ^ s_key] andalso
-       resumes2d = [(six_list, NONE), (["p1"], NONE),
-                    (six_list, SOME progress_s)] andalso
-       map #lemmas (#suggestions r2d) = [["p1"], six_list])
-    (* 2d2. An arrival whose replay bound is not below the replays the
-       reconstruction has left does not preempt it: the progress
-       {6 lemmas, 3 kept} leaves 4 (three attempts, the final replay)
-       and a proof of one lemma needs 4. *)
-    val (r2d2, log2d2, _) = run [six, after "0.4" one] 2 20
-      (fn lemmas => fn _ =>
-        if lemmas = six_list
-        then ReportFound ({lemmas = six_list, kept = 3}, 2) else Instant)
-    val _ = expect "recon order: an arrival with no lower bound waits"
-      (log2d2 = ["start|" ^ t_key, "verified|fake " ^ t_key, "start|p1",
-                 "verified|fake p1"] andalso
-       length (#suggestions r2d2) = 2)
-    (* 2d3. A preempted retry with progress is kept past the soft
-       deadline (timeout 1), as the other retries are not: the list of
-       six fails, its first variant is preempted by a proof of one
-       lemma that ends after the deadline, and the variant resumes while
-       the others are dropped. *)
-    val variant = tl six_list
-    val v_key = key variant
-    val progress_v = {lemmas = variant, kept = 0}
-    val (r2d3, log2d3, _) = with_ref (drop_one, true) (fn () =>
-      run [six, after "0.3" one] 2 1
-        (fn lemmas => fn times =>
-          if lemmas = six_list then Failing
-          else if lemmas = variant andalso times = 0
-          then Report progress_v
-          else if lemmas = ["p1"] then Delay 1200
-          else Instant))
-    val _ = expect "recon order: a resumed retry outlives the soft deadline"
-      (log2d3 = ["start|" ^ t_key, "start|" ^ v_key, "cut|" ^ v_key,
-                 "start|p1", "verified|fake p1", "start|" ^ v_key,
-                 "verified|fake " ^ v_key]
-       andalso length (#suggestions r2d3) = 2)
-    (* 2d4. The queue is ordered by the replays left, which for a
-       preempted item follow its progress: the 6 lemma list (9) is
-       preempted by p1 with the progress {6 lemmas, 2 kept} (6, with the
-       replay of the list), while the 3 lemma list (6) is queued.  They
-       tie, and the preempted item, at the head of the queue, goes
-       first; its list alone would put the other first. *)
-    val progress_two = {lemmas = six_list, kept = 2}
-    val (r2d4, log2d4, _) = run [six, after "0.2" three, after "0.5" one] 3 20
-      (fn lemmas => fn times =>
-        if lemmas = six_list andalso times = 0
-        then Report progress_two else Instant)
-    val _ = expect "recon order: a resumed item is taken at its progress cost"
-      (log2d4 = ["start|" ^ t_key, "cut|" ^ t_key, "start|p1",
-                 "verified|fake p1", "start|" ^ t_key,
-                 "verified|fake " ^ t_key, "start|s1,s2,s3",
-                 "verified|fake s1,s2,s3"])
-    (* 2d5. The reconstruction time adds up the segments that a
-       preemption cut: the first is cut at about 0.6 s, the resumed one
-       takes 0.4 s. *)
-    val (r2d5, _, _) = run [six, after "0.6" one] 2 20
-      (fn lemmas => fn times =>
-        if lemmas <> six_list then Instant
-        else if times = 0 then Report progress_s else Delay 400)
-    val _ = expect "recon order: t_recon spans the preemptions"
-      (case #suggestions r2d5 of
-           [_, resumed] => #t_recon resumed > 0.7
-         | _ => false)
-    (* 2d6. A resumed list that fails to replay is tried once more from
-       its original list, with neither a warning nor the variants of the
-       list (drop_one is on, and the variants would be started). *)
-    val (r2d6, log2d6, _) = with_ref (drop_one, true) (fn () =>
-      run [six, after "0.4" one] 3 20
-        (fn lemmas => fn times =>
-          if lemmas <> six_list then Instant
-          else if times = 0 then Report progress_s
-          else if times = 1 then Failing else Instant))
-    val resumes2d6 = List.rev (!resume_log)
-    val _ = expect "recon order: a failed resume falls back to the original"
-      (log2d6 = ["start|" ^ t_key, "cut|" ^ t_key, "start|p1",
-                 "verified|fake p1", "start|" ^ t_key, "start|" ^ t_key,
-                 "verified|fake " ^ t_key] andalso
-       resumes2d6 = [(six_list, NONE), (["p1"], NONE),
-                     (six_list, SOME progress_s), (six_list, NONE)] andalso
-       map #lemmas (#suggestions r2d6) = [["p1"], six_list])
-    (* 2d8. If the original list fails too, after a fallback, there is
-       the one fallback, and then the variants of the list, as for any
-       failing list. *)
-    val (r2d8, log2d8, _) = with_ref (drop_one, true) (fn () =>
-      run [six, after "0.4" one] 3 20
-        (fn lemmas => fn times =>
-          if lemmas <> six_list then Instant
-          else if times = 0 then Report progress_s else Failing))
-    val _ = expect "recon order: a failing fallback queues the variants"
-      (log2d8 = ["start|" ^ t_key, "cut|" ^ t_key, "start|p1",
-                 "verified|fake p1", "start|" ^ t_key, "start|" ^ t_key,
-                 "start|" ^ v_key, "verified|fake " ^ v_key] andalso
-       length (#suggestions r2d8) = 2)
-    (* 2d9. A much cheaper arrival preempts: the progress of a list of
-       15 lemmas, one of them kept, leaves 15 replays, and a proof of
-       three lemmas needs 6. *)
-    val long = List.tabulate (15, fn i => "u" ^ Int.toString i)
-    val (r2d9, log2d9, _) = run [six, after "0.4" three] 2 20
-      (fn lemmas => fn times =>
-        if lemmas = six_list andalso times = 0
-        then Report {lemmas = long, kept = 1} else Instant)
-    val _ = expect "recon order: a much cheaper arrival preempts"
-      (log2d9 = ["start|" ^ t_key, "cut|" ^ t_key, "start|s1,s2,s3",
-                 "verified|fake s1,s2,s3", "start|" ^ t_key,
-                 "verified|fake " ^ key long])
-    (* 2d7. The variants of a list that has been recovered are skipped:
-       the first variant verifies, the others are not started. *)
-    val (r2d7, log2d7, _) = with_ref (drop_one, true) (fn () =>
-      run [three] 3 20
-        (fn lemmas => fn _ =>
-          if lemmas = ["s1", "s2", "s3"] then Failing else Instant))
-    val _ = expect "recon order: the variants of a recovered list are skipped"
-      (log2d7 = ["start|s1,s2,s3", "start|s2,s3", "verified|fake s2,s3"]
-       andalso length (#suggestions r2d7) = 1)
-    (* 2e. A costly reconstruction with no interruption point, which ends
-       in a failure or in a success after the cheaper proof arrived and a
-       preemption was requested, is not cut by it, and the interrupt does
-       not reach the next item.  The cheaper reconstruction waits where
-       an interrupt would cut it. *)
-    fun spin_then ok lemmas times =
-      if lemmas = six_list then Spin ok
-      else Found 2
-    val (r2e, log2e, _) = run [six, after "0.4" two] 1 20 (spin_then false)
-    val _ = expect "recon order: a failure commits, the next item runs on"
-      (log2e = ["start|" ^ t_key, "start|q1,q2", "verified|fake q1,q2"] andalso
-       #stopped r2e = hhSchedule.MaxProofs)
-    val (r2f, log2f, _) = run [six, after "0.4" two] 2 20 (spin_then true)
-    val _ = expect "recon order: a success commits, the next item runs on"
-      (log2f = ["start|" ^ t_key, "verified|fake " ^ t_key, "start|q1,q2",
-                "verified|fake q1,q2"] andalso
-       length (#suggestions r2f) = 2)
-    (* 2g. No preemption at or after the soft deadline: the cheaper proof
-       arrives after it (timeout 1). *)
-    val (r2g, log2g, _) = run [six, after "1.3" two] 2 1
-      (fn lemmas => fn _ =>
-        if lemmas = six_list then ReportFound (deep, 2) else Instant)
-    val _ = expect "recon order: no preemption after the soft deadline"
-      (log2g = ["start|" ^ t_key, "verified|fake " ^ t_key, "start|q1,q2",
-                "verified|fake q1,q2"])
-    (* 3. An arrival that needs as many replays as the reconstruction has
-       left, or more, does not preempt: the progress {6 lemmas, 2 kept}
-       leaves 5, and the proofs of 2 and 3 lemmas need 5 and 6. *)
-    val (r3, log3, _) = run [six, after "0.3" two, after "0.6" three] 3 20
-      (fn lemmas => fn _ =>
-        if lemmas = six_list
-        then ReportFound ({lemmas = six_list, kept = 2}, 3) else Instant)
-    val _ = expect "recon order: an equal or higher bound arrival waits"
-      (count ("cut|" ^ t_key) log3 = 0 andalso
-       log3 = ["start|" ^ t_key, "verified|fake " ^ t_key, "start|q1,q2",
-               "verified|fake q1,q2", "start|s1,s2,s3",
-               "verified|fake s1,s2,s3"] andalso
-       length (#suggestions r3) = 3)
-    (* 4. Stops are not preemptions.  The hard deadline cuts a
-       reconstruction that never ends. *)
-    val (r4, log4, elapsed4) = run [three] 1 1 (fn _ => fn _ => Cut)
-    val _ = expect "recon order: the hard deadline cuts, without a restart"
-      (log4 = ["start|s1,s2,s3", "cut|s1,s2,s3"] andalso
-       #stopped r4 = hhSchedule.Timeout andalso null (#suggestions r4) andalso
-       elapsed4 < 8.0)
-    (* The caller's interrupt. *)
-    val result = ref NONE
-    val _ = with_setup [three] (fn _ => fn _ => Cut) (fn () =>
-      let
-        val thread = Thread.fork
-          (fn () => result := SOME (hhSchedule.run (request [three] 1 20)),
-           [])
-        val _ = await_schedule_test "no reconstruction started"
-          (fn () => count "start|s1,s2,s3" (!log) > 0)
-        val _ = OS.Process.sleep (Time.fromMilliseconds 100)
-        val _ = Thread.interrupt thread
-        val _ = await_schedule_test "interrupted run did not finish"
-          (fn () => not (Thread.isActive thread))
-      in
-        ()
-      end)
-    val _ = expect "recon order: the caller's interrupt cuts, no restart"
-      (List.rev (!log) = ["start|s1,s2,s3", "cut|s1,s2,s3"] andalso
-       (case !result of
-            SOME value => #stopped value = hhSchedule.Interrupted
-          | NONE => false))
-    (* MaxProofs: the proof that arrives after the stop is not started. *)
-    val (r5, log5, _) = run [two, after "0.5" one] 1 20
-      (fn _ => fn _ => Instant)
-    val _ = expect "recon order: MaxProofs ends the run without a cut"
-      (log5 = ["start|q1,q2", "verified|fake q1,q2"] andalso
-       #stopped r5 = hhSchedule.MaxProofs)
-  in
-    ()
-  end
-
 fun test_hhSchedule () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       SOME _ => ()
@@ -5397,7 +4900,6 @@ fun test_hhSchedule () =
           val _ = test_schedule_isolation parser
           val _ = test_schedule_timeout parser
           val _ = test_schedule_filter_rankings parser
-          val _ = test_schedule_recon_order ()
         in
           expect "scheduler hermetic suite stays within its wall-time bound"
             (Time.toReal (Time.- (Time.now (), started)) < 60.0)

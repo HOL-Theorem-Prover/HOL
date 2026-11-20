@@ -9,8 +9,8 @@ sig
     | Verified of suggestion
     | ScheduleDone of stop_reason
   and stop_reason = MaxProofs | Timeout | Exhausted | Interrupted
-  (* t_recon is the whole reconstruction time, minimisation included,
-     across preemptions; t_replay is the time the replay of stac took. *)
+  (* t_recon is the whole reconstruction time, minimisation included;
+     t_replay is the time the replay of stac took. *)
   withtype suggestion =
     {stac : string, tac : tactic, lemmas : string list,
      prover : hhProver.prover, slice : hhProver.slice,
@@ -160,39 +160,6 @@ sig
      hhNames.sig for why this second pin client, besides proof replay, is
      safe.  (A warning of the export goes to the file that hides the
      output of a replay running at the time.)
-
-     Reconstruction order.  One thread reconstructs the found proofs.
-     The cost of a proof is an upper bound on the replays that its
-     reconstruction runs (hhReconstruct.replays_left), not its number of
-     lemmas: a short list may fail to replay, which costs whole preplay
-     timeouts.  The thread takes the cheapest proof first (ties in
-     arrival order).  A proof that arrives while a reconstruction is past
-     its preplay, having reported a verified list, preempts it if the
-     replays the arrival needs are fewer than those the reconstruction
-     has left (hhReconstruct.attempts_left); a reconstruction in its
-     preplay is never cut.  The reconstruction, in any phase before its
-     outcome (a suggestion or a failure) is recorded, is interrupted, and
-     the cheaper proof is reconstructed.  The preempted proof is requeued, and
-     its list stays its identity
-     (for the suggestion, the lists found again by other slices, and the
-     variants), with its progress: the latest verified list and the
-     lemmas of it found needed (hhReconstruct.progress).  Its restart
-     replays that list again, which measures its time again, and goes on
-     with the minimisation where it stopped; the lemmas already found
-     needed are not tried again.  A restart with progress is kept past the
-     soft deadline, when the other retries are dropped, as it only needs
-     to finish.  If its replay fails, the proof is reconstructed once
-     more from its original list (a retry is then dropped if the soft
-     deadline has passed, like the other retries), without a warning or
-     variants.  t_recon adds up the time of all the segments of a
-     preempted reconstruction.  Nothing is preempted at or after the soft
-     deadline.  The
-     interrupt takes effect at the next wait of the reconstruction
-     thread: normally at once, as replays and minimisation attempts run
-     in a time-limited worker, but a compilation can delay it by tens to
-     hundreds of milliseconds.  A preempted reconstruction reports no
-     event, and Verified suggestions stay in the order of completion.  A
-     stop is not a preemption.
 
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an
