@@ -3828,14 +3828,16 @@ fun test_hhReconstruct () =
        the full list first, then lists that never grow, with a growing
        number of lemmas known to be needed; the last is complete and
        holds the lemmas of the result. *)
-    val _ = expect "the progress is reported, from the full list to the result"
+    val _ = expect "the progress is reported from the full list to the result"
       (case (List.rev (!reported), minimized) of
            (first :: rest, SOME {lemmas = result, ...}) =>
-             first = {lemmas = lemmas, kept = 0} andalso not (null rest) andalso
-             #1 (List.foldl (fn ({lemmas = l, kept = k}, (ok, (size, known))) =>
-                   (ok andalso length l <= size andalso k >= known andalso
-                    k <= length l, (length l, k)))
-                 (true, (length lemmas, 0)) rest) andalso
+             first = {lemmas = lemmas, kept = 0} andalso
+             not (null rest) andalso
+             #1 (List.foldl
+                   (fn ({lemmas = l, kept = k}, (ok, (size, known))) =>
+                      (ok andalso length l <= size andalso k >= known andalso
+                       k <= length l, (length l, k)))
+                   (true, (length lemmas, 0)) rest) andalso
              List.last rest = {lemmas = result, kept = length result} andalso
              List.exists (fn {lemmas = l, kept} =>
                kept > 0 andalso kept < length l) rest andalso
@@ -3877,8 +3879,7 @@ fun test_hhReconstruct () =
            SOME (result as {lemmas = result_lemmas, ...}) =>
              result_lemmas = complete andalso
              replays_in_kernel goal result andalso
-             List.rev (!finished) =
-               [{lemmas = complete, kept = 3}, {lemmas = complete, kept = 3}]
+             List.rev (!finished) = [{lemmas = complete, kept = 3}]
          | NONE => false)
     val (unminimized, _) =
       reconstruct_timed true 10.0 (SOME (Time.now ())) NONE lemmas goal
@@ -3926,7 +3927,11 @@ fun test_hhReconstruct () =
     ()
   end
 
-val _ = test_hhReconstruct ()
+(* Once, like test_hhSchedule: not in the hermetic children. *)
+val _ =
+  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
+      NONE => test_hhReconstruct ()
+    | SOME _ => ()
 
 val _ = test_szs_status_words ()
 val _ = test_hhProver ()
@@ -5160,17 +5165,68 @@ fun test_schedule_recon_order () =
        the others are dropped. *)
     val progress_v = {lemmas = ["s2", "s3"], kept = 1}
     val (r2d3, log2d3, _) = with_ref (drop_one, true) (fn () =>
-      run [three, after "0.6" one] 2 1
+      run [three, after "0.3" one] 2 1
         (fn lemmas => fn times =>
           if lemmas = ["s1", "s2", "s3"] then Failing
           else if lemmas = ["s2", "s3"] andalso times = 0
           then Report progress_v
-          else if lemmas = ["p1"] then Delay 700
+          else if lemmas = ["p1"] then Delay 1200
           else Instant))
     val _ = expect "recon order: a resumed retry outlives the soft deadline"
       (log2d3 = ["start|s1,s2,s3", "start|s2,s3", "cut|s2,s3", "start|p1",
                  "verified|fake p1", "start|s2,s3", "verified|fake s2,s3"]
        andalso length (#suggestions r2d3) = 2)
+    (* 2d4. The cost of a preempted item is that of the list it resumes
+       from: s (3 lemmas, down to 2) is preempted by p1, while q (2) is
+       queued, and then comes before q. *)
+    val progress_two = {lemmas = ["s1", "s2"], kept = 0}
+    val (r2d4, log2d4, _) = run [three, after "0.2" two, after "0.5" one] 3 20
+      (fn lemmas => fn times =>
+        if lemmas = ["s1", "s2", "s3"] andalso times = 0
+        then Report progress_two else Instant)
+    val _ = expect "recon order: a resumed item is taken at its progress cost"
+      (log2d4 = ["start|s1,s2,s3", "cut|s1,s2,s3", "start|p1",
+                 "verified|fake p1", "start|s1,s2,s3",
+                 "verified|fake s1,s2", "start|q1,q2",
+                 "verified|fake q1,q2"])
+    (* 2d5. The reconstruction time adds up the segments that a
+       preemption cut: the first is cut at about 0.4 s, the resumed one
+       takes 0.4 s. *)
+    val (r2d5, _, _) = run [three, after "0.4" one] 2 20
+      (fn lemmas => fn times =>
+        if lemmas <> ["s1", "s2", "s3"] then Instant
+        else if times = 0 then Report progress_s else Delay 400)
+    val _ = expect "recon order: t_recon spans the preemptions"
+      (case #suggestions r2d5 of
+           [_, resumed] => #t_recon resumed > 0.7
+         | _ => false)
+    (* 2d6. A resumed list that fails to replay is tried once more from
+       its original list, with neither a warning nor the variants of the
+       list (drop_one is on, and the variants would be started). *)
+    val (r2d6, log2d6, _) = with_ref (drop_one, true) (fn () =>
+      run [three, after "0.4" one] 3 20
+        (fn lemmas => fn times =>
+          if lemmas <> ["s1", "s2", "s3"] then Instant
+          else if times = 0 then Report progress_s
+          else if times = 1 then Failing else Instant))
+    val resumes2d6 = List.rev (!resume_log)
+    val _ = expect "recon order: a failed resume falls back to the original"
+      (log2d6 = ["start|s1,s2,s3", "cut|s1,s2,s3", "start|p1",
+                 "verified|fake p1", "start|s1,s2,s3", "start|s1,s2,s3",
+                 "verified|fake s1,s2,s3"] andalso
+       resumes2d6 = [(["s1", "s2", "s3"], NONE), (["p1"], NONE),
+                     (["s1", "s2", "s3"], SOME progress_s),
+                     (["s1", "s2", "s3"], NONE)] andalso
+       map #lemmas (#suggestions r2d6) = [["p1"], ["s1", "s2", "s3"]])
+    (* 2d7. The variants of a list that has been recovered are skipped:
+       the first variant verifies, the others are not started. *)
+    val (r2d7, log2d7, _) = with_ref (drop_one, true) (fn () =>
+      run [three] 3 20
+        (fn lemmas => fn _ =>
+          if lemmas = ["s1", "s2", "s3"] then Failing else Instant))
+    val _ = expect "recon order: the variants of a recovered list are skipped"
+      (log2d7 = ["start|s1,s2,s3", "start|s2,s3", "verified|fake s2,s3"]
+       andalso length (#suggestions r2d7) = 1)
     (* 2e. A costly reconstruction with no interruption point, which ends
        in a failure or in a success after the cheaper proof arrived and a
        preemption was requested, is not cut by it, and the interrupt does

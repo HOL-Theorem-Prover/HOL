@@ -211,11 +211,6 @@ fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
                     psMinimize.unsafe_prettify_stac
                       (mk_metis_call (map bound_name needed))
                 in
-                  (* The minimisation is complete, which a preemption in
-                     the final replay resumes from (not when the deadline
-                     cut it short). *)
-                  if out_of_time minimize_deadline then ()
-                  else progress {lemmas = needed, kept = length needed};
                   (* The short names are resolved in the current
                      namespace, so the printed form is verified on its
                      own. *)

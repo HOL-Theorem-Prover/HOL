@@ -87,8 +87,10 @@ datatype resume = New | Again of hhReconstruct.progress option
 
 (* A lemma list waiting for reconstruction.  The list of the success is
    its identity (for tried_keys, the suggestion and the variants); only
-   the replay starts from the progress of a resume. *)
-type queued = {success : success, resume : resume}
+   the replay starts from the progress of a resume.  spent is the time
+   that the earlier segments of its reconstruction took, which a
+   preemption interrupted. *)
+type queued = {success : success, resume : resume, spent : real}
 
 (* A Retry is a list that Metis could not replay, less one of its lemmas;
    origin is the key of that list. *)
@@ -106,13 +108,17 @@ fun recon_cost ((_, lemmas, _) : success) = length lemmas
 fun progress_of (Again (SOME progress)) = SOME progress
   | progress_of _ = NONE
 
-fun work_cost ({success, resume} : queued) =
+fun work_cost ({success, resume, ...} : queued) =
   case progress_of resume of
       SOME {lemmas, ...} => length lemmas
     | NONE => recon_cost success
 
-fun item_cost (Fresh work) = work_cost work
-  | item_cost (Retry {work, ...}) = work_cost work
+(* The key of the list a Retry is a variant of, if it is one, and the
+   work. *)
+fun item_parts (Fresh work) = (NONE, work)
+  | item_parts (Retry {origin, work}) = (SOME origin, work)
+
+fun item_cost item = work_cost (#2 (item_parts item))
 
 (* The first of the cheapest proofs, with the others in their order. *)
 fun take_cheapest [] = NONE
@@ -845,6 +851,9 @@ fun run_in root {options, goal, rankings, progress} =
     val current = ref (NONE : (recon_item * int) option)
     val replayed = ref (NONE : hhReconstruct.progress option)
     val preempt = ref false
+    (* When the reconstruction of the current item began, for the time
+       of a segment that a preemption interrupts. *)
+    val begun = ref Time.zeroTime
     val reconstruct_with = !hhSchedule_Test.reconstruct
     val slices_run = ref
       ([] : (hhProver.slice * hhProver.szs * real * bool) list)
@@ -1221,7 +1230,8 @@ fun run_in root {options, goal, rankings, progress} =
               (emit (ProofFound (slice, values));
                with_mutex state_mutex (fn () =>
                  let val success = (slice, values, #time result) in
-                   recon := !recon @ [{success = success, resume = New}];
+                   recon := !recon @
+                    [{success = success, resume = New, spent = 0.0}];
                    preempt_for (recon_cost success);
                    signal ()
                  end))
@@ -1302,35 +1312,46 @@ fun run_in root {options, goal, rankings, progress} =
     (* Takes the item (the mutex is held) as the current one. *)
     fun start item =
       (current := SOME (item, item_cost item);
-       replayed := (case item of
-                        Fresh {resume, ...} => progress_of resume
-                      | Retry {work = {resume, ...}, ...} =>
-                          progress_of resume);
+       begun := Time.now ();
+       replayed := progress_of (#resume (#2 (item_parts item)));
        SOME item)
+
+    (* Puts the item, with other work, back at the head of its queue (the
+       mutex is held). *)
+    fun requeue (Fresh _) work = recon := work :: !recon
+      | requeue (Retry {origin, ...}) work =
+          retries := {origin = origin, work = work} :: !retries
+
+    fun segment_time () =
+      Time.toReal (Time.- (Time.now (), !begun))
 
     fun member list value = List.exists (fn other => value = other) list
 
     (* Whether the item is reconstructed (the mutex is held), as opposed
-       to skipped: a list already reconstructed, or a variant of a list
-       that has been recovered.  A reconstructed list is recorded.  An
-       item requeued after a preemption is never skipped for its own
-       list, whose key stays recorded. *)
+       to skipped: a variant of a list that has been recovered, or a
+       list already reconstructed.  A new list is recorded.  An item
+       requeued after a preemption is not skipped for its own list,
+       whose key stays recorded, but it is for a recovered parent. *)
     fun admit item =
       let
-        val (origin, {success = (_, lemmas, _), resume}) =
-          case item of
-              Fresh work => (NONE, work)
-            | Retry {origin, work} => (SOME origin, work)
+        val (origin, {success = (_, lemmas, _), resume, ...}) =
+          item_parts item
         val key = lemma_key lemmas
+        val recovered_parent =
+          case origin of
+              SOME parent => member (!recovered) parent
+            | NONE => false
+        val tried =
+          case resume of
+              New => member (!tried_keys) key
+            | Again _ => false
       in
-        case resume of
-            Again _ => true
-          | New =>
-              not ((case origin of
-                        SOME parent => member (!recovered) parent
-                      | NONE => false) orelse
-                    member (!tried_keys) key) andalso
-              (tried_keys := key :: !tried_keys; true)
+        if recovered_parent orelse tried then false
+        else
+          ((case resume of
+                New => tried_keys := key :: !tried_keys
+              | Again _ => ());
+           true)
       end
 
     (* An item that is skipped never becomes current.  Retries are
@@ -1382,10 +1403,8 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun reconstruct item =
       let
-        val (origin, {success = (slice, lemmas, t_prover), resume}) =
-          case item of
-              Fresh work => (NONE, work)
-            | Retry {origin, work} => (SOME origin, work)
+        val (origin, {success = (slice, lemmas, t_prover), resume, spent}) =
+          item_parts item
         val key = lemma_key lemmas
         fun queue_variants () =
           if #preplay_drop_one options andalso length lemmas > 1 then
@@ -1394,7 +1413,7 @@ fun run_in root {options, goal, rankings, progress} =
                 map (fn variant =>
                        {origin = key,
                         work = {success = (slice, variant, t_prover),
-                                resume = New}})
+                                resume = New, spent = 0.0}})
                   (drop_one_variants lemmas))
           else ()
       in
@@ -1402,7 +1421,7 @@ fun run_in root {options, goal, rankings, progress} =
             (* Minimisation stops at the deadline, so that a verified
                proof found late is still returned before the hard
                deadline interrupts this thread. *)
-            val ({stac, tac, t_replay, ...}, t_recon) =
+            val ({stac, tac, t_replay, ...}, segment) =
               add_time
                 (smlRedirect.hidef
                   (reconstruct_with
@@ -1410,11 +1429,11 @@ fun run_in root {options, goal, rankings, progress} =
                      preplay_timeout = #preplay_timeout options,
                      minimize_timeout = #minimize_timeout options,
                      minimize_deadline = SOME deadline,
-                     on_verified = SOME (fn progress =>
+                     on_verified = SOME (fn reached =>
                        with_mutex state_mutex (fn () =>
-                         (replayed := SOME progress;
+                         (replayed := SOME reached;
                           current := Option.map (fn (item, _) =>
-                            (item, length (#lemmas progress)))
+                            (item, length (#lemmas reached)))
                             (!current)))),
                      resume = progress_of resume}
                     lemmas))
@@ -1422,11 +1441,11 @@ fun run_in root {options, goal, rankings, progress} =
             val suggestion : suggestion =
               {stac = stac, tac = tac, lemmas = lemmas,
                prover = #prover slice, slice = slice,
-               t_prover = t_prover, t_recon = t_recon,
+               t_prover = t_prover, t_recon = spent + segment,
                t_replay = t_replay}
             (* The commit point: the outcome is recorded and the item no
                longer current, so a later arrival does not preempt it. *)
-            val (reached, preempted) = with_mutex state_mutex (fn () =>
+            val (enough, preempted) = with_mutex state_mutex (fn () =>
               (suggestions := suggestion :: !suggestions;
                Option.app (fn parent => recovered := parent :: !recovered)
                  origin;
@@ -1435,7 +1454,7 @@ fun run_in root {options, goal, rankings, progress} =
             val _ = if preempted then drain_interrupt () else ()
             val _ = emit (Verified suggestion)
           in
-            if reached then kill_all MaxProofs else ()
+            if enough then kill_all MaxProofs else ()
           end)
          handle Interrupt => raise Interrupt
               | error =>
@@ -1443,12 +1462,29 @@ fun run_in root {options, goal, rankings, progress} =
                      point where a preemption can cut it, which leaves
                      an interrupt that is taken now. *)
                   let
-                    val preempted = with_mutex state_mutex clear_current
+                    val (preempted, again) =
+                      with_mutex state_mutex (fn () =>
+                        let
+                          val again = case resume of
+                              Again (SOME _) =>
+                                (requeue item
+                                   {success = (slice, lemmas, t_prover),
+                                    resume = Again NONE,
+                                    spent = spent + segment_time ()};
+                                 signal (); true)
+                            | _ => false
+                        in
+                          (clear_current (), again)
+                        end)
                   in
                     if preempted then drain_interrupt () else ();
+                    (* A list resumed from its progress that fails (the
+                       load may have changed) is tried once more from
+                       its original list, without a warning. *)
+                    if again then ()
                     (* A variant that fails is expected and not
                        reported. *)
-                    if Option.isSome origin then ()
+                    else if Option.isSome origin then ()
                     else (warn "reconstruction" error; queue_variants ())
                   end)
     end
@@ -1470,18 +1506,18 @@ fun run_in root {options, goal, rankings, progress} =
         let
           val item = !current
           val resume = Again (!replayed)
+          val elapsed = segment_time ()
           val requested = clear_current ()
         in
           if not requested orelse !stopping then false
           else
             (Option.app
-               (fn (Fresh {success, ...}, _) =>
-                     recon := {success = success, resume = resume} :: !recon
-                 | (Retry {origin, work = {success, ...}}, _) =>
-                     retries :=
-                       {origin = origin,
-                        work = {success = success, resume = resume}} ::
-                       !retries)
+               (fn (item, _) =>
+                  let val (_, {success, spent, ...}) = item_parts item in
+                    requeue item
+                      {success = success, resume = resume,
+                       spent = spent + elapsed}
+                  end)
                item;
              signal (); true)
         end)
@@ -1504,7 +1540,13 @@ fun run_in root {options, goal, rankings, progress} =
        (which stays its identity), so the restart replays that list again
        (and so measures its time again) and goes on with the minimisation
        where it stopped.  A requeued item with progress is also kept past
-       the soft deadline, when the other retries are dropped.  No
+       the soft deadline, when the other retries are dropped.  If its
+       replay fails all the same (the load may have changed), it is
+       requeued once more, at the head of its queue, to start from its
+       original list, with no warning and no variants: only a failure
+       from its original list is a failure of the proof.  The time of
+       the segments that the preemptions cut is carried with the item
+       (spent), so that t_recon is the whole reconstruction time.  No
        preemption happens at or after the soft deadline.  Only an arrival
        preempts (note_result), once per arrival (the preempt flag), and
        arrivals are finite, so a run has at most schedule_length

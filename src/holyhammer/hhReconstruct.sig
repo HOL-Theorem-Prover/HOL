@@ -32,7 +32,8 @@ sig
      argument: that list is replayed again (and so timed again, as the
      load may have changed), and the minimisation skips its first kept
      lemmas.  If the list can only be replayed without its permutative
-     equations, the lemmas found needed are not kept. *)
+     equations, the lemmas found needed are not kept.  The progress of a
+     resume must have kept <= length lemmas. *)
   type progress = {lemmas : string list, kept : int}
   type settings =
     {minimize : bool, preplay_timeout : real, minimize_timeout : real,
