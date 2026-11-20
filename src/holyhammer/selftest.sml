@@ -411,6 +411,11 @@ fun test_environment_default value =
        hhConfig.hh_get "preplay_timeout" = "2.5" andalso
        has_parameter "preplay_timeout" "2.5" "default" andalso
        Real.abs (hhConfig.default_preplay_timeout - 2.5) < 0.000001)
+    val _ = expect "effective minimize_timeout default is 1.0"
+      (Real.abs (#minimize_timeout options - 1.0) < 0.000001 andalso
+       hhConfig.hh_get "minimize_timeout" = "1.0" andalso
+       has_parameter "minimize_timeout" "1.0" "default" andalso
+       Real.abs (hhConfig.default_minimize_timeout - 1.0) < 0.000001)
     val _ = expect "default cores and slices are computed"
       (#cores options > 0 andalso #slices options = 24 * #cores options)
     val _ = expect "empty option defaults map to NONE"

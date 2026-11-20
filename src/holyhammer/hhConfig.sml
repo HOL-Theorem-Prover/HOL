@@ -311,6 +311,9 @@ val default_export_workers = 2
 (* The default of the preplay_timeout option, in seconds. *)
 val default_preplay_timeout = 2.5
 
+(* The default of the minimize_timeout option, in seconds. *)
+val default_minimize_timeout = 1.0
+
 val option_specs : option_spec list =
   [{name = "timeout", default = fn () => "30",
     expected = "a positive integer",
@@ -379,7 +382,8 @@ val option_specs : option_spec list =
     expected = "a positive real number",
     doc = "time limit for each replay of a proof, in seconds",
     valid = positive_real},
-   {name = "minimize_timeout", default = fn () => "1.0",
+   {name = "minimize_timeout",
+    default = fn () => Real.toString default_minimize_timeout,
     expected = "a positive real number",
     doc = "time limit for each minimization attempt, in seconds",
     valid = positive_real},

@@ -19,7 +19,7 @@ val ERR = mk_HOL_ERR "hhReconstruct"
    -------------------------------------------------------------------------- *)
 
 val reconstruct_flag = ref true
-val minimization_timeout = ref 1.0
+val minimization_timeout = ref hhConfig.default_minimize_timeout
 val reconstruction_timeout = ref hhConfig.default_preplay_timeout
 
 (*----------------------------------------------------------------------------

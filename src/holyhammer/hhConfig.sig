@@ -71,6 +71,9 @@ sig
   (* The built-in default of the preplay_timeout option, in seconds. *)
   val default_preplay_timeout : real
 
+  (* The built-in default of the minimize_timeout option, in seconds. *)
+  val default_minimize_timeout : real
+
   val get : string -> string option
   val get_int : string -> int option
   val get_bool : string -> bool option
