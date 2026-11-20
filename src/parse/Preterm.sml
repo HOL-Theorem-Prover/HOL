@@ -437,7 +437,7 @@ fun remove_overloading_phase1 ptm =
               if s = fromNum_str then
                 case decode_numeral_preterm Rand of
                     SOME n =>
-                      error (Misc ("Couldn't infer a type for the \
+                      error (misc ("Couldn't infer a type for the \
                                    \numeric literal `" ^
                                    Arbnum.toString n ^ "`"),
                              Locn)
@@ -650,8 +650,17 @@ fun is_atom (Var _) = true
 val rcm_for_msg : (Term.term -> Term.term) ref = ref Lib.I
 
 local
-  fun default_typrinter x = "<hol_type>"
-  fun default_tmprinter x = "<term>"
+  (* Messages here are built, not printed: `txt' and `^^' assemble a
+     value that still holds the terms and types it talks about, and
+     only a reader forces them.  `concat' shadows the basis one for
+     the rest of this block, which uses `String.concat' by name. *)
+  val txt = HOLmessage.txt
+  val concat = HOLmessage.concat
+  val op ^^ = HOLmessage.^^
+  infix 6 ^^
+
+  fun default_typrinter x = HOLmessage.txt "<hol_type>"
+  fun default_tmprinter x = HOLmessage.txt "<term>"
   open errormonad
   infix ++?
   fun smashTm ptm =
@@ -677,33 +686,34 @@ fun typecheck_phase1 printers = let
       end
   fun ptm_arms t =
       case bool_op case_split_special t of
-          SOME [l, r] => ptm_arms l ^ " | " ^ ptm_arms r
+          SOME [l, r] => ptm_arms l ^^ txt " | " ^^ ptm_arms r
         | _ =>
           case bool_op case_arrow_special t of
-              SOME [pat, body] => pretty_tm pat ^ " => " ^ pretty_tm body
+              SOME [pat, body] => pretty_tm pat ^^ txt " => " ^^ pretty_tm body
             | _ => pretty_tm t
   (* When the AppFail Comb is the partial split application
      `case_split @ left_arms`, we know we are at the point where two arm
      groups of a `case ... of ...` expression are being unified.  Reformat
      the error so the user sees the arms, not the raw combinator term. *)
   fun arms_disagree_msg left_arms Rand' unify_error =
-      String.concat
-        ["\nType error in case expression: arms have incompatible types.\n",
-         "  ", ptm_arms left_arms, " ",
-              pty(Term.type_of left_arms), "\n",
-         "  ", ptm_arms Rand', " ",
-              pty(Term.type_of Rand'), "\n",
-         "  Reason: ", errorMsg (#1 unify_error), "\n"]
+      concat
+        [txt "\nType error in case expression: arms have incompatible types.\n",
+         txt "  ", ptm_arms left_arms, txt " ",
+              pty(Term.type_of left_arms), txt "\n",
+         txt "  ", ptm_arms Rand', txt " ",
+              pty(Term.type_of Rand'), txt "\n",
+         txt "  Reason: ", errorMessage (#1 unify_error), txt "\n"]
   (* When the AppFail Comb is `(case_arg @ scrutinee) @ split_tree`, the
      whole case expression is split across Rator and Rand.  Rebuild a
      surface `case <scrutinee> of <arms>` view rather than showing the
      internal combinator structure. *)
   fun case_app_msg scrut arms_tree unify_error =
-      String.concat
-        ["\nType error in case expression.\n",
-         "  case ", pretty_tm scrut, " ", pty(Term.type_of scrut), "\n",
-         "  of ", ptm_arms arms_tree, "\n",
-         "  Reason: ", errorMsg (#1 unify_error), "\n"]
+      concat
+        [txt "\nType error in case expression.\n",
+         txt "  case ", pretty_tm scrut, txt " ",
+              pty(Term.type_of scrut), txt "\n",
+         txt "  of ", ptm_arms arms_tree, txt "\n",
+         txt "  Reason: ", errorMessage (#1 unify_error), txt "\n"]
   (* What forced a type on an argument is the operator that took it,
      so that is what a binding made while checking this application
      should be blamed on.  `parse_term' gives an operator token its own
@@ -753,13 +763,14 @@ fun typecheck_phase1 printers = let
                       SOME [left_arms] =>
                         arms_disagree_msg left_arms Rand' unify_error
                     | _ =>
-                      String.concat
-                        ["\nType error in function application.\n",
-                         "  Function: ", pretty_tm Rator', " ",
-                         pty(Term.type_of Rator'), "\n",
-                         "  Argument: ", pretty_tm Rand',  " ",
-                         pty(Term.type_of Rand'), "\n",
-                         "  Reason: ",   errorMsg (#1 unify_error), "\n"]
+                      concat
+                        [txt "\nType error in function application.\n",
+                         txt "  Function: ", pretty_tm Rator', txt " ",
+                         pty(Term.type_of Rator'), txt "\n",
+                         txt "  Argument: ", pretty_tm Rand',  txt " ",
+                         pty(Term.type_of Rand'), txt "\n",
+                         txt "  Reason: ", errorMessage (#1 unify_error),
+                         txt "\n"]
           in
             Error (AppFail(Rator',Rand',message), blameOf unify_error Rand)
           end))))
@@ -775,11 +786,13 @@ fun typecheck_phase1 printers = let
              let val real_term = smashTm Ptm env
                  val rty = Term.type_of real_term
                  val constraint = Pretype.toType Ty
-                 val message = String.concat
-                     ["\nType constraint failure: \n",
-                      "  Term: ", pretty_tm real_term, " ", pty rty, "\n",
-                      "  Constraint: ", pty constraint, "\n",
-                      "  Reason: ", errorMsg (#1 unify_error), "\n"]
+                 val message = concat
+                     [txt "\nType constraint failure: \n",
+                      txt "  Term: ", pretty_tm real_term, txt " ",
+                      pty rty, txt "\n",
+                      txt "  Constraint: ", pty constraint, txt "\n",
+                      txt "  Reason: ", errorMessage (#1 unify_error),
+                      txt "\n"]
              in
                Error(ConstrainFail(real_term, constraint, message), Locn)
              end)))

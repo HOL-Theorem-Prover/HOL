@@ -430,13 +430,20 @@ val print_thm = HOL_INFO o thm_to_string
 
 fun absyn_to_preterm a = TermParse.absyn_to_preterm (term_grammar()) a
 
+(* Suspended, not printed: an error that is caught and discarded --
+   which is most of them -- costs an allocation rather than a
+   pretty-print, and one that is shown carries the term to whoever
+   shows it. *)
+val stdprinters = SOME(fn t => HOLmessage.pp (fn () => pp_term t),
+                       fn ty => HOLmessage.pp (fn () => pp_type ty))
+
 fun Preterm q =
   case (q |> Absyn |> absyn_to_preterm) Pretype.Env.empty of
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, pt) => pt
 
 val absyn_to_term =
-    TermParse.absyn_to_term (SOME (term_to_string, type_to_string))
+    TermParse.absyn_to_term stdprinters
 
 
 (*---------------------------------------------------------------------------
@@ -508,7 +515,6 @@ fun smashErrm m =
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, result) => result
 
-val stdprinters = SOME(term_to_string,type_to_string)
 
 fun ctxt_absyn_to_preterm_in c fvs a =
   TermParse.ctxt_absyn_to_preterm (get_term_grammar c) fvs a
