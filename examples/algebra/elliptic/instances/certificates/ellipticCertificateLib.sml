@@ -336,7 +336,8 @@ fun gf_scalar_tools prime curve member tm =
           | _ => NONE
         (* CBV evaluates each let-bound slope before substituting it into the
            coordinates; rewriting first duplicates large arithmetic terms. *)
-        val th = with_flag (computeLib.auto_import_definitions,false)
+        val th = HOLFlags.with_bflags
+          [(computeLib.auto_import_definitions,false)]
           (computeLib.WEAK_CBV_CONV addition_cs) expression
         val _ = point (rhs (concl th))
       in th end
