@@ -127,6 +127,76 @@ in
   if body = "" then "HOL error" else body
 end
 
+(* Everything above works on the message as text.  The message is more
+   than that -- it holds the terms and types the error talks about --
+   and `Msg.segments' renders it again through the back end that marks
+   which spans those are.  A diagnostic can only carry a string, so
+   this is the only way the type of a free variable an error mentions
+   reaches a client.
+
+   The two renderings have to line up, because a client indexes into
+   the message text it was given.  `trimWS' and `dropLocnTail' only
+   ever remove from the ends, so the shown text is a contiguous slice
+   of the full rendering and the segments can be cut to match.  When
+   it is not a slice -- `messageOf' fell back to `exn_to_string', a
+   different rendering altogether -- the answer is no segments rather
+   than segments that disagree. *)
+fun indexOf (hay, needle) = let
+  val nh = size hay and nn = size needle
+  fun go i = if i + nn > nh then NONE
+             else if String.substring (hay, i, nn) = needle then SOME i
+             else go (i + 1)
+in
+  if nn = 0 then NONE else go 0
+end
+
+fun sliceSegments segs start len = let
+  fun go ([], _, acc) = List.rev acc
+    | go (({text, kind, name, ty} : LSPExtension.pp_segment) :: rest,
+          pos, acc) = let
+        val n = size text
+        val s = Int.max (start, pos)
+        val e = Int.min (start + len, pos + n)
+        val acc = if e <= s then acc
+                  else {text = String.substring (text, s - pos, e - s),
+                        kind = kind, name = name, ty = ty} :: acc
+      in
+        go (rest, pos + n, acc)
+      end
+in
+  go (segs, 0, [])
+end
+
+fun segmentsFor err body =
+  let
+    val rich = Feedback.rich_message_of err
+  in
+    (* A message with no HOL values in it has nothing to say that its
+       text does not, and rendering it twice would be pure cost. *)
+    if HOLmessage.isPlain rich then []
+    else let
+        (* `Msg.segments' is this, and is the name to use anywhere
+           else -- but `Msg' is not in `hol.state0'.  Nothing in the
+           kernel depends on it, so nothing loads it there, and an
+           init file may only name what the least heap a server ever
+           starts on already has (see the note at the top of this
+           file).  `HOLmessage', `PPBackEnd' and `Parse' are all in
+           it. *)
+        val segs =
+          PPBackEnd.lsp_segments
+            (Lib.with_flag (Parse.current_backend, PPBackEnd.lsp_terminal)
+               (HOLPP.pp_to_string (!Globals.linewidth)
+                                   HOLmessage.toPretty) rich)
+        val full = String.concat (List.map #text segs)
+      in
+        case indexOf (full, body) of
+            NONE => []
+          | SOME i => sliceSegments segs i (size body)
+      end
+  end
+  handle Portable.Interrupt => raise Portable.Interrupt
+       | _ => []
+
 fun report e =
   case e of
     Feedback.HOL_ERR err => let
@@ -134,11 +204,11 @@ fun report e =
       val body = messageOf e err
       val body = case range of NONE => body | SOME _ => dropLocnTail body
     in
-      {range = range, message = SOME body}
+      {range = range, message = SOME body, segments = segmentsFor err body}
     end
     (* Not a HOL error: no position, and no opinion about how the
        server should render it. *)
-  | _ => {range = NONE, message = NONE}
+  | _ => {range = NONE, message = NONE, segments = []}
 
 in
 

@@ -2234,6 +2234,9 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "g"    'hol-goal-at-point)
 (define-key hol-map "G"    'hol-do-goaltree)
 (define-key hol-map "\M-C" 'hol-lsp-retry-compile)
+;; Not `\M-E', `\M-M' or `\M-g': `hol-lsp-holmake-keeps-its-key'
+;; pins those three free on purpose.
+(define-key hol-map "w"    'hol-lsp-show-message)
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 ;; `holmake' keeps `M-m' outright rather than sharing it.  A server is
@@ -3871,6 +3874,69 @@ collects the answer twice, and the echo area shows the symbol twice
 over.  The `help-echo\=' tooltip is a separate path and was never
 doubled."
   (get-text-property (point) 'hol-lsp-doc))
+
+(defcustom hol-lsp-message-buffer-name "*HOL Message*"
+  "Buffer that `hol-lsp-show-message' renders the message at point into."
+  :type 'string
+  :group 'hol)
+
+(define-derived-mode hol-lsp-message-mode special-mode "HOL Message"
+  "Major mode for the *HOL Message* buffer.
+Like `hol-lsp-goals-mode\=', point or the mouse over a constant or a
+variable says what it is.
+
+That is the whole reason this buffer exists.  A diagnostic\='s message
+is a plain string in every version of the LSP, and nothing in the
+protocol hangs a tooltip off a word inside one -- so a message whose
+terms the reader can point *at* has to be rendered somewhere the
+client owns.  Here."
+  (add-hook 'eldoc-documentation-functions #'hol-lsp--goals-eldoc nil t)
+  (eldoc-mode 1))
+
+(defun hol-lsp--message-params ()
+  "Build the `$/hol/message' params object for point."
+  (list :textDocument
+        (list :uri (hol-lsp--path-to-uri buffer-file-name))
+        :position
+        (list :line (1- (line-number-at-pos))
+              :character (hol-lsp--point-byte-in-line))))
+
+(defun hol-lsp-show-message ()
+  "Show the HOL message at point with its terms annotated.
+The text is the one the squiggle already carries; what this adds is
+that every constant and variable in it answers for itself, by
+tooltip and in the echo area."
+  (interactive)
+  (let ((server (hol-lsp--server)))
+    (unless (and server buffer-file-name)
+      (user-error "No HOL language server for this buffer"))
+    ;; Same reason as `hol-lsp--query\=': eglot batches `didChange\=', so
+    ;; without this the server answers about the buffer as it was half
+    ;; a second ago, and the position may no longer mean anything.
+    (when (fboundp 'eglot--signal-textDocument/didChange)
+      (ignore-errors (eglot--signal-textDocument/didChange)))
+    (let ((result (condition-case nil
+                      (jsonrpc-request server :$/hol/message
+                                       (hol-lsp--message-params))
+                    (error nil))))
+      (if (null result)
+          (message "No HOL message with annotated terms at point")
+        (let ((buf (get-buffer-create hol-lsp-message-buffer-name))
+              (text (or (plist-get result :message) ""))
+              (segs (plist-get result :segments)))
+          (with-current-buffer buf
+            (unless (derived-mode-p 'hol-lsp-message-mode)
+              (hol-lsp-message-mode))
+            (let ((inhibit-read-only t))
+              (erase-buffer)
+              (let ((start (point)))
+                (insert text)
+                ;; SKIP is 0: unlike the goals pane, this buffer holds
+                ;; exactly what the segments cover, so their offsets
+                ;; are the buffer's own.
+                (when segs (hol-lsp--apply-segments start segs 0)))
+              (goto-char (point-min))))
+          (display-buffer buf))))))
 
 (defun hol-lsp--render-goals (result)
   "Render RESULT into *HOL Goals* and display it below the selected

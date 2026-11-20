@@ -294,8 +294,9 @@ val restoreCompileSnap : (compileSnap -> unit) ref = ref (fn f => f ())
 
 val theorySealed : (string -> bool) ref = ref (fn _ => false)
 
-val exnReport : (exn -> {range: rangeLC option, message: string option}) ref =
-  ref (fn _ => {range = NONE, message = NONE})
+val exnReport : (exn -> {range: rangeLC option, message: string option,
+                         segments: pp_segment list}) ref =
+  ref (fn _ => {range = NONE, message = NONE, segments = []})
 
 datatype proof_status =
          Unseen | Cheated | Checking | Proved
