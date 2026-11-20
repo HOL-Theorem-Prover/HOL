@@ -176,61 +176,6 @@ fun ac_term_ord(tm1,tm2) =
      {legacy : (term list -> term -> thm) -> term list -> conv,
       configured : config -> conv}
 
-   fun prepare th =
-      let val eqn = snd (strip_imp (concl th))
-          val isperm = is_var_perm (dest_eq eqn)
-          val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
-                       handle HOL_ERR _ => ERR("COND_REWR_CONV",
-                         "bad theorem argument (not a conditional equation)")
-      in (isperm,instth) end
-
-   fun apply (nm,th,bounded,isperm,instth) depth term_ord solver stack tm =
-       (let val conditional_eqn = instth tm
-            val (conditions,eqn) = strip_imp (concl conditional_eqn)
-            val _ = if exists (C (op_mem aconv) stack) conditions
-                        then (trace(1, TEXT "looping - cut");
-                              failwith "looping!") else ()
-            val _ = if length stack + length conditions > depth
-                    then (trace(1, TEXT "looping - stack limit reached");
-                          failwith "stack limit") else ()
-            val (l,r) = dest_eq eqn
-            val _ =
-              if Term.aconv l r then
-                (trace(4, IGNORE ("Rewrite loops", conditional_eqn));
-                 failwith "looping rewrite")
-              else ()
-
-            val _ = if isperm andalso term_ord(l, r) <> GREATER andalso
-                       not bounded
-                    then
-                      (trace(4, IGNORE("possibly looping",conditional_eqn));
-                       failwith "permutative rewr: not applied")
-                    else ()
-            val _ = if null conditions then ()
-                    else trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
-            val new_stack = conditions@stack
-            fun solver' condition =
-                 let val _   = trace(2,SIDECOND_ATTEMPT condition)
-                     val res = solver new_stack condition
-                      handle e as HOL_ERR _
-                       =>  (trace(1,SIDECOND_NOT_SOLVED condition); raise e)
-                 in trace(2,SIDECOND_SOLVED res);
-                    res
-                 end
-            val condition_thms = map solver' conditions
-            val disch_eqn = rev_itlist (C MP) condition_thms conditional_eqn
-            val final_thm = if aconv l tm then disch_eqn
-                            else TRANS (ALPHA tm l) disch_eqn
-            val _ = if null conditions then
-              trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
-                    else ()
-            (* note_rewrite is a no-op unless someone is tracking *)
-            val _ = if null stack then note_rewrite th else ()
-        in trace(if isperm then 3 else 2,PRODUCE(tm,nm,final_thm));
-            final_thm
-        end
-        handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
-
    (* Construction validates a chain of implications ending in an
       equality. Instantiation preserves the operators on that chain. *)
    fun rewrite_lhs tm =
@@ -247,13 +192,74 @@ fun ac_term_ord(tm1,tm2) =
             in (l::conditions,eqn) end
      end
 
-   (* Keep the ordinary runner's depth check and term order inline. *)
-   fun COND_REWR_CONV (nm,th) bounded =
+   fun prepare th =
       let val eqn = snd (strip_imp (concl th))
           val isperm = is_var_perm (dest_eq eqn)
           val instth = HO_PART_MATCH rewrite_lhs th
                        handle HOL_ERR _ => ERR("COND_REWR_CONV",
                          "bad theorem argument (not a conditional equation)")
+      in (isperm,instth) end
+
+   fun solve_conditions (nm,th,isperm) solver stack tm conditions eqn =
+     let
+       val _ = trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
+       val new_stack = conditions @ stack
+       fun solve condition =
+         let
+           val _ = trace(2,SIDECOND_ATTEMPT condition)
+           val res = solver new_stack condition
+             handle e as HOL_ERR _ =>
+               (trace(1,SIDECOND_NOT_SOLVED condition); raise e)
+         in
+           trace(2,SIDECOND_SOLVED res);
+           res
+         end
+     in
+       (* Run every solver before discharging any antecedent. *)
+       rev_itlist (C MP) (map solve conditions) eqn
+     end
+
+   fun apply (nm,th,bounded,isperm,instth) depth term_ord solver stack tm =
+       (let val conditional_eqn = instth tm
+            val (conditions,(l,r)) = rewrite_parts (concl conditional_eqn)
+            val _ = if exists (C (op_mem aconv) stack) conditions
+                        then (trace(1, TEXT "looping - cut");
+                              failwith "looping!") else ()
+            val _ = if length stack + length conditions > depth
+                    then (trace(1, TEXT "looping - stack limit reached");
+                          failwith "stack limit") else ()
+            val _ =
+              if Term.aconv l r then
+                (trace(4, IGNORE ("Rewrite loops", conditional_eqn));
+                 failwith "looping rewrite")
+              else ()
+
+            val _ = if isperm andalso term_ord(l, r) <> GREATER andalso
+                       not bounded
+                    then
+                      (trace(4, IGNORE("possibly looping",conditional_eqn));
+                       failwith "permutative rewr: not applied")
+                    else ()
+            val disch_eqn =
+                case conditions of
+                    [] => conditional_eqn
+                  | _ => solve_conditions (nm,th,isperm) solver stack tm
+                                          conditions conditional_eqn
+            val final_thm = if aconv l tm then disch_eqn
+                            else TRANS (ALPHA tm l) disch_eqn
+            val _ = if null conditions then
+              trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
+                    else ()
+            (* note_rewrite is a no-op unless someone is tracking *)
+            val _ = if null stack then note_rewrite th else ()
+        in trace(if isperm then 3 else 2,PRODUCE(tm,nm,final_thm));
+            final_thm
+        end
+        handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
+
+   (* Keep the ordinary runner's depth check and term order inline. *)
+   fun COND_REWR_CONV (nm,th) bounded =
+      let val (isperm,instth) = prepare th
       in
       fn solver => fn stack => fn tm =>
        (let val conditional_eqn = instth tm
@@ -279,22 +285,8 @@ fun ac_term_ord(tm1,tm2) =
             val disch_eqn =
                 case conditions of
                     [] => conditional_eqn
-                  | _ =>
-                      let
-                        val _ = trace(if isperm then 2 else 1,
-                                      REWRITING(nm,tm,th))
-                        val new_stack = conditions@stack
-                        fun solver' condition =
-                            let val _ = trace(2,SIDECOND_ATTEMPT condition)
-                                val res = solver new_stack condition
-                                  handle e as HOL_ERR _ =>
-                                    (trace(1,SIDECOND_NOT_SOLVED condition);
-                                     raise e)
-                            in trace(2,SIDECOND_SOLVED res); res end
-                      in
-                        rev_itlist (C MP) (map solver' conditions)
-                                   conditional_eqn
-                      end
+                  | _ => solve_conditions (nm,th,isperm) solver stack tm
+                                          conditions conditional_eqn
             val final_thm = if aconv l tm then disch_eqn
                             else TRANS (ALPHA tm l) disch_eqn
             val _ = if null conditions then

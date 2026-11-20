@@ -131,13 +131,6 @@ fun std_conv_ss {conv_ss, merge_ss} {name,conv,pats} =
       merge_ss (map (fn p => cnv (SOME([],p))) pats)
   end
 
-fun partition_ssfrags name_of names ssdata =
-     List.partition
-       (fn f =>
-          case name_of f
-          of SOME name => Lib.mem name names
-           | NONE => false) ssdata
-
 fun same_frag name_of f1 f2 =
     case (name_of f1, name_of f2) of
         (SOME n1, SOME n2) => n1=n2
@@ -150,8 +143,67 @@ fun name_set_member s =
       fn SOME n => Binaryset.member(s,n)
        | NONE => nil_included
     end
-fun names_member names =
-    name_set_member (Binaryset.addList (Binaryset.empty String.compare, names))
+fun names_member [] = K false
+  | names_member [name] =
+    let val anonymous = name = ""
+    in fn SOME n => n = name | NONE => anonymous end
+  (* These names are read repeatedly during a history scan. Sort once for
+     larger batches, and use direct comparisons for short lists. *)
+  | names_member (names as first::_::_::_::_) =
+    if List.all (fn name => name = first) names then names_member [first]
+    else
+    (let
+      val keys = Vector.fromList (Lib.uniq (Listsort.sort String.compare names))
+      fun member key =
+        let
+          fun search lo hi =
+            if lo >= hi then false
+            else
+              let val mid = lo + (hi - lo) div 2
+              in
+                case String.compare (key, Vector.sub (keys,mid)) of
+                    LESS => search lo mid
+                  | EQUAL => true
+                  | GREATER => search (mid + 1) hi
+              end
+        in search 0 (Vector.length keys) end
+      val anonymous = member ""
+    in fn SOME n => member n | NONE => anonymous end
+    handle Size =>
+      name_set_member (Binaryset.addList (Binaryset.empty String.compare,
+                                          names)))
+  | names_member names =
+    let val anonymous = Lib.mem "" names
+    in fn SOME n => Lib.mem n names | NONE => anonymous end
+
+fun partition_ssfrags name_of names frags =
+  let
+    fun at_least 0 _ = true
+      | at_least _ [] = false
+      | at_least n (_::rest) = at_least (n - 1) rest
+  in
+    case names of
+        [selected] =>
+          List.partition
+            (fn f => case name_of f of
+                         SOME name =>
+                           Portable.pointer_eq (name,selected) orelse
+                           name = selected
+                       | NONE => false) frags
+      | _ =>
+          (* Sorting the names pays off only for a large enough scan. *)
+          if at_least 16 names andalso at_least 64 frags then
+            let val member = names_member names
+            in
+              List.partition
+                (fn f => case name_of f of n as SOME _ => member n
+                                         | NONE => false) frags
+            end
+          else
+            List.partition
+              (fn f => case name_of f of SOME name => Lib.mem name names
+                                       | NONE => false) frags
+  end
 
 fun is_excluded excluded nameopt =
     case nameopt of

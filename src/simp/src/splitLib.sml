@@ -302,7 +302,7 @@ fun same_type_shape (ty1, ty2) =
 fun same_key (h1,h2) =
   same_const h1 h2 andalso same_type_shape (type_of h1, type_of h2)
 
-fun insert_rule (rule : split_rule) (cmap : cmap) =
+fun insert_rule (rule : split_rule, cmap : cmap) =
   let
     val head = #head rule
     fun insert [] = [(head, [rule])]
@@ -313,16 +313,12 @@ fun insert_rule (rule : split_rule) (cmap : cmap) =
     Symtab.map_default (const_key head, []) insert cmap
   end
 
-fun index_rules rules =
-  let
-    fun index (rule : split_rule, (concls, asms)) =
-      if #asm rule then (concls, insert_rule rule asms)
-      else (insert_rule rule concls, asms)
-  in
-    foldl index (Symtab.empty, Symtab.empty) rules
-  end
+fun index_rules asm =
+  foldl (fn (rule : split_rule, cmap) =>
+           if #asm rule = asm then insert_rule (rule,cmap) else cmap)
+        Symtab.empty
 
-fun index_theorems thms = index_rules (map analyse_rule thms)
+fun index_theorems asm thms = index_rules asm (map analyse_rule thms)
 
 (* Paths are in [Conv.PATH_CONV] notation: "l" rator, "r" rand, "a" body. *)
 datatype path_step = Body | Argument of int * int
@@ -502,7 +498,7 @@ fun split_conv cmap tm =
     first_success packs tm
   end
 
-fun SPLIT_CONV thms = split_conv (#1 (index_theorems thms))
+fun SPLIT_CONV thms = split_conv (index_theorems false thms)
 
 fun clean_asm_eq th =
   let
@@ -573,14 +569,21 @@ fun split_asm_tac cmap =
     tac
   end
 
-fun SPLIT_ASM_TAC thms = split_asm_tac (#2 (index_theorems thms))
+fun SPLIT_ASM_TAC thms = split_asm_tac (index_theorems true thms)
 
-(* Analyse the rules once and share the result between both attempts. *)
+(* Analyse rules eagerly, but index assumption rules only if the conclusion
+   does not split. A saved tactic can reuse the assumption lookup. *)
 fun SPLIT_RULE_TAC rules =
-  let val (concls,asms) = index_rules rules
+  let
+    fun prepare (rule : split_rule, (concls,asms)) =
+      if #asm rule then (concls,rule::asms)
+      else (insert_rule (rule,concls),asms)
+    val (concls,asms) = foldl prepare (Symtab.empty,[]) rules
+    val asm_tac = Susp.delay
+      (fn () => split_asm_tac (List.foldr insert_rule Symtab.empty asms))
   in
     CHANGED_TAC (CONV_TAC (split_conv concls)) ORELSE
-    CHANGED_TAC (split_asm_tac asms)
+    CHANGED_TAC (fn g => Susp.force asm_tac g)
   end
 
 fun SPLIT_TAC thms = SPLIT_RULE_TAC (map analyse_rule thms)

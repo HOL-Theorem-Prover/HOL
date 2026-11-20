@@ -5,7 +5,31 @@ struct
 open HolKernel Parse boolLib simpLib testutils
 open LegacyFailures
 
+fun fragment_batch_checks () = let
+  val filler = List.tabulate (64, fn i => "keep fragment " ^ Int.toString i)
+  val missing = List.tabulate (16, fn i => "missing fragment " ^ Int.toString i)
+  val names = "drop first" :: "" :: "drop last" :: "drop first" :: missing
+  val order = SOME "drop last" :: NONE :: SOME "" :: map SOME filler @
+              [SOME "drop first", SOME "drop last"]
+  fun fragment NONE = empty_ssfrag
+    | fragment (SOME name) = name_ss name empty_ssfrag
+  val frags = map fragment order
+  fun names_of fs = map (#name o dest_ssfrag) fs
+  val (selected,remaining) = partition_ssfrags names frags
+  val _ = check "large fragment partition preserves each side's order"
+    (names_of selected = map SOME ["drop last","","drop first","drop last"]
+     andalso names_of remaining = NONE :: map SOME filler)
+  val ss = mk_simpset frags
+  val kept = remove_ssfrags names ss
+  val _ = check "large fragment removal includes anonymous and empty names"
+    (names_of (ssfrags_of kept) = map SOME (List.rev filler))
+in
+  check "large missing fragment batch reports UNCHANGED"
+    ((remove_ssfrags missing ss; false) handle Conv.UNCHANGED => true)
+end
+
 fun run () = let
+  val _ = fragment_batch_checks ()
   val dummy = "legacy replay dummy"
   val input = ``replay_legacy_p:bool``
   val rule = ASSUME ``replay_legacy_p:bool = T``

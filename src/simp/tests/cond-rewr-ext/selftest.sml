@@ -113,6 +113,22 @@ val _ = let
   val _ = check "depth and loop rejection run no solver" (null (!seen))
 in () end
 
+val _ = let
+  val seen = ref ([] : term list)
+  fun solve _ tm = (seen := tm :: !seen; ASSUME q)
+  val pair = Cond_rewrExt.COND_REWR_CONVS ("bad proof",two) false
+  val direct = Cond_rewr.COND_REWR_CONV ("bad proof",two) false
+  fun check_both name conv =
+    (seen := [];
+     fails (name ^ ": wrong first proof fails") application
+       (fn () => conv input);
+     check (name ^ ": both solvers run before discharging")
+       (terms (!seen) [q,p]))
+in
+  check_both "ordinary" (direct solve []);
+  check_both "configured" (#configured pair (default solve [] (SOME 2)))
+end
+
 (* Matching substitutes conditions before invoking the solver, while
    retaining hypotheses that did not participate in the match. *)
 val _ = let
@@ -141,6 +157,10 @@ in () end
 val _ = List.app (fn (name,make) =>
   (fails (name ^ ": malformed theorem fails during construction")
      construction (fn () => make ("bad",TRUTH) false);
+   fails (name ^ ": leading forall fails during construction")
+     construction (fn () => make ("bad",GEN a plain) false);
+   fails (name ^ ": negated equality fails during construction")
+     construction (fn () => make ("bad",ASSUME (mk_neg (concl plain))) false);
    fails (name ^ ": mismatch fails at application") application
      (fn () => #legacy (make ("plain",plain) false) solver [] T);
    fails (name ^ ": reflexive rewrite is rejected") application

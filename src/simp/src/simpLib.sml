@@ -434,14 +434,28 @@ fun setexcluded e (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit,
     SS{mk_rewrs=mk_rewrs, history=history, initial_net=initial_net,
        dprocs=dprocs, travrules=travrules, limit=limit, excluded=e}
 
-fun remove_ssfrags names (ss as SS{history,limit,excluded,...}) =
+fun remove_ssfrags [] _ = raise Conv.UNCHANGED
+  | remove_ssfrags names (SS{history,limit,excluded,...}) =
     let
-      val member = simpCommon.names_member names o frag_name
-      fun filterthis (hi as ADDFRAG f) = not(member f)
-        | filterthis hi = true
-      val history' = List.filter filterthis history
-      val _ = length history' < length history orelse
-              raise Conv.UNCHANGED
+      val member = simpCommon.names_member names
+      fun removes (ADDFRAG (SSFRAG_CON {name,...})) = member name
+        | removes _ = false
+      val history' =
+        case names of
+            [_] =>
+              (* A missing singleton name needs no copy of the history. *)
+              if List.exists removes history then
+                List.filter (not o removes) history
+              else raise Conv.UNCHANGED
+          | _ =>
+              let
+                val changed = ref false
+                fun keep item =
+                  if removes item then (changed := true; false) else true
+                val retained = List.filter keep history
+              in
+                if !changed then retained else raise Conv.UNCHANGED
+              end
     in
       build_from_history history' |> fupdlimit (fn _ => limit)
                                   |> setexcluded excluded

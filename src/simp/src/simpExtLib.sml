@@ -73,6 +73,17 @@ fun queried_source_index queries sources =
       val wanted = map origin queries
     in source_index (fn source => Lib.mem (origin source) wanted) sources end
 
+(* Sparse view checks need only the queried origins. A dense check avoids
+   building a second tree. Both paths retain the last source at an origin. *)
+fun view_source_index queries sources =
+  if use_full_source_index queries andalso
+     length queries < length sources div 4 then
+    let
+      val wanted = Binaryset.addList
+        (Binaryset.empty rewrite_source_compare,queries)
+    in source_index (fn source => Binaryset.member (wanted,source)) sources end
+  else queried_source_index queries sources
+
 fun grouped_by compare key items =
   let
     fun add (item,groups) =
@@ -2037,9 +2048,9 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
         case List.foldl collect [] history of
             [] => []
           | queries =>
-              active_views history (queried_source_index queries sources)
+              active_views history (view_source_index queries sources)
       end
-    val views_changed =
+    fun views_changed () =
       not (same_history andalso
            Portable.pointer_eq (#native_sources old,#native_sources current))
       andalso not (ListPair.allEq same_view
@@ -2086,11 +2097,11 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
         (#unsafe_solvers old_strategy,#unsafe_solvers new_strategy))
     val rebuild =
       #limit old <> #limit current orelse strategy_changed orelse
-      views_changed orelse
       not (Portable.pointer_eq (#dprocs old,#dprocs current)) orelse
       not (ListPair.allEq same_structure (old_structure,new_structure)) orelse
       not (ListPair.allEq Portable.pointer_eq (old_makers,new_makers)) orelse
-      List.exists (fn (_,key) => not (Option.isSome key)) changed
+      List.exists (fn (_,key) => not (Option.isSome key)) changed orelse
+      views_changed ()
   in
     {keys=List.mapPartial #2 changed, rebuild=rebuild,
      context_sensitive=not (null (#dprocs old) andalso
