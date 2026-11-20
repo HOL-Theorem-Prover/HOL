@@ -381,10 +381,9 @@ in
     end
 end
 
-val {export, segment_data, set} = ThyDataSexp.new {
+val {export, segment_data, set} = ThyDataSexp.new_noload {
       thydataty = "grammardelta",
       merge = append_merge,
-      load = fn _ => (),
       other_tds = other_tds
     }
 
