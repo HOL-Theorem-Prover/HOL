@@ -9,8 +9,7 @@
    index), act where an item is handed to the pool ([after_submit]) or
    before it is prepared ([before_prepare]), act at the launch points of
    run_in ([launch_point]) and before a slice worker claims work
-   ([before_claim]), set the gap between prover launches ([launch_gap]),
-   select the export of run_in ([export_choice]) and read
+   ([before_claim]), select the export of run_in ([export_choice]) and read
    the export state of the problems of the last pipelined run
    ([export_states]).  Production leaves the hooks at their defaults. *)
 structure hhSchedule_Test =
@@ -52,9 +51,6 @@ struct
   (* Called on a slice worker before each claim of work, with a test of
      whether the run is stopping. *)
   val before_claim = ref (fn (_ : unit -> bool) => ())
-  (* The gap between two prover launches of a run_in, where not NONE (see
-     launch_gap in hhSchedule.sml). *)
-  val launch_gap = ref (NONE : Time.time option)
 end
 
 structure hhSchedule :> hhSchedule =
@@ -101,19 +97,6 @@ val elapsed = hhProver.elapsed
 fun time_before left right = Time.compare (left, right) = LESS
 
 fun time_min left right = if time_before left right then left else right
-
-(* The least time between two prover launch slots of one run_in.  hhProver
-   starts a prover with posix_spawn, which takes about a millisecond, so
-   without a gap all the provers of a run start at once.  Many wall-clock
-   timed prover strategies then miss their slices when the host is loaded.
-   The fork it replaced took about 45 ms of the HOL heap and so spaced the
-   launches that much, which measured better: the earlier slices of the
-   schedule get the start-up CPU first.  The slots go in the order of the
-   claims of the slices (the schedule order), a launch waits for its slot
-   only when another prover of the run is starting or running (otherwise
-   nothing competes for the CPU), and a cache hit launches nothing and is
-   never delayed. *)
-val launch_gap = Time.fromMilliseconds 45
 
 val szs_name = hhProver.szs_name
 
@@ -860,25 +843,6 @@ fun run_in root {options, goal, rankings, progress} =
     val threads = ref ([] : Thread.thread list)
     val launch_point = !hhSchedule_Test.launch_point
     val before_claim = !hhSchedule_Test.before_claim
-    val gap = getOpt (!hhSchedule_Test.launch_gap, launch_gap)
-    (* The earliest time the next queued prover launch may take (see
-       await_launch_slot). *)
-    val next_launch = ref Time.zeroTime
-    (* Launch order.  claim gives each claimed slice the next ticket, in
-       the order of the claims: the schedule order, except that the
-       pipelined export claims a slice only once its problem is ready.
-       A slice reserves its launch slot only when !turn is its ticket, so
-       the slots go in ticket order; passing a ticket advances turn past the
-       tickets already passed.  Every ticket is passed: by the reservation,
-       by a cache hit, or, if the slice ends otherwise (a stop, an
-       exception), by worker_loop after run_slice.  Passing is idempotent,
-       so a stranded ticket cannot block the later launches.  launching
-       counts the slots reserved whose process is not yet registered as
-       running. *)
-    val next_ticket = ref 0
-    val turn = ref 0
-    val passed = ref ([] : int list)
-    val launching = ref 0
 
     fun signal () = ConditionVar.broadcast state_changed
 
@@ -919,12 +883,8 @@ fun run_in root {options, goal, rankings, progress} =
       if !stopping orelse not (time_before (Time.now ()) deadline) then NONE
       else
         case if has_room () then take_ready (!work) else NONE of
-            SOME (item, rest) =>
-              let val ticket = !next_ticket in
-                work := rest; active := !active + 1;
-                next_ticket := ticket + 1;
-                SOME (ticket, item)
-              end
+            SOME (item, rest) => (work := rest; active := !active + 1;
+                                  SOME item)
           | NONE =>
               if null (!work) orelse
                  (has_room () andalso
@@ -948,65 +908,6 @@ fun run_in root {options, goal, rankings, progress} =
       handle exn => (Mutex.unlock state_mutex handle _ => (); raise exn)
 
     fun get_work () = with_locked claim
-
-    (* Passes the ticket (the mutex is held); idempotent. *)
-    fun pass_ticket ticket =
-      let
-        fun advance () =
-          if List.exists (fn other => other = !turn) (!passed) then
-            (passed := List.filter (fn other => other <> !turn) (!passed);
-             turn := !turn + 1; advance ())
-          else ()
-      in
-        if ticket < !turn orelse
-           List.exists (fn other => other = ticket) (!passed) then ()
-        else (passed := ticket :: !passed; advance (); signal ())
-      end
-
-    fun pass ticket = with_mutex state_mutex (fn () => pass_ticket ticket)
-
-    (* Waits (the mutex is held) until ready, with a stop or the soft
-       deadline ending the wait with false, like a claim: kill_all
-       signals state_changed; the wait is bounded by the soft deadline. *)
-    fun wait_ready ready until =
-      if !stopping orelse not (time_before (Time.now ()) deadline) then false
-      else if ready () then true
-      else (ignore (ConditionVar.waitUntil
-                      (state_changed, state_mutex, time_min until deadline));
-            wait_ready ready until)
-
-    (* Waits for the turn of the ticket, then reserves the next launch slot
-       (never earlier than gap after the previous one) and passes the
-       ticket.  The launch waits for its slot only if another prover of the
-       run is starting or running; else it goes at once.  The mutex is
-       released while waiting and is not held by the launch that follows.
-       False, with the slice not to be launched, when the run is stopping
-       or past its soft deadline; an interrupt of a wait propagates.  When
-       true, launching counts the launch until register_running or
-       launch_failed; otherwise it does not. *)
-    fun await_launch_slot ticket =
-      with_locked (fn () =>
-        if not (wait_ready (fn () => !turn = ticket) deadline) then false
-        else
-          let
-            val now = Time.now ()
-            val queued = !launching > 0 orelse not (null (!running))
-            val slot =
-              if queued andalso time_before now (!next_launch)
-              then !next_launch else now
-            val _ = next_launch := Time.+ (slot, gap)
-            val _ = launching := !launching + 1
-            val _ = pass_ticket ticket
-            val go =
-              not queued orelse
-              wait_ready (fn () => not (time_before (Time.now ()) slot)) slot
-              handle exn => (launching := !launching - 1; raise exn)
-          in
-            if go then true else (launching := !launching - 1; false)
-          end)
-
-    fun launch_failed () =
-      with_mutex state_mutex (fn () => launching := !launching - 1)
 
     fun worker_finished () =
       with_mutex state_mutex (fn () =>
@@ -1037,17 +938,15 @@ fun run_in root {options, goal, rankings, progress} =
         (end_exports (if failed then Failed else Cancelled);
          producer_active := false; signal ()))
 
-    (* Registers the process of a launch, which ends its launching. *)
     fun register_running kill =
       with_mutex state_mutex (fn () =>
-        (launching := !launching - 1;
-         if !stopping then NONE
-         else
-           let val id = !next_running in
-             next_running := id + 1;
-             running := (id, ref false, kill) :: !running;
-             SOME id
-           end))
+        if !stopping then NONE
+        else
+          let val id = !next_running in
+            next_running := id + 1;
+            running := (id, ref false, kill) :: !running;
+            SOME id
+          end)
 
     (* Removal and cancellation marking share the mutex, so a completed
        slice cannot race a stop into caching a prematurely killed result. *)
@@ -1249,11 +1148,8 @@ fun run_in root {options, goal, rankings, progress} =
                   signal ())))
       end
 
-    fun run_slice ticket (config, slice) =
+    fun run_slice (config, slice) =
       let
-        (* The budget is computed before the wait for the launch slot, on
-           purpose: recomputing it after the wait would change the argv and
-           the cache key.  The hard deadline still bounds the run. *)
         val now = Time.now ()
         val remaining = Time.toReal (Time.- (hard_deadline, now))
         val wanted = hhSlice.slice_budget schedule_length options slice
@@ -1262,59 +1158,52 @@ fun run_in root {options, goal, rankings, progress} =
           {timeout = Real.ceil budget,
            problem = problem_path root slice, extra = #extra_opts slice,
            debug_dir = #debug_dir options}
+        val _ = emit (SliceStarted slice)
         val key = if #cache options then cache_key config request else NONE
         val cached = Option.mapPartial (hhCache.lookup options) key
-        fun launch () =
-          let
-            val process =
-              (emit (SliceStarted slice);
-               hhProver.run_async config request)
-              handle exn => (launch_failed (); raise exn)
-          in
-            case register_running (#kill process) of
-                NONE =>
-                  (#kill process (); #wait process ())
-              | SOME id =>
-                  let
-                    val result =
-                      (#wait process ()
-                       handle error =>
-                         (ignore (unregister_running id); raise error))
-                    val cancelled = unregister_running id
-                    val _ = if cancelled then () else
-                      Option.app
-                        (fn key => hhCache.store options key result) key
-                  in
-                    result
-                  end
-          end
+        val result =
+          case cached of
+              SOME value => value
+            | NONE =>
+                let
+                  val process = hhProver.run_async config request
+                in
+                  case register_running (#kill process) of
+                      NONE =>
+                        (#kill process (); #wait process ())
+                    | SOME id =>
+                        let
+                          val result =
+                            (#wait process ()
+                             handle error =>
+                               (ignore (unregister_running id); raise error))
+                          val cancelled = unregister_running id
+                          val _ = if cancelled then () else
+                            Option.app
+                              (fn key => hhCache.store options key result) key
+                        in
+                          result
+                        end
+                end
       in
-        case cached of
-            SOME value =>
-              (pass ticket; emit (SliceStarted slice);
-               note_result slice true value)
-          | NONE =>
-              if await_launch_slot ticket
-              then note_result slice false (launch ())
-              else ()
+        note_result slice (Option.isSome cached) result
       end
 
     fun worker_loop () =
       (before_claim (fn () => with_mutex state_mutex (fn () => !stopping));
        case get_work () of
            NONE => ()
-         | SOME (ticket, item) =>
+         | SOME item =>
              (Portable.bracket (fn () => ())
                 (fn () =>
-                  (pass ticket;
-                   (* only the cap, which only the pipelined export has,
-                      waits on the count *)
-                   if Option.isSome plan then
-                     with_mutex state_mutex (fn () =>
-                       (active := !active - 1; signal ()))
-                   else ()))
+                  (* only the cap, which only the pipelined export has,
+                     waits on the count *)
+                  if Option.isSome plan then
+                    with_mutex state_mutex (fn () =>
+                      (active := !active - 1; signal ()))
+                  else ())
                 (fn () =>
-                  (run_slice ticket item
+                  (run_slice item
                    handle Interrupt => ()
                         | error => (warn "slice" error handle _ => ())));
               worker_loop ()))
