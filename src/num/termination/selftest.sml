@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib
-open testutils TotalDefn
+open testutils TotalDefn numLib
 
 val _ = new_theory "scratch"
 
@@ -282,3 +282,363 @@ val _ = if is_exists (snd (proofManagerLib.top_goal ())) andalso
            (proofManagerLib.drop (); top_is user_goal)
         then OK () else die "wrong proof state"
 val _ = proofManagerLib.drop_all ()
+
+(* Definitions with an explicit termination proof, in stages *)
+fun rejects f = (f (); false) handle HOL_ERR _ => true
+fun assert b = if b then () else die "staged termination check failed"
+fun auto_import () = HOLFlags.get_bflag computeLib.auto_import_definitions
+fun stored nm = Option.isSome (DB.lookup {Thy = "-", Name = nm})
+fun rejects_with s f =
+  (f (); false) handle HOL_ERR e => String.isSubstring s (message_of e)
+fun no_pending nm = rejects_with "No pending definition"
+                                 (fn () => complete_definition nm TRUTH)
+
+val attribute_calls = ref ([] : string list)
+fun staged_attribute {name,attrname,args,thm} =
+  (assert (auto_import ());
+   attribute_calls := name :: !attribute_calls)
+val _ = ThmAttribute.register_attribute
+          ("staged_test", {localf = staged_attribute,
+                           storedf = staged_attribute})
+
+val _ = tprint "native completion stores, registers and runs attributes"
+val native_loc = DB_dtype.mkloc ("staged-test", 42, true)
+val native_fac = located_qDefine native_loc
+  "native_fac_def[staged_test,induction=native_fac_steps]"
+  ‘native_fac n = if n < 2 then 1 else n * native_fac (n - 1)’
+  (SOME (WF_REL_TAC ‘$<’)) (Context.snapshot ())
+val _ = assert (!attribute_calls = ["native_fac_def"])
+val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="native_fac_def"})))
+                = native_loc)
+val _ = assert (stored "native_fac_steps")
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “native_fac”))
+val _ = assert (Option.isSome (DefnBase.lookup_indn “native_fac”))
+val _ = assert (no_pending "native_fac_def")
+val _ = OK ()
+val _ = convtest ("native definition enters EVAL", EVAL,
+                 “native_fac 5”, “120”)
+
+val _ = tprint "flags surround the termination proof, not the attributes"
+fun check_flags g =
+  (assert (not (auto_import ()));
+   assert (HOLFlags.get_bflag allow_schema_definition);
+   assert (HOLFlags.get_bflag Theory.allow_rebinds);
+   assert (!Defn.def_suffix = "" andalso !Defn.ind_suffix = " flag_steps");
+   WF_REL_TAC ‘$<’ g)
+val _ = qDefine
+  "flag_def[nocompute,schematic,allow_rebind,induction=flag_steps,staged_test]"
+  ‘flag_fun n = if n = 0 then y else flag_fun (n - 1) * 2’
+  (SOME check_flags)
+val _ = assert (auto_import () andalso stored "flag_steps")
+val _ = assert (hd (!attribute_calls) = "flag_def")
+val _ = OK ()
+val _ = convtest ("nocompute stays out of EVAL", EVAL,
+                 “flag_fun y 2”, “flag_fun y 2”)
+
+val _ = tprint "trivial definitions ignore explicit tactics"
+val ignored_calls = ref 0
+fun ignored_tac g = (ignored_calls := !ignored_calls + 1; ALL_TAC g)
+val _ = qDefine "staged_abbrev_def" ‘staged_abbrev = 7n’ (SOME ignored_tac)
+val _ = qDefine "staged_prim_def"
+    ‘(staged_prim 0 = 0n) /\
+     (staged_prim (SUC n) = SUC (staged_prim n))’ (SOME ignored_tac)
+val _ = assert (!ignored_calls = 0)
+val _ = assert (not (Option.isSome
+  (prepare_qDefine "staged_abbrev2_def" ‘staged_abbrev2 = 8n’)))
+val _ = assert (stored "staged_abbrev2_def")
+val _ = OK ()
+
+val _ = tprint "a failed or rejected termination proof leaves nothing pending"
+val _ = assert (rejects (fn () => ignore
+  (in_repl_mode (qDefine "bad_staged_def"
+    ‘bad_staged n = if n = 0 then 0n else bad_staged (n - 1) + 1’)
+    (SOME ALL_TAC))))
+val _ = assert (no_pending "bad_staged_def" andalso
+                not (stored "bad_staged_def"))
+fun assume_goal (g as (_, w)) = ACCEPT_TAC (ASSUME w) g
+val _ = assert (rejects_with "does not prove" (fn () => ignore
+  (in_repl_mode (qDefine "rejected_def"
+    ‘rejected n = if n = 0 then 0n else rejected (n - 1) + 1’)
+    (SOME assume_goal))))
+val _ = assert (no_pending "rejected_def" andalso not (stored "rejected_def"))
+val _ = Q.store_thm ("cited_thm", ‘p ==> p’,
+                     DISCH_TAC THEN markerLib.suspend "cited")
+fun cite_suspended g =
+  let val cited = #2 (valOf (markerLib.lookup_suspension "cited_thm"))
+  in
+    (Q.EXISTS_TAC ‘$<’ THEN ASSUME_TAC cited THEN markerLib.suspend "tc") g
+  end
+val _ = assert (rejects_with "still-suspended" (fn () => ignore
+  (in_repl_mode (qDefine "citing_def"
+    ‘citing n = if n = 0 then 0n else citing (n - 1) + 1’)
+    (SOME cite_suspended))))
+val _ = assert (no_pending "citing_def" andalso
+                not (Option.isSome (markerLib.lookup_suspension "citing_def")))
+val _ = OK ()
+
+val _ = tprint "prepare_qDefine keeps support constants until completion"
+val consts_before = length (thy_consts (current_theory ()))
+val nested_goal = valOf (prepare_qDefine
+  "nested_def[staged_test,induction=nested_steps]"
+  ‘nested n = if n = 0 then 0n else nested (nested (n - 1) MOD n)’)
+val consts_pending = length (thy_consts (current_theory ()))
+val _ = assert (consts_pending > consts_before + 1)
+val _ = assert (not (stored "nested_def") andalso not (stored "nested_steps"))
+val _ = assert (rejects (fn () => complete_definition "nested_def" TRUTH))
+val _ = assert (rejects (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "nested_def"))
+val nested_def =
+    complete_definition "nested_def" (TAC_PROOF (nested_goal, WF_REL_TAC ‘$<’))
+val _ = assert (length (thy_consts (current_theory ())) < consts_pending)
+val _ = assert (null (hyp nested_def) andalso stored "nested_steps")
+val _ = assert (hd (!attribute_calls) = "nested_def")
+val _ = assert (Option.isSome (DefnBase.lookup_indn “nested”))
+val _ = assert (no_pending "nested_def")
+val _ = assert (rejects (fn () => complete_definition "nowhere_def" TRUTH))
+val _ = OK ()
+
+val _ = tprint "a proof made out of date is not accepted"
+val stale_goal = valOf (prepare_qDefine "stale_def"
+  ‘stale n = if n = 0 then 0n else stale (stale (n - 1) MOD n)’)
+val stale_th = TAC_PROOF (stale_goal, WF_REL_TAC ‘$<’)
+val _ = Theory.delete_const "stale_aux"
+val _ = assert (rejects_with "does not prove"
+                  (fn () => complete_definition "stale_def" stale_th))
+val _ = assert (not (stored "stale_def") andalso
+                not (Option.isSome (DefnBase.lookup_indn “stale”)))
+val _ = OK ()
+
+val _ = tprint "deferred completion keeps the flags of its preparation"
+val ambient_goal = valOf (HOLFlags.with_bflags
+  [(computeLib.auto_import_definitions, false)]
+  (prepare_qDefine "ambient_def")
+  ‘ambient n = if n = 0 then 0n else ambient (n - 1) + 1’)
+val _ = assert (rejects (fn () => in_repl_mode (prepare_qDefine "ambient_def")
+  ‘ambient2 n = if n = 0 then 0n else ambient2 (n - 1) + 1’))
+val _ = assert (auto_import ())
+val _ = complete_definition "ambient_def"
+          (TAC_PROOF (ambient_goal, WF_REL_TAC ‘$<’))
+val _ = OK ()
+val _ = convtest ("ambient nocompute stays out of EVAL", EVAL,
+                 “ambient 2”, “ambient 2”)
+
+val _ = tprint "a suspended termination proof completes at finalisation"
+val suspend_loc = DB_dtype.mkloc ("staged-test", 77, true)
+val suspended_eqns = located_qDefine suspend_loc
+  "susp_def[staged_test,induction=susp_steps]"
+  ‘susp n = if n = 0 then 0n else susp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
+  (Context.snapshot ())
+val _ = assert (not (null (hyp suspended_eqns)))
+val _ = assert (not (stored "susp_def") andalso not (stored "susp_steps"))
+val _ = assert (hd (!attribute_calls) <> "susp_def")
+val _ = assert (Option.isSome (markerLib.lookup_suspension "susp_def"))
+val _ = assert (rejects (fn () => complete_definition "susp_def" TRUTH))
+val susp_helper = store_thm ("susp_helper", “!n. n <> 0 ==> n - 1 < n”,
+                             DECIDE_TAC)
+val _ = markerLib.resume {suspension_name = "susp_def", label_name = "tc"}
+          (markerLib.RESUME_TAC THEN CONJ_TAC THENL
+             [WF_TAC, REPEAT STRIP_TAC THEN MATCH_MP_TAC susp_helper THEN
+                      FIRST_ASSUM ACCEPT_TAC])
+          (Context.snapshot ())
+val _ = assert (rejects (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "susp_def[simp]"))
+val susp_def = markerLib.finalise_suspended_thm suspend_loc "susp_def"
+val _ = assert (null (hyp susp_def) andalso
+                aconv (concl susp_def) (concl suspended_eqns))
+val _ = assert (null (hyp (DB.fetch "-" "susp_steps")))
+val _ = assert (#loc (#2 (valOf (DB.lookup {Thy="-",Name="susp_def"})))
+                = suspend_loc)
+val _ = assert (hd (!attribute_calls) = "susp_def")
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “susp”))
+val _ = assert (Option.isSome (DefnBase.lookup_indn “susp”))
+val _ = assert (not (Option.isSome (markerLib.lookup_suspension "susp_def")))
+val _ = assert (no_pending "susp_def")
+val _ = OK ()
+val _ = convtest ("finalised definition enters EVAL", EVAL,
+                 “susp 3”, “3”)
+
+val _ = tprint "a suspended nested definition keeps its support constants"
+fun is_snest_aux t = is_const t andalso fst (dest_const t) = "snest_aux"
+fun has_snest_aux () = List.exists is_snest_aux
+                                   (thy_consts (current_theory ()))
+fun aux_in_goal (g : goal) =
+  (assert (can (find_term is_snest_aux) (snd g)); ALL_TAC g)
+val snest_eqns = located_qDefine DB.Unknown "snest_def[induction=snest_steps]"
+  ‘snest n = if n = 0 then 0n else snest (snest (n - 1) MOD n)’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
+  (Context.snapshot ())
+val _ = assert (has_snest_aux () andalso not (stored "snest_def"))
+val _ = markerLib.resume {suspension_name = "snest_def", label_name = "tc"}
+          (markerLib.RESUME_TAC THEN aux_in_goal THEN CONJ_TAC THEN1 WF_TAC
+           THEN TC_SIMP_TAC (termination_ss ()) [])
+          (Context.snapshot ())
+val _ = assert (has_snest_aux ())
+val snest_def = markerLib.finalise_suspended_thm DB.Unknown "snest_def"
+val _ = assert (not (has_snest_aux ()) andalso null (hyp snest_def) andalso
+                null (hyp (DB.fetch "-" "snest_steps")))
+val _ = OK ()
+
+val _ = tprint "a termination tactic's settings apply when stored at once"
+val support_trace = "Definition.delete_support_defs"
+fun has_aux nm = List.exists (fn t => is_const t andalso
+                                      fst (dest_const t) = nm)
+                             (thy_consts (current_theory ()))
+val nest_tac = WF_REL_TAC ‘$<’
+fun keep_support g = (HOLFlags.set_trace support_trace 0; ALL_TAC g)
+val _ = qDefine "keep_def"
+  ‘keep n = if n = 0 then 0n else keep (keep (n - 1) MOD n)’
+  (SOME (keep_support THEN nest_tac))
+val _ = assert (has_aux "keep_aux" andalso
+                HOLFlags.current_trace support_trace = 0)
+val _ = HOLFlags.set_trace support_trace 1
+val _ = OK ()
+
+val _ = tprint "a definition completed later is stored under its settings"
+val later_goal = valOf (prepare_qDefine "later_def"
+  ‘later n = if n = 0 then 0n else later (later (n - 1) MOD n)’)
+val _ = assert (has_aux "later_aux")
+val _ = HOLFlags.set_trace support_trace 0
+val _ = complete_definition "later_def" (TAC_PROOF (later_goal, nest_tac))
+val _ = assert (not (has_aux "later_aux"))
+val _ = HOLFlags.set_trace support_trace 1
+val _ = OK ()
+
+val _ = tprint "a definition prepared and completed in ML finalises in ML"
+val mlfin_goal = valOf (prepare_qDefine "mlfin_def[induction=mlfin_steps]"
+  ‘mlfin n = if n = 0 then 0n else mlfin (n - 1) + 1’)
+val _ = complete_definition "mlfin_def"
+  (boolLib.prove_named (Context.snapshot ())
+     {name = "mlfin_def", goal = mlfin_goal,
+      tac = Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"})
+val _ = assert (not (stored "mlfin_def") andalso no_pending "mlfin_def")
+val _ = markerLib.resume {suspension_name = "mlfin_def", label_name = "tc"}
+          (markerLib.RESUME_TAC THEN CONJ_TAC THENL
+             [WF_TAC, REPEAT STRIP_TAC THEN MATCH_MP_TAC susp_helper THEN
+                      FIRST_ASSUM ACCEPT_TAC])
+          (Context.snapshot ())
+val mlfin_def = markerLib.finalise_suspended_thm DB.Unknown "mlfin_def"
+val _ = assert (null (hyp mlfin_def) andalso not (is_conj (concl mlfin_def))
+                andalso stored "mlfin_def" andalso
+                null (hyp (DB.fetch "-" "mlfin_steps")))
+val _ = assert (Option.isSome (DefnBase.lookup_userdef “mlfin”) andalso
+                Option.isSome (DefnBase.lookup_indn “mlfin”))
+val _ = OK ()
+
+val _ = tprint "a resumed proof with an extra hypothesis is not stored"
+val _ = located_qDefine DB.Unknown "xhyp_def"
+  ‘xhyp n = if n = 0 then 0n else xhyp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "xhyp"))
+  (Context.snapshot ())
+val _ = markerLib.resume {suspension_name = "xhyp_def", label_name = "xhyp"}
+          (markerLib.RESUME_TAC THEN
+           (fn (g as (_, w)) => ACCEPT_TAC (ASSUME w) g))
+          (Context.snapshot ())
+val _ = assert (rejects_with "does not prove" (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "xhyp_def"))
+val _ = assert (not (stored "xhyp_def") andalso not (stored "xhyp_ind") andalso
+                not (Option.isSome (DefnBase.lookup_indn “xhyp”)))
+val _ = OK ()
+
+val _ = tprint "a replaced suspension is not finalised as the definition"
+val _ = located_qDefine DB.Unknown "swap_def"
+  ‘swap_fun n = if n = 0 then 0n else swap_fun (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "swapdef"))
+  (Context.snapshot ())
+val _ = Q.store_thm ("swap_def", ‘p ==> p’,
+                     DISCH_TAC THEN markerLib.suspend "swap")
+val _ = markerLib.resume {suspension_name = "swap_def", label_name = "swap"}
+          (ASM_REWRITE_TAC []) (Context.snapshot ())
+val _ = assert (rejects_with "does not prove" (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "swap_def"))
+val _ = assert (not (stored "swap_def") andalso
+                not (Option.isSome (DefnBase.lookup_indn “swap_fun”)))
+val _ = OK ()
+
+val _ = tprint "mutual definitions complete through prepare_qDefine"
+val mutual_goal = valOf (prepare_qDefine "mev_def[induction=mev_steps]"
+  ‘(mev n = if n = 0 then T else mod (n - 1)) /\
+   (mod n = if n = 0 then F else mev (n - 1))’)
+val mev_def = complete_definition "mev_def"
+  (TAC_PROOF (mutual_goal, WF_REL_TAC ‘measure (\x. sum_CASE x I I)’))
+val _ = assert (length (strip_conj (concl mev_def)) = 2 andalso
+                stored "mev_steps" andalso no_pending "mev_def")
+val _ = OK ()
+val _ = convtest ("mutual definition enters EVAL", EVAL, “mod 3”, “T”)
+
+(* Last, since they discard the scratch theory *)
+fun discard_to thy = with_flag (Globals.interactive, true) new_theory thy
+fun count_goal g = WF_REL_TAC ‘$<’ g
+
+val _ = tprint "a theory is not exported with a definition pending"
+val _ = discard_to "staged_export"
+val export_goal = valOf (prepare_qDefine "exp_def"
+  ‘exp_fun n = if n = 0 then 0n else exp_fun (n - 1) + 1’)
+val _ = assert (rejects_with "own theory: exp_def" export_theory)
+val _ = complete_definition "exp_def" (TAC_PROOF (export_goal, count_goal))
+val _ = located_qDefine DB.Unknown "expsusp_def"
+  ‘expsusp n = if n = 0 then 0n else expsusp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "tc"))
+  (Context.snapshot ())
+val _ = assert (rejects_with "own theory: expsusp_def" export_theory)
+val _ = save_thm ("occ_steps", TRUTH)
+val occ_goal = valOf (prepare_qDefine "occ_def[induction=occ_steps]"
+  ‘occ n = if n = 0 then 0n else occ (n - 1) + 1’)
+val occ_th = TAC_PROOF (occ_goal, count_goal)
+val _ = assert ((complete_definition "occ_def" occ_th; false)
+                handle _ => true)
+val _ = assert (rejects_with "occ_def" export_theory)
+val _ = save_thm ("held_def", TRUTH)
+val _ = prepare_qDefine "held_def"
+  ‘held n = if n = 0 then 0n else held (n - 1) + 1’
+val _ = assert (rejects (fn () =>
+  markerLib.finalise_suspended_thm DB.Unknown "held_def"))
+val _ = assert (rejects_with "held_def" export_theory)
+fun failing_attribute _ = raise mk_HOL_ERR "selftest" "staged_fail" "failed"
+val _ = ThmAttribute.register_attribute
+          ("staged_fail", {localf = failing_attribute,
+                           storedf = failing_attribute})
+val _ = assert (rejects (fn () => ignore (qDefine "attrfail_def[staged_fail]"
+  ‘attrfail n = if n = 0 then 0n else attrfail (n - 1) + 1’
+  (SOME count_goal))))
+val _ = assert (stored "attrfail_def" andalso
+                rejects_with "attrfail_def" export_theory)
+val _ = OK ()
+
+val _ = tprint "a discarded or restarted theory leaves nothing pending"
+val _ = discard_to "staged_other"
+val _ = assert (no_pending "exp_def")
+val _ = located_qDefine DB.Unknown "expsusp_def"
+  ‘expsusp n = if n = 0 then 0n else expsusp (n - 1) + 1’ (SOME count_goal)
+  (Context.snapshot ())
+val _ = assert (stored "expsusp_def")
+val _ = prepare_qDefine "restart_def"
+  ‘restart n = if n = 0 then 0n else restart (n - 1) + 1’
+val _ = located_qDefine DB.Unknown "rsusp_def"
+  ‘rsusp n = if n = 0 then 0n else rsusp (n - 1) + 1’
+  (SOME (Q.EXISTS_TAC ‘$<’ THEN markerLib.suspend "rsusp"))
+  (Context.snapshot ())
+val _ = new_theory "staged_other"
+val _ = located_qDefine DB.Unknown "rsusp_def"
+  ‘rsusp n = if n = 0 then 0n else rsusp (n - 1) + 1’ (SOME count_goal)
+  (Context.snapshot ())
+val _ = assert (stored "rsusp_def" andalso
+                not (Option.isSome (markerLib.lookup_suspension "rsusp_def")))
+val restart_goal = valOf (prepare_qDefine "restart_def"
+  ‘restart n = if n = 0 then 0n else restart (n - 1) + 1’)
+val _ = complete_definition "restart_def" (TAC_PROOF (restart_goal, count_goal))
+val _ = assert (stored "restart_def")
+val _ = OK ()
+
+val _ = if Systeml.ML_SYSNAME <> "poly" then () else let
+  val hol = OS.Path.concat (Systeml.HOLDIR, "bin/hol")
+  val heap = "staged-termination.save"
+  fun remove f = OS.FileSys.remove f handle OS.SysErr _ => ()
+  fun run args = OS.Process.isSuccess (Systeml.systeml (hol :: args))
+  val _ = remove heap
+  val _ = tprint "a heap saved mid-proof completes the definition once"
+  val _ = assert (run ["run", "--holstate=numheap", "tests/staged-save.sml"])
+  val _ = assert (run ["run", "--holstate=" ^ heap,
+                       "tests/staged-restore.sml"])
+  val _ = remove heap
+in OK () end

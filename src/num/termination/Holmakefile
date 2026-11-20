@@ -33,6 +33,6 @@ selftest.exe: selftest.uo
 ifdef HOLSELFTESTLEVEL
 all: numterm-selftest.log
 
-numterm-selftest.log: selftest.exe
+numterm-selftest.log: selftest.exe $(HOLHEAP) tests/staged-save.sml tests/staged-restore.sml
 	$(tee ./$<,$@)
 endif

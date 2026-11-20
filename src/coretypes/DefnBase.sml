@@ -73,16 +73,16 @@ fun defn_consts defn =
 (* on the theory constants before and after a definition is made.            *)
 (*---------------------------------------------------------------------------*)
 
-val delete_support =
+fun support_consts defn snap2 snap1 =
  let val set_of = HOLset.fromList Term.compare
      val subtract = HOLset.difference
-     fun zap c = delete_const (fst (dest_const c)) handle HOL_ERR _ => ()
- in fn defn => fn snap2 => fn snap1 =>
-    let val new_consts = subtract(set_of snap2,set_of snap1)
-        val {introduced,...} = defn_consts defn
-        val deleteable = subtract(new_consts,set_of introduced)
-    in HOLset.app zap deleteable end
- end
+     val new_consts = subtract(set_of snap2,set_of snap1)
+     val {introduced,...} = defn_consts defn
+ in HOLset.listItems (subtract(new_consts,set_of introduced)) end
+
+fun delete_support defn snap2 snap1 =
+ let fun zap c = delete_const (fst (dest_const c)) handle HOL_ERR _ => ()
+ in List.app zap (support_consts defn snap2 snap1) end
 
 local open Portable
   fun kind (ABBREV _)  = "abbreviation"
