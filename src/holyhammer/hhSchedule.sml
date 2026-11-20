@@ -861,13 +861,14 @@ fun run_in root {options, goal, rankings, progress} =
     val launch_point = !hhSchedule_Test.launch_point
     val before_claim = !hhSchedule_Test.before_claim
     val gap = getOpt (!hhSchedule_Test.launch_gap, launch_gap)
-    (* The earliest time the next prover launch may take (see
+    (* The earliest time the next queued prover launch may take (see
        await_launch_slot). *)
     val next_launch = ref Time.zeroTime
     (* Launch order.  claim gives each claimed slice the next ticket, in
-       the order of the claims, which is the schedule order.  A slice
-       reserves its launch slot only when !turn is its ticket, so the
-       slots go in ticket order; passing a ticket advances turn past the
+       the order of the claims: the schedule order, except that the
+       pipelined export claims a slice only once its problem is ready.
+       A slice reserves its launch slot only when !turn is its ticket, so
+       the slots go in ticket order; passing a ticket advances turn past the
        tickets already passed.  Every ticket is passed: by the reservation,
        by a cache hit, or, if the slice ends otherwise (a stop, an
        exception), by worker_loop after run_slice.  Passing is idempotent,
@@ -989,9 +990,10 @@ fun run_in root {options, goal, rankings, progress} =
         else
           let
             val now = Time.now ()
-            val slot = if time_before now (!next_launch) then !next_launch
-                       else now
             val queued = !launching > 0 orelse not (null (!running))
+            val slot =
+              if queued andalso time_before now (!next_launch)
+              then !next_launch else now
             val _ = next_launch := Time.+ (slot, gap)
             val _ = launching := !launching + 1
             val _ = pass_ticket ticket
@@ -1035,7 +1037,6 @@ fun run_in root {options, goal, rankings, progress} =
         (end_exports (if failed then Failed else Cancelled);
          producer_active := false; signal ()))
 
-    (* Registers a launched process; this ends its launching. *)
     (* Registers the process of a launch, which ends its launching. *)
     fun register_running kill =
       with_mutex state_mutex (fn () =>
@@ -1303,16 +1304,19 @@ fun run_in root {options, goal, rankings, progress} =
        case get_work () of
            NONE => ()
          | SOME (ticket, item) =>
-             ((run_slice ticket item
-               handle Interrupt => ()
-                    | error => warn "slice" error);
-              pass ticket;
-              (* only the cap, which only the pipelined export has, waits
-                 on the count *)
-              if Option.isSome plan then
-                with_mutex state_mutex (fn () =>
-                  (active := !active - 1; signal ()))
-              else ();
+             (Portable.bracket (fn () => ())
+                (fn () =>
+                  (pass ticket;
+                   (* only the cap, which only the pipelined export has,
+                      waits on the count *)
+                   if Option.isSome plan then
+                     with_mutex state_mutex (fn () =>
+                       (active := !active - 1; signal ()))
+                   else ()))
+                (fn () =>
+                  (run_slice ticket item
+                   handle Interrupt => ()
+                        | error => (warn "slice" error handle _ => ())));
               worker_loop ()))
 
     fun worker () =

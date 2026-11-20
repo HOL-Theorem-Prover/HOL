@@ -162,11 +162,13 @@ sig
      output of a replay running at the time.)
 
      Launch pacing.  Within one run_in the launch slots are at least
-     launch_gap (see hhSchedule.sml) apart, in schedule order, and a launch
-     waits for its slot only if another prover of the run is starting or
-     running; a cache hit launches nothing and never waits.  A slice whose
-     wait ends in a stop or the soft deadline is never launched and
-     reports no event (no SliceStarted or SliceDone, no slices_run entry).
+     launch_gap (see hhSchedule.sml) apart, in claim order (the schedule
+     order, except that the pipelined export claims a slice only once its
+     problem is ready), and a launch waits for its slot only if another
+     prover of the run is starting or running; a cache hit launches
+     nothing and never waits.  A slice whose wait ends in a stop or the
+     soft deadline is never launched and reports no event (no SliceStarted
+     or SliceDone, no slices_run entry).
 
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an

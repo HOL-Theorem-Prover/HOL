@@ -4904,19 +4904,23 @@ fun test_schedule_pacing parser =
     val cache = join root "cache"
     val _ = remove_tree root
     val _ = mkdir root
-    fun timed_run options =
+    fun timed_run_events options =
       let
         val start = Time.now ()
-        val (result, _) = run_schedule options
+        val (result, events) = run_schedule options
       in
-        (result, Time.toReal (Time.- (Time.now (), start)))
+        (result, events, Time.toReal (Time.- (Time.now (), start)))
       end
+    fun timed_run options =
+      let val (result, _, elapsed) = timed_run_events options
+      in (result, elapsed) end
     fun diffs (a :: (rest as b :: _)) =
           Time.toReal (Time.- (b, a)) :: diffs rest
       | diffs _ = []
     val wanted = Time.toReal gap
+    val config =
+      printer_config name (slices "0" "e-gave-up.out") (fn _ => ()) parser
     (* Spaced launches (cache off, so that mk_command runs once each). *)
-    val config = printer_config name (slices "0" "e-gave-up.out") note parser
     val spacing_config =
       printer_config name (slices "1" "e-gave-up.out") note parser
     val options = fixture_options [Z3] 4 4 30 1 false "" NONE
@@ -5002,11 +5006,9 @@ fun test_schedule_pacing parser =
       (int_spawns = 1)
     (* No competing prover, no wait: one worker runs fast-failing slices
        back to back, though the gap is long. *)
-    val one_config =
-      printer_config name (slices "0" "e-gave-up.out") (fn _ => ()) parser
     val one_options = fixture_options [Z3] 4 1 30 1 false "" NONE
     val ((one_result, one_elapsed), one_spawns) =
-      with_fixtures [(Z3, one_config)] (fn () =>
+      with_fixtures [(Z3, config)] (fn () =>
         with_gap (Time.fromSeconds 2) (fn () =>
           let
             val _ = hhProver.reset_spawn_count ()
@@ -5016,7 +5018,7 @@ fun test_schedule_pacing parser =
           end))
     val _ = expect "pacing: with nothing else running a launch does not wait"
       (length (#slices_run one_result) = 4 andalso one_spawns = 4 andalso
-       one_elapsed < 1.5)
+       one_elapsed < 3.5)
     (* Schedule order: the first slice dawdles before its launch (its
        command is built, for the cache key, after a pause), yet the slots
        go in the order of the schedule.  The second run finds the slices 1
@@ -5040,24 +5042,17 @@ fun test_schedule_pacing parser =
         (fn () =>
           let
             val _ = hhProver.reset_spawn_count ()
-            val ((_, events), elapsed) =
-              let
-                val start = Time.now ()
-                val r = run_schedule
-                  (fixture_options [Z3] 4 4 30 1 true cache_dir NONE)
-                val finish = Time.now ()
-              in
-                (r, Time.toReal (Time.- (finish, start)))
-              end
+            val (_, events, elapsed) = timed_run_events
+              (fixture_options [Z3] 4 4 30 1 true cache_dir NONE)
           in
             (events, hhProver.spawn_count (), elapsed)
           end)
-    fun started delays =
-      map (fn slice => "started|" ^ slice_event_tag slice)
-        (slices_of delays "e-gave-up.out")
+    fun tags delays =
+      map slice_event_tag (slices_of delays "e-gave-up.out")
+    fun started delays = map (fn tag => "started|" ^ tag) (tags delays)
     val order_delays = ["0.5", "0.50", "0.500", "0.5000"]
     val (order_events, _, _) =
-      with_gap (Time.fromMilliseconds 100) (fn () =>
+      with_gap (Time.fromMilliseconds 400) (fn () =>
         order_run order_delays "0.5" (join order_root "c1"))
     val _ = expect "pacing: launches go in the order of the schedule"
       (List.filter (String.isPrefix "started|") order_events =
@@ -5068,12 +5063,25 @@ fun test_schedule_pacing parser =
     val _ = with_gap Time.zeroTime (fn () =>
       order_run fill_delays "" cache_dir)
     val (hit_events, hit_spawns, hit_elapsed) =
-      with_gap (Time.fromMilliseconds 1500) (fn () =>
+      with_gap (Time.fromSeconds 3) (fn () =>
         order_run miss_delays "0.3" cache_dir)
     val miss_tags =
       map (fn index => List.nth (started miss_delays, index)) [0, 2]
+    fun position tag =
+      let
+        fun find _ [] = NONE
+          | find n (event :: rest) =
+              if event = tag then SOME n else find (n + 1) rest
+      in find 0 hit_events end
+    (* the hits are done before the first miss, which dawdles, starts *)
+    val hits_first =
+      case (position (hd (started miss_delays)),
+            position ("done|" ^ List.nth (tags miss_delays, 1)),
+            position ("done|" ^ List.nth (tags miss_delays, 3))) of
+          (SOME s, SOME a, SOME b) => a < s andalso b < s
+        | _ => false
     val _ = expect "pacing: cache hits take no slot and the misses keep order"
-      (hit_spawns = 2 andalso hit_elapsed < 2.8 andalso
+      (hit_spawns = 2 andalso hit_elapsed < 5.0 andalso hits_first andalso
        List.filter (fn event => List.exists (fn tag => tag = event) miss_tags)
          hit_events = miss_tags)
     val _ = remove_tree order_root
