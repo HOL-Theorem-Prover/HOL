@@ -2573,6 +2573,14 @@ val _ = let
      ``(b ==> P (x:'a) /\ Q (if c then u else v)) /\
        (~b ==> P y /\ Q (if c then u else v))``)
 
+  val (if_vars, if_eq) = strip_forall (concl if_split)
+  val reflexive_split = GENL if_vars (REFL (lhs if_eq))
+  val _ = convtest
+    ("splitter: later rule wins a tie at the same occurrence",
+     SPLIT_CONV [if_split, reflexive_split],
+     ``P (if b then x:'a else y) : bool``,
+     ``P (if b then x:'a else y) : bool``)
+
   val generic_k_split =
     GEN_ALL (REFL ``P (K (x:'a) (y:'b)) : bool``)
   val bool_k_split =

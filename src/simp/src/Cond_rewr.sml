@@ -579,7 +579,10 @@ fun IMP_CANON acc thl =
 val IMP_CANON = (fn (th,bnd) => IMP_CANON [] [([], th, bnd)])
 
 infix oo;
-fun f oo g = fn x => flatten (map f (g x));
+fun f oo g = fn x =>
+    case g x of
+        [y] => f y
+      | ys => flatten (map f ys);
 
 fun mk_cond_rewrs l =
     (QUANTIFY_CONDITIONS oo IMP_EQ_CANON oo IMP_CANON) l

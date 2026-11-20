@@ -102,18 +102,18 @@ fun all_named_frags slot = Symtab.keys (fragDB slot)
 (* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun merge_names list =
-  itlist (fn (SOME x) =>
-              (fn NONE => SOME x
-                | SOME y => SOME (x^", "^y))
-           | NONE =>
-              (fn NONE => NONE
-                | SOME y => SOME y))
-         list NONE;
+fun merge_names [] = NONE
+  | merge_names [name] = name
+  | merge_names names =
+    case List.mapPartial I names of
+        [] => NONE
+      | [name] => SOME name
+      | names => SOME (String.concatWith ", " names)
 
 fun merge_filters filters =
-    SOME (liteLib.end_foldr (op oo) (mapfilter liteLib.the filters))
-    handle HOL_ERR _ => NONE
+    case List.mapPartial I filters of
+        [] => NONE
+      | fs => SOME (liteLib.end_foldr (op oo) fs)
 
 fun std_conv_ss {conv_ss, merge_ss} {name,conv,pats} =
   let
