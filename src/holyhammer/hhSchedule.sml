@@ -88,8 +88,8 @@ datatype resume = New | Again of hhReconstruct.progress option
 (* A lemma list waiting for reconstruction.  The list of the success is
    its identity (for tried_keys, the suggestion and the variants); only
    the replay starts from the progress of a resume.  spent is the time
-   that the earlier segments of its reconstruction took, which a
-   preemption interrupted. *)
+   that the earlier segments of its reconstruction took, those that a
+   preemption cut and those of a resume that failed. *)
 type queued = {success : success, resume : resume, spent : real}
 
 (* A Retry is a list that Metis could not replay, less one of its lemmas;
@@ -98,29 +98,24 @@ datatype recon_item =
     Fresh of queued
   | Retry of {origin : string, work : queued}
 
-(* The cost of reconstructing a found proof: its number of lemmas, which
-   is for a preempted one the length of the verified list it resumes
-   from.  Fewer lemmas mean fewer minimisation attempts and a likelier
-   replay, so the cheapest proof is the likeliest to verify first (see
-   take_success). *)
-fun recon_cost ((_, lemmas, _) : success) = length lemmas
-
 fun progress_of (Again (SOME progress)) = SOME progress
   | progress_of _ = NONE
 
-fun work_cost ({success, resume, ...} : queued) =
-  case progress_of resume of
-      SOME {lemmas, ...} => length lemmas
-    | NONE => recon_cost success
+(* The cost of reconstructing a found proof: an upper bound on the
+   replays its reconstruction runs, from its list, or from the progress
+   of a preempted one (hhReconstruct.replays_left).  A shorter list is
+   not always cheaper, as it may fail to replay, which costs whole
+   preplay timeouts; the replays that remain are what costs time. *)
+fun work_cost ({success = (_, lemmas, _), resume, ...} : queued) =
+  hhReconstruct.replays_left lemmas (progress_of resume)
 
 (* The key of the list a Retry is a variant of, if it is one, and the
    work. *)
 fun item_parts (Fresh work) = (NONE, work)
   | item_parts (Retry {origin, work}) = (SOME origin, work)
 
-fun item_cost item = work_cost (#2 (item_parts item))
-
-(* The first of the cheapest proofs, with the others in their order. *)
+(* The first of the cheapest proofs (work_cost), with the others in
+   their order. *)
 fun take_cheapest [] = NONE
   | take_cheapest (first :: rest) =
       let
@@ -838,21 +833,21 @@ fun run_in root {options, goal, rankings, progress} =
             else schedule_length
         | NONE => schedule_length
     val recon = ref ([] : queued list)
-    (* The item being reconstructed, with its cost, from the moment the
-       reconstruction thread takes it until its outcome is recorded, and
-       the furthest progress that its reconstruction has reported so far
-       (see on_verified in hhReconstruct).  The cost follows the progress:
-       it is the length of the latest verified list, so that an item
-       already down to a short list is not preempted by a proof costlier
-       than that list (see on_verified in reconstruct).  preempt is set,
-       together with the interrupt of the thread, by the arrival of a
-       cheaper proof (see note_result); the thread then requeues the item
-       with that progress (see settle_interrupt). *)
-    val current = ref (NONE : (recon_item * int) option)
+    (* The item being reconstructed, from the moment the reconstruction
+       thread takes it until its outcome is recorded, and the furthest
+       progress that its reconstruction has reported so far (see
+       on_verified in hhReconstruct), or that it resumes from.  Without
+       progress the item is still in its preplay and is not preempted;
+       with it, the replays left to the item follow the progress (see
+       preempt_for).  preempt is set, together with the interrupt of the
+       thread, by the arrival of a cheaper proof (see note_result); the
+       thread then requeues the item with that progress (see
+       settle_interrupt). *)
+    val current = ref (NONE : recon_item option)
     val replayed = ref (NONE : hhReconstruct.progress option)
     val preempt = ref false
     (* When the reconstruction of the current item began, for the time
-       of a segment that a preemption interrupts. *)
+       of a segment that a preemption or a failed resume ends. *)
     val begun = ref Time.zeroTime
     val reconstruct_with = !hhSchedule_Test.reconstruct
     val slices_run = ref
@@ -1196,22 +1191,30 @@ fun run_in root {options, goal, rankings, progress} =
               handle Interrupt => raise Interrupt | _ => NONE
             end
 
-    (* A proof of this cost arrived (the mutex is held): it preempts the
-       reconstruction of a strictly costlier one.  The flag is set under
+    (* A proof with this list arrived (the mutex is held): it preempts
+       the reconstruction under way iff that has reported progress, which
+       is past its preplay, and the replays the arrival needs
+       (hhReconstruct.replays_left, from its start) are fewer than those
+       left to the reconstruction (hhReconstruct.attempts_left of its
+       progress).  So a reconstruction in its preplay is never cut, and
+       a short list is not preferred to one that is nearly done.  The
+       flag is set under
        the mutex together with the interrupt, and only while an item is
        current, whose outcome is recorded under the mutex as well; so the
        interrupt reaches the item it was meant for, or is drained by the
        thread (see clear_current and drain_interrupt in reconstruct).
        Nothing is preempted at or after the soft deadline, when what is
        being reconstructed may be the last chance of a proof. *)
-    fun preempt_for cost =
-      case !current of
-          SOME (_, running) =>
-            if cost < running andalso not (!preempt) andalso
-               not (!stopping) andalso time_before (Time.now ()) deadline
+    fun preempt_for lemmas =
+      case (!current, !replayed) of
+          (SOME _, SOME progress) =>
+            if hhReconstruct.replays_left lemmas NONE <
+               hhReconstruct.attempts_left progress andalso
+               not (!preempt) andalso not (!stopping) andalso
+               time_before (Time.now ()) deadline
             then (preempt := true; interrupt_recon ())
             else ()
-        | NONE => ()
+        | _ => ()
 
     fun note_result slice cached result =
       let
@@ -1232,7 +1235,7 @@ fun run_in root {options, goal, rankings, progress} =
                  let val success = (slice, values, #time result) in
                    recon := !recon @
                     [{success = success, resume = New, spent = 0.0}];
-                   preempt_for (recon_cost success);
+                   preempt_for values;
                    signal ()
                  end))
       end
@@ -1311,19 +1314,29 @@ fun run_in root {options, goal, rankings, progress} =
 
     (* Takes the item (the mutex is held) as the current one. *)
     fun start item =
-      (current := SOME (item, item_cost item);
+      (current := SOME item;
        begun := Time.now ();
        replayed := progress_of (#resume (#2 (item_parts item)));
        SOME item)
 
-    (* Puts the item, with other work, back at the head of its queue (the
-       mutex is held). *)
-    fun requeue (Fresh _) work = recon := work :: !recon
-      | requeue (Retry {origin, ...}) work =
-          retries := {origin = origin, work = work} :: !retries
-
+    (* The time of the segment of the current item, since it was taken. *)
     fun segment_time () =
       Time.toReal (Time.- (Time.now (), !begun))
+
+    (* Puts the item back at the head of its queue, as the kind of item
+       it was, to restart as resume says, with the time of the segment
+       that ends added to its spent time (the mutex is held). *)
+    fun requeue item resume =
+      let
+        val (origin, {success, spent, ...}) = item_parts item
+        val work = {success = success, resume = resume,
+                    spent = spent + segment_time ()}
+      in
+        case origin of
+            NONE => recon := work :: !recon
+          | SOME origin =>
+              retries := {origin = origin, work = work} :: !retries
+      end
 
     fun member list value = List.exists (fn other => value = other) list
 
@@ -1403,8 +1416,8 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun reconstruct item =
       let
-        val (origin, {success = (slice, lemmas, t_prover), resume, spent}) =
-          item_parts item
+        val (origin, {success, resume, spent}) = item_parts item
+        val (slice, lemmas, t_prover) = success
         val key = lemma_key lemmas
         fun queue_variants () =
           if #preplay_drop_one options andalso length lemmas > 1 then
@@ -1431,10 +1444,7 @@ fun run_in root {options, goal, rankings, progress} =
                      minimize_deadline = SOME deadline,
                      on_verified = SOME (fn reached =>
                        with_mutex state_mutex (fn () =>
-                         (replayed := SOME reached;
-                          current := Option.map (fn (item, _) =>
-                            (item, length (#lemmas reached)))
-                            (!current)))),
+                         replayed := SOME reached)),
                      resume = progress_of resume}
                     lemmas))
                 goal
@@ -1467,10 +1477,7 @@ fun run_in root {options, goal, rankings, progress} =
                         let
                           val again = case resume of
                               Again (SOME _) =>
-                                (requeue item
-                                   {success = (slice, lemmas, t_prover),
-                                    resume = Again NONE,
-                                    spent = spent + segment_time ()};
+                                (requeue item (Again NONE);
                                  signal (); true)
                             | _ => false
                         in
@@ -1506,34 +1513,30 @@ fun run_in root {options, goal, rankings, progress} =
         let
           val item = !current
           val resume = Again (!replayed)
-          val elapsed = segment_time ()
           val requested = clear_current ()
         in
           if not requested orelse !stopping then false
           else
-            (Option.app
-               (fn (item, _) =>
-                  let val (_, {success, spent, ...}) = item_parts item in
-                    requeue item
-                      {success = success, resume = resume,
-                       spent = spent + elapsed}
-                  end)
-               item;
+            (Option.app (fn item => requeue item resume) item;
              signal (); true)
         end)
 
     (* One item.  Whatever ends it, the item is no longer current.
 
-       Reconstruction order and preemption.  take_success takes the
-       cheapest queued proof (recon_cost, ties in arrival order).  A
-       proof that arrives while a costlier one is being reconstructed (any
-       phase before its outcome is recorded: the replay, the
-       minimisation, the final replay) preempts it: note_result sets
-       preempt and interrupts this thread under the mutex, the item is
-       requeued here, and the cheaper one is taken next.  The cost of the
-       item being reconstructed is the length of the latest verified list
-       it has reported, so a proof no cheaper than that list preempts
-       nothing.  A preemption keeps the progress made: the reconstruction
+       Reconstruction order and preemption.  The cost of a proof is an
+       upper bound on the replays its reconstruction runs
+       (hhReconstruct.replays_left), not its number of lemmas: a short
+       list may fail to replay, and a failure costs whole preplay
+       timeouts.  take_success takes the cheapest queued proof (ties in
+       arrival order).  A proof that arrives while a reconstruction is
+       past its preplay (it has reported progress), and needs fewer
+       replays than that reconstruction has left (hhReconstruct.
+       attempts_left of its progress), preempts it in any phase before
+       its outcome is recorded (the minimisation, the final replay):
+       note_result sets preempt and interrupts this thread under the
+       mutex, the item is requeued here, and the cheaper one is taken
+       next.  A reconstruction still in its preplay is never preempted.
+       A preemption keeps the progress made: the reconstruction
        reports its progress (on_verified: a verified list, and the lemmas
        of it already found needed), the latest is recorded under the
        mutex, and the requeued item carries it besides its original list
@@ -1544,9 +1547,11 @@ fun run_in root {options, goal, rankings, progress} =
        replay fails all the same (the load may have changed), it is
        requeued once more, at the head of its queue, to start from its
        original list, with no warning and no variants: only a failure
-       from its original list is a failure of the proof.  The time of
-       the segments that the preemptions cut is carried with the item
-       (spent), so that t_recon is the whole reconstruction time.  No
+       from its original list is a failure of the proof (that retry is
+       dropped if the soft deadline has passed, like the other retries).
+       The time of the segments that the preemptions or a failed resume
+       cut is carried with the item (spent), so that t_recon is the
+       whole reconstruction time.  No
        preemption happens at or after the soft deadline.  Only an arrival
        preempts (note_result), once per arrival (the preempt flag), and
        arrivals are finite, so a run has at most schedule_length

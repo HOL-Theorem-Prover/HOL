@@ -162,14 +162,18 @@ sig
      output of a replay running at the time.)
 
      Reconstruction order.  One thread reconstructs the found proofs.
-     It takes the proof of fewest lemmas first (ties in arrival order),
-     and a proof that arrives with strictly fewer lemmas than the one
-     being reconstructed preempts it: the reconstruction, in any phase
-     before its outcome (a suggestion or a failure) is recorded, is
-     interrupted, and the cheaper proof is reconstructed.  The cost of
-     the one being reconstructed is the length of the latest list it has
-     verified, so an arrival no cheaper than that list preempts nothing.
-     The preempted proof is requeued, and its list stays its identity
+     The cost of a proof is an upper bound on the replays that its
+     reconstruction runs (hhReconstruct.replays_left), not its number of
+     lemmas: a short list may fail to replay, which costs whole preplay
+     timeouts.  The thread takes the cheapest proof first (ties in
+     arrival order).  A proof that arrives while a reconstruction is past
+     its preplay, having reported a verified list, preempts it if the
+     replays the arrival needs are fewer than those the reconstruction
+     has left (hhReconstruct.attempts_left); a reconstruction in its
+     preplay is never cut.  The reconstruction, in any phase before its
+     outcome (a suggestion or a failure) is recorded, is interrupted, and
+     the cheaper proof is reconstructed.  The preempted proof is requeued, and
+     its list stays its identity
      (for the suggestion, the lists found again by other slices, and the
      variants), with its progress: the latest verified list and the
      lemmas of it found needed (hhReconstruct.progress).  Its restart
@@ -178,9 +182,11 @@ sig
      needed are not tried again.  A restart with progress is kept past the
      soft deadline, when the other retries are dropped, as it only needs
      to finish.  If its replay fails, the proof is reconstructed once
-     more from its original list, without a warning or variants.  t_recon
-     adds up the time of all the segments of a preempted reconstruction.
-     Nothing is preempted at or after the soft deadline.  The
+     more from its original list (a retry is then dropped if the soft
+     deadline has passed, like the other retries), without a warning or
+     variants.  t_recon adds up the time of all the segments of a
+     preempted reconstruction.  Nothing is preempted at or after the soft
+     deadline.  The
      interrupt takes effect at the next wait of the reconstruction
      thread: normally at once, as replays and minimisation attempts run
      in a time-limited worker, but a compilation can delay it by tens to

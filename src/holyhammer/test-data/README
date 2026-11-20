@@ -26,8 +26,9 @@ The `schedule-*.out` files, except the `schedule-cost-*.out`, are minimal
 E-style theorem outputs naming replayable HOL axioms and one deliberately
 unavailable fixture axiom.  The `schedule-cost-*.out` are not E output:
 their one line lists comma-separated lemma names, which the
-reconstruction-order test parses itself (the cost of a proof is its number
-of lemmas).  The shell is used only as fixture material, never by the
+reconstruction-order test parses itself (the cost of a proof is a bound on
+the replays of its reconstruction, which grows with its lemmas).  The shell
+is used only as fixture material, never by the
 production runner or scheduler.
 
 `problems/` contains hermetic golden TPTP problems emitted by

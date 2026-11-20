@@ -156,7 +156,9 @@ fun is_permutative_lemma lemma =
 (* The lists Metis is asked to replay, in order: the full list, then,
    if that fails, the list without its permutative equations.  Each try
    costs at most preplay_timeout, so a list that cannot be replayed still
-   fails quickly. *)
+   fails quickly.  preplay_replays bounds the replays it runs. *)
+val preplay_replays = 2
+
 fun preplay preplay_timeout lemmas g =
   case replay preplay_timeout (mk_metis_call lemmas) g of
       SOME found => SOME (lemmas, found)
@@ -170,6 +172,24 @@ fun preplay preplay_timeout lemmas g =
             Option.map (fn found => (others, found))
               (replay preplay_timeout (mk_metis_call others) g)
         end
+
+(* An upper bound on the replays that a reconstruction still runs.
+   After the preplay, minimize_lemmas runs one attempt per lemma that is
+   not yet known to be needed, and the printed form of the result is
+   replayed once more (final_replays).  A reconstruction that resumes
+   from a progress first replays its list (resume_replays: a verified
+   list replays again unless the load changed), and one that starts from
+   a list first runs the preplay.  With minimize off, fewer replays are
+   run. *)
+val final_replays = 1
+val resume_replays = 1
+
+fun attempts_left ({lemmas, kept} : progress) =
+  length lemmas - kept + final_replays
+
+fun replays_left lemmas NONE =
+      preplay_replays + attempts_left {lemmas = lemmas, kept = 0}
+  | replays_left _ (SOME progress) = resume_replays + attempts_left progress
 
 fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
                           minimize_deadline, on_verified, resume} : settings)

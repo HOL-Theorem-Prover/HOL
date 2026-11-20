@@ -91,16 +91,21 @@ fails to replay is tried again once without each of its lemmas in turn.
 These retries run only while no new list waits for reconstruction, and stop
 at the timeout.
 
-The proof reconstructed and reported first is the one with the fewest
-lemmas.  A cheaper proof that arrives while a costlier one is being
-reconstructed preempts it, unless the reconstruction has already
-verified a list no longer than the arrival's.  The preempted proof is
+The proof reconstructed and reported first is the one whose reconstruction
+needs the fewest replays (an upper bound: the preplay of the list, one
+attempt per lemma to drop, the final replay), not the one with the fewest
+lemmas, as a short list may fail to replay, at the cost of whole preplay
+timeouts.  A proof that arrives while a reconstruction is past its preplay
+preempts it if the replays it needs are fewer than those the reconstruction
+has left; one still in its preplay is never cut.  The preempted proof is
 requeued with its progress: the shortest list it had verified and the
 lemmas of it found needed.  Its restart replays that list again and
 continues the minimisation where it stopped, and, unlike the other
 retries, a restart with progress is kept past the soft deadline.  If it
 fails to replay, the proof is reconstructed once more from its original
-list, without a warning or variants.  `t_recon` covers all the segments.
+list (a retry is then dropped if the soft deadline has passed, like the
+other retries), without a warning or variants.  `t_recon` covers all the
+segments.
 Nothing is preempted at or after the soft deadline.
 
 The `filter` values are:

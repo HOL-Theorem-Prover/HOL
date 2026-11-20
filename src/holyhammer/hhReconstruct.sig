@@ -41,6 +41,18 @@ sig
      on_verified : (progress -> unit) option, resume : progress option}
   type reconstruction =
     {stac : string, tac : tactic, t_replay : real, lemmas : string list}
+  (* An upper bound on the replays that a reconstruction runs (minimize
+     on): replays_left lemmas progress for one that is about to start,
+     with the list to reconstruct and its resume, which is two for the
+     preplay (the list, then without its permutative equations) or one
+     for the resumed list, one attempt per lemma not yet kept, and one
+     final replay of the printed form.  attempts_left progress is the
+     number that remain once a reconstruction has reported that progress
+     (the attempts and the final replay).  A resumed list that fails to
+     replay again, as the load may have changed, can exceed the bound by
+     the preplay's second replay. *)
+  val replays_left : string list -> progress option -> int
+  val attempts_left : progress -> int
   val hh_reconstruct_with :
     settings -> string list -> goal -> reconstruction
   (* Minimizes, with the timeouts in the references above. *)
