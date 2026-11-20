@@ -319,17 +319,32 @@ val bool_compset =
      branches before the guard is fully true or false *)
   seal (set_skip (from_list bool_redns) boolSyntax.conditional NONE);
 
+(* Loading a theory adds its compute theorems and datatypes to the global
+   compset, but most sessions never evaluate.  So each update is delayed,
+   and the first read applies the delayed updates in order; an update
+   should depend only on the compset it is given, and one that fails
+   raises when the compset is read.  The lock keeps two threads from
+   applying the same update. *)
 local
-  val compset_slot : compset Context.Data.slot =
+  val force_lock = Lock.new "computeLib.compset"
+  (* Copied now: compsets made later with new_compset can add rules to
+     bool_compset's shared entries. *)
+  val initial = copy bool_compset
+  val compset_slot : compset Susp.susp Context.Data.slot =
       Context.Data.new
         {name = "computeLib.compset",
-         empty = copy bool_compset,
+         empty = Susp.delay (fn () => initial),
          pp = fn _ => "<compset>"}
 in
-  fun the_compset_of ctxt = Context.Data.get compset_slot ctxt
+  fun the_compset_of ctxt =
+      Lock.synchronized force_lock
+        (fn () => Susp.force (Context.Data.get compset_slot ctxt))
   fun the_compset () = the_compset_of (Context.snapshot())
-  val put_compset = Context.Data.write compset_slot
-  val upd_compset = Context.Data.modify compset_slot
+  fun put_compset cs =
+      Context.Data.write compset_slot (Susp.delay (fn () => cs))
+  fun upd_compset f =
+      Context.Data.modify compset_slot
+        (fn s => Susp.delay (fn () => f (Susp.force s)))
 end
 
 fun add_funs thms = upd_compset (add_thms thms)
@@ -416,12 +431,18 @@ val _ = TypeBase.register_update_fn (fn tyi => (write_datatype_info tyi; tyi))
 (* Usage note: call this before export_theory().                             *)
 (*---------------------------------------------------------------------------*)
 
+(* A theorem the current theory exports is checked now, so one the compset
+   can't take is refused before it is stored rather than breaking EVAL in
+   every theory that loads it. *)
 open LoadableThyData
+fun add_compute_thm {thy, named_thm = (_, th)} =
+    (if Lib.total current_theory () <> SOME thy then ()
+     else ignore (add_thms [th] (copy (new_compset [])));
+     add_funs [th])
 val {export,...} =
     ThmSetData.new_exporter {
       settype = "compute",
-      efns = {add = (fn {named_thm,...} => add_funs [#2 named_thm]),
-              remove = fn _ => ()}
+      efns = {add = add_compute_thm, remove = fn _ => ()}
     }
 val add_persistent_funs = app export
 
