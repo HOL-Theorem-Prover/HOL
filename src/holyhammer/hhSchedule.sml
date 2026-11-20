@@ -9,7 +9,8 @@
    index), act where an item is handed to the pool ([after_submit]) or
    before it is prepared ([before_prepare]), act at the launch points of
    run_in ([launch_point]) and before a slice worker claims work
-   ([before_claim]), select the export of run_in ([export_choice]) and read
+   ([before_claim]), replace the reconstruction of a proof ([reconstruct]),
+   select the export of run_in ([export_choice]) and read
    the export state of the problems of the last pipelined run
    ([export_states]).  Production leaves the hooks at their defaults. *)
 structure hhSchedule_Test =
@@ -51,6 +52,9 @@ struct
   (* Called on a slice worker before each claim of work, with a test of
      whether the run is stopping. *)
   val before_claim = ref (fn (_ : unit -> bool) => ())
+  (* The reconstruction of a lemma list on the reconstruction thread (see
+     reconstruct in hhSchedule.sml). *)
+  val reconstruct = ref hhReconstruct.hh_reconstruct_with
 end
 
 structure hhSchedule :> hhSchedule =
@@ -83,6 +87,29 @@ type success = hhProver.slice * string list * real
 datatype recon_item =
     Fresh of success
   | Retry of {origin : string, success : success}
+
+(* The cost of reconstructing a found proof: its number of lemmas.  Fewer
+   lemmas mean fewer minimisation attempts and a likelier replay, so the
+   cheapest proof is the likeliest to verify first (see take_success). *)
+fun recon_cost ((_, lemmas, _) : success) = length lemmas
+
+fun item_cost (Fresh success) = recon_cost success
+  | item_cost (Retry {success, ...}) = recon_cost success
+
+(* The first of the cheapest proofs, with the others in their order. *)
+fun take_cheapest [] = NONE
+  | take_cheapest (first :: rest) =
+      let
+        val least = List.foldl (fn (success, least) =>
+          Int.min (recon_cost success, least)) (recon_cost first) rest
+        fun split _ [] = NONE
+          | split skipped (success :: later) =
+              if recon_cost success = least
+              then SOME (success, List.revAppend (skipped, later))
+              else split (success :: skipped) later
+      in
+        split [] (first :: rest)
+      end
 
 (* The lists left by dropping each lemma in turn. *)
 fun drop_one_variants lemmas =
@@ -787,6 +814,16 @@ fun run_in root {options, goal, rankings, progress} =
             else schedule_length
         | NONE => schedule_length
     val recon = ref ([] : success list)
+    (* The item being reconstructed, with its cost, from the moment the
+       reconstruction thread takes it until its outcome is recorded, and
+       the key it put in tried_keys.  preempt is set, together with the
+       interrupt of the thread, by the arrival of a cheaper proof (see
+       note_result); the thread then requeues the item (see
+       recon_step). *)
+    val current = ref (NONE : (recon_item * int) option)
+    val current_key = ref (NONE : string option)
+    val preempt = ref false
+    val reconstruct_with = !hhSchedule_Test.reconstruct
     val slices_run = ref
       ([] : (hhProver.slice * hhProver.szs * real * bool) list)
     val suggestions = ref ([] : suggestion list)
@@ -1128,6 +1165,21 @@ fun run_in root {options, goal, rankings, progress} =
               handle Interrupt => raise Interrupt | _ => NONE
             end
 
+    (* A proof of this cost arrived (the mutex is held): it preempts the
+       reconstruction of a strictly costlier one.  The flag is set under
+       the mutex together with the interrupt, and only while an item is
+       current, whose outcome is recorded under the mutex as well; so the
+       interrupt reaches the item it was meant for, or is drained by the
+       thread (see end_item). *)
+    fun preempt_for cost =
+      case !current of
+          SOME (_, running) =>
+            if cost < running andalso not (!preempt) andalso
+               not (!stopping)
+            then (preempt := true; interrupt_recon ())
+            else ()
+        | NONE => ()
+
     fun note_result slice cached result =
       let
         val axioms =
@@ -1144,8 +1196,11 @@ fun run_in root {options, goal, rankings, progress} =
           | SOME values =>
               (emit (ProofFound (slice, values));
                with_mutex state_mutex (fn () =>
-                 (recon := !recon @ [(slice, values, #time result)];
-                  signal ())))
+                 let val success = (slice, values, #time result) in
+                   recon := !recon @ [success];
+                   preempt_for (recon_cost success);
+                   signal ()
+                 end))
       end
 
     fun run_slice (config, slice) =
@@ -1220,24 +1275,42 @@ fun run_in root {options, goal, rankings, progress} =
        held). *)
     fun finished_locked () = search_finished_locked () andalso !recon_done
 
+    (* Takes the item (the mutex is held) as the current one. *)
+    fun start item =
+      (current := SOME (item, item_cost item); SOME item)
+
     fun take_success () =
       let
         fun wait () =
           if !stopping then NONE
           else
-            case (!recon, !retries) of
-                (item :: rest, _) => (recon := rest; SOME (Fresh item))
-              | ([], retry :: rest) =>
+            case (take_cheapest (!recon), !retries) of
+                (SOME (success, rest), _) =>
+                  (recon := rest; start (Fresh success))
+              | (NONE, retry :: rest) =>
                   if time_before (Time.now ()) deadline then
-                    (retries := rest; SOME (Retry retry))
+                    (retries := rest; start (Retry retry))
                   else (retries := []; wait ())
-              | ([], []) =>
+              | (NONE, []) =>
                   if search_finished_locked () then NONE
                   else
                     (ConditionVar.wait (state_changed, state_mutex); wait ())
       in
         with_locked wait
       end
+
+    (* Ends the current item (the mutex is held), whatever its outcome;
+       true when a preemption was requested for it. *)
+    fun clear_current () =
+      let val requested = !preempt in
+        current := NONE; current_key := NONE; preempt := false; requested
+      end
+
+    (* Takes the interrupt of a preemption that arrived after the item
+       was past the point where it could be cut.  The sender interrupted
+       the thread under the mutex before the thread cleared the request,
+       so the interrupt is pending by now. *)
+    fun drain_interrupt () = Thread.testInterrupt () handle Interrupt => ()
 
     fun reconstruct item =
       let
@@ -1252,7 +1325,8 @@ fun run_in root {options, goal, rankings, progress} =
                SOME parent => member (!recovered) parent
              | NONE => false) orelse
           member (!tried_keys) key orelse
-          (tried_keys := key :: !tried_keys; false))
+          (tried_keys := key :: !tried_keys; current_key := SOME key;
+           false))
         fun queue_variants () =
           if #preplay_drop_one options andalso length lemmas > 1 then
             with_mutex state_mutex (fn () =>
@@ -1271,7 +1345,7 @@ fun run_in root {options, goal, rankings, progress} =
               val ({stac, tac, t_replay}, t_recon) =
                 add_time
                   (smlRedirect.hidef
-                    (hhReconstruct.hh_reconstruct_with
+                    (reconstruct_with
                       {minimize = #minimize options,
                        preplay_timeout = #preplay_timeout options,
                        minimize_timeout = #minimize_timeout options,
@@ -1283,28 +1357,100 @@ fun run_in root {options, goal, rankings, progress} =
                  prover = #prover slice, slice = slice,
                  t_prover = t_prover, t_recon = t_recon,
                  t_replay = t_replay}
-              val reached = with_mutex state_mutex (fn () =>
+              (* The commit point: the outcome is recorded and the item no
+                 longer current, so a later arrival does not preempt it. *)
+              val (reached, preempted) = with_mutex state_mutex (fn () =>
                 (suggestions := suggestion :: !suggestions;
                  Option.app (fn parent => recovered := parent :: !recovered)
                    origin;
-                 length (!suggestions) >= #max_proofs options))
+                 (length (!suggestions) >= #max_proofs options,
+                  clear_current ())))
+              val _ = if preempted then drain_interrupt () else ()
               val _ = emit (Verified suggestion)
             in
               if reached then kill_all MaxProofs else ()
             end)
            handle Interrupt => raise Interrupt
                 | error =>
+                    (* An error while a preemption is pending may be the
+                       cut computation's: the item is requeued. *)
+                    if with_mutex state_mutex (fn () => !preempt)
+                    then raise Interrupt
                     (* A variant that fails is expected and not reported. *)
-                    if Option.isSome origin then ()
+                    else if Option.isSome origin then ()
                     else
                       (warn "reconstruction" error;
                        queue_variants ()))
       end
 
-    fun recon_loop () =
-      case take_success () of
-          NONE => ()
-        | SOME item => (reconstruct item; recon_loop ())
+    (* The item is preempted: back to the head of its queue, which keeps
+       the arrival order of equal costs, as a taken item was the first
+       of the cheapest; its key is forgotten, as it has not been
+       reconstructed.  True when the interrupt was a preemption (the mutex
+       is not held).  A stop is not: with a stop (stopping is set before
+       its interrupt) the interrupt ends the thread as before, though a
+       pending preemption has been requested too. *)
+    fun settle_interrupt () =
+      with_mutex state_mutex (fn () =>
+        let
+          val item = !current
+          val key = !current_key
+          val requested = clear_current ()
+        in
+          if not requested orelse !stopping then false
+          else
+            (Option.app (fn k =>
+               tried_keys := List.filter (fn other => other <> k)
+                                         (!tried_keys)) key;
+             Option.app (fn (Fresh success, _) => recon := success :: !recon
+                          | (Retry retry, _) => retries := retry :: !retries)
+               item;
+             signal (); true)
+        end)
+
+    (* One item.  Whatever ends it, the item is no longer current.
+
+       Reconstruction order and preemption.  take_success takes the
+       cheapest queued proof (recon_cost, ties in arrival order).  A
+       proof that arrives while a costlier one is being reconstructed (any
+       phase before its outcome is recorded: the replay, the
+       minimisation, the final replay) preempts it: note_result sets
+       preempt and interrupts this thread under the mutex, the item is
+       requeued here and restarts from scratch later, and the cheaper one
+       is taken next.  A preemption needs a strictly lower cost, so a run
+       has at most as many as the lemma counts allow.  No event reports a
+       preempted reconstruction; a stop (MaxProofs, the hard deadline,
+       the caller's interrupt) is not a preemption and ends this thread as
+       before (settle_interrupt).
+
+       The interrupt is a preemption only if preempt is set, which
+       happens only while an item is current, both under the mutex.  The
+       outcome of an item (the suggestion, and so the end of its being
+       current) is recorded under that mutex too, so an arrival cannot cut
+       a verified item, and a preemption requested just before the commit
+       leaves a pending interrupt that is taken at once (drain_interrupt),
+       not by the next item.  A cut leaves nothing behind: the thread is
+       interruptible only at its waits.  smlTimeout.timeLimit, where a
+       replay spends its time, kills its worker and restores the thread's
+       attributes before it re-raises the interrupt of the waiting thread;
+       smlRedirect.hide_in_file pops its output file when its function
+       raises; hhReconstruct re-raises Interrupt wherever it handles
+       exceptions.  (The hard deadline, which interrupts this thread as
+       well, relies on the same.)  An error that is not an Interrupt while
+       a preemption is pending, as when a compilation swallowed the
+       interrupt, is treated as the cut. *)
+    fun recon_step () =
+      (case take_success () of
+          NONE => false
+        | SOME item =>
+            (reconstruct item;
+             if with_mutex state_mutex clear_current
+             then drain_interrupt () else ();
+             true))
+      handle Interrupt =>
+        if settle_interrupt () then true else raise Interrupt
+
+    fun recon_loop () = if recon_step () then recon_loop () else ()
 
     fun reconstruction_worker () =
       ((recon_loop () handle _ => ());

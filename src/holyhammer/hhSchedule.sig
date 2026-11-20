@@ -161,6 +161,15 @@ sig
      safe.  (A warning of the export goes to the file that hides the
      output of a replay running at the time.)
 
+     Reconstruction order.  One thread reconstructs the found proofs.
+     It takes the proof of fewest lemmas first (ties in arrival order),
+     and a proof that arrives with strictly fewer lemmas than the one
+     being reconstructed preempts it: the reconstruction, in any phase
+     before its outcome is recorded, is interrupted, the cheaper proof is
+     reconstructed, and the preempted one starts afresh later.  A
+     preempted reconstruction reports no event, and Verified suggestions
+     stay in the order of completion.  A stop is not a preemption.
+
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an
      interrupt of the caller (also during the launch) and a failed export

@@ -24,6 +24,9 @@ latter starts a long-lived child, prints its pid, and remains alive so the
 process-group cancellation selftest can verify that both generations die.
 The `schedule-*.out` files are minimal E-style theorem outputs naming
 replayable HOL axioms and one deliberately unavailable fixture axiom.  The
+`schedule-cost-*.out` are not E output: their one line lists comma-separated
+lemma names, which the reconstruction-order test parses itself (the cost
+of a proof is its number of lemmas).  The
 shell is used only as fixture material, never by the production runner or
 scheduler.
 
