@@ -1,0 +1,61 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `prepare_rewrite_bundle`
+
+``` hol4
+simpExtLib.prepare_rewrite_arguments :
+  simpExtLib.simpset -> thm list -> simpExtLib.simpset * thm list
+simpExtLib.prepare_rewrite_bundle :
+  simpExtLib.simpset -> thm list -> simpExtLib.rewrite_bundle
+simpExtLib.rewrite_bundle_rules : simpExtLib.rewrite_bundle ->
+  (thm * simpExtLib.rewrite_source list) list
+simpExtLib.combine_rewrite_bundles :
+  simpExtLib.rewrite_bundle list -> simpExtLib.rewrite_bundle
+simpExtLib.install_rewrite_bundle : simpExtLib.rewrite_bundle ->
+  (simpExtLib.rewrite_source * thm) list ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Prepares a theorem-list argument once, for use in several simplifier calls.
+
+`prepare_rewrite_arguments ss ths` applies the directives in `ths` (such
+as `simpExtLib.ExclX`, `SF` and `Split`) to `ss`, returning the resulting
+simpset and the remaining theorems.
+
+`prepare_rewrite_bundle ss ths` turns the theorems `ths`, which should
+contain no directives, into rewrites using the rewrite maker of `ss`,
+without adding them to `ss`. `install_rewrite_bundle bundle views ss` adds
+them to `ss`, together with the views `views` (see
+`simpExtLib.rewrite_views`). `rewrite_bundle_rules bundle` returns each
+theorem of the bundle with the handles of the rewrites made from it.
+`combine_rewrite_bundles` joins bundles.
+
+The rewrites of a bundle are made only once: wherever it is installed,
+bounded rewrites (`Once`, `Ntimes`) share one count of remaining uses.
+`simpExtLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND` takes a bundle already
+installed in its simpset.
+
+### Failure
+
+`prepare_rewrite_arguments` fails if a directive fails.
+`install_rewrite_bundle` fails if the bundle is already installed in the
+simpset, and `combine_rewrite_bundles` if a bundle occurs twice. Views
+whose source is not a rewrite of the bundle are ignored.
+
+### Example
+
+``` hol4
+>>_ val (ss, ths) = simpExtLib.prepare_rewrite_arguments
+     (simpExtLib.lift_simpset boolSimps.bool_ss)
+     [BoundedRewrites.Once boolTheory.AND_CLAUSES];
+>>_ val bundle = simpExtLib.prepare_rewrite_bundle ss ths;
+>>_ val ss' = simpExtLib.install_rewrite_bundle bundle [] ss;
+>> simpExtLib.SIMP_CONV ss' [] “T ∧ p”;
+```
+
+### See also
+
+[`simpExtLib.rewrite_source_handles`](#simpExtLib.rewrite_source_handles),
+[`simpExtLib.GEN_GLOBAL_SIMP_TAC`](#simpExtLib.GEN_GLOBAL_SIMP_TAC).

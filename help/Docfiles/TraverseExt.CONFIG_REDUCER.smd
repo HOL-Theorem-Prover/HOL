@@ -1,0 +1,62 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `CONFIG_REDUCER`
+
+``` hol4
+TraverseExt.CONFIG_REDUCER :
+  TraverseExt.reducer_config_data -> TraverseExt.reducer
+TraverseExt.CONTEXT_REDUCER :
+  TraverseExt.reducer_context_data -> TraverseExt.reducer
+TraverseExt.lift : Traverse.reducer -> TraverseExt.reducer
+```
+
+------------------------------------------------------------------------
+
+Makes a decision procedure for the extension simplifier.
+
+``` hol4
+type reducer_config_data =
+  {name : string option, initial : context,
+   addcontext : context * thm list -> context,
+   apply : {solver : term list -> term -> thm,
+            conv : term list -> term -> thm, context : context,
+            stack : term list, cond_depth : int option,
+            term_ord : term * term -> order,
+            relation : term * (term -> thm)} -> conv}
+```
+
+Extension decision procedures, added to a fragment with
+`simpExtLib.dproc_ss` or `simpExtLib.SSFRAG`, have type
+`TraverseExt.reducer`. They are made as ordinary ones are with
+`Traverse.REDUCER`: `initial` is the starting context, `addcontext` adds
+theorems to it, and `apply` is called with the current context to give a
+conversion. `apply` also receives the simpset's side-condition depth limit
+(`NONE` if none is set with `simpExtLib.set_cond_depth`) and the order used
+for permutative rewrites (see `simpExtLib.set_term_ord`).
+
+`CONTEXT_REDUCER` is the same, but `cond_depth` is an `int`: an unset
+limit is given as the value of `Cond_rewr.stack_limit`. `lift r` turns an
+ordinary `Traverse.reducer` into an extension one; there is no conversion
+in the other direction.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ exception NoContext;
+>>_ val beta_reducer = TraverseExt.CONFIG_REDUCER
+     {name = SOME "beta", initial = NoContext, addcontext = #1,
+      apply = fn _ => BETA_CONV};
+>> simpExtLib.SIMP_CONV
+     (simpExtLib.mk_simpset [simpExtLib.dproc_ss beta_reducer])
+     [] “(λx. x ∧ y) p”;
+```
+
+### See also
+
+[`simpExtLib.lift_ssfrag`](#simpExtLib.lift_ssfrag),
+[`simpExtLib.set_cond_depth`](#simpExtLib.set_cond_depth),
+[`simpExtLib.xtraversedata_for_ss`](#simpExtLib.xtraversedata_for_ss).

@@ -1,5 +1,35 @@
 HOLHEAP = $(HOLDIR)/bin/hol.state0
-EXTRA_CLEANS = selftest.exe simp-selftest.log
+EXTRA_CLEANS = selftest.exe simp-selftest.log fresh-load-selftest.exe \
+  fresh-load-shadowed.exe standard-recipes.log \
+  api-audit.log ../tests/api-audit/selftest.exe ../tests/api-audit/.hol/ \
+  native-extension.log ../tests/native-extension/selftest.exe \
+  ../tests/native-extension/.hol/ \
+  ../tests/standard-recipes/selftest.exe ../tests/standard-recipes/.hol/ \
+  traversal-contracts.log exclusion-contracts.log traverse-ext.log \
+  cond-rewr-ext.log ../tests/cond-rewr-ext/selftest.exe \
+  ../tests/cond-rewr-ext/.hol/ \
+  simp-ext.log ../tests/simp-ext/selftest.exe \
+  ../tests/simp-ext/tracked.exe ../tests/simp-ext/exclusions.exe \
+  ../tests/simp-ext/strategies.exe ../tests/simp-ext/tactics.exe \
+  ../tests/simp-ext/sources.exe ../tests/simp-ext/derivation.exe \
+  ../tests/simp-ext/lifetimes.exe ../tests/simp-ext/.hol/ \
+  congruence-ext.log ../tests/congruence-ext/selftest.exe \
+  ../tests/congruence-ext/ordinary.exe \
+  ../tests/congruence-ext/.hol/ \
+  ../tests/traverse-ext/selftest.exe \
+  ../tests/traverse-ext/.hol/ split-registration.log \
+  split-persistence.log split-lifecycle.log \
+  replay-order.log \
+  $(FRESH_LOAD)/selftest.exe $(FRESH_LOAD)/.hol/ \
+  $(SPLIT_REGISTRATION)/selftest.exe $(SPLIT_REGISTRATION)/.hol/ \
+  $(SPLIT_PERSISTENCE)/selftest.exe $(SPLIT_PERSISTENCE)/.hol/ \
+  $(SPLIT_PERSISTENCE)/split-lifecycle.state \
+  ../tests/split-lifecycle/selftest.exe ../tests/split-lifecycle/repair.exe \
+  ../tests/split-lifecycle/.hol/ \
+  ../tests/split-lifecycle/split-proof.state \
+  ../tests/replay-order/selftest.exe \
+  type-boundaries.log ../tests/type-boundaries/selftest.exe \
+  ../tests/type-boundaries/.hol/
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
@@ -7,9 +37,181 @@ all: $(DEFAULT_TARGETS) selftest.exe
 selftest.exe: selftest.uo boolSimps.uo Cond_rewr.uo simpLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
+# congLibFn declares a signature and a functor, which Moscow ML compiles
+# only in toplevel mode; units applying the functor name congLibFn.ui
+# (cf. num/arith's GenRelNorm).  Holdep does not see functor applications,
+# and with an explicit command, sigobj imports must be listed too.
+congLibFn.ui congLibFn.uo: congLibFn.sml Trace.uo Opening.uo Travrules.uo \
+              Cond_rewr.uo Traverse.uo $(dprot $(SIGOBJ)/liteLib.ui)
+	$(HOLMOSMLC) -toplevel -c $(protect $(SIGOBJ)/Overlay.ui) $<
+
+# congExtLib.sig includes the congLibFn signature (cf. parse's Overload.ui)
+congExtLib.ui: congExtLib.sig congLibFn.uo TraverseExt.ui simpExtLib.ui \
+               congLib.ui
+	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Overlay.ui) congLibFn.ui $<
+
+congExtLib.uo: congExtLib.sml congExtLib.ui congLibFn.uo TraverseExt.uo \
+               simpExtLib.uo
+	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Overlay.ui) congLibFn.ui $<
+
+CONGLIB_SIGOBJ = liteLib computeLib
+congLib.uo: congLib.sml congLib.ui congLibFn.uo \
+            $(patsubst %,$(dprot $(SIGOBJ)/%.ui),$(CONGLIB_SIGOBJ))
+	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Overlay.ui) \
+	  $(patsubst %,$(protect $(SIGOBJ)/%.ui),$(CONGLIB_SIGOBJ)) congLibFn.ui $<
+
+# Clean-heap namespace/syntax regressions. Only the launcher is linked;
+# library prerequisites are not imports.
+FRESH_LOAD = ../tests/fresh-load
+# The extension modules the shadowed-load launcher loads.  Its SML name
+# rule (ext_patterns in the launcher) lists the same patterns; keep the
+# two in step.  Holmake has no filter-out, so the launcher skips theory
+# scripts that match a pattern.
+FRESH_EXT_UO = $(patsubst %.sml,%.uo,\
+  $(wildcard *Ext*.sml split*.sml SplitData.sml TraverseCore.sml))
+FRESH_SCENARIOS = control attribute-first set-first attribute-after set-after \
+  syntax-first
+
+fresh-load-selftest.exe: $(FRESH_LOAD)/selftest.sml simpLib.uo boolSimps.uo \
+  Holmakefile
+	$(HOLDIR)/bin/Holmake --no-project --no-cache --no_prereqs -j1 \
+	  -C $(FRESH_LOAD) selftest.uo
+	$(HOLMOSMLC) -o $@ $(FRESH_LOAD)/selftest.uo
+
+.PHONY: fresh-load-regressions $(patsubst %,fresh-load-%,$(FRESH_SCENARIOS))
+fresh-load-regressions: fresh-load-selftest.exe simpLib.uo boolSimps.uo \
+  $(FRESH_EXT_UO) $(FRESH_LOAD)/shadowed.sml
+	$(HOLDIR)/bin/Holmake --no-project --no-cache --no_prereqs -j1 \
+	  -C $(FRESH_LOAD) shadowed.uo
+	$(HOLMOSMLC) -o fresh-load-shadowed.exe $(FRESH_LOAD)/shadowed.uo
+	@status=0; for s in $(FRESH_SCENARIOS); do \
+	  SIMP_COMPAT_SCENARIO=$$s \
+	  SIMP_COMPAT_PATH=$$(pwd)/simpLib \
+	  SIMP_COMPAT_CONTROL=$$(pwd)/$(FRESH_LOAD)/control.ML \
+	  SIMP_COMPAT_IDENTITY_PREFIX=$$(pwd)/$(FRESH_LOAD)/identity- \
+	  ./fresh-load-selftest.exe || status=1; done; \
+	SIMP_COMPAT_SCENARIO=shadowed-load SIMP_COMPAT_PATH=$$(pwd)/simpLib \
+	  ./fresh-load-shadowed.exe || status=1; exit $$status
+
+fresh-load-control fresh-load-attribute-first fresh-load-set-first \
+  fresh-load-attribute-after fresh-load-set-after fresh-load-syntax-first: \
+  fresh-load-selftest.exe
+	SIMP_COMPAT_SCENARIO=$(patsubst fresh-load-%,%,$@) \
+	  SIMP_COMPAT_PATH=$$(pwd)/simpLib \
+	  SIMP_COMPAT_CONTROL=$$(pwd)/$(FRESH_LOAD)/control.ML \
+	  SIMP_COMPAT_IDENTITY_PREFIX=$$(pwd)/$(FRESH_LOAD)/identity- \
+	  ./fresh-load-selftest.exe
+
+# Shared legacy-only fixtures have their own dependency scope: they must
+# see these private modules before this directory is uploaded to sigobj.
+CONTRACTS = ../tests/contracts
+.PHONY: traversal-contracts
+traversal-contracts: simpLib.uo
+	$(HOLDIR)/bin/Holmake --no-project --no-cache -j1 -C $(CONTRACTS) \
+	  traversal-contracts.exe
+	$(tee cd $(CONTRACTS) && ./traversal-contracts.exe,\
+traversal-contracts.log)
+
+.PHONY: exclusion-contracts
+exclusion-contracts: simpLib.uo
+	$(HOLDIR)/bin/Holmake --no-project --no-cache -j1 -C $(CONTRACTS) \
+	  exclusion-contracts.exe
+	$(tee cd $(CONTRACTS) && ./exclusion-contracts.exe,\
+exclusion-contracts.log)
+
+SPLIT_REGISTRATION = ../tests/split-registration
+.PHONY: split-registration
+split-registration: simpExtLib.uo
+	$(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C $(SPLIT_REGISTRATION) selftest.exe
+	$(tee cd $(SPLIT_REGISTRATION) && ./selftest.exe,\
+split-registration.log)
+
+SPLIT_PERSISTENCE = ../tests/split-persistence
+.PHONY: split-persistence
+split-persistence: simpExtLib.uo splitPersistLib.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C $(SPLIT_PERSISTENCE) check,split-persistence.log)
+
+# Explicit extension/ordinary load order and post-reload proof validation.
+.PHONY: split-lifecycle
+split-lifecycle: simpExtLib.uo congExtLib.uo splitPersistLib.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/split-lifecycle check,split-lifecycle.log)
+
+# Fresh ordinary load paths/callbacks and deliberate extension control sharing.
+# Only the independent launcher imports the extension layer, after its guards.
+.PHONY: api-audit
+api-audit: simpLib.uo congLib.uo simpExtLib.uo congExtLib.uo boolSimps.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/api-audit check,api-audit.log)
+
+# The extension engine's integration suite, with its ordinary controls.
+ifdef HOLBUILD
+NATIVE_CHECK = core-check
+else
+NATIVE_CHECK = check
+endif
+.PHONY: native-extension
+native-extension: simpExtLib.uo congExtLib.uo boolSimps.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/native-extension $(NATIVE_CHECK),native-extension.log)
+
+# Separate extension tests do not become imports of ordinary selftest.
+.PHONY: traverse-ext
+traverse-ext: TraverseExt.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/traverse-ext check,traverse-ext.log)
+
+.PHONY: simp-ext
+simp-ext: simpExtLib.uo pureSimps.uo boolSimps.uo congExtLib.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/simp-ext check,simp-ext.log)
+
+# Independent tracked catalog, TypeBase builders and explicit reducer lifts.
+.PHONY: standard-recipes
+standard-recipes: combinSimps.uo boolSimps.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/standard-recipes check,standard-recipes.log)
+
+.PHONY: congruence-ext
+congruence-ext: congExtLib.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/congruence-ext check,congruence-ext.log)
+
+.PHONY: cond-rewr-ext
+cond-rewr-ext: Cond_rewrExt.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/cond-rewr-ext check,cond-rewr-ext.log)
+
+# Ill-typed clients of both engines, elaborated with PolyML.use.
+.PHONY: type-boundaries
+type-boundaries: simpExtLib.uo congExtLib.uo pureSimps.uo
+	$(tee $(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../tests/type-boundaries check,type-boundaries.log)
+
 ifdef HOLSELFTESTLEVEL
-all: simp-selftest.log
+all: simp-selftest.log traversal-contracts exclusion-contracts traverse-ext \
+  simp-ext cond-rewr-ext congruence-ext standard-recipes native-extension \
+  split-registration
+
+# These check fresh-process loading (Meta.loadPlan, PolyML.globalNameSpace),
+# saved heaps (PolyML.SaveState) or static type errors (PolyML.use), none
+# of which Moscow ML provides.
+ifdef POLY
+all: api-audit fresh-load-regressions split-persistence split-lifecycle \
+  type-boundaries
+endif
 
 simp-selftest.log: selftest.exe
 	$(tee ./selftest.exe,$@)
+endif
+
+.PHONY: replay-order
+replay-order: SplitData.uo splitLib.uo
+	$(HOLDIR)/bin/Holmake --no-project --no-cache -j1 -C ../tests/replay-order selftest.exe
+	$(tee cd ../tests/replay-order && ./selftest.exe,replay-order.log)
+
+ifdef HOLSELFTESTLEVEL
+all: replay-order
 endif

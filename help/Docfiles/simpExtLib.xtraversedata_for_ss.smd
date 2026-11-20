@@ -1,0 +1,41 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `xtraversedata_for_ss`
+
+``` hol4
+simpExtLib.xtraversedata_for_ss :
+  simpExtLib.simpset -> TraverseExt.xtraverse_data
+simpExtLib.traversedata_for_ss :
+  simpExtLib.simpset -> TraverseExt.traverse_data
+```
+
+------------------------------------------------------------------------
+
+Extracts the traversal data of an extension simpset.
+
+`xtraversedata_for_ss ss` returns the rewriters, decision procedures,
+congruence rules and limit of `ss`, paired with its subgoaler, unsafe
+solvers, side-condition depth and term order, for use with
+`TraverseExt.XTRAVERSE`. `traversedata_for_ss ss` returns the same data
+without these settings, for use with `TraverseExt.TRAVERSE`.
+
+Bounded rewrites (`Once`, `Ntimes`) share their remaining uses with those
+of `ss`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpExtLib.set_cond_depth 2
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>> TraverseExt.XTRAVERSE (simpExtLib.xtraversedata_for_ss ss) [] “T ∧ p”;
+```
+
+### See also
+
+[`simpExtLib.set_cond_depth`](#simpExtLib.set_cond_depth),
+[`TraverseExt.CONFIG_REDUCER`](#TraverseExt.CONFIG_REDUCER),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset).

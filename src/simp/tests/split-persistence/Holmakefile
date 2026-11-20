@@ -1,0 +1,17 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+INCLUDES = ../../src
+EXTRA_CLEANS = selftest.exe split-lifecycle.state
+
+# Build dynamic controls, but link only the launcher into the clean heap.
+selftest.exe: selftest.uo ../../src/simpLib.uo ../../src/boolSimps.uo
+	$(HOLMOSMLC) -o $@ $<
+
+SCENARIOS = parent child descendant owned foreign-attribute foreign-set \
+  heap-save heap-reload
+.PHONY: check
+check: splitDescendantTheory.uo selftest.exe
+	@rm -f split-lifecycle.state; status=0; \
+	trap 'rm -f split-lifecycle.state' 0; \
+	for s in $(SCENARIOS); do \
+	  SPLIT_PERSIST_SCENARIO=$$s ./selftest.exe || status=1; \
+	done; exit $$status

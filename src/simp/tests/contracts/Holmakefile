@@ -1,0 +1,11 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+# Native selftest must resolve private simplifier modules before sigobj is
+# populated by the directory's successful build.
+INCLUDES = ../../src
+EXTRA_CLEANS = traversal-contracts.exe exclusion-contracts.exe
+
+traversal-contracts.exe: RunTraversalContracts.uo
+	$(HOLMOSMLC) -o $@ $<
+
+exclusion-contracts.exe: RunExclusionContracts.uo
+	$(HOLMOSMLC) -o $@ $<

@@ -1,0 +1,5 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+EXTRA_CLEANS = selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<

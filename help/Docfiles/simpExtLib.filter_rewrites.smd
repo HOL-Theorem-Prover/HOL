@@ -1,0 +1,46 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `filter_rewrites`
+
+``` hol4
+simpExtLib.filter_rewrites :
+  ((simpExtLib.thname option * thm) -> bool) ->
+  simpExtLib.simpset -> simpExtLib.simpset
+simpExtLib.filter_rewrites_preserving_controls :
+  ((simpExtLib.thname option * thm) -> bool) ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes the rewrites of an extension simpset that a predicate rejects.
+
+`filter_rewrites keep ss` removes every rewrite `(name, th)`, as it was
+added to `ss`, for which `keep` returns false. Everything else in `ss` is
+kept, including its exclusions, limit, rewrite maker, solvers and
+loopers, which rebuilding from `ssfrags_of ss` would lose. If nothing is
+rejected, `ss` itself is returned.
+
+The simpset is rebuilt, so bounded rewrites (`Once`, `Ntimes`) start again
+with their full number of uses. With `filter_rewrites_preserving_controls`
+they keep the number of uses they had left.
+
+### Failure
+
+Fails if `keep` fails.
+
+### Example
+
+``` hol4
+>> fun keep (_, th) = not (aconv (concl th) (concl AND_CLAUSES));
+>>_ val ss = simpExtLib.filter_rewrites keep
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>> QCONV (simpExtLib.SIMP_CONV ss []) “p ∧ T”;
+>> simpExtLib.SIMP_CONV ss [] “p ∨ F”;
+```
+
+### See also
+
+[`simpExtLib.clear_rules`](#simpExtLib.clear_rules),
+[`simpExtLib.mk_simpset`](#simpExtLib.mk_simpset),
+[`simpExtLib.rewrite_source_handles`](#simpExtLib.rewrite_source_handles).
