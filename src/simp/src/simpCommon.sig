@@ -40,6 +40,9 @@ sig
 
   val merge_names : string option list -> string option
   val merge_filters : ('a -> 'a list) option list -> ('a -> 'a list) option
+  val merge_names_by : ('f -> string option) -> 'f list -> string option
+  val merge_filters_by :
+      ('f -> ('a -> 'a list) option) -> 'f list -> ('a -> 'a list) option
   val std_conv_ss :
       {conv_ss : convdata -> 'f, merge_ss : 'f list -> 'f} ->
       stdconvdata -> 'f

@@ -467,7 +467,8 @@ fun frag_rewrites ssf = map (#2 o #item) (#rewrs (D ssf))
 
 fun add_named_rwt nth ssfrag = ssf_upd_rewrs (cons (apfst SOME nth)) ssfrag
 
-val merge_names = simpCommon.merge_names
+val merge_names = simpCommon.merge_names_by frag_name
+val merge_filters = simpCommon.merge_filters_by (#filter o D)
 
 (*---------------------------------------------------------------------------*)
 (* Possibly need to suppress duplicates in the merge?                        *)
@@ -475,10 +476,10 @@ val merge_names = simpCommon.merge_names
 
 fun merge_ss (s:ssfrag list) =
   SSFRAG_CON
-    { name     = merge_names (map (#name o D) s),
+    { name     = merge_names s,
       convs    = flatten (map (#convs o D) s),
       rewrs    = map (source_slot o #item) (flatten (map (#rewrs o D) s)),
-      filter   = simpCommon.merge_filters (map (#filter o D) s),
+      filter   = merge_filters s,
       ac       = map (source_slot o #item) (flatten (map (#ac o D) s)),
       views    = flatten (map (#views o D) s),
       dprocs   = flatten (map (#dprocs o D) s),
@@ -859,7 +860,75 @@ fun add_solver (solver : TraverseExt.ssolver,
   if List.exists (fn {name,...} => name = #name solver) solvers then solvers
   else solvers @ [solver]
 
-fun dedup_solvers solvers = List.foldl add_solver [] solvers
+fun add_solvers [] solvers = solvers
+  | add_solvers [solver] solvers = add_solver (solver,solvers)
+  | add_solvers [first,second] solvers =
+      add_solver (second,add_solver (first,solvers))
+  | add_solvers batch solvers =
+      let
+        fun add_indexed added batch =
+          let
+            fun collect (solver as {name,...} : TraverseExt.ssolver,
+                         acc as (names,added)) =
+              if Symtab.defined names name then acc
+              else (Symtab.insert_set name names,solver::added)
+            val initial = List.foldl
+              (fn (solver,names) => Symtab.insert_set (#name solver) names)
+              Symtab.empty added
+            val (names,added) = List.foldl collect (initial,added) batch
+            (* Index only incoming names. A duplicate-only batch can finish
+               as soon as it has found those names in the existing list. *)
+            fun remove_installed [] pending = pending
+              | remove_installed (({name,...} : TraverseExt.ssolver)::rest)
+                                 pending =
+                  if Symtab.is_empty pending then pending
+                  else remove_installed rest (Symtab.remove_set name pending)
+            val pending = remove_installed solvers names
+          in
+            if Symtab.is_empty pending then solvers
+            else if Portable.pointer_eq (names,pending) then
+              solvers @ List.rev added
+            else solvers @ List.rev
+              (List.filter (Symtab.defined pending o #name) added)
+          end
+        fun finish added =
+          if null solvers then List.rev added
+          else
+            let
+              fun collect (solver as {name,...} : TraverseExt.ssolver, new) =
+                if List.exists (fn s => #name s = name) solvers then new
+                else solver::new
+            in
+              case List.foldl collect [] added of
+                  [] => solvers
+                | new => solvers @ new
+            end
+        (* A small set of distinct names is cheap to scan, even when
+           repeated throughout a long batch. *)
+        fun gather [] _ added = finish added
+          | gather (batch as (solver as {name,...} : TraverseExt.ssolver)::rest)
+                   room added =
+              if List.exists (fn s => #name s = name) added then
+                gather rest room added
+              else if room = 0 then add_indexed added batch
+              else gather rest (room - 1) (solver::added)
+        fun short _ [] = true
+          | short 0 _ = false
+          | short n (_::rest) = short (n - 1) rest
+        fun skip_installed
+              (batch as (solver : TraverseExt.ssolver)::rest)
+              ((installed : TraverseExt.ssolver)::more) =
+              if #name solver = #name installed then skip_installed rest more
+              else batch
+          | skip_installed batch _ = batch
+      in
+        case skip_installed batch solvers of
+            [] => solvers
+          | [solver] => add_solver (solver,solvers)
+          | rest => gather rest (if short 64 rest then 64 else 8) []
+      end
+
+fun dedup_solvers solvers = add_solvers solvers []
 
 fun strategy_of (SS s) = #strategy s
 fun has_looper_id id ss =
@@ -1261,16 +1330,22 @@ fun mk_tactic_solver (name,tac) =
 
  fun compile_native_named event slot component named =
    let
-     fun convert (conjunct,rw) =
-       case mk_rewr_convdata rw of
-           NONE => NONE
-         | SOME (cd as {source=SOME rewrite,bound,...}) =>
-             SOME (cd,RewriteSource
-               {origin={event=event,slot=slot,component=component,
-                        conjunct=conjunct},rewrite=rewrite,bound=bound})
-         | SOME _ => NONE
+     fun compile _ [] acc = List.rev acc
+       | compile conjunct (rw::rest) acc =
+           let val next = conjunct + 1
+           in
+             case mk_rewr_convdata rw of
+                 SOME (cd as {source=SOME rewrite,bound,...}) =>
+                   let
+                     val origin = {event=event, slot=slot, component=component,
+                                   conjunct=conjunct}
+                     val source = RewriteSource
+                       {origin=origin, rewrite=rewrite, bound=bound}
+                   in compile next rest ((cd,source)::acc) end
+               | _ => compile next rest acc
+           end
    in
-     List.mapPartial I (numbered convert named)
+     compile 1 named []
    end
 
  fun compile_native event mk_rewrs slot component item =
@@ -1471,10 +1546,8 @@ fun mk_tactic_solver (name,tac) =
    val strategy =
      #strategy sset
        |> upd_loopers (fn ls => List.foldl update_looper ls (#loopers ssf))
-       |> upd_unsafe_solvers
-            (fn ss => List.foldl add_solver ss (#unsafe_solvers ssf))
-       |> upd_safe_solvers
-            (fn ss => List.foldl add_solver ss (#safe_solvers ssf))
+       |> upd_unsafe_solvers (add_solvers (#unsafe_solvers ssf))
+       |> upd_safe_solvers (add_solvers (#safe_solvers ssf))
  in
    let
      val history = ADDFRAG
@@ -1971,33 +2044,34 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
 
  fun source_thms (prepared : prepared_rewrites) = map #1 prepared
 
- fun prepared_convdata mk_rewrs (prepared : prepared_rewrites) =
-   let
-     val rwts0 = flatten (map mk_rewrs prepared)
-     val rwts =
-       map (fn th =>
-               (SOME {Thy = "", Name = "rewrite: prepared context"}, th))
-           rwts0
-   in
-     List.mapPartial mk_rewr_convdata rwts
-   end
+ fun context_convdata _ _ [] = []
+   | context_convdata name mk_rewrs (prepared : prepared_rewrites) =
+     let
+       (* Finish the rewrite makers before constructing any conversions. *)
+       val groups = map mk_rewrs prepared
+       val rule_name = SOME {Thy = "", Name = name}
+       fun compile (rw,acc) =
+         case mk_rewr_convdata (rule_name,rw) of
+             SOME data => data::acc
+           | NONE => acc
+     in
+       List.rev (List.foldl (fn (rules,acc) => List.foldl compile acc rules)
+                            [] groups)
+     end
 
  (* Both extension projections use this setup once. Collectors
     continue compiling facts at their original consumption stage. *)
  fun rewriter_context_for_ss_prepared
        (SS{mk_rewrs,initial_net,...}) prepared = let
    val prepared_net =
-     net_add_convs initial_net (prepared_convdata mk_rewrs prepared)
+     net_add_convs initial_net
+       (context_convdata "rewrite: prepared context" mk_rewrs prepared)
    fun addcontext (context,thms) = let
      val net = (raise context) handle CONVNET net => net
      val cthms = map dest_tagged_rewrite thms
-     val new_rwts0 = flatten (map mk_rewrs cthms)
-     val new_rwts =
-         map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
-             new_rwts0
+     val data = context_convdata "rewrite: from context" mk_rewrs cthms
    in
-     CONVNET
-       (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
+     CONVNET (net_add_convs net data)
    end
    in {initial=CONVNET prepared_net,addcontext=addcontext} end;
 
@@ -2055,10 +2129,10 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
        (ss as (SS ssdata)) (prepared : prepared_rewrites)
        : TraverseExt.traverse_data =
    let
+     val existing_dprocs = #dprocs ssdata
      val dprocs =
-       if null prepared then #dprocs ssdata
-       else
-         map (TraverseExt.addctxt (source_thms prepared)) (#dprocs ssdata)
+       if null existing_dprocs orelse null prepared then existing_dprocs
+       else map (TraverseExt.addctxt (source_thms prepared)) existing_dprocs
    in
       {rewriters=[configured_rewriter_for_ss_prepared
                     check_abort traversal ss prepared],

@@ -102,20 +102,24 @@ fun all_named_frags slot = Symtab.keys (fragDB slot)
 (* Operation on ssfrag values                                                *)
 (*---------------------------------------------------------------------------*)
 
-(* Merging a named fragment creates a fresh name option. *)
-fun merge_names [] = NONE
-  | merge_names [NONE] = NONE
-  | merge_names [SOME name] = SOME name
-  | merge_names names =
-    case List.mapPartial I names of
-        [] => NONE
-      | [name] => SOME name
-      | names => SOME (String.concatWith ", " names)
+(* A singleton keeps its payload and gets a fresh option. *)
+fun merge_options combine project [] = NONE
+  | merge_options combine project [x] =
+      (case project x of NONE => NONE | SOME y => SOME y)
+  | merge_options combine project xs =
+      case List.mapPartial project xs of
+          [] => NONE
+        | [x] => SOME x
+        | xs => SOME (combine xs)
 
-fun merge_filters filters =
-    case List.mapPartial I filters of
-        [] => NONE
-      | fs => SOME (liteLib.end_foldr (op oo) fs)
+fun merge_names_by name_of xs =
+    merge_options (fn names => String.concatWith ", " names) name_of xs
+
+fun merge_filters_by filter_of xs =
+    merge_options (fn filters => liteLib.end_foldr (op oo) filters) filter_of xs
+
+val merge_names = merge_names_by I
+fun merge_filters filters = merge_filters_by I filters
 
 fun std_conv_ss {conv_ss, merge_ss} {name,conv,pats} =
   let

@@ -167,7 +167,8 @@ fun frag_rewrites ssf = map #2 (#rewrs (D ssf))
 
 fun add_named_rwt nth ssfrag = ssf_upd_rewrs (cons (apfst SOME nth)) ssfrag
 
-val merge_names = simpCommon.merge_names
+val merge_names = simpCommon.merge_names_by frag_name
+val merge_filters = simpCommon.merge_filters_by (#filter o D)
 
 (*---------------------------------------------------------------------------*)
 (* Possibly need to suppress duplicates in the merge?                        *)
@@ -175,10 +176,10 @@ val merge_names = simpCommon.merge_names
 
 fun merge_ss (s:ssfrag list) =
   SSFRAG_CON
-    { name     = merge_names (map (#name o D) s),
+    { name     = merge_names s,
       convs    = flatten (map (#convs o D) s),
       rewrs    = flatten (map (#rewrs o D) s),
-      filter   = simpCommon.merge_filters (map (#filter o D) s),
+      filter   = merge_filters s,
       ac       = flatten (map (#ac o D) s),
       dprocs   = flatten (map (#dprocs o D) s),
       congs    = flatten (map (#congs o D) s),
@@ -585,7 +586,9 @@ fun process_tags ss thl =
          null frags andalso null exclfrags
       then (ss, rst)
       else
-        let val base = remove_ssfrags exclfrags ss handle Conv.UNCHANGED => ss
+        let val base =
+                if null exclfrags then ss
+                else remove_ssfrags exclfrags ss handle Conv.UNCHANGED => ss
             val cong_ac =
                 SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
                            ac=acs, congs=congs,

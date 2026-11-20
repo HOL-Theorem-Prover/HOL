@@ -307,12 +307,11 @@ fun goal_split_rule_groups terms =
         List.foldl keep found (Symtab.lookup_list index key)
       end
     val matched = Binarymap.foldl saturated [] arities
-    fun earlier (i1,_) (i2,_) = (i1 : int) <= i2
     fun group ((_,ty),result) =
       (ty, type_split_rules ty) :: result
       handle HOL_ERR _ => result
   in
-    List.foldl group [] (sort earlier matched)
+    List.foldl group [] (Listsort.sort (Lib.measure_cmp fst) matched)
   end
 
 fun goal_split_rules terms =
@@ -326,11 +325,6 @@ fun same_type_shape (ty1, ty2) =
 fun same_key (h1,h2) =
   same_const h1 h2 andalso same_type_shape (type_of h1, type_of h2)
 
-fun head_key head =
-  let val {Thy,Name,...} = dest_thy_const head
-  in persistent_name {Thy=Thy, Name=Name}
-  end
-
 fun insert_rule (rule : split_rule) (cmap : cmap) =
   let
     val head = #head rule
@@ -339,7 +333,7 @@ fun insert_rule (rule : split_rule) (cmap : cmap) =
           if same_key (head, key) then (key, rule :: rules) :: rest
           else (key, rules) :: insert rest
   in
-    Symtab.map_default (head_key head, []) insert cmap
+    Symtab.map_default (const_key head, []) insert cmap
   end
 
 fun index_rules rules =
@@ -371,7 +365,7 @@ type split_pack =
    visit : int}
 
 fun fold_candidates cmap head collect packs =
-  case Symtab.lookup_list cmap (head_key head) of
+  case Symtab.lookup_list cmap (const_key head) of
       [] => packs
     | entries =>
         let
@@ -436,8 +430,8 @@ fun scan cmap tm =
       end
 
     (* At equal depth, preorder visits argument paths in lexicographic
-       order. Rules at the same node keep the same visit index. Restore
-       the input order to sort so ties are resolved as before. *)
+       order. Index each successful pack, including multiple rules at one
+       node, so sorting preserves their collection order on ties. *)
     fun walk depth steps (binders : binder_info list) node packs =
       if is_abs node then
         let
@@ -455,7 +449,7 @@ fun scan cmap tm =
           val (head, args) = strip_comb node
           val arity = length args
           fun collect (rule, acc) =
-            case mk_pack depth packs binders node head args arity rule of
+            case mk_pack depth acc binders node head args arity rule of
                 SOME pack => pack :: acc
               | NONE => acc
           val here =
@@ -475,11 +469,13 @@ fun scan cmap tm =
     List.rev (walk 0 [] [] tm [])
   end
 
-fun pack_le (p1 : split_pack) (p2 : split_pack) =
-  #binders p1 < #binders p2 orelse
-  (#binders p1 = #binders p2 andalso
-   (#depth p1 < #depth p2 orelse
-    (#depth p1 = #depth p2 andalso #visit p1 <= #visit p2)))
+fun pack_compare (p1 : split_pack, p2 : split_pack) =
+  case Int.compare (#binders p1, #binders p2) of
+      EQUAL =>
+        (case Int.compare (#depth p1, #depth p2) of
+             EQUAL => Int.compare (#visit p1, #visit p2)
+           | order => order)
+    | order => order
 
 fun fresh_parts th =
   let
@@ -521,7 +517,7 @@ fun first_success packs tm =
 fun split_conv cmap tm =
   let
     val packs = if Symtab.is_empty cmap then []
-                else sort pack_le (scan cmap tm)
+                else Listsort.sort pack_compare (scan cmap tm)
     (* Isabelle tries only the first sorted pack.  Trying later packs
        when instantiation fails avoids one rejected rule shadowing an
        otherwise applicable rule, while retaining one split per call. *)
@@ -550,9 +546,10 @@ fun clean_asm_eq th =
 
 fun asm_eq cmap asm =
   let
-    val packs = sort pack_le (scan cmap (mk_neg asm))
+    val negated = mk_neg asm
+    val packs = Listsort.sort pack_compare (scan cmap negated)
   in
-    clean_asm_eq (first_success packs (mk_neg asm))
+    clean_asm_eq (first_success packs negated)
   end
 
 fun split_asm_tac cmap =
@@ -562,7 +559,7 @@ fun split_asm_tac cmap =
                                        acc entries) cmap []
     fun indexed_head head =
       List.exists (fn (key_head,_) => same_const key_head head)
-        (Symtab.lookup_list cmap (head_key head))
+        (Symtab.lookup_list cmap (const_key head))
     (* A short list avoids constructing a key string at each constant. *)
     val has_head =
       if length heads <= 8 then
