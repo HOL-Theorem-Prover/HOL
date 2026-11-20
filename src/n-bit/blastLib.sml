@@ -57,7 +57,11 @@ fun mk_size_thm (i,ty) = mk_less_thm (i, wordsSyntax.mk_dimindex ty)
                     !k. BIT (k + m) L = BIT k (L DIV 2 ** m)
                   for the largest m reached so far and advances m one bit
                   at a time, so the bits of a literal cost O(1) inferences
-                  each.  The last few literals are remembered.
+                  each.  The last few literals are remembered, but only
+                  within one BBLAST_CONV call (see reset_bit_lits): a
+                  theorem kept from an earlier call mentions that call's
+                  copy of L, and aconv cannot short-cut on pointer equality
+                  when comparing terms that mix the two copies.
    ------------------------------------------------------------------------ *)
 
 local
@@ -158,6 +162,7 @@ local
            end
       end
 in
+   fun reset_bit_lits () = memo := []
    fun BIT_LIT_CONV tm =
       let
          val (i, l) = bitSyntax.dest_bit tm
@@ -1278,6 +1283,7 @@ in
      end
   fun BBLAST_CONV tm =
      let
+        val () = reset_bit_lits ()
         val _ = Term.type_of tm = Type.bool orelse
                 raise ERR "BBLAST_CONV" "not a bool term"
         val (vars,tm') = boolSyntax.strip_forall tm
