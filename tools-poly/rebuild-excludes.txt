@@ -15,13 +15,6 @@ src/HolSat/sat_solvers/minisat/*.o
 src/HolSat/sat_solvers/zc2hs/zc2hs
 src/HolSat/sat_solvers/zc2hs/*.o
 
-src/holyhammer/hh/*.cmi
-src/holyhammer/hh/*.cmx
-src/holyhammer/hh/*.o
-src/holyhammer/hh/hh1/*.cmi
-src/holyhammer/hh/hh1/*.cmx
-src/holyhammer/hh/hh1/*.o
-
 tools/Holmake/Systeml.sml
 tools/mlyacc/src/mlyacc.exe
 tools/mllex/mllex.exe

@@ -284,6 +284,49 @@ New theories
 New tools
 ---------
 
+-   HOLyHammer now invokes external provers through a declarative registry,
+    without shell scripts.  E, Vampire, and the newly supported
+    Zipperposition form the default prover set.  Pinned provers can be
+    installed with `tools/download-provers`; supported binaries on `PATH`
+    also work.  Executables can be selected through
+    `prover.<name>.executable` in the hammer configuration or the
+    `HOL4_<PROVER>_EXECUTABLE` environment variables (for E,
+    `HOL4_EPROVER_EXECUTABLE`).
+
+-   HOLyHammer now runs exclusively through its parallel slice scheduler and
+    returns on the first reconstruction-verified suggestion.  Its default
+    overall timeout is now 30 seconds.  Runtime options are set with
+    `hhConfig.hh_set`; `hhConfig.hh_params` reports all effective values and
+    their provenance.  `holyHammer.set_timeout` remains as a deprecated alias
+    for `hhConfig.hh_set ("timeout", ...)`.
+
+-   HOLyHammer schedules TPTP formats, type encodings, and lambda
+    translations per prover slice.  Besides FOF, it now proves goals
+    through typed `tf0`, `tf1`, `tx0`, `tx0-`, `th0`, and `th1` problems
+    (`tx0` and `tx0-` are new; the others were previously export-only),
+    with used-axiom parse-back and Metis reconstruction.  The new
+    `hhConfig` keys `format`, `type_enc`, and `lam_trans` provide
+    schedule-wide overrides; `mono_iters` and `mono_instances` control the
+    bounded monomorphization pass.  Empty overrides retain the tested
+    per-slice schedule.
+
+-   HOLyHammer's premise selection now includes MePo relevance filtering, a
+    sparse-Naive-Bayes plus kNN MaSh learner, and their MeSh combination.  Its
+    default 24-slice schedule runs 16 kNN slices followed by eight slices
+    using these ensemble filters.  The `filter` option accepts `knn`, `mepo`,
+    `mash`, `mesh`, and `none`; its empty default retains each slice's tested
+    filter, while a nonempty value overrides the whole schedule.  Premise
+    rankings, exported problems, result-cache keys, and evaluation journals
+    are filter-aware.
+
+-   `hhEval` is a resumable HOLyHammer evaluation harness.  `run_eval`
+    evaluates experimental conditions (regime, premise selector, single
+    prover or full schedule) over a set of theories in parallel, recording
+    each result in per-theory JSONL journals; `report` summarizes an
+    experiment as `summary.json` and `report.md`.  `smoke.exe` in
+    `src/holyhammer` runs a fixed end-to-end smoke suite against the
+    installed provers.
+
 -   `statementDossierLib` generates Markdown and standalone HTML reports
     of stored theorem statements, their trust tags, assumptions, defining
     equations, datatypes and expansion boundaries. HTML terms use HOL's
@@ -311,6 +354,23 @@ New examples
 
 Incompatibilities
 -----------------
+
+-   The `holyHammer.prover` datatype has gained a `Zipperposition`
+    constructor, so exhaustive matches on it need a new case.  The
+    evaluation helpers `holyHammer.hh_pb_eval_thm` and `hh_pb_eval_thy`
+    have been removed in favor of `hhEval`.  The file-based
+    `hhReconstruct.get_lemmas` API and its status/output-file protocol have
+    also been removed.  The types of `hh`, `holyhammer`, `hh_fork`, `hh_pb`,
+    `main_hh`, and `main_hh_lemmas` are unchanged.
+
+-   The `holyHammer.premise_selection_flag` reference has been removed.
+    Execution is controlled by the `timeout`, `provers`, and `filter`
+    options through `hhConfig.hh_set`; in particular,
+    `premise_selection_flag := false` becomes
+    `hhConfig.hh_set ("filter", "none")`.  The race-result reference
+    `holyHammer.lemmas_glob` has been removed in favor of `main_hh_lemmas`.
+    Z3 is no longer in the default prover set: `z3` remains registered but
+    has no scheduler slices.
 
 -   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
     Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.

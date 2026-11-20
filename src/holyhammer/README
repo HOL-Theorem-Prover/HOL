@@ -1,31 +1,151 @@
-HOLyHammer is a machine learning for theorem proving framework.
-It automatically selects suitable premises (theorems) for the current goal and
-translates them together with the goal to automated theorem provers (ATPs).
-The final proof is reconstructed by calling Metis on the premises appearing in
-the ATP proof.
+HOLyHammer
+==========
 
-Usage (requires at least one installed external prover):
-  load "holyHammer"; open holyHammer;
-  hh ([],``1+1=2``);
-  holyhammer ``1+1=2``; (* alternatively *)
+HOLyHammer selects premises for a goal, translates the goal and premises to
+TPTP, schedules time slices across external provers, and reconstructs a proof
+with Metis.  It returns as soon as the first reconstructed proof is verified.
 
-Install external provers:
-  1) Download provers
-  - Eprover 2.0 (latest version should work too):
-      Source: http://wwwlehre.dhbw-stuttgart.de/~sschulz/E/E.html
-      Installing Eprover produces the binary file PROVER/eprover.
-  - Z3 4.0 (only):
-      Linux binary: http://isabelle.in.tum.de/components/
-  - Vampire 4.2.2 (latest version should work too):
-      Linux binary: https://vprover.github.io/download.html
-      Source: https://github.com/vprover/vampire
-      Installing Vampire produces the binary file "vampire_rel_master_3993"
-      in the top directory.
-  2) Prover binaries should be copied or linked in
-     the directory src/holyhammer/provers.
-     They should be respectively renamed to eprover, z3 and vampire.
-  3) Make sure you have the permission to execute them (chmod +x).
+Usage
+-----
 
-Questions:
-  If you have any question, you can send an email to
-  email@thibaultgauthier.fr.
+At least one external prover must be installed.
+
+    load "holyHammer";
+    open holyHammer;
+    hh ([], ``1 + 1 = 2``);
+    holyhammer ``1 + 1 = 2``;
+
+The overall default timeout is 30 seconds.  `set_timeout` is deprecated; use
+the option interface instead:
+
+    hhConfig.hh_set ("timeout", "60");
+    hhConfig.hh_set ("provers", "e vampire");
+    hhConfig.hh_set ("format", "th0");
+    hhConfig.hh_set ("type_enc", "mono_native_higher");
+    hhConfig.hh_set ("lam_trans", "lifting");
+    hhConfig.hh_params ();
+    hhConfig.print_params ();
+
+`hh_set` validates values immediately.  `hh_params` returns every effective
+option as `(name, value, provenance)`, while `print_params` prints the same
+information with short descriptions.  Runtime settings take precedence over
+the user or system configuration and environment; use `hh_unset` to remove a
+runtime override.
+
+Each call writes its TPTP problems to a fresh directory below the state
+directory (`$HOME/.hol4/hammer`, or `$HOL4_HAMMER_DIR`) and deletes it when
+the call returns, also on failure or interruption.  With `debug_dir` set,
+the problems are kept instead, in `debug_dir/problems`, next to the raw
+prover output.
+
+The options are `timeout`, `max_proofs`, `provers`, `slices`, `cores`,
+`filter`, `max_facts`, `format`, `type_enc`, `lam_trans`, `mono_iters`,
+`mono_instances`, `minimize`, `preplay_timeout`, `minimize_timeout`,
+`preplay_drop_one`, `cache`, `cache_dir`, `cache_max_entries`, `debug_dir`,
+and `verbose`.  By default a call prints only its outcome: the verified
+tactic or why it failed.  With `verbose` set it also reports every slice as
+it starts and ends.
+
+A prover's lemma list sometimes holds a lemma that sends Metis astray, so
+the list cannot be replayed within `preplay_timeout` although a sublist
+can.  With `preplay_drop_one` set, as it is by default, each list that
+fails to replay is tried again once without each of its lemmas in turn.
+These retries run only while no new list waits for reconstruction, and stop
+at the timeout.
+
+The `filter` values are:
+
+* `knn`, the existing dependency-aware nearest-neighbour selector;
+* `mepo`, a relevance filter based on the goal's constants and types;
+* `mash`, the meshed sparse-Naive-Bayes and kNN learner;
+* `mesh`, the combined MePo and MaSh ranking; and
+* `none`, all available premises in dependency order.
+
+The default value is empty, meaning that every slice uses its tested table
+filter.  A nonempty value overrides the filter across the whole schedule.
+For example, this runs every selected slice with MePo:
+
+    hhConfig.hh_set ("filter", "mepo");
+
+Use `hhConfig.hh_unset "filter"` to restore the per-slice default.  The old
+public references `timeout_glob`, `premise_selection_flag`, and `all_atps`
+have been removed; their replacements are the `timeout`, `filter`, and
+`provers` options.  `lemmas_glob` has also been removed: integrations should
+consume `main_hh_lemmas` directly.
+
+The default 24-slice schedule chooses its premise filter, TPTP format, type
+encoding, and lambda translation independently for each slice.  Its first 16
+slices retain the kNN schedule; the final eight add MePo, MaSh, and MeSh
+rankings.  The built-in slices combine the legacy FOF exporter with typed
+`tx0`, `tx0-`, `th0`, and `th1` problems.  The problem generator also
+supports `tf0` and `tf1`.  Per-slice choices are validated against the
+selected prover before proof search and are included in cache keys and
+evaluation journals.
+
+`format`, `type_enc`, and `lam_trans` are schedule-wide overrides; leave
+them empty to retain the tested per-slice choices.  Formats are `fof`,
+`tf0`, `tf1`, `tx0`, `tx0-`, `th0`, and `th1`.  Type encodings are
+`mono_native`, `mono_native_fool`, `mono_native_higher`,
+`mono_native_higher_fool`, `poly_native`, `mono_guards`, and
+`mono_guards??`; an empty encoding selects the legacy FOF exporter.  Lambda
+modes are `lifting`, `combs`, `combs_and_lifting`, and `keep_lams`.
+Unsupported prover/format combinations are rejected.  `mono_iters` controls
+monomorphization rounds, while `mono_instances` caps new instances; empty,
+the default, uses each prover's own cap.
+
+The provers are the constructors of `holyHammer.prover`: `Eprover`,
+`Vampire`, `Zipperposition`, and `Z3`.  The `provers` option names them `e`,
+`vampire`, `zipperposition`, and `z3`, and `hh_pb` takes a list of them.  Z3
+has no scheduler slices yet, so selecting it schedules nothing: a Z3 slice
+is added only once an `hhEval` measurement shows that it raises the
+portfolio's success rate rather than duplicating existing slices.
+
+Installing provers
+------------------
+
+The recommended installation command is:
+
+    tools/download-provers
+
+The end-to-end smoke suite exercises every Phase 2 slice through export,
+proof search, TSTP parse-back, and reconstruction.  It also runs cardinality
+soundness fixtures through the complete 16-slice public `hh` schedule:
+
+    cd src/holyhammer
+    ../../bin/Holmake smoke.exe
+    ./smoke.exe
+
+Alternatively, put a supported binary on `PATH`.  HOLyHammer looks for
+`eprover-ho` or `eprover`, `vampire`, `zipperposition`, and, for the
+schedule-less Z3 entry, `z3_tptp` or `z3`.
+
+The tested versions are:
+
+* E 3.2.5-ho ("Puttabong Moondrop");
+* Vampire 5.0.1; and
+* Zipperposition 2.1, Isabelle component revision 2.
+
+Executable discovery
+--------------------
+
+A prover executable may also be selected in
+`$HOME/.hol4/hammer/config` or `$HOLDIR/etc/hammer-config`:
+
+    prover.e.executable = /opt/e/bin/eprover
+
+User configuration takes precedence over system configuration.  Dedicated
+environment variables are also supported:
+
+* `HOL4_EPROVER_EXECUTABLE`;
+* `HOL4_VAMPIRE_EXECUTABLE`;
+* `HOL4_ZIPPERPOSITION_EXECUTABLE`; and
+* `HOL4_Z3_EXECUTABLE`.
+
+Discovery checks configuration, the dedicated environment variable, `PATH`,
+and versioned installation directories under
+`$HOLDIR/src/holyhammer/provers` and `$HOME/.hol4/hammer/provers`.
+
+Questions
+---------
+
+Questions may be sent to email@thibaultgauthier.fr.

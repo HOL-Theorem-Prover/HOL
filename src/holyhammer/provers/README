@@ -1,0 +1,20 @@
+HolyHammer prover installations
+================================
+
+This directory contains no prover invocation scripts.  It may hold local,
+untracked prover installations using the version-directory layout:
+
+    e-<version>/<platform>/eprover
+    vampire-<version>/<platform>/vampire
+    zipperposition-<version>/<platform>/zipperposition
+    z3-<version>/<platform>/z3
+
+`<platform>` is such as `arm64-linux` or `x86_64-darwin`.  When several
+versions are installed, HolyHammer chooses the newest version directory.
+Do not commit downloaded prover binaries.
+
+The recommended user-wide installation is performed by
+`tools/download-provers`.  It installs under
+`$HOME/.hol4/hammer/provers` instead.  A supported binary on `PATH`, an
+explicit configuration entry, or a dedicated prover environment variable
+may also be used; see `../README`.

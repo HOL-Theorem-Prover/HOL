@@ -334,7 +334,7 @@ fun fof_cjdef oc cj =
 
 fun fof_axdef oc (name,thm) =
   let
-    val statement = translate_thm thm
+    val statement = translate_axiom_thm thm
     val fofname = escape ("thm." ^ name)
   in
     os oc (fofpar ^ fofname ^ ",axiom,");

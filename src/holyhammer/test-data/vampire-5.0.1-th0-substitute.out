@@ -1,0 +1,96 @@
+% Detected formulas, will run a generic FOF schedule.
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% lrs+1011_32_sil=2000:tgt=full:alpa=true:random_seed=1782096932:st=5:i=107:sd=1:ss=included:er=filter_1 on atp_in for (1ds/107Mi)
+% Solution written to "/tmp/claude/vampire-proof-1302"
+% Refutation found. Thanks to Tanya!
+% SZS status Theorem for atp_in
+% SZS output start Proof for atp_in
+thf(type_def_5, type, ty_2Enum_2Enum: $tType).
+thf(type_def_6, type, ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cmin_2Ebool_29_29: $tType).
+thf(type_def_7, type, ty_2Emin_2Efun_28num_2Enum_2Cmin_2Ebool_29: $tType).
+thf(type_def_8, type, ty_2Emin_2Ebool: $tType).
+thf(type_def_9, type, ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29: $tType).
+thf(type_def_10, type, ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cnum_2Enum_29_29: $tType).
+thf(type_def_11, type, sTfun: ($tType * $tType) > $tType).
+thf(func_def_0, type, c_2Enum_2ESUC: (ty_2Enum_2Enum > ty_2Enum_2Enum)).
+thf(func_def_1, type, c_2Earithmetic_2E_2B: (ty_2Enum_2Enum > ty_2Enum_2Enum > ty_2Enum_2Enum)).
+thf(func_def_2, type, c_2Earithmetic_2ENUMERAL: (ty_2Enum_2Enum > ty_2Enum_2Enum)).
+thf(func_def_3, type, c_2Earithmetic_2EBIT1: (ty_2Enum_2Enum > ty_2Enum_2Enum)).
+thf(func_def_4, type, c_2Earithmetic_2EZERO: ty_2Enum_2Enum).
+thf(func_def_6, type, sK0: ty_2Enum_2Enum).
+thf(func_def_7, type, sF1: ty_2Enum_2Enum).
+thf(func_def_8, type, sF2: (ty_2Enum_2Enum > ty_2Enum_2Enum)).
+thf(func_def_9, type, sF3: ty_2Enum_2Enum).
+thf(func_def_10, type, sF4: ty_2Enum_2Enum).
+thf(func_def_11, type, sF5: ty_2Enum_2Enum).
+thf(f1,axiom,(
+  ! [X0 : ty_2Enum_2Enum] : (((c_2Enum_2ESUC @ X0)) = ((c_2Earithmetic_2E_2B @ X0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  file('/tmp/claude/tmp.cLgnDFvttn/problems/th0.mono__native__higher.keep__lams.512/atp_in',thm_2EarithmeticTheory_2EADD1)).
+thf(f2,conjecture,(
+  ! [X0 : ty_2Enum_2Enum] : (((c_2Enum_2ESUC @ X0)) = ((c_2Earithmetic_2E_2B @ X0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  file('/tmp/claude/tmp.cLgnDFvttn/problems/th0.mono__native__higher.keep__lams.512/atp_in',conjecture)).
+thf(f3,negated_conjecture,(
+  ~! [X0 : ty_2Enum_2Enum] : (((c_2Enum_2ESUC @ X0)) = ((c_2Earithmetic_2E_2B @ X0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  inference(negated_conjecture,[status(cth)],[f2])).
+thf(f4,plain,(
+  ? [X0 : ty_2Enum_2Enum] : (((c_2Enum_2ESUC @ X0)) != ((c_2Earithmetic_2E_2B @ X0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  inference(ennf_transformation,[],[f3])).
+thf(f5,plain,(
+  ? [X0 : ty_2Enum_2Enum] : (((c_2Enum_2ESUC @ X0)) != ((c_2Earithmetic_2E_2B @ X0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO))))) => (((c_2Enum_2ESUC @ sK0)) != ((c_2Earithmetic_2E_2B @ sK0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  introduced(definition,[],[skolem_symbol_introduction])).
+thf(f6,plain,(
+  (((c_2Enum_2ESUC @ sK0)) != ((c_2Earithmetic_2E_2B @ sK0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  inference(skolemisation,[status(esa),new_symbols(skolem,[sK0])],[f4,f5])).
+thf(f7,plain,(
+  ( ! [X0 : ty_2Enum_2Enum] : ((((c_2Enum_2ESUC @ X0)) = ((c_2Earithmetic_2E_2B @ X0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))) )),
+  inference(cnf_transformation,[],[f1])).
+thf(f8,plain,(
+  (((c_2Enum_2ESUC @ sK0)) != ((c_2Earithmetic_2E_2B @ sK0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  inference(cnf_transformation,[],[f6])).
+thf(f9,definition,(
+  (((c_2Enum_2ESUC @ sK0)) = sF1)),
+  introduced(definition,[new_symbols(definition,[sF1])],[function_definition])).
+thf(f10,definition,(
+  (((c_2Earithmetic_2E_2B @ sK0)) = sF2)),
+  introduced(definition,[new_symbols(definition,[sF2])],[function_definition])).
+thf(f11,definition,(
+  (((c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)) = sF3)),
+  introduced(definition,[new_symbols(definition,[sF3])],[function_definition])).
+thf(f12,definition,(
+  (((c_2Earithmetic_2ENUMERAL @ sF3)) = sF4)),
+  introduced(definition,[new_symbols(definition,[sF4])],[function_definition])).
+thf(f13,definition,(
+  (((sF2 @ sF4)) = sF5)),
+  introduced(definition,[new_symbols(definition,[sF5])],[function_definition])).
+thf(f14,plain,(
+  (sF1 != sF5)),
+  inference(definition_folding,[],[f8,f13,f12,f11,f10,f9])).
+thf(f15,plain,(
+  (((c_2Enum_2ESUC @ sK0)) = ((sF2 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))),
+  inference(superposition,[],[f7,f10])).
+thf(f18,plain,(
+  (((c_2Enum_2ESUC @ sK0)) = ((sF2 @ (c_2Earithmetic_2ENUMERAL @ sF3))))),
+  inference(forward_demodulation,[],[f15,f11])).
+thf(f19,plain,(
+  (((c_2Enum_2ESUC @ sK0)) = ((sF2 @ sF4)))),
+  inference(forward_demodulation,[],[f18,f12])).
+thf(f20,plain,(
+  (((c_2Enum_2ESUC @ sK0)) = sF5)),
+  inference(forward_demodulation,[],[f19,f13])).
+thf(f21,plain,(
+  (sF1 = sF5)),
+  inference(forward_demodulation,[],[f20,f9])).
+thf(f22,plain,(
+  $false),
+  inference(forward_subsumption_resolution,[],[f21,f14])).
+% SZS output end Proof for atp_in
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Refutation
+% Time elapsed: 0.0000 s
+% Peak memory usage: 12 MB
+% ------------------------------
+% ------------------------------
+% Success in time 0.003 s

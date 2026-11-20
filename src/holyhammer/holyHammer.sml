@@ -8,249 +8,199 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread aiLib
-  smlExecute smlRedirect smlParallel smlTimeout
-  mlFeature mlThmData mlTacticData mlNearestNeighbor
-  hhExportFof hhReconstruct hhTranslate hhTptp
+open HolKernel boolLib Thread aiLib smlRedirect mlFeature mlThmData
+  mlNearestNeighbor
 
 val ERR = mk_HOL_ERR "holyHammer"
 
-(* -------------------------------------------------------------------------
-   Settings
-   ------------------------------------------------------------------------- *)
+datatype prover = datatype hhConfig.prover
 
-val timeout_glob = ref 10
-fun set_timeout n = timeout_glob := n
-val premise_selection_flag = ref true
+fun set_timeout n = hhConfig.hh_set ("timeout", Int.toString n)
 
-(* -------------------------------------------------------------------------
-   ATPs
-   ------------------------------------------------------------------------- *)
-
-datatype prover = Eprover | Z3 | Vampire
-fun name_of atp = case atp of
-    Eprover => "eprover"
-  | Z3 => "z3"
-  | Vampire => "vampire"
-
-fun npremises_of atp =
-  if not (!premise_selection_flag) then 100000 else
-  case atp of
-    Eprover => 128
-  | Z3 => 32
-  | Vampire => 96
-
-(* ATPs called by holyhammer if their binary exists *)
-val all_atps = ref [Eprover,Z3,Vampire]
-
-(* -------------------------------------------------------------------------
-   Directories
-   ------------------------------------------------------------------------- *)
-
-fun pathl sl = case sl of
-    []  => raise ERR "pathl" "empty"
-  | [a] => a
-  | a :: m => OS.Path.concat (a, pathl m)
-
-val hhdir = pathl [HOLDIR,"src","holyhammer"]
-val bindir = pathl [hhdir,"provers"]
-fun fof_dir dir atp = pathl [dir, name_of atp ^ "_files"]
-
-(* ---------------------------------------------------------------------------
-   Evaluation log
-   ------------------------------------------------------------------------- *)
-
-val hh_eval_dir = pathl [hhdir,"eval"];
-val eval_flag = ref false
-val eval_thy = ref "scratch"
-fun log_eval s =
-  if !eval_flag then
-    let val file = hh_eval_dir ^ "/" ^ (!eval_thy) in
-      mkDir_err hh_eval_dir;
-      append_endline file s
-    end
-  else print_endline s
-
-(* ---------------------------------------------------------------------------
-   Run functions in parallel and terminate as soon as one returned a
-   positive result in lemmas_glob.
-   ------------------------------------------------------------------------- *)
-
-val (lemmas_glob : string list option ref) = ref NONE
-
-val attrib = [Thread.InterruptState Thread.InterruptAsynch,
-  Thread.EnableBroadcastInterrupt true]
-
-fun parallel_call t fl =
+fun no_prover caller =
   let
-    val _ = lemmas_glob := NONE
-    fun rec_fork f = Thread.fork (fn () => f (), attrib)
-    val threadl = map rec_fork fl
-    val rt = Timer.startRealTimer ()
-    fun loop () =
-      (
-      OS.Process.sleep (Time.fromReal 0.01);
-      if isSome (!lemmas_glob) orelse
-         not (exists Thread.isActive threadl) orelse
-         Timer.checkRealTimer rt  > Time.fromReal t
-      then (app interruptkill threadl; !lemmas_glob)
-      else loop ()
-      )
+    val message =
+      "no prover binary found; run tools/download-provers or put a " ^
+      "supported prover binary on PATH"
+    val _ = print_endline ("HolyHammer: " ^ message)
   in
-    loop ()
+    raise ERR caller message
   end
 
-(* -------------------------------------------------------------------------
-   Launch an ATP
-   ------------------------------------------------------------------------- *)
-
-val atp_ref = ref ""
-
-fun launch_atp fofdir atp t =
+fun available_provers caller provers =
   let
-    val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^
-      fofdir ^ " > /dev/null 2> /dev/null"
-    val _ = cmd_in_dir bindir cmd
-    val r = get_lemmas (fofdir ^ "/status", fofdir ^ "/out")
-  in
-    if isSome r
-    then
-      (
-      atp_ref := name_of atp;
-      log_eval ("  proof found by " ^ name_of atp ^ ":");
-      log_eval ("    " ^ mk_metis_call (valOf r));
-      lemmas_glob := r
-      )
-    else ();
-    r
-  end
-
-(* -------------------------------------------------------------------------
-   HolyHammer
-   ------------------------------------------------------------------------- *)
-
-fun export_to_atp dir premises cj atp =
-  let
-    val new_premises = first_n (npremises_of atp) premises
-    val namethml = hidef thml_of_namel new_premises
-    val fofdir = fof_dir dir atp
-    val _ = mkDir_err fofdir
-  in
-    fof_export_pb fofdir (cj,namethml)
-  end
-
-fun exists_atp atp =
-  exists_file (pathl [bindir, name_of atp])
-
-fun exists_atp_err atp =
-  let val b = exists_file (pathl [bindir, name_of atp]) in
-    if not b then print_endline ("no binary for " ^ name_of atp) else ();
-    b
-  end
-
-val lemmas_glob = ref NONE
-
-fun hh_pb dir wanted_atpl premises goal =
-  let
-    val atpl = filter exists_atp_err wanted_atpl
-    val cj = list_mk_imp goal
-    val _  = app (export_to_atp dir premises cj) atpl
-    val t1 = !timeout_glob
-    val t2 = Real.fromInt t1 + 2.0
-    fun f x = fn () => ignore (launch_atp (fof_dir dir x) x t1)
-    val olemmas = parallel_call t2 (map f atpl)
-  in
-    case olemmas of
-      NONE =>
-        (log_eval "  ATPs could not find a proof";
-        raise ERR "hh_pb" "ATPs could not find a proof")
-    | SOME lemmas =>
-      let
-        val _ = lemmas_glob := SOME lemmas
-        val (stac,tac) = hidef (hh_reconstruct lemmas) goal
-      in
-        log_eval ("  minimized proof:  \n    " ^ stac);
-        tac
+    fun available prover =
+      let val config = hhProver.config_of prover in
+        case hhProver.find_exec config of
+            SOME _ => true
+          | NONE =>
+              (print_endline ("no binary for " ^ #name config); false)
       end
-  end
-
-fun main_hh dir thmdata goal =
-  let
-    val atpl = filter exists_atp (!all_atps)
-    val _ =
-      if null atpl
-      then raise ERR "main_hh" "no ATP binary: see src/holyhammer/README"
-      else ()
-    val n = list_imax (map npremises_of atpl)
-    val premises = thmknn_wdep thmdata n (fea_of_goal true goal)
+    val available = filter available provers
   in
-    hh_pb dir atpl premises goal
+    if null available then no_prover caller else available
   end
 
-fun main_hh_lemmas dir thmdata goal =
-  (lemmas_glob := NONE; ignore (main_hh dir thmdata goal); !lemmas_glob)
+(* Deliberately a function: state_dir needs HOME and creates directories,
+   so binding it at structure-initialisation time would make merely loading
+   holyHammer fail wherever HOME is unset or the home is read-only. *)
+fun workdir () = hhConfig.state_dir ()
+
+val attrib =
+  [Thread.InterruptState Thread.InterruptAsynch,
+   Thread.EnableBroadcastInterrupt true]
+
+fun interactive_options provers =
+  hhConfig.snapshot_with
+    [("max_proofs", "1"),
+     ("provers", String.concatWith " " (map hhConfig.prover_name provers))]
+
+type unverified = hhProver.slice * string list
+
+(* A record of the proofs the schedule announced, plus, with the verbose
+   option, its own reporting.  Otherwise a call prints only its outcome. *)
+fun progress (options : hhConfig.hh_options) found event =
+  (case event of
+       hhSchedule.ProofFound pair => found := pair :: !found
+     | _ => ();
+   if #verbose options then hhSchedule.default_progress event else ())
+
+val problem_path = hhSchedule.problem_path
+
+fun output_paths directory prover =
+  let
+    val prefix = #name (hhProver.config_of prover) ^ "-"
+    fun is_output name =
+      String.isPrefix prefix name andalso String.isSuffix ".out" name
+  in
+    map (fn name => OS.Path.concat (directory, name))
+      (List.filter is_output (hhConfig.directory_names directory))
+  end
+
+fun unverified_line root debug_dir (slice : hhProver.slice, lemmas) =
+  let
+    val name = #name (hhProver.config_of (#prover slice))
+    val heading =
+      "  " ^ name ^ ": [" ^ String.concatWith ", " lemmas ^ "]"
+  in
+    case debug_dir of
+        NONE => heading
+      | SOME directory =>
+          let
+            val outputs = output_paths directory (#prover slice)
+            val output_text =
+              if null outputs then
+                OS.Path.concat (directory, name ^ "-*.out")
+              else String.concatWith ", " outputs
+          in
+            heading ^ "\n    problem: " ^ problem_path root slice ^
+            "\n    output: " ^ output_text
+          end
+  end
+
+fun failed caller root options found =
+  if null found then
+    (print_endline "  ATPs could not find a proof";
+     raise ERR caller "ATPs could not find a proof")
+  else
+    let
+      val message =
+        "ATPs found proofs, but reconstruction failed for:\n" ^
+        String.concatWith "\n"
+          (map (unverified_line root (#debug_dir options)) (List.rev found))
+    in
+      print_endline ("  " ^ message);
+      raise ERR caller message
+    end
+
+fun run_schedule caller parent options rankings goal =
+  hhSchedule.with_problem_dir parent options (fn root =>
+    let
+      val found = ref ([] : unverified list)
+      val result = hhSchedule.run_in root
+        {options = options, goal = goal, rankings = rankings,
+         progress = SOME (progress options found)}
+    in
+      case #suggestions result of
+          suggestion :: _ => suggestion
+        | [] => failed caller root options (!found)
+    end)
+
+fun explicit_rankings schedule premises =
+  map (fn (filter, _) => (filter, premises))
+    (hhSlice.filter_maxima schedule)
+
+fun options_for caller provers =
+  interactive_options (available_provers caller provers)
+
+(* The last thing a successful interactive call prints: the verified
+   tactic, with what to do with it, after every slice has reported. *)
+fun announce instruction (suggestion : hhSchedule.suggestion) =
+  print_endline ("\n" ^ instruction ^ "\n  " ^ #stac suggestion)
+
+fun hh_pb directory provers premises goal =
+  let
+    val options = options_for "hh_pb" provers
+    val schedule = hhSlice.mk_schedule options
+    val suggestion = run_schedule "hh_pb" directory options
+      (explicit_rankings schedule premises) goal
+  in
+    announce "Replace `hh_pb` with:" suggestion;
+    #tac suggestion
+  end
+
+fun main_hh_result caller directory thmdata goal =
+  let
+    val options = options_for caller (#provers (hhConfig.snapshot ()))
+    val schedule = hhSlice.mk_schedule options
+    val context = hhLearn.create_context thmdata
+    fun rank (filter, maximum) =
+      (filter, hhLearn.rank context
+        {filter = filter, pool = NONE, goal = goal, n = maximum})
+    val rankings = map rank (hhSlice.filter_maxima schedule)
+  in
+    run_schedule caller directory options rankings goal
+  end
+
+fun main_hh directory thmdata goal =
+  #tac (main_hh_result "main_hh" directory thmdata goal)
+
+fun main_hh_lemmas directory thmdata goal =
+  SOME (#lemmas (main_hh_result "main_hh_lemmas" directory thmdata goal))
   handle HOL_ERR _ => NONE
 
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
-fun hh_goal goal =
-  if not (has_boolty_goal goal)
-  then raise ERR "hh_goal" "a term is not of type bool"
+fun hh_suggestion goal =
+  if not (has_boolty_goal goal) then
+    raise ERR "hh_goal" "a term is not of type bool"
   else
     let val thmdata = hidef create_thmdata () in
-      main_hh bindir thmdata goal
+      main_hh_result "main_hh" (workdir ()) thmdata goal
     end
 
+fun hh_goal goal = #tac (hh_suggestion goal)
+
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
-fun hh goal = let val tac = hh_goal goal in hidef tac goal end
-fun holyhammer tm = hidef TAC_PROOF (([],tm), hh_goal ([],tm));
 
-(* -------------------------------------------------------------------------
-   HolyHammer evaluation without premise selection:
-   trying to re-prove theorems from their dependencies
-   ------------------------------------------------------------------------- *)
-
-fun hh_pb_eval_thm atpl (s,thm) =
+(* hidef has to span the context application, which runs the replay *)
+fun hh goal ctxt =
   let
-    val _ = print_endline ("\nTheorem: " ^ s)
-    val _ = log_eval ("\nTheorem: " ^ s)
-    val goal = dest_thm thm
-    val (b,premises) = intactdep_of_thm thm
-    val _ = log_eval ("  dependencies:\n    " ^
-      (String.concatWith "\n    " premises))
+    val suggestion = hh_suggestion goal
+    val result = hidef (#tac suggestion goal) ctxt
   in
-    if not b then (print_endline "  broken_dependencies (not tested)";
-                   log_eval "  broken dependencies (not tested)")
-    else
-      let val (_,t) = add_time (can (hh_pb bindir atpl premises)) goal in
-        log_eval ("  time: " ^ Real.toString t)
-      end
+    announce "Replace `hh` with:" suggestion;
+    result
   end
 
-fun hh_pb_eval_thy atpl thy =
-  let val b = !premise_selection_flag in
-    premise_selection_flag := false; eval_flag := true; eval_thy := thy;
-    mkDir_err hh_eval_dir;
-    remove_file (hh_eval_dir ^ "/" ^ thy);
-    app (hh_pb_eval_thm atpl) (DB.theorems thy);
-    premise_selection_flag := b; eval_flag := false; eval_thy := "scratch"
+fun holyhammer tm =
+  let
+    val suggestion = hh_suggestion ([], tm)
+    val thm = hidef TAC_PROOF (([], tm), #tac suggestion)
+  in
+    announce "Prove the statement in a script with:" suggestion;
+    thm
   end
 
-(* -------------------------------------------------------------------------
-   Function called by the tactictoe evaluation framework
-   ------------------------------------------------------------------------- *)
-
-(*
-fun hh_eval expdir (thy,n) (thmdata,tacdata) nnol goal =
-  let val b = !hide_flag in
-    hide_flag := false;
-    mkDir_err hh_eval_dir;
-    log_eval ("Goal: " ^ string_of_goal goal);
-    ignore (main_hh thmdata goal);
-    eval_flag := false; hide_flag := b;
-    eval_thy := "scratch"
-  end
-*)
-
-end (* struct *)
+end

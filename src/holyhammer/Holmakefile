@@ -1,15 +1,65 @@
-all: $(DEFAULT_TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) hhStature.uo hhMePo.uo hhLearn.uo \
+     hhTptpProblem.uo hhTypeEnc.uo \
+     hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
+     hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo \
+     hhEval.uo selftest.exe smoke.exe
+
+hhTptpProblem.uo: hhTptpProblem.sml hhTptpProblem.ui
+
+hhStature.uo: hhStature.sml hhStature.ui
+
+hhMePo.uo: hhMePo.sml hhMePo.ui
+
+hhLearn.uo: hhLearn.sml hhLearn.ui hhStature.uo hhMePo.uo
+
+hhTypeEnc.uo: hhTypeEnc.sml hhTypeEnc.ui hhTptpProblem.uo
+
+hhLamTrans.uo: hhLamTrans.sml hhLamTrans.ui
+
+hhMonomorph.uo: hhMonomorph.sml hhMonomorph.ui
+
+hhProblemGen.uo: hhProblemGen.sml hhProblemGen.ui hhTptpProblem.uo \
+                 hhTypeEnc.uo hhLamTrans.uo hhMonomorph.uo
+
+hhConfig.uo: hhConfig.sml hhConfig.ui hhTptpProblem.uo hhTypeEnc.uo \
+             hhLamTrans.uo
+
+hhProver.uo: hhProver.sml hhProver.ui hhConfig.uo
+
+hhSlice.uo: hhSlice.sml hhSlice.ui hhConfig.uo hhProver.uo
+
+hhCache.uo: hhCache.sml hhCache.ui hhConfig.uo hhProver.uo
+
+hhSchedule.uo: hhSchedule.sml hhSchedule.ui hhConfig.uo hhProver.uo \
+               hhSlice.uo hhCache.uo hhProblemGen.uo
+
+hhEval.uo: hhEval.sml hhEval.ui hhConfig.uo hhProver.uo hhSlice.uo \
+           hhSchedule.uo holyHammer.uo
+
+holyHammer.uo: holyHammer.sml holyHammer.ui hhConfig.uo hhProver.uo \
+               hhSlice.uo hhSchedule.uo hhLearn.uo
+
+selftest.uo: selftest.sml hhStature.uo hhMePo.uo hhLearn.uo \
+             hhTptpProblem.uo hhTypeEnc.uo \
+             hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
+             hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo \
+             hhEval.uo holyHammer.uo
+
+smoke.uo: smoke.sml hhEval.uo
 .PHONY: all
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe selftest.log
+smoke.exe: smoke.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe selftest.log smoke.exe
 
 ifdef HOLSELFTESTLEVEL
 all: selftest.log
 
 selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1,$@)
+	$(tee (d=$$(mktemp -d); HOL4_HAMMER_DIR=$$d HOL4_SCRATCH=$$d/scratch ./selftest.exe 2>&1; s=$$?; rm -rf $$d; exit $$s),$@)
 
 endif

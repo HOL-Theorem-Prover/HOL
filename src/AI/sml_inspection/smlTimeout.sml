@@ -68,7 +68,12 @@ fun timeLimit t f x =
       Mutex.lock m; ConditionVar.signal c; Mutex.unlock m
       )
     val worker = Thread.fork (worker_fun, attrib_async)
+    (* An interrupt of the waiting thread must not leave the worker
+       running: waitUntil re-locks m before raising it. *)
     val b = ConditionVar.waitUntil (c,m,Time.now () + t)
+      handle Interrupt =>
+        (Mutex.unlock m; Thread.setAttributes curattrib;
+         interruptkill worker; raise Interrupt)
     val _ = Mutex.unlock m
     val _ = Thread.setAttributes curattrib
     val _ = if b then () else interruptkill worker

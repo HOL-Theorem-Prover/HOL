@@ -1,0 +1,94 @@
+% done 7 iterations in 0.007s
+% SZS status Theorem for '/tmp/claude/tmp.cLgnDFvttn/problems/fof...32/atp_in'
+% SZS output start Refutation
+thf(s_type, type, s: $i > $i > $i).
+thf(c_2Enum_2ESUC_2E1_type, type, c_2Enum_2ESUC_2E1: $i > $i).
+thf(c_2Earithmetic_2ENUMERAL_2E1_type, type, c_2Earithmetic_2ENUMERAL_2E1:
+    $i > $i).
+thf(sk__3_type, type, sk__3: $i).
+thf(tyop_2Enum_2Enum_type, type, tyop_2Enum_2Enum: $i).
+thf(c_2Earithmetic_2E_2B_2E2_type, type, c_2Earithmetic_2E_2B_2E2: $i > $i > $i).
+thf(c_2Earithmetic_2EBIT1_2E1_type, type, c_2Earithmetic_2EBIT1_2E1: $i > $i).
+thf(c_2Earithmetic_2EZERO_2E0_type, type, c_2Earithmetic_2EZERO_2E0: $i).
+thf(conjecture, conjecture,
+  (![V0m_2E0:$i]:
+   ( ( s @
+       tyop_2Enum_2Enum @
+       ( c_2Enum_2ESUC_2E1 @ ( s @ tyop_2Enum_2Enum @ V0m_2E0 ) ) ) =
+     ( s @
+       tyop_2Enum_2Enum @
+       ( c_2Earithmetic_2E_2B_2E2 @
+         ( s @ tyop_2Enum_2Enum @ V0m_2E0 ) @
+         ( s @
+           tyop_2Enum_2Enum @
+           ( c_2Earithmetic_2ENUMERAL_2E1 @
+             ( s @
+               tyop_2Enum_2Enum @
+               ( c_2Earithmetic_2EBIT1_2E1 @
+                 ( s @ tyop_2Enum_2Enum @ c_2Earithmetic_2EZERO_2E0 ) ) ) ) ) ) ) ))).
+thf(zf_stmt_0, negated_conjecture,
+  (~( ![V0m_2E0:$i]:
+      ( ( s @
+          tyop_2Enum_2Enum @
+          ( c_2Enum_2ESUC_2E1 @ ( s @ tyop_2Enum_2Enum @ V0m_2E0 ) ) ) =
+        ( s @
+          tyop_2Enum_2Enum @
+          ( c_2Earithmetic_2E_2B_2E2 @
+            ( s @ tyop_2Enum_2Enum @ V0m_2E0 ) @
+            ( s @
+              tyop_2Enum_2Enum @
+              ( c_2Earithmetic_2ENUMERAL_2E1 @
+                ( s @
+                  tyop_2Enum_2Enum @
+                  ( c_2Earithmetic_2EBIT1_2E1 @
+                    ( s @ tyop_2Enum_2Enum @ c_2Earithmetic_2EZERO_2E0 ) ) ) ) ) ) ) ) )),
+  inference('cnf.neg', [status(esa)], [conjecture])).
+thf(zip_derived_cl43, plain,
+    (((s @ tyop_2Enum_2Enum @
+       (c_2Enum_2ESUC_2E1 @ (s @ tyop_2Enum_2Enum @ sk__3)))
+       != (s @ tyop_2Enum_2Enum @
+           (c_2Earithmetic_2E_2B_2E2 @ (s @ tyop_2Enum_2Enum @ sk__3) @
+            (s @ tyop_2Enum_2Enum @
+             (c_2Earithmetic_2ENUMERAL_2E1 @
+              (s @ tyop_2Enum_2Enum @
+               (c_2Earithmetic_2EBIT1_2E1 @
+                (s @ tyop_2Enum_2Enum @ c_2Earithmetic_2EZERO_2E0))))))))),
+    inference('cnf', [status(esa)], [zf_stmt_0])).
+thf(thm_2EarithmeticTheory_2EADD1, axiom,
+  (![V0m_2E0:$i]:
+   ( ( s @
+       tyop_2Enum_2Enum @
+       ( c_2Enum_2ESUC_2E1 @ ( s @ tyop_2Enum_2Enum @ V0m_2E0 ) ) ) =
+     ( s @
+       tyop_2Enum_2Enum @
+       ( c_2Earithmetic_2E_2B_2E2 @
+         ( s @ tyop_2Enum_2Enum @ V0m_2E0 ) @
+         ( s @
+           tyop_2Enum_2Enum @
+           ( c_2Earithmetic_2ENUMERAL_2E1 @
+             ( s @
+               tyop_2Enum_2Enum @
+               ( c_2Earithmetic_2EBIT1_2E1 @
+                 ( s @ tyop_2Enum_2Enum @ c_2Earithmetic_2EZERO_2E0 ) ) ) ) ) ) ) ))).
+thf(zip_derived_cl42, plain,
+    (![X0 : $i]:
+       ((s @ tyop_2Enum_2Enum @
+         (c_2Enum_2ESUC_2E1 @ (s @ tyop_2Enum_2Enum @ X0)))
+         = (s @ tyop_2Enum_2Enum @
+            (c_2Earithmetic_2E_2B_2E2 @ (s @ tyop_2Enum_2Enum @ X0) @
+             (s @ tyop_2Enum_2Enum @
+              (c_2Earithmetic_2ENUMERAL_2E1 @
+               (s @ tyop_2Enum_2Enum @
+                (c_2Earithmetic_2EBIT1_2E1 @
+                 (s @ tyop_2Enum_2Enum @ c_2Earithmetic_2EZERO_2E0))))))))),
+    inference('cnf', [status(esa)], [thm_2EarithmeticTheory_2EADD1])).
+thf(zip_derived_cl63, plain,
+    (((s @ tyop_2Enum_2Enum @
+       (c_2Enum_2ESUC_2E1 @ (s @ tyop_2Enum_2Enum @ sk__3)))
+       != (s @ tyop_2Enum_2Enum @
+           (c_2Enum_2ESUC_2E1 @ (s @ tyop_2Enum_2Enum @ sk__3))))),
+    inference('demod', [status(thm)], [zip_derived_cl43, zip_derived_cl42])).
+thf(zip_derived_cl64, plain, ($false),
+    inference('simplify', [status(thm)], [zip_derived_cl63])).
+
+% SZS output end Refutation

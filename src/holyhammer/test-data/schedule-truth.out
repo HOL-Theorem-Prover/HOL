@@ -1,0 +1,3 @@
+% SZS status Theorem
+fof(thm_2EboolTheory_2ETRUTH, axiom, $true,
+    file('schedule-fixture.p', thm_2EboolTheory_2ETRUTH)).

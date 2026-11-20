@@ -1,0 +1,10 @@
+% Recorded hermetic TSTP proof-name corpus for hhProblemGen.
+fof(thm.alpha, axiom, p).
+fof(thm2.alpha, axiom, p).
+fof(thm3.beta, axiom, p).
+fof(lam.0, axiom, p).
+fof(help.eq_ext, axiom, p).
+fof(ty.any, axiom, p).
+fof(sy.any, axiom, p).
+fof(gsy.any, axiom, p).
+fof(wit.any, axiom, p).

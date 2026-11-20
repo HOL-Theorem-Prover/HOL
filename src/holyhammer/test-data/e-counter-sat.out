@@ -1,0 +1,31 @@
+# Preprocessing class: FSSSSMSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting G-E--_302_C18_F1_URBAN_RG_S04BN with 2s (1) cores
+# G-E--_302_C18_F1_URBAN_RG_S04BN with pid 606 completed with status 1
+# Result found by G-E--_302_C18_F1_URBAN_RG_S04BN
+# Preprocessing class: FSSSSMSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting G-E--_302_C18_F1_URBAN_RG_S04BN with 2s (1) cores
+# No SInE strategy applied
+# Search class: FUUNF-FFSF00-SFFFFFNN
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 2s (1) cores
+# SAT001_MinMin_p005000_rr_RG with pid 607 completed with status 1
+# Result found by SAT001_MinMin_p005000_rr_RG
+# Preprocessing class: FSSSSMSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting G-E--_302_C18_F1_URBAN_RG_S04BN with 2s (1) cores
+# No SInE strategy applied
+# Search class: FUUNF-FFSF00-SFFFFFNN
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 2s (1) cores
+# Presaturation interreduction done
+
+# No proof found!
+# SZS status CounterSatisfiable
+# SZS output start Saturation
+fof(conjecture, conjecture, p, file('/tmp/hhprover-recordings/counter.p', conjecture)).
+fof(c_0_1, negated_conjecture, ~p, inference(fof_simplification,[status(thm)],[inference(assume_negation,[status(cth)],[conjecture])])).
+fof(c_0_2, negated_conjecture, ~p, inference(fof_nnf,[status(thm)],[c_0_1])).
+cnf(c_0_3, negated_conjecture, (~p), inference(split_conjunct,[status(thm)],[c_0_2]), ['final']).
+# SZS output end Saturation

@@ -1,0 +1,4 @@
+% SZS status Theorem
+fof(thm_2EfixtureTheory_2Eunreconstructable, axiom, $true,
+    file('schedule-fixture.p',
+         thm_2EfixtureTheory_2Eunreconstructable)).

@@ -1,5 +1,10 @@
 Exporting HOL4 problems to TPTP formats:
 
+NOTE: The dataset exporters below (`hhExportTf0`, `hhExportTf1`,
+`hhExportTh0`, `hhExportTh1`, and `hhExportSexpr`) remain for dataset
+creation only.  They are deprecated for proving; HolyHammer's proving path
+uses the unified problem generator instead.
+
   load "hhExportTh1"; open hhExportTh1;
   load "hhExportTf1"; open hhExportTf1;
   load "hhExportFof"; open hhExportFof;

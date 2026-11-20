@@ -1,6 +1,10 @@
-eprover
-vampire
-z3
-eprover_files/*
-vampire_files/*
-z3_files/*
+/e-*/
+/vampire-*/
+# Legacy flat layout: a binary copied straight into this directory.
+/eprover
+/vampire
+/z3
+/zipperposition
+/zipperposition-*/
+/z3-*/
+/*_files/

@@ -1,0 +1,53 @@
+% done 1 iterations in 0.002s
+% SZS status Theorem for '/tmp/claude/tmp.cLgnDFvttn/problems/th1.mono__native__higher__fool.keep__lams.128/atp_in'
+% SZS output start Refutation
+thf(ty_2Enum_2Enum_type, type, ty_2Enum_2Enum: $tType).
+thf(c_2Earithmetic_2ENUMERAL_type, type, c_2Earithmetic_2ENUMERAL: ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(c_2Enum_2ESUC_type, type, c_2Enum_2ESUC: ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(c_2Earithmetic_2EBIT1_type, type, c_2Earithmetic_2EBIT1: ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(c_2Earithmetic_2E_2B_type, type, c_2Earithmetic_2E_2B: ty_2Enum_2Enum >
+                                                           ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(c_2Earithmetic_2EZERO_type, type, c_2Earithmetic_2EZERO: ty_2Enum_2Enum).
+thf(sk__type, type, sk_: ty_2Enum_2Enum).
+thf(conjecture, conjecture,
+  (![V_m:ty_2Enum_2Enum]:
+   ( ( c_2Enum_2ESUC @ V_m ) =
+     ( c_2Earithmetic_2E_2B @
+       V_m @
+       ( c_2Earithmetic_2ENUMERAL @
+         ( c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO ) ) ) ))).
+thf(zf_stmt_0, negated_conjecture,
+  (~( ![V_m:ty_2Enum_2Enum]:
+      ( ( c_2Enum_2ESUC @ V_m ) =
+        ( c_2Earithmetic_2E_2B @
+          V_m @
+          ( c_2Earithmetic_2ENUMERAL @
+            ( c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO ) ) ) ) )),
+  inference('cnf.neg', [status(esa)], [conjecture])).
+thf(zip_derived_cl1, plain,
+    (((c_2Enum_2ESUC @ sk_)
+       != (c_2Earithmetic_2E_2B @ sk_ @
+           (c_2Earithmetic_2ENUMERAL @
+            (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO))))),
+    inference('cnf', [status(esa)], [zf_stmt_0])).
+thf(thm_2EarithmeticTheory_2EADD1, axiom,
+  (![V_m:ty_2Enum_2Enum]:
+   ( ( c_2Enum_2ESUC @ V_m ) =
+     ( c_2Earithmetic_2E_2B @
+       V_m @
+       ( c_2Earithmetic_2ENUMERAL @
+         ( c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO ) ) ) ))).
+thf(zip_derived_cl0, plain,
+    (![X0 : ty_2Enum_2Enum]:
+       ((c_2Enum_2ESUC @ X0)
+         = (c_2Earithmetic_2E_2B @ X0 @
+            (c_2Earithmetic_2ENUMERAL @
+             (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO))))),
+    inference('cnf', [status(esa)], [thm_2EarithmeticTheory_2EADD1])).
+thf(zip_derived_cl2, plain,
+    (((c_2Enum_2ESUC @ sk_) != (c_2Enum_2ESUC @ sk_))),
+    inference('demod', [status(thm)], [zip_derived_cl1, zip_derived_cl0])).
+thf(zip_derived_cl3, plain, ($false),
+    inference('simplify', [status(thm)], [zip_derived_cl2])).
+
+% SZS output end Refutation

@@ -1,0 +1,5 @@
+% done 1 iterations in 0.001s
+% Final clauses: 1
+Clauses:
+[¬p*]/id:0/depth:0/penalty:1/red:false
+% SZS status CounterSatisfiable for '/tmp/hhprover-recordings/counter.p'

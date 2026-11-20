@@ -1,0 +1,31 @@
+These are raw stdout recordings captured on 2026-07-15 from the pinned
+Phase 0 prover binaries:
+
+  E 3.2.5-ho, Vampire 5.0.1, and Zipperposition 2.1.
+
+The theorem recordings use an escaped HolyHammer axiom name
+`thm_2Ekeep__name`; parser tests therefore check both unescaping and removal
+of the `thm.` prefix.  The E theorem recording also retains its
+`--auto-schedule` comment chatter.  The versioned Phase 2 recordings were
+captured on 2026-08-04 from the full export/prove/parse-back/reconstruction
+smoke path, each using `arithmeticTheory.ADD1`.  They include the documented
+Vampire TH0, E TX0-minus, and Zipperposition legacy-FOF substitutions for
+pinned-parser rejections of TF1, TF0, and guarded FOF respectively.
+Pigeonhole instances produced E's
+`GaveUp`, Vampire's `Timeout`, and Zipperposition's `ResourceOut` (the
+Zipperposition timeout spelling).  The Zipperposition `GaveUp` recording is
+from a small higher-order counterexample.  Version recordings are the
+corresponding raw `--version` output.
+
+`runner-print-e.sh` and `runner-forking-sleeper.sh` are hermetic process
+runner and scheduler fixtures.  The former prints the recorded E theorem
+output by default and accepts an optional delay and recording filename.  The
+latter starts a long-lived child, prints its pid, and remains alive so the
+process-group cancellation selftest can verify that both generations die.
+The `schedule-*.out` files are minimal E-style theorem outputs naming
+replayable HOL axioms and one deliberately unavailable fixture axiom.  The
+shell is used only as fixture material, never by the production runner or
+scheduler.
+
+`problems/` contains hermetic golden TPTP problems emitted by
+`hhTptpProblem` for FOF, TF0, TX0, TF1, TH0, and TH1.

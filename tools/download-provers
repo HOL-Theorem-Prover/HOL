@@ -1,0 +1,389 @@
+#!/bin/sh
+
+# Download the pinned HolyHammer prover portfolio.
+
+set -eu
+
+prog=${0##*/}
+force=false
+list=false
+only=
+dest_arg=
+platform=
+os=
+temp=
+
+usage() {
+  cat <<EOF
+Usage: $prog [--dest DIR] [--only PROVER] [--force] [--list]
+
+Download e, vampire, and zipperposition for the current platform.
+PROVER is one of: e, vampire, zipperposition.
+EOF
+}
+
+fail() {
+  printf '%s: error: %s\n' "$prog" "$*" >&2
+  exit 1
+}
+
+need_arg() {
+  if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+    fail "$1 requires an argument"
+  fi
+}
+
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --dest)
+      need_arg "$@"
+      dest_arg=$2
+      shift 2
+      ;;
+    --only)
+      need_arg "$@"
+      only=$2
+      shift 2
+      ;;
+    --force)
+      force=true
+      shift
+      ;;
+    --list)
+      list=true
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      [ "$#" -eq 0 ] || fail "unexpected argument: $1"
+      ;;
+    *)
+      fail "unknown option: $1"
+      ;;
+  esac
+done
+
+case $only in
+  ''|e|vampire|zipperposition) ;;
+  *) fail "unknown prover '$only' (expected e, vampire, or zipperposition)" ;;
+esac
+
+kernel=$(uname -s) || fail "cannot detect the operating system"
+machine=$(uname -m) || fail "cannot detect the machine architecture"
+
+case $kernel in
+  Linux) os=linux ;;
+  Darwin) os=darwin ;;
+  *) fail "unsupported platform: $kernel $machine" ;;
+esac
+
+case $machine in
+  x86_64|amd64) arch=x86_64 ;;
+  arm64|aarch64) arch=arm64 ;;
+  *) fail "unsupported platform: $kernel $machine" ;;
+esac
+platform=$arch-$os
+
+isabelle=https://isabelle.in.tum.de/components
+e_url=$isabelle/e-3.2.tar.gz
+z_url=$isabelle/zipperposition-2.1-2.tar.gz
+z_root=zipperposition-2.1-2
+v_base=https://github.com/vprover/vampire/releases/download/v5.0.1
+vlx_url=$v_base/vampire-Linux-X64.zip
+vla_url=$v_base/vampire-Linux-ARM64.zip
+vdx_url=$v_base/vampire-macOS-X64.zip
+vda_url=$v_base/vampire-macOS-ARM64.zip
+
+e_sha=adc35617f10c74ab8d3d13aacac57a68b9ce2c61b6da9ced5e2e370469b77305
+z_sha=98adec94cf87507b6762eca7d9618fcee7d94496c09368c146001c59174874b8
+vlx_sha=6ff2f42ea7fb9753ee104efc3e623d5e39443190f7c82a63e1e1517bf9d2cde3
+vla_sha=2fc419d3ac1eb075b4ceb6ce770242247507afd8c64f897799e479643f4b2c6b
+vdx_sha=e252f1bf8c41f17f620a0009f8952809fc473a1250cad010fc1a8c43ae9af1a9
+vda_sha=8c92e649fe7bc622a70000afbdf5a5c51007b384e2d8b8235c95474cc7a68f35
+
+# name|version|platform|url|sha256|archive type|binary directory member
+pins() {
+  cat <<EOF
+e|3.2.5-ho|x86_64-linux|$e_url|$e_sha|tar.gz|e-3.2/x86_64-linux
+e|3.2.5-ho|arm64-linux|$e_url|$e_sha|tar.gz|e-3.2/arm64-linux
+e|3.2.5-ho|x86_64-darwin|$e_url|$e_sha|tar.gz|e-3.2/x86_64-darwin
+e|3.2.5-ho|arm64-darwin|$e_url|$e_sha|tar.gz|e-3.2/arm64-darwin
+vampire|5.0.1|x86_64-linux|$vlx_url|$vlx_sha|zip|.
+vampire|5.0.1|arm64-linux|$vla_url|$vla_sha|zip|.
+vampire|5.0.1|x86_64-darwin|$vdx_url|$vdx_sha|zip|.
+vampire|5.0.1|arm64-darwin|$vda_url|$vda_sha|zip|.
+zipperposition|2.1-2|x86_64-linux|$z_url|$z_sha|tar.gz|$z_root/x86_64-linux
+zipperposition|2.1-2|arm64-linux|$z_url|$z_sha|tar.gz|$z_root/arm64-linux
+zipperposition|2.1-2|x86_64-darwin|$z_url|$z_sha|tar.gz|$z_root/x86_64-darwin
+zipperposition|2.1-2|arm64-darwin|$z_url|$z_sha|tar.gz|$z_root/arm64-darwin
+EOF
+}
+
+selected() {
+  [ -z "$only" ] || [ "$only" = "$1" ]
+}
+
+pin_for() {
+  pins | awk -F '|' -v name="$1" -v plat="$platform" \
+    '$1 == name && $3 == plat { print; found = 1 }
+     END { if (!found) exit 1 }'
+}
+
+if $list; then
+  printf 'Pinned provers for %s:\n' "$platform"
+  for prover in e vampire zipperposition; do
+    selected "$prover" || continue
+    row=$(pin_for "$prover") || fail "no pin for $prover on $platform"
+    version=$(printf '%s\n' "$row" | awk -F '|' '{ print $2 }')
+    printf '  %-18s %s\n' "$prover" "$version"
+  done
+  exit 0
+fi
+
+writable_destination() {
+  candidate=$1
+  if [ -d "$candidate" ]; then
+    [ -w "$candidate" ]
+  else
+    parent=${candidate%/*}
+    [ "$parent" != "$candidate" ] && [ -d "$parent" ] && [ -w "$parent" ]
+  fi
+}
+
+if [ -n "$dest_arg" ]; then
+  dest=$dest_arg
+elif [ -n "${HOL4_HAMMER_DIR:-}" ]; then
+  dest=$HOL4_HAMMER_DIR/provers
+elif [ -n "${HOLDIR:-}" ] &&
+     writable_destination "$HOLDIR/src/holyhammer/provers"; then
+  dest=$HOLDIR/src/holyhammer/provers
+else
+  [ -n "${HOME:-}" ] || fail "HOME is not set; use --dest DIR"
+  dest=$HOME/.hol4/hammer/provers
+fi
+
+mkdir -p "$dest" || fail "cannot create destination: $dest"
+if [ ! -d "$dest" ] || [ ! -w "$dest" ]; then
+  fail "destination is not writable: $dest"
+fi
+dest=$(cd "$dest" && pwd -P) || fail "cannot resolve destination: $dest"
+command -v curl >/dev/null 2>&1 || fail "curl is required"
+
+if command -v sha256sum >/dev/null 2>&1; then
+  hash_command=sha256sum
+elif command -v shasum >/dev/null 2>&1; then
+  hash_command=shasum
+else
+  fail "sha256sum or shasum is required"
+fi
+
+hash_file() {
+  if [ "$hash_command" = sha256sum ]; then
+    hash_output=$(sha256sum "$1") || return 1
+  else
+    hash_output=$(shasum -a 256 "$1") || return 1
+  fi
+  hash=${hash_output%% *}
+  case $hash in
+    ''|*[!0-9a-fA-F]*) return 1 ;;
+  esac
+  [ "${#hash}" -eq 64 ] || return 1
+  printf '%s\n' "$hash"
+}
+
+temp=$(mktemp -d "${TMPDIR:-/tmp}/download-provers.XXXXXX") ||
+  fail "cannot create a temporary directory"
+cleanup() {
+  [ -z "$temp" ] || rm -rf "$temp"
+}
+trap cleanup 0 1 2 3 15
+
+binary_relative() {
+  case $1 in
+    e) printf '%s/eprover\n' "$platform" ;;
+    vampire) printf '%s/vampire\n' "$platform" ;;
+    zipperposition) printf '%s/zipperposition\n' "$platform" ;;
+  esac
+}
+
+clear_quarantine() {
+  [ "$os" = darwin ] || return 0
+  command -v xattr >/dev/null 2>&1 || return 0
+  xattr -d com.apple.quarantine "$1" >/dev/null 2>&1 || :
+}
+
+check_binary() {
+  check_path=$1
+  [ -x "$check_path" ] || return 1
+  "$check_path" --version >/dev/null 2>&1
+}
+
+run_failure() {
+  if [ "$os" = darwin ]; then
+    printf '%s: error: %s did not run; Gatekeeper may have blocked it.\n' \
+      "$prog" "$1" >&2
+    printf '%s\n' \
+      'Approve it in System Settings > Privacy & Security, then retry.' >&2
+  else
+    printf '%s: error: installed %s binary did not run\n' \
+      "$prog" "$1" >&2
+  fi
+  exit 1
+}
+
+gmp_is_missing() {
+  [ "$os" = linux ] || return 1
+  if command -v ldd >/dev/null 2>&1; then
+    gmp_probe=$temp/gmp-probe
+    cp "$1" "$gmp_probe"
+    gmp_trace=$(ldd "$gmp_probe" 2>/dev/null || :)
+    rm -f "$gmp_probe"
+    printf '%s\n' "$gmp_trace" |
+      grep 'libgmp\.so\.10.*not found' >/dev/null
+  elif command -v ldconfig >/dev/null 2>&1; then
+    if ldconfig -p 2>/dev/null | grep 'libgmp\.so\.10' >/dev/null; then
+      return 1
+    else
+      return 0
+    fi
+  else
+    return 0
+  fi
+}
+
+shell_quote() {
+  escaped=$(printf '%s\n' "$1" | sed "s/'/'\\\\''/g")
+  printf "'%s'" "$escaped"
+}
+
+write_gmp_wrapper() {
+  wrapper=$1
+  wrapper_dir=$(shell_quote "$2")
+  {
+    printf '%s\n' '#!/bin/sh'
+    # shellcheck disable=SC2016
+    printf '%s%s%s%s%s\n' 'LD_LIBRARY_PATH=' "$wrapper_dir" \
+      '${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} exec ' "$wrapper_dir" \
+      '/z.bin "$@"'
+  } >"$wrapper"
+  chmod +x "$wrapper"
+}
+
+make_gmp_wrapper() {
+  wrapper=$1
+  mv "$wrapper" "${wrapper%/*}/z.bin"
+  write_gmp_wrapper "$wrapper" "${wrapper%/*}"
+}
+
+install_pin() {
+  pin_name=$1
+  pin_version=$2
+  pin_platform=$3
+  pin_url=$4
+  pin_sha=$5
+  pin_type=$6
+  pin_member=$7
+
+  [ "$pin_platform" = "$platform" ] || fail "internal platform mismatch"
+  target=$dest/$pin_name-$pin_version
+  marker=$target/.download-provers.sha256
+  relative=$(binary_relative "$pin_name")
+  expected_marker="$pin_sha  $platform"
+  installed_marker=$(sed -n '2p' "$marker" 2>/dev/null || :)
+
+  if ! $force && [ -f "$marker" ] &&
+     [ "$(sed -n '1p' "$marker")" = "$expected_marker" ] &&
+     [ -x "$target/$relative" ] &&
+     [ "$(hash_file "$target/$relative")  $relative" = \
+       "$installed_marker" ] && check_binary "$target/$relative"; then
+    printf '%s %s is already installed; skipping\n' \
+      "$pin_name" "$pin_version"
+    return 0
+  fi
+
+  work=$temp/$pin_name
+  archive=$work/archive
+  extracted=$work/extracted
+  image=$work/image
+  rm -rf "$work"
+  mkdir -p "$extracted" "$image"
+
+  printf 'Downloading %s %s for %s...\n' \
+    "$pin_name" "$pin_version" "$platform"
+  curl -fL "$pin_url" -o "$archive" ||
+    fail "download failed: $pin_url"
+  actual=$(hash_file "$archive") || fail "cannot checksum $pin_name"
+  if [ "$actual" != "$pin_sha" ]; then
+    fail "checksum mismatch for $pin_name: expected $pin_sha, got $actual"
+  fi
+  printf 'Checksum verified for %s.\n' "$pin_name"
+
+  case $pin_type in
+    tar.gz)
+      tar -xzf "$archive" -C "$extracted" ||
+        fail "cannot extract $pin_name archive"
+      root=${pin_member%%/*}
+      [ -d "$extracted/$pin_member" ] ||
+        fail "archive is missing $pin_member"
+      cp -R "$extracted/$root/." "$image/" ||
+        fail "cannot stage $pin_name"
+      ;;
+    zip)
+      command -v unzip >/dev/null 2>&1 || fail "unzip is required"
+      mkdir -p "$image/$platform"
+      unzip -q "$archive" -d "$image/$platform" ||
+        fail "cannot extract $pin_name archive"
+      ;;
+    *) fail "internal error: unknown archive type $pin_type" ;;
+  esac
+
+  binary=$image/$relative
+  [ -f "$binary" ] || fail "archive is missing the $pin_name binary"
+  chmod +x "$binary"
+  if [ "$pin_name" = zipperposition ] && gmp_is_missing "$binary"; then
+    make_gmp_wrapper "$binary"
+  fi
+  clear_quarantine "$binary"
+  if [ -f "${binary%/*}/z.bin" ]; then
+    clear_quarantine "${binary%/*}/z.bin"
+  fi
+  check_binary "$binary" || run_failure "$pin_name"
+
+  pending=$dest/.$pin_name-$pin_version.tmp.$$
+  rm -rf "$pending"
+  mkdir "$pending"
+  cp -R "$image/." "$pending/" || fail "cannot stage install in $dest"
+  rm -rf "$target"
+  mv "$pending" "$target" || fail "cannot install $target"
+
+  if [ -f "${target}/${relative%/*}/z.bin" ]; then
+    write_gmp_wrapper "$target/$relative" \
+      "${target}/${relative%/*}"
+    clear_quarantine "${target}/${relative%/*}/z.bin"
+  fi
+  clear_quarantine "$target/$relative"
+  check_binary "$target/$relative" || run_failure "$pin_name"
+  binary_sha=$(hash_file "$target/$relative") ||
+    fail "cannot checksum installed $pin_name binary"
+  printf '%s\n%s  %s\n' "$expected_marker" "$binary_sha" "$relative" \
+    >"$marker"
+  printf 'Installed %s %s in %s\n' "$pin_name" "$pin_version" "$target"
+}
+
+for prover in e vampire zipperposition; do
+  selected "$prover" || continue
+  row=$(pin_for "$prover") || fail "no pin for $prover on $platform"
+  old_ifs=$IFS
+  IFS='|'
+  read -r pin_name pin_version pin_platform pin_url pin_sha pin_type \
+    pin_member <<EOF
+$row
+EOF
+  IFS=$old_ifs
+  install_pin "$pin_name" "$pin_version" "$pin_platform" "$pin_url" \
+    "$pin_sha" "$pin_type" "$pin_member"
+done
