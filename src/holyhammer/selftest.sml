@@ -3869,21 +3869,34 @@ fun test_hhReconstruct () =
       (fetched "hh_int_add0" andalso fetched "hh_other_add0")
     val _ = expect "an ancestor's lemma is named by a copy bound to its name"
       (String.isSuffix " [ADD_0]" (stac_in "arithmetic" "ADD_0"))
-    (* The limit of every minimisation attempt comes from the replay of
-       the full list (0.5 s: 1.2 s), not from the last success: dropping
-       "a" replays in 1.1 s, a marginal success, and the attempts after
-       it must not get 2 * 1.1 + 0.2. *)
-    val limits = ref ([] : real list)
-    fun fake limit candidate =
+    (* The limit of a minimisation attempt is 2 t + 0.2 capped by the
+       minimize_timeout, t the fastest verified replay so far, starting
+       from the replay of the full list (0.5 s).  Dropping "a" replays in
+       1.1 s, a marginal success: neither the last success (the limit
+       would rise to 2.4) nor the start (the limit would stay 1.2 after
+       dropping "b" replays in 0.2 s) gives the limits below. *)
+    fun near (x, y) = Real.abs (x - y) < 1E~9
+    fun fake limits limit candidate =
       (limits := limit :: !limits;
-       if candidate = ["b", "c", "d"] then SOME ("tactic", 1.1) else NONE)
-    val (kept, (_, best_time)) =
-      hhReconstruct.drop_one_minimize fake (2.0 * 0.5 + 0.2) NONE
-        ["a", "b", "c", "d"] ("tactic", 0.5)
-    val _ = expect "every minimisation attempt keeps the original limit"
-      (ListPair.allEq Real.== (!limits, [1.2, 1.2, 1.2, 1.2]) andalso
-       kept = ["b", "c", "d"] andalso
-       Real.== (best_time, 1.1))
+       if candidate = ["b", "c", "d"] then SOME ("tactic", 1.1)
+       else if candidate = ["c", "d"] then SOME ("tactic", 0.2)
+       else NONE)
+    fun run cap =
+      let
+        val limits = ref ([] : real list)
+        val (kept, (_, best_time)) =
+          hhReconstruct.drop_one_minimize (fake limits) cap NONE
+            ["a", "b", "c", "d"] ("tactic", 0.5)
+      in
+        (rev (!limits), kept, best_time)
+      end
+    val (limits, kept, best_time) = run 10.0
+    val _ = expect "attempt limits follow the fastest replay so far"
+      (ListPair.allEq near (limits, [1.2, 1.2, 0.6, 0.6]) andalso
+       kept = ["c", "d"] andalso Real.== (best_time, 0.2))
+    val (limits, _, _) = run 0.9
+    val _ = expect "the minimize_timeout caps the attempt limits"
+      (ListPair.allEq near (limits, [0.9, 0.9, 0.6, 0.6]))
   in
     ()
   end

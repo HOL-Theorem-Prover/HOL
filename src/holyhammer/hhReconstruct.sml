@@ -85,17 +85,18 @@ fun bound_name lemma =
   end
   handle Interrupt => raise Interrupt | _ => lemma
 
-(* An attempt may take at most twice the time of the replay the
-   minimisation starts from, plus some slack; minimize_timeout caps it.
-   A failing attempt, the common case for a needed fact, otherwise runs
-   out the whole minimize_timeout.  Sledgehammer's minimiser bases the
-   limit on the last successful replay, but then a marginal success (an
-   attempt that only just fits) raises the limit of every later attempt,
-   and the next ones run out a longer limit: the time of a minimisation
-   depends on whether one attempt beats its limit by a few milliseconds.
-   Here the limit is fixed once, from the verified replay of the full
-   list, so a minimised list replays within 2 t0 + slack of the original
-   one, however many drops succeed. *)
+(* An attempt may take at most twice the time of the fastest verified
+   replay so far in this minimisation, plus some slack; minimize_timeout
+   caps it.  A failing attempt, the common case for a needed fact,
+   otherwise runs out the whole minimize_timeout.  The fastest replay
+   starts as the verified replay the minimisation starts from (the full
+   list, or the list without its permutative equations) and improves
+   when a shorter list replays faster.  Sledgehammer's minimiser bases
+   the limit on the last successful replay, but then a marginal success
+   (an attempt that only just fits) raises the limit of every later
+   attempt, and the next ones run out a longer limit: the time of a
+   minimisation depends on whether one attempt beats its limit by a few
+   milliseconds.  With the minimum the limit never rises. *)
 val attempt_factor = 2.0
 val attempt_slack = 0.2
 
@@ -108,27 +109,30 @@ fun out_of_time NONE = false
 (* Drops the lemmas one at a time, keeping a lemma when the replay
    without it fails.  try limit candidate is the replay, within limit
    seconds, of the candidate list, and gives its tactic and time when it
-   succeeds.  Every attempt gets the same limit, from the time of the
-   replay of best, the verified result for the full list.  Every
-   intermediate list is verified, so stopping at the deadline returns a
-   verified list. *)
-fun drop_one_minimize try limit deadline lemmas best =
+   succeeds.  The limit of an attempt is attempt_timeout of the fastest
+   replay so far (see above), starting from the time of best, the
+   verified result the minimisation starts from.  Every intermediate
+   list is verified, so stopping at the deadline returns a verified
+   list. *)
+fun drop_one_minimize try minimize_timeout deadline lemmas best =
   let
-    fun loop kept [] best = (kept, best)
-      | loop kept (lemma :: rest) best =
+    fun loop kept [] best _ = (kept, best)
+      | loop kept (lemma :: rest) best t_min =
           if out_of_time deadline then (kept @ lemma :: rest, best)
           else
-            case try limit (kept @ rest) of
-                SOME found => loop kept rest found
-              | NONE => loop (kept @ [lemma]) rest best
+            case try (attempt_timeout minimize_timeout t_min)
+                     (kept @ rest) of
+                SOME (found as (_, t)) =>
+                  loop kept rest found (Real.min (t_min, t))
+              | NONE => loop (kept @ [lemma]) rest best t_min
   in
-    loop [] lemmas best
+    loop [] lemmas best (snd best)
   end
 
-fun minimize_lemmas minimize_timeout deadline g lemmas (best as (_, time)) =
+fun minimize_lemmas minimize_timeout deadline g lemmas best =
   drop_one_minimize
     (fn limit => fn candidate => replay limit (mk_metis_call candidate) g)
-    (attempt_timeout minimize_timeout time) deadline lemmas best
+    minimize_timeout deadline lemmas best
 
 (* A permutative equation, such as commutativity, has sides that are
    instances of each other but not equal.  Metis cannot orient it, and
