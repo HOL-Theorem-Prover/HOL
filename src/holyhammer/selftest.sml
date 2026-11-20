@@ -4871,25 +4871,29 @@ fun test_schedule_legacy_sharing () =
     remove_tree root
   end
 
-(* Launch pacing: within one run, prover launches are launch_gap apart,
-   a cache hit is not paced, and a stop or an interrupt during the ramp
-   launches nothing more. *)
+(* A reference holds a value for the run of f and is restored whatever
+   happens. *)
+fun with_ref (r, value) f =
+  Portable.bracket (fn () => !r) (fn old => r := old)
+    (fn _ => (r := value; f ()))
+
+(* Launch pacing: within one run, prover launch slots are launch_gap
+   apart, in schedule order, a launch waits only while another prover of
+   the run is starting or running, a cache hit is not paced, and a stop or
+   an interrupt during the ramp launches nothing more.  test_hhSchedule
+   runs it under both exports. *)
 fun test_schedule_pacing parser =
   let
     val name = "hh-schedule-pacing"
     val gap = Time.fromMilliseconds 400
-    fun slices file =
-      map (fn delay => fixture_slice Z3 [delay, file] 1)
-        ["0", "0.0", "0.00", "0.000"]
+    (* Four distinct slices (the delay of the fixture prover is the first
+       extra option, and the options make the cache keys differ). *)
+    fun ids base = [base, base ^ ".0", base ^ ".00", base ^ ".000"]
+    fun slices_of delays file =
+      map (fn delay => fixture_slice Z3 [delay, file] 1) delays
+    fun slices base file = slices_of (ids base) file
     fun with_gap time f =
-      let
-        val old = !hhSchedule_Test.launch_gap
-        val _ = hhSchedule_Test.launch_gap := SOME time
-        val result = f () handle e =>
-          (hhSchedule_Test.launch_gap := old; raise e)
-      in
-        (hhSchedule_Test.launch_gap := old; result)
-      end
+      with_ref (hhSchedule_Test.launch_gap, SOME time) f
     val times = ref ([] : Time.time list)
     val times_mutex = Mutex.mutex ()
     fun note _ =
@@ -4912,10 +4916,12 @@ fun test_schedule_pacing parser =
       | diffs _ = []
     val wanted = Time.toReal gap
     (* Spaced launches (cache off, so that mk_command runs once each). *)
-    val config = printer_config name (slices "e-gave-up.out") note parser
+    val config = printer_config name (slices "0" "e-gave-up.out") note parser
+    val spacing_config =
+      printer_config name (slices "1" "e-gave-up.out") note parser
     val options = fixture_options [Z3] 4 4 30 1 false "" NONE
     val (first, ordered) =
-      with_fixtures [(Z3, config)] (fn () =>
+      with_fixtures [(Z3, spacing_config)] (fn () =>
         with_gap gap (fn () =>
           let
             val (first, _) = timed_run options
@@ -4947,7 +4953,7 @@ fun test_schedule_pacing parser =
     (* A stop during the ramp: the first proof ends the run at once and
        the slices still waiting for their launch slot are never launched. *)
     val long_gap = Time.fromSeconds 4
-    val stop_config = printer_config name (slices "schedule-truth.out")
+    val stop_config = printer_config name (slices "0.3" "schedule-truth.out")
       (fn _ => ()) parser
     val stop_options = fixture_options [Z3] 4 4 30 1 false "" NONE
     val ((stopped, elapsed), stop_spawns) =
@@ -4965,7 +4971,7 @@ fun test_schedule_pacing parser =
     val _ = expect "pacing: a stop during the ramp launches nothing more"
       (stop_spawns = 1)
     (* An interrupt of the caller during the ramp. *)
-    val int_config = printer_config name (slices "e-gave-up.out")
+    val int_config = printer_config name (slices "2" "e-gave-up.out")
       (fn _ => ()) parser
     val result = ref NONE
     val (int_elapsed, int_spawns) =
@@ -4994,6 +5000,83 @@ fun test_schedule_pacing parser =
           | NONE => false))
     val _ = expect "pacing: an interrupt during the ramp launches nothing more"
       (int_spawns = 1)
+    (* No competing prover, no wait: one worker runs fast-failing slices
+       back to back, though the gap is long. *)
+    val one_config =
+      printer_config name (slices "0" "e-gave-up.out") (fn _ => ()) parser
+    val one_options = fixture_options [Z3] 4 1 30 1 false "" NONE
+    val ((one_result, one_elapsed), one_spawns) =
+      with_fixtures [(Z3, one_config)] (fn () =>
+        with_gap (Time.fromSeconds 2) (fn () =>
+          let
+            val _ = hhProver.reset_spawn_count ()
+            val r = timed_run one_options
+          in
+            (r, hhProver.spawn_count ())
+          end))
+    val _ = expect "pacing: with nothing else running a launch does not wait"
+      (length (#slices_run one_result) = 4 andalso one_spawns = 4 andalso
+       one_elapsed < 1.5)
+    (* Schedule order: the first slice dawdles before its launch (its
+       command is built, for the cache key, after a pause), yet the slots
+       go in the order of the schedule.  The second run finds the slices 1
+       and 3 in the cache (the first run had other slices 0 and 2): the
+       hits take no slot and the misses keep their order. *)
+    val order_root = OS.FileSys.tmpName ()
+    val _ = remove_tree order_root
+    val _ = mkdir order_root
+    fun dawdler first =
+      let val dawdled = ref false in
+        fn (request : hhProver.run_request) =>
+          if hd (#extra request) = first andalso not (!dawdled)
+          then (dawdled := true;
+                OS.Process.sleep (Time.fromMilliseconds 300))
+          else ()
+      end
+    fun order_run delays dawdle cache_dir =
+      with_fixtures
+        [(Z3, printer_config name (slices_of delays "e-gave-up.out")
+                (dawdler dawdle) parser)]
+        (fn () =>
+          let
+            val _ = hhProver.reset_spawn_count ()
+            val ((_, events), elapsed) =
+              let
+                val start = Time.now ()
+                val r = run_schedule
+                  (fixture_options [Z3] 4 4 30 1 true cache_dir NONE)
+                val finish = Time.now ()
+              in
+                (r, Time.toReal (Time.- (finish, start)))
+              end
+          in
+            (events, hhProver.spawn_count (), elapsed)
+          end)
+    fun started delays =
+      map (fn slice => "started|" ^ slice_event_tag slice)
+        (slices_of delays "e-gave-up.out")
+    val order_delays = ["0.5", "0.50", "0.500", "0.5000"]
+    val (order_events, _, _) =
+      with_gap (Time.fromMilliseconds 100) (fn () =>
+        order_run order_delays "0.5" (join order_root "c1"))
+    val _ = expect "pacing: launches go in the order of the schedule"
+      (List.filter (String.isPrefix "started|") order_events =
+       started order_delays)
+    val miss_delays = ["0.3", "0.30", "0.300", "0.3000"]
+    val fill_delays = ["0.9", "0.30", "0.900", "0.3000"]
+    val cache_dir = join order_root "c2"
+    val _ = with_gap Time.zeroTime (fn () =>
+      order_run fill_delays "" cache_dir)
+    val (hit_events, hit_spawns, hit_elapsed) =
+      with_gap (Time.fromMilliseconds 1500) (fn () =>
+        order_run miss_delays "0.3" cache_dir)
+    val miss_tags =
+      map (fn index => List.nth (started miss_delays, index)) [0, 2]
+    val _ = expect "pacing: cache hits take no slot and the misses keep order"
+      (hit_spawns = 2 andalso hit_elapsed < 2.8 andalso
+       List.filter (fn event => List.exists (fn tag => tag = event) miss_tags)
+         hit_events = miss_tags)
+    val _ = remove_tree order_root
   in
     ()
   end
@@ -6446,11 +6529,6 @@ fun test_schedule_pipelined parser =
     fun relative root path = String.extract (path, size root + 1, NONE)
     fun exists_prefix prefix events =
       List.exists (String.isPrefix prefix) events
-    (* A reference holds a value for the run of f and is restored whatever
-       happens. *)
-    fun with_ref (r, value) f =
-      Portable.bracket (fn () => !r) (fn old => r := old)
-        (fn _ => (r := value; f ()))
     (* The selector and the test hooks are set for one run. *)
     fun with_hooks {pipelined, before_finish, before_prepare} f =
       with_ref (hhSchedule_Test.export_choice,
@@ -7498,11 +7576,8 @@ val _ = test_schedule_pool ()
 val _ = case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
             SOME _ => ()
           | NONE => test_schedule_pipelined (#parse_output (prover Eprover))
-(* An export choice for the run of f, restored whatever happens. *)
 fun with_choice choice f =
-  Portable.bracket (fn () => !hhSchedule_Test.export_choice)
-    (fn old => hhSchedule_Test.export_choice := old)
-    (fn _ => (hhSchedule_Test.export_choice := choice; f ()))
+  with_ref (hhSchedule_Test.export_choice, choice) f
 
 (* The policy that picks the export of a run_in: the structural reasons in
    their order of precedence, the measured region (see
