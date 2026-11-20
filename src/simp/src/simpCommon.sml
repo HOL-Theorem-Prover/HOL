@@ -185,47 +185,81 @@ fun entry_name_match (thypart, ssnm) pats =
       List.exists check1 pats
     end
 
-fun prepare_entry_name_match pats =
+fun prepare_entry_pattern (pattern as (thy,base)) =
     let
-      fun prepare (thy,base) =
-          let val rewrite = "rewrite:" ^ base
-          in (thy,base,rewrite,rewrite ^ ".") end
-      fun matches [] _ _ = false
-        | matches ((thy,base,rewrite,prefix)::rest) thypart name =
-            ((not (isSome thy) orelse thy = thypart) andalso
-             (base = name orelse rewrite = name orelse
-              String.isPrefix prefix name)) orelse matches rest thypart name
+      val rewrite = "rewrite:" ^ base
+      val prefix = rewrite ^ "."
+      fun matches name =
+          base = name orelse rewrite = name orelse String.isPrefix prefix name
     in
-      matches (map prepare pats)
-      handle Size =>
-        (* A very long pattern may have matched without adding a prefix. *)
-        fn thypart => fn name => entry_name_match (thypart,name) pats
+      case thy of
+          NONE => K matches
+        | SOME _ => fn thypart => if thy = thypart then matches else K false
+    end
+    handle Size =>
+      fn thypart => fn name => entry_name_match (thypart,name) [pattern]
+
+datatype entry_patterns =
+    Pending of (string option * string) list
+  | Ready of string option * string * string * string * entry_patterns ref
+  | Oversized of (string option * string) list
+
+fun prepare_entry_name_match [] = K (K false)
+  | prepare_entry_name_match [pattern] = prepare_entry_pattern pattern
+  | prepare_entry_name_match pats =
+    let
+      (* Prepare and cache each pattern only as far as a match requires. *)
+      val first = ref (Pending pats)
+      fun matches current thypart name =
+          case !current of
+              Ready (thy,base,rewrite,prefix,next) =>
+                ((not (isSome thy) orelse thy = thypart) andalso
+                 (base = name orelse rewrite = name orelse
+                  String.isPrefix prefix name)) orelse matches next thypart name
+            | Pending [] => false
+            | Pending (remaining as (thy,base)::rest) =>
+                let
+                  val ready =
+                      (let val rewrite = "rewrite:" ^ base
+                       in Ready (thy,base,rewrite,rewrite ^ ".",
+                                 ref (Pending rest)) end)
+                      handle Size => Oversized remaining
+                in
+                  current := ready;
+                  matches current thypart name
+                end
+            | Oversized remaining => entry_name_match (thypart,name) remaining
+    in
+      matches first
     end
 
-val split_dot = Substring.position "."
-
 fun munge_simpset_name p =
-    let val (thy,suffix) = split_dot (Substring.full p)
+    let
+      val n = String.size p
+      fun next_dot i =
+          if i = n orelse String.sub (p,i) = #"." then i else next_dot (i + 1)
+      val first = next_dot 0
     in
-      if Substring.isEmpty suffix then (NONE,p)
+      if first = n then (NONE,p)
       else
         let
-          val name = Substring.triml 1 suffix
-          val (_,conjunct) = split_dot name
+          val start = first + 1
+          val second = next_dot start
+          fun digits i =
+              i = n orelse (Char.isDigit (String.sub (p,i)) andalso
+                            digits (i + 1))
         in
-          if Substring.isEmpty conjunct then
-            if Substring.isEmpty (#2 (Substring.splitl Char.isDigit name))
-            then (NONE,p)
+          if second = n then
+            if digits start then (NONE,p)
             else
-              let val s = Substring.string thy
+              let val thy = String.substring (p,0,first)
               in
-                if mem s (Theory.ancestry "-")
-                then (SOME s,Substring.string name)
-                else raise ERR ("-*", "bad theory name: "^s)
+                if mem thy (Theory.ancestry "-") then
+                  (SOME thy,String.extract (p,start,NONE))
+                else raise ERR ("-*", "bad theory name: "^thy)
               end
-          else if Substring.isEmpty
-                    (#2 (split_dot (Substring.triml 1 conjunct)))
-          then (SOME (Substring.string thy),Substring.string name)
+          else if next_dot (second + 1) = n then
+            (SOME (String.substring (p,0,first)),String.extract (p,start,NONE))
           else raise ERR ("-*", "User key has too many dots")
         end
     end

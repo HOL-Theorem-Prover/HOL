@@ -247,21 +247,22 @@ fun ssupd_net f (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit,
 
 fun optprint NONE = "NONE"
   | optprint (SOME s) = "SOME "^s
-fun filter_net_by_names nms net =
+fun filter_net_by_patterns pats net =
     let
-      val pats = map simpCommon.munge_simpset_name nms
-      val matcher = ref NONE
-      fun prepare thy name =
-          let val matches = simpCommon.prepare_entry_name_match pats
-          in matcher := SOME matches; matches thy name end
-      (* Prepare the prefixes only when a second entry can reuse them. *)
+      val matches = simpCommon.prepare_entry_name_match pats
       fun retained ({thypart,ci}:net_conv_info) =
-          case !matcher of
-              NONE =>
-                (matcher := SOME prepare;
-                 not (simpCommon.entry_name_match (thypart,#name ci) pats))
-            | SOME matches => not (matches thypart (#name ci))
+          not (matches thypart (#name ci))
     in Ho_Net.vfilter retained net end
+
+fun filter_net_by_names [name] net =
+    let val pat = simpCommon.munge_simpset_name name
+    in
+      if Portable.pointer_eq (net,Ho_Net.empty) then
+        Ho_Net.vfilter (K true) net
+      else filter_net_by_patterns [pat] net
+    end
+  | filter_net_by_names nms net =
+    filter_net_by_patterns (map simpCommon.munge_simpset_name nms) net
 
 fun dphas_name_from nms (REDUCER {name = SOME n,...}) = Lib.mem n nms
   | dphas_name_from _ _ = false

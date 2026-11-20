@@ -397,6 +397,25 @@ val _ = let
 in tactic "looper UNCHANGED permits the next candidate"
      (noasms unsafe skipped) g [(asl,p),(asl,mk_conj (q,r))] end
 
+val _ = let
+  val seen = ref ([] : string list)
+  fun note tag _ _ = (seen := tag :: !seen; reject ())
+  val base = S.empty_ss
+    |> S.add_looper ("existing",note "original")
+    |> S.add_looper ("untouched",note "untouched")
+  val distinct = List.tabulate (128,fn i => "extra " ^ Int.toString i)
+  val batch = S.merge_ss (map (fn (id,tag) => S.looper_ss (id,note tag))
+    ([("a","early a"), ("existing","early replacement"), ("b","b")] @
+     map (fn name => (name,name)) distinct @
+     [("new","early new"), ("a","last a"), ("c","c"),
+      ("existing","last replacement"), ("new","last new")]))
+  val _ = tactic "merged loopers allow all callbacks to decline"
+    (noasms unsafe (S.++ (base,batch))) goal [goal]
+in check "merged loopers retain first positions and final callbacks"
+     (List.rev (!seen) = ["last replacement","untouched","last a","b"] @
+                        distinct @ ["last new","c"])
+end
+
 (* Foreign exceptions preserve payload identity, unlike normal HOL_ERR
    candidate rejection. Invalid final proofs must not be accepted. *)
 val _ = let

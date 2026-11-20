@@ -214,31 +214,6 @@ fun const_key c =
   in KernelSig.name_toString {Thy=Thy,Name=Name}
   end
 
-fun applied_arities tms =
-  let
-    fun visit (tm,acc) =
-      if is_abs tm then visit (body tm,acc)
-      else
-        let
-          val (head,args) = strip_comb tm
-          val acc = List.foldl visit acc args
-          val n = length args
-        in
-          if is_const head then
-            let val key = const_key head
-            in
-              case Binarymap.peek (acc,key) of
-                  SOME old =>
-                    if old >= n then acc else Binarymap.insert (acc,key,n)
-                | NONE => Binarymap.insert (acc,key,n)
-            end
-          else if is_abs head then visit (head,acc)
-          else acc
-        end
-  in
-    List.foldl visit (Binarymap.mkDict String.compare) tms
-  end
-
 (* The registered case constants, indexed by name.  [order] is the
    constant's position in [TypeBase.elts], retained so that the groups
    below can be handed back in the order a walk over the TypeBase leaves
@@ -288,30 +263,32 @@ fun case_const_index_of () =
 (* This deliberately does not use [TypeBase.is_case].  That predicate
    delegates to Pmatch's stricter and substantially more expensive case
    recognition.  Splitting only needs a saturated application of the
-   registered case constant, which the maximum-arity table identifies in
-   one walk over the goal and assumptions.  The looper is offered a goal
-   on every simplification round, so the constants the goal does contain
-   are looked up in the index rather than the whole TypeBase walked.  The
-   derived rules themselves use [type_split_cache], so with
-   [case_const_index] these are the only datatype-split caches. *)
+   registered case constant. Count arguments along each application spine
+   and collect matching types in their TypeBase order. The looper can do
+   this on each simplification round without recording unrelated constants. *)
 fun goal_split_rule_groups terms =
   let
-    val arities = applied_arities terms
     val index = case_const_index_of ()
-    fun saturated (key,n,found) =
-      let
-        fun keep (entry : case_const, found) =
-          if n >= #arity entry then (#order entry, #ty entry) :: found
-          else found
-      in
-        List.foldl keep found (Symtab.lookup_list index key)
-      end
-    val matched = Binarymap.foldl saturated [] arities
-    fun group ((_,ty),result) =
+    fun collect arity ({order,ty,arity=min_arity} : case_const, found) =
+      if arity < min_arity orelse Option.isSome (Binarymap.peek (found,order))
+      then found
+      else Binarymap.insert (found,order,ty)
+    fun visit tm arity found =
+      if is_comb tm then
+        let val (f,x) = dest_comb tm
+        in visit f (arity + 1) (visit x 0 found) end
+      else if is_abs tm then visit (body tm) 0 found
+      else if is_const tm then
+        List.foldl (collect arity) found
+          (Symtab.lookup_list index (const_key tm))
+      else found
+    val matched = List.foldl (fn (tm,found) => visit tm 0 found)
+                    (Binarymap.mkDict Int.compare) terms
+    fun group (_,ty,result) =
       (ty, type_split_rules ty) :: result
       handle HOL_ERR _ => result
   in
-    List.foldl group [] (Listsort.sort (Lib.measure_cmp fst) matched)
+    Binarymap.foldl group [] matched
   end
 
 fun goal_split_rules terms =
