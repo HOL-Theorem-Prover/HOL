@@ -473,59 +473,15 @@ fun POWER_CERTIFICATE_TAC prime field (asl,w) _ =
     val _ = EQT_ELIM
       (arithmetic (pred_setSyntax.mk_in (x,carrier)))
     val prefix = rator power
-    fun bits 0 acc = acc
-      | bits k acc = bits (IntInf.div(k,2)) (IntInf.mod(k,2)::acc)
-    val digits = bits n []
-    fun prefixes [] k = [(k,[])]
-      | prefixes (remaining as bit::rest) k =
-          (k,remaining) :: prefixes rest (2*k+bit)
-    val prefix_suffixes = prefixes digits 0
-    fun assumed_prefix eq best =
-      if not (is_eq eq) then best
-      else
-        let val (left,Q) = dest_eq eq in
-          if not (is_comb left) orelse not (aconv (rator left) prefix) orelse
-             not (numSyntax.is_numeral (rand left))
-          then best
-          else
-            let val k = integer (rand left) in
-              case List.find (fn (previous,_) => previous=k) prefix_suffixes of
-                NONE => best
-              | SOME (_,remaining) =>
-                  (case best of
-                     SOME (previous,_,_,_) =>
-                       if previous >= k then best
-                       else SOME (k,Q,remaining,eq)
-                   | NONE => SOME (k,Q,remaining,eq))
-            end
-        end
-    val seed = foldl (fn (eq,best) => assumed_prefix eq best) NONE asl
-    val (start_k,start_value,remaining,seed_eq) =
-      case seed of
-        NONE => (0,(1,0),digits,NONE)
-      | SOME (k,Q,remaining,eq) =>
-          (k,quadratic_pair p Q,remaining,SOME eq)
     fun times ((a,b),(c,d)) =
       (IntInf.mod(a*c-b*d,p),IntInf.mod(a*d+b*c,p))
-    fun equation k (a,b) =
-      mk_eq (mk_comb (prefix,literal k),polynomial (trim [a,b]))
-    (* Pure ML multiplication proposes at most sixteen complete binary bits.
-       Every doubling and every odd multiplication has its own proof goal. *)
-    fun milestones [] _ _ _ acc = (rev acc,[])
-      | milestones (remaining as bit::rest) i k value acc =
-          if i=16 then (rev acc,remaining)
-          else
-            let
-              val doubled = times (value,value)
-              val twice = 2*k
-              val even_acc = equation twice doubled :: acc
-              val next = if bit=0 then doubled else times (doubled,base)
-              val k' = twice+bit
-              val acc' = if bit=0 then even_acc
-                         else equation k' next :: even_acc
-            in milestones rest (i+1) k' next acc' end
-    val (equations,pending) = milestones remaining 0 start_k start_value []
-    val continuation = not (null pending)
+    val {equations,seed=seed_eq,continuation} =
+      certificateComputeLib.BINARY_MILESTONES
+        {operations=true,width=16,prefix=prefix,exponent=n,assumptions=asl,
+         zero=(1,0),decode=quadratic_pair p,
+         encode=fn (a,b) => polynomial (trim [a,b]),
+         double=fn value => times (value,value),
+         add_base=fn value => times (value,base)}
     val final =
       if not (null equations) then ASSUME (List.last equations)
       else case seed_eq of

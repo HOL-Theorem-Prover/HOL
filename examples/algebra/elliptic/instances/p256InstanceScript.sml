@@ -76,21 +76,11 @@ Proof
   simp[p256_curve, p256_base_field_finite_field]
 QED
 
-local
-    val definitions = [p256_group_def, p256_base_field_def, p256_p_def, p256_a_def, p256_b_def, p256_generator_def, p256_n_def]
-    fun numeric th = CONV_RULE certificateComputeLib.NAT_CONV
-      (REWRITE_RULE definitions th)
-    val prime = numeric p256_p_prime
-    val curve = numeric p256_curve
-    val member = numeric p256_generator_member
-    val step = ellipticCertificateLib.SCALAR_STEP_TAC prime curve member
-in
-  val p256_scalar_normalize = CONV_TAC (LAND_CONV
-    (REWRITE_CONV definitions THENC certificateComputeLib.NAT_CONV))
-  val p256_scalar_certificate =
-    ellipticCertificateLib.SCALAR_CERTIFICATE_TAC 4 prime curve member
-  val p256_scalar_step = step
-end
+val (p256_scalar_normalize, p256_scalar_certificate, p256_scalar_step) =
+  ellipticCertificateLib.SCALAR_CERTIFICATE_TOOLS
+    [p256_group_def, p256_base_field_def, p256_p_def, p256_a_def,
+     p256_b_def, p256_generator_def, p256_n_def]
+    4 p256_p_prime p256_curve p256_generator_member;
 
 Theorem p256_generator_annihilated:
   p256_group.exp p256_generator p256_n = ECInfinity

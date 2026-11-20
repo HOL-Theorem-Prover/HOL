@@ -23,6 +23,75 @@ fun inverse_candidate p x =
     else loop (b,IntInf.mod(a,b),v,u-IntInf.div(a,b)*v)
   in loop (x,p,1,0) end
 
+fun BINARY_MILESTONES
+    {operations, width, prefix, exponent, assumptions, zero,
+     decode, encode, double, add_base} =
+  let
+    val _ = width > 0 andalso exponent >= 0 orelse
+      raise mk_HOL_ERR "certificateComputeLib" "BINARY_MILESTONES"
+        "Expected a positive width and nonnegative exponent"
+    fun bits 0 acc = acc
+      | bits k acc = bits (IntInf.div(k,2)) (IntInf.mod(k,2)::acc)
+    val digits = bits exponent []
+    fun prefixes [] k = [(k,[])]
+      | prefixes (remaining as bit::rest) k =
+          (k,remaining) :: prefixes rest (2*k+bit)
+    val suffixes = if operations then prefixes digits 0 else []
+    fun assumed_prefix eq best =
+      if not (is_eq eq) then best
+      else
+        let val (left,value) = dest_eq eq in
+          if not (is_comb left) orelse not (aconv (rator left) prefix) orelse
+             not (numSyntax.is_numeral (rand left))
+          then best
+          else
+            let val k = integer (rand left) in
+              case List.find (fn (previous,_) => previous=k) suffixes of
+                NONE => best
+              | SOME (_,remaining) =>
+                  (case best of
+                     SOME (previous,_,_,_) =>
+                       if previous >= k then best
+                       else SOME (k,value,remaining,eq)
+                   | NONE => SOME (k,value,remaining,eq))
+            end
+        end
+    val seed =
+      if operations then
+        foldl (fn (eq,best) => assumed_prefix eq best) NONE assumptions
+      else NONE
+    val (start_k,start_value,remaining,seed_eq) =
+      case seed of
+        NONE => (0,zero,digits,NONE)
+      | SOME (k,value,remaining,eq) =>
+          (k,decode value,remaining,SOME eq)
+    fun equation k value =
+      mk_eq (mk_comb (prefix,literal k),encode value)
+    fun milestones [] _ _ _ acc = (rev acc,false)
+      | milestones (bit::rest) i k value acc =
+          if operations andalso i=width then (rev acc,true)
+          else
+            let
+              val doubled = double value
+              val next = if bit=0 then doubled else add_base doubled
+              val twice = 2*k
+              val k' = twice+bit
+              val boundary = i+1=width orelse null rest
+              val acc' =
+                if operations then
+                  let val even_acc = equation twice doubled :: acc in
+                    if bit=0 then even_acc else equation k' next :: even_acc
+                  end
+                else if boundary then equation k' next :: acc else acc
+            in
+              milestones rest
+                (if boundary andalso not operations then 0 else i+1)
+                k' next acc'
+            end
+    val (equations,continuation) =
+      milestones remaining 0 start_k start_value []
+  in {equations=equations,seed=seed_eq,continuation=continuation} end
+
 fun MILESTONE_GOALS {goal = (asl,w), equations, seed, continuation, final} =
   let
     fun implications [] _ = []

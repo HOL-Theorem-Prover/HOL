@@ -7,6 +7,19 @@ sig
   val literal : IntInf.int -> Term.term
   val inverse_candidate : IntInf.int -> IntInf.int -> IntInf.int
 
+  (* Untrusted binary trajectories. Operation mode resumes from the largest
+     matching assumed prefix and emits at most width bits; window mode emits
+     one equation per width bits over the full exponent, without resumption.
+     Candidate values stay in the caller's representation until emitted.
+     Every returned equation must subsequently be proved. *)
+  val BINARY_MILESTONES :
+    {operations : bool, width : int, prefix : Term.term,
+     exponent : IntInf.int, assumptions : Term.term list, zero : 'a,
+     decode : Term.term -> 'a, encode : 'a -> Term.term,
+     double : 'a -> 'a, add_base : 'a -> 'a} ->
+    {equations : Term.term list, seed : Term.term option,
+     continuation : bool}
+
   (* Assemble ordered milestone claims and reconstruct the original goal.
      final is the last milestone equality (or the zero-case equality);
      seed is an optional assumed prefix. A continuation leaves the original

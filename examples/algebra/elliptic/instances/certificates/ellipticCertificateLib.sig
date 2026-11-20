@@ -46,6 +46,11 @@ sig
   val SCALAR_CERTIFICATE_TAC : int -> thm -> thm -> thm -> tactic
   val SCALAR_STEP_TAC : thm -> thm -> thm -> tactic
 
+  (* Normalize named instance parameters once and prepare the matching
+     left-hand-side normalization, certificate and step tactics. *)
+  val SCALAR_CERTIFICATE_TOOLS :
+    thm list -> int -> thm -> thm -> thm -> tactic * tactic * tactic
+
   (* SCALAR_CONV prime curve member evaluates (sw_group (GF p) a b).exp P n
      for literal p,a,b,n and a literal affine point or ECInfinity. The inputs
      prove prime p, ShortWeierstrassCurve (GF p) a b, and P IN sw_points

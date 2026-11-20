@@ -181,6 +181,14 @@ val _ = proof_test "Zero quadratic power closes without operation branches"
   quadratic_power
   ``^quadratic.prod.exp [1n;1] 0 = [1n]``;
 
+val _ = proof_test "Power resumes from the strongest matching prefix"
+  (STRIP_TAC THEN quadratic_power THEN ASM_REWRITE_TAC [])
+  ``^quadratic.prod.exp [1n;1] 1 = [1n;1] /\
+    ^quadratic.prod.exp [1n;1] 3 = [5n;2] /\
+    ^quadratic.prod.exp [1n;2] 3 = [3n;5] /\
+    f [5n;2] ==>
+    f (^quadratic.prod.exp [1n;1] 3)``;
+
 val _ = proof_test "Quadratic power resumes and retains its residual"
   (DISCH_TAC THEN
    pairingCurveCertificateLib.CERTIFICATE_CHUNKS_TAC

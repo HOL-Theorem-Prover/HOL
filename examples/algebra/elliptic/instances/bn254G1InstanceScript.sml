@@ -76,21 +76,12 @@ Proof
   simp[bn254_g1_curve, bn254_base_field_finite_field]
 QED
 
-local
-    val definitions = [bn254_g1_group_def, bn254_base_field_def, bn254_p_def, bn254_g1_a_def, bn254_g1_b_def, bn254_g1_generator_def, bn254_n_def]
-    fun numeric th = CONV_RULE certificateComputeLib.NAT_CONV
-      (REWRITE_RULE definitions th)
-    val prime = numeric bn254_p_prime
-    val curve = numeric bn254_g1_curve
-    val member = numeric bn254_g1_generator_member
-    val step = ellipticCertificateLib.SCALAR_STEP_TAC prime curve member
-in
-  val bn254_g1_scalar_normalize = CONV_TAC (LAND_CONV
-    (REWRITE_CONV definitions THENC certificateComputeLib.NAT_CONV))
-  val bn254_g1_scalar_certificate =
-    ellipticCertificateLib.SCALAR_CERTIFICATE_TAC 4 prime curve member
-  val bn254_g1_scalar_step = step
-end
+val (bn254_g1_scalar_normalize, bn254_g1_scalar_certificate,
+     bn254_g1_scalar_step) =
+  ellipticCertificateLib.SCALAR_CERTIFICATE_TOOLS
+    [bn254_g1_group_def, bn254_base_field_def, bn254_p_def, bn254_g1_a_def,
+     bn254_g1_b_def, bn254_g1_generator_def, bn254_n_def]
+    4 bn254_p_prime bn254_g1_curve bn254_g1_generator_member;
 
 Theorem bn254_g1_generator_annihilated:
   bn254_g1_group.exp bn254_g1_generator bn254_n = ECInfinity

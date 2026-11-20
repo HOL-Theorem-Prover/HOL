@@ -58,6 +58,14 @@ Proof
   metis_tac[pred_setTheory.NOT_IN_EMPTY]
 QED
 
+fun cubic_root_free_tac definitions prime polynomial =
+  let
+    val normalize = REWRITE_CONV definitions THENC numLib.REDUCE_CONV
+    val f = rhs (concl (normalize polynomial))
+    val certificate = polynomialCertificateLib.NO_ROOTS_RULE
+      (REWRITE_RULE definitions prime) f
+  in CONV_TAC normalize >> ACCEPT_TAC certificate end;
+
 Definition secp256k1_cofactor_def:
   secp256k1_cofactor = 1n
 End
@@ -65,13 +73,9 @@ End
 Theorem secp256k1_cubic_root_free:
   poly_roots (GF secp256k1_p) [secp256k1_b;secp256k1_a;0;1] = {}
 Proof
-  let
-    val definitions = [secp256k1_p_def, secp256k1_a_def, secp256k1_b_def]
-    val normalize = REWRITE_CONV definitions THENC numLib.REDUCE_CONV
-    val f = rhs (concl (normalize ``[secp256k1_b;secp256k1_a;0;1]``))
-    val prime = REWRITE_RULE [secp256k1_p_def] secp256k1_p_prime
-    val certificate = polynomialCertificateLib.NO_ROOTS_RULE prime f
-  in CONV_TAC normalize >> ACCEPT_TAC certificate end
+  cubic_root_free_tac
+    [secp256k1_p_def, secp256k1_a_def, secp256k1_b_def]
+    secp256k1_p_prime ``[secp256k1_b;secp256k1_a;0;1]``
 QED
 
 Theorem secp256k1_no_two_torsion:
@@ -122,13 +126,8 @@ End
 Theorem p256_cubic_root_free:
   poly_roots (GF p256_p) [p256_b;p256_a;0;1] = {}
 Proof
-  let
-    val definitions = [p256_p_def, p256_a_def, p256_b_def]
-    val normalize = REWRITE_CONV definitions THENC numLib.REDUCE_CONV
-    val f = rhs (concl (normalize ``[p256_b;p256_a;0;1]``))
-    val prime = REWRITE_RULE [p256_p_def] p256_p_prime
-    val certificate = polynomialCertificateLib.NO_ROOTS_RULE prime f
-  in CONV_TAC normalize >> ACCEPT_TAC certificate end
+  cubic_root_free_tac [p256_p_def, p256_a_def, p256_b_def]
+    p256_p_prime ``[p256_b;p256_a;0;1]``
 QED
 
 Theorem p256_no_two_torsion:
@@ -179,13 +178,8 @@ End
 Theorem bn254_g1_cubic_root_free:
   poly_roots (GF bn254_p) [bn254_g1_b;bn254_g1_a;0;1] = {}
 Proof
-  let
-    val definitions = [bn254_p_def, bn254_g1_a_def, bn254_g1_b_def]
-    val normalize = REWRITE_CONV definitions THENC numLib.REDUCE_CONV
-    val f = rhs (concl (normalize ``[bn254_g1_b;bn254_g1_a;0;1]``))
-    val prime = REWRITE_RULE [bn254_p_def] bn254_p_prime
-    val certificate = polynomialCertificateLib.NO_ROOTS_RULE prime f
-  in CONV_TAC normalize >> ACCEPT_TAC certificate end
+  cubic_root_free_tac [bn254_p_def, bn254_g1_a_def, bn254_g1_b_def]
+    bn254_p_prime ``[bn254_g1_b;bn254_g1_a;0;1]``
 QED
 
 Theorem bn254_g1_no_two_torsion:

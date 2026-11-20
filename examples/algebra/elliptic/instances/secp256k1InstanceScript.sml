@@ -76,21 +76,13 @@ Proof
   simp[secp256k1_curve, secp256k1_base_field_finite_field]
 QED
 
-local
-    val definitions = [secp256k1_group_def, secp256k1_base_field_def, secp256k1_p_def, secp256k1_a_def, secp256k1_b_def, secp256k1_generator_def, secp256k1_n_def]
-    fun numeric th = CONV_RULE certificateComputeLib.NAT_CONV
-      (REWRITE_RULE definitions th)
-    val prime = numeric secp256k1_p_prime
-    val curve = numeric secp256k1_curve
-    val member = numeric secp256k1_generator_member
-    val step = ellipticCertificateLib.SCALAR_STEP_TAC prime curve member
-in
-  val secp256k1_scalar_normalize = CONV_TAC (LAND_CONV
-    (REWRITE_CONV definitions THENC certificateComputeLib.NAT_CONV))
-  val secp256k1_scalar_certificate =
-    ellipticCertificateLib.SCALAR_CERTIFICATE_TAC 4 prime curve member
-  val secp256k1_scalar_step = step
-end
+val (secp256k1_scalar_normalize, secp256k1_scalar_certificate,
+     secp256k1_scalar_step) =
+  ellipticCertificateLib.SCALAR_CERTIFICATE_TOOLS
+    [secp256k1_group_def, secp256k1_base_field_def, secp256k1_p_def,
+     secp256k1_a_def, secp256k1_b_def, secp256k1_generator_def,
+     secp256k1_n_def]
+    4 secp256k1_p_prime secp256k1_curve secp256k1_generator_member;
 
 Theorem secp256k1_generator_annihilated:
   secp256k1_group.exp secp256k1_generator secp256k1_n = ECInfinity

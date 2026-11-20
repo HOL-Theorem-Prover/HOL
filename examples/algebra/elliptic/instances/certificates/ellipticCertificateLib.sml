@@ -131,63 +131,11 @@ fun scalar_certificate_tac operations width candidate curve member (asl,w) _ =
     val scalar_prefix = rator scalar
     fun add U V = candidate (mk_comb (mk_comb (add_prefix,U),V))
     fun add_base V = candidate (mk_comb (add_P,V))
-    fun bits 0 acc = acc
-      | bits k acc = bits (IntInf.div(k,2)) (IntInf.mod(k,2)::acc)
-    fun equation k Q =
-      mk_eq (mk_comb (scalar_prefix,literal k),Q)
-    val digits = bits n []
-    fun prefixes [] k = [(k,[])]
-      | prefixes (remaining as bit::rest) k =
-          (k,remaining) :: prefixes rest (2*k+bit)
-    val prefix_suffixes = if operations then prefixes digits 0 else []
-    fun assumed_prefix eq best =
-      if not operations orelse not (is_eq eq) then best
-      else
-        let val (left,Q) = dest_eq eq in
-          if not (is_comb left) orelse
-             not (aconv (rator left) scalar_prefix) orelse
-             not (numSyntax.is_numeral (rand left))
-          then best
-          else
-            let val k = integer (rand left) in
-              case List.find (fn (prefix,_) => prefix=k) prefix_suffixes of
-                NONE => best
-              | SOME (_,remaining) =>
-                  (case best of
-                     SOME (previous,_,_,_) =>
-                       if previous >= k then best
-                       else SOME (k,Q,remaining,eq)
-                   | NONE => SOME (k,Q,remaining,eq))
-            end
-        end
-    val seed = foldl (fn (eq,best) => assumed_prefix eq best) NONE asl
-    val (start_k,start_Q,remaining,seed_eq) =
-      case seed of
-        NONE => (0,zero,digits,NONE)
-      | SOME (k,Q,remaining,eq) => (k,Q,remaining,SOME eq)
-    fun milestones [] _ _ _ acc = (rev acc,[])
-      | milestones (remaining as bit::rest) i k Q acc =
-        if operations andalso i=width then (rev acc,remaining)
-        else
-        let
-          val doubled = add Q Q
-          val next = if bit=0 then doubled else add_base doubled
-          val twice = 2*k
-          val k' = twice + bit
-          val boundary = i+1=width orelse null rest
-          val acc' =
-            if operations then
-              let val doubled_acc = equation twice doubled :: acc in
-                if bit=0 then doubled_acc else equation k' next :: doubled_acc
-              end
-            else if boundary then equation k' next :: acc else acc
-        in
-          milestones rest
-            (if boundary andalso not operations then 0 else i+1)
-            k' next acc'
-        end
-    val (equations,pending) = milestones remaining 0 start_k start_Q []
-    val continuation = not (null pending)
+    val {equations,seed=seed_eq,continuation} =
+      certificateComputeLib.BINARY_MILESTONES
+        {operations=operations,width=width,prefix=scalar_prefix,
+         exponent=n,assumptions=asl,zero=zero,decode=I,encode=I,
+         double=fn Q => add Q Q,add_base=add_base}
     val final =
       if not (null equations) then ASSUME (List.last equations)
       else case seed_eq of
@@ -359,6 +307,18 @@ fun SCALAR_STEP_TAC prime curve member (goal as (_,w)) =
     val scalar = find_term (fn t => isSome (scalar_key t)) w
     val (_,add_conv) = gf_scalar_tools prime curve member scalar
   in BINARY_SCALAR_STEP_TAC add_conv curve member goal end
+
+fun SCALAR_CERTIFICATE_TOOLS definitions width prime curve member =
+  let
+    val normalize = REWRITE_CONV definitions THENC certificateComputeLib.NAT_CONV
+    val prime = CONV_RULE normalize prime
+    val curve = CONV_RULE normalize curve
+    val member = CONV_RULE normalize member
+  in
+    (CONV_TAC (LAND_CONV normalize),
+     SCALAR_CERTIFICATE_TAC width prime curve member,
+     SCALAR_STEP_TAC prime curve member)
+  end
 
 fun SCALAR_CONV prime curve member =
   Conv.memoize scalar_key (Redblackmap.mkDict Term.compare)
