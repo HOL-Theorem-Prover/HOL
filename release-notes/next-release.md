@@ -229,49 +229,14 @@ New examples
     No optimized arithmetic, serialization or
     pairing evaluation is introduced.
 
--   `examples/algebra/elliptic` develops short-Weierstrass curves over the
-    existing field records, in characteristic other than 2 or 3 with
-    nonzero discriminant. Ring identities support the associativity proof;
-    the curve points form an Abelian group using the existing group API.
-    A group-only GF(5) example has six points and a generator of order six.
-    The package is included in the algebra aggregate and level-1 selftests,
-    independently of the legacy `examples/elliptic` hierarchy.
-
--   `examples/algebra/elliptic` adds `ellipticTorsion`,
-    `ellipticMorphisms` and `ellipticScaling`. Rational n-torsion is the
-    kernel of scalar multiplication over the given field, not torsion
-    over an algebraic closure or a chosen generator's subgroup; n = 0
-    gives the whole group and n = 1 just the identity. Generated-group,
-    order and cofactor results use the existing group API. Cofactor
-    clearing lands in torsion, not necessarily a nonidentity point or
-    the subgroup of a chosen generator. Field homomorphisms induce
-    injective group maps to curves with mapped coefficients, not
-    necessarily onto all larger-field points; field isomorphisms induce
-    group isomorphisms. Nonzero carrier elements `u` give isomorphisms
-    `(x,y) |-> (u^2*x,u^3*y)` to coefficients `(u^4*a,u^6*b)`, distinct
-    from homogeneous scaling. Curve and carrier hypotheses remain in
-    force. GF(5) examples cover rational 3-torsion, a generated six-point
-    group, option-field transport and scaling by 2 to `y^2 = x^3 + 4`
-    with generator order six.
-
--   `examples/algebra/elliptic` also includes ordinary homogeneous
-    coordinates in `shortWeierstrassProjective`, with nonzero scaling
-    equivalence, valid curve representatives and affine/infinity chart
-    theorems. The decoder is total and is not a validity test.
-    `ellipticCardinality` supplies the elementary `2*CARD field+1` bound
-    (not Hasse's theorem), odd-cardinality and exact-order certificates.
-    `ellipticCMMap` proves that `(x,y) |-> (beta*x,y)` is a group
-    automorphism on curves with `a = 0` when `beta` is a carrier element
-    with `beta^3 = 1`; this includes the identity cube root.
-    The companion `ellipticCMCertificates` proves finite-group
-    independence and cardinality lower bounds from order-three
-    endomorphisms and explicit prime-order eigenvalue exclusions, without
-    requiring coprime order and cofactor. All field, carrier, nonzero and
-    exact-order hypotheses remain explicit. GF(5) examples demonstrate
-    scaled affine representatives, infinity and rejected triples.
-    These theories share the existing native level-1 package registration
-    and do not depend on named cryptographic fields or arithmetic
-    certificate libraries.
+-   [`examples/algebra/elliptic`](../examples/algebra/elliptic/README.md)
+    develops nonsingular short-Weierstrass curves in characteristic other
+    than 2 or 3 over the existing field records. It provides the Abelian
+    curve group, rational torsion, field-map and coordinate-scaling
+    transport, ordinary homogeneous coordinates, elementary cardinality
+    bounds and order-three endomorphism certificates, with GF(5) examples.
+    The generic package runs at selftest level 1, independently of named
+    cryptographic instances and the legacy `examples/elliptic` hierarchy.
 
 -   The algebra examples now connect fields to the HOL Light-compatible
     ring interface, with inverse laws and a homogeneous-coordinate

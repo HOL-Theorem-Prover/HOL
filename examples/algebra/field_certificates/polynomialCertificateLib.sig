@@ -17,7 +17,8 @@ sig
      The normalized dividend must satisfy Poly (GF p) before ML division. *)
   val REMAINDER_CONV : Thm.thm -> Term.term -> Abbrev.conv
   (* Prove the remainder of (PolyRing (GF p)).prod.exp a n for literal n,
-     using binary powering and checked bounded remainders. *)
+     using binary powering and checked bounded remainders. Capture the
+     validated prime/modulus context once when constructing the converter. *)
   val MODPOW_CONV : Thm.thm -> Term.term -> Abbrev.conv
   (* Return irreducible (PolyRing (GF p)) f for a degree-twelve monic f,
      after checking the degree-4, degree-6 and degree-12 Frobenius tests. *)

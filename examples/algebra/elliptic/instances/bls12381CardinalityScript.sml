@@ -122,8 +122,7 @@ val cardinality_scalar_finish =
                GF_eval] >>
   CONV_TAC (certificateComputeLib.EVAL_CONV ());
 
-(* Explicit four-bit milestones give each checked window its own deadline.
-   CM comparisons evaluate their two scalar occurrences in residual branches. *)
+(* Explicit four-bit milestones give each checked window its own deadline. *)
 Theorem bls12381_large_scalar_annihilation[local]:
   bls12381_g1_group.exp bls12381_large_point bls12381_large_order = ECInfinity
 Proof
@@ -439,6 +438,66 @@ Proof
   large_scalar_certificate >| (List.tabulate (79, K large_scalar_step) @ [
       cardinality_scalar_finish]))
 QED
+
+(* Candidate literals; the value theorems check the full scalar computations. *)
+val cm10177_point = ``ECAffine
+  (903165519254656343794022457838916573341345330666631784648460684037086889728683431240224884667681694964624160785465:num)
+  (1356270388514632698839406679743172623635208358956357567241563199991183750178569277156846557217656511143523304779063:num)``;
+val cm859267_point = ``ECAffine
+  (925730318901014724205619232160536253648159800507687724242994227812238853961468071604380002408177361903754543482486:num)
+  (3272969353792397235404795381327112277935469356655328634142219945405480233307324612060532524580690767817859945147515:num)``;
+
+Theorem bls12381_cm10177_value[local]:
+  bls12381_g1_group.exp bls12381_large_point
+    (bls12381_large_order DIV 10177) = ^cm10177_point
+Proof
+  cardinality_scalar_normalize >>
+  large_scalar_certificate >| List.tabulate (77, K large_scalar_step)
+QED
+
+Theorem bls12381_cm859267_value[local]:
+  bls12381_g1_group.exp bls12381_large_point
+    (bls12381_large_order DIV 859267) = ^cm859267_point
+Proof
+  cardinality_scalar_normalize >>
+  large_scalar_certificate >| List.tabulate (75, K large_scalar_step)
+QED
+
+Theorem bls12381_cm10177_member[local]:
+  ^cm10177_point IN bls12381_g1_group.carrier
+Proof
+  REWRITE_TAC [GSYM bls12381_cm10177_value] >>
+  irule group_exp_element >>
+  metis_tac[bls12381_g1_finite_group, FiniteAbelianGroup_def_alt,
+            FiniteGroup_def, bls12381_g1_group_def, sw_group_carrier,
+            bls12381_g1_a_def, bls12381_g1_b_def,
+            bls12381_large_point_member]
+QED
+
+Theorem bls12381_cm859267_member[local]:
+  ^cm859267_point IN bls12381_g1_group.carrier
+Proof
+  REWRITE_TAC [GSYM bls12381_cm859267_value] >>
+  irule group_exp_element >>
+  metis_tac[bls12381_g1_finite_group, FiniteAbelianGroup_def_alt,
+            FiniteGroup_def, bls12381_g1_group_def, sw_group_carrier,
+            bls12381_g1_a_def, bls12381_g1_b_def,
+            bls12381_large_point_member]
+QED
+
+val cm10177_member = REWRITE_RULE [sw_group_carrier]
+  (cardinality_numeric bls12381_cm10177_member);
+val cm10177_certificate = ellipticCertificateLib.SCALAR_CERTIFICATE_TAC 4
+  cardinality_prime cardinality_curve cm10177_member;
+val cm10177_step = ellipticCertificateLib.SCALAR_STEP_TAC
+  cardinality_prime cardinality_curve cm10177_member;
+val cm859267_member = REWRITE_RULE [sw_group_carrier]
+  (cardinality_numeric bls12381_cm859267_member);
+val cm859267_certificate = ellipticCertificateLib.SCALAR_CERTIFICATE_TAC 4
+  cardinality_prime cardinality_curve cm859267_member;
+val cm859267_step = ellipticCertificateLib.SCALAR_STEP_TAC
+  cardinality_prime cardinality_curve cm859267_member;
+
 Theorem bls12381_cm_check_10177[local]:
   !t. t = 1 \/ t = 4773 \/ t = 5403 ==>
     sw_cm_map bls12381_base_field bls12381_cm_beta
@@ -446,21 +505,16 @@ Theorem bls12381_cm_check_10177[local]:
     bls12381_g1_group.exp
       (bls12381_g1_group.exp bls12381_large_point (bls12381_large_order DIV 10177)) t
 Proof
-  gen_tac >> DISCH_THEN (REPEAT_TCL DISJ_CASES_THEN SUBST1_TAC)
-  >| [(REWRITE_TAC [bls12381_large_scalar_mult] >>
-  cardinality_scalar_normalize >>
-  large_scalar_certificate >| (List.tabulate (77, K large_scalar_step) @ [
-      cardinality_scalar_finish])),
-      (REWRITE_TAC [bls12381_large_scalar_mult] >>
-  cardinality_scalar_normalize >>
-  large_scalar_certificate >| (List.tabulate (77, K large_scalar_step) @ [
-      (large_scalar_certificate >| (List.tabulate (80, K large_scalar_step) @ [
-      cardinality_scalar_finish]))])),
-      (REWRITE_TAC [bls12381_large_scalar_mult] >>
-  cardinality_scalar_normalize >>
-  large_scalar_certificate >| (List.tabulate (77, K large_scalar_step) @ [
-      (large_scalar_certificate >| (List.tabulate (80, K large_scalar_step) @ [
-      cardinality_scalar_finish]))]))]
+  gen_tac >> DISCH_THEN (REPEAT_TCL DISJ_CASES_THEN SUBST1_TAC) >>
+  REWRITE_TAC [bls12381_cm10177_value] >>
+  cardinality_scalar_normalize >| [
+    cm10177_certificate >|
+      [cm10177_step, cardinality_scalar_finish],
+    cm10177_certificate >|
+      (List.tabulate (4, K cm10177_step) @ [cardinality_scalar_finish]),
+    cm10177_certificate >|
+      (List.tabulate (4, K cm10177_step) @ [cardinality_scalar_finish])
+  ]
 QED
 Theorem bls12381_cm_check_859267[local]:
   !t. t = 1 \/ t = 119571 \/ t = 739695 ==>
@@ -469,21 +523,16 @@ Theorem bls12381_cm_check_859267[local]:
     bls12381_g1_group.exp
       (bls12381_g1_group.exp bls12381_large_point (bls12381_large_order DIV 859267)) t
 Proof
-  gen_tac >> DISCH_THEN (REPEAT_TCL DISJ_CASES_THEN SUBST1_TAC)
-  >| [(REWRITE_TAC [bls12381_large_scalar_mult] >>
-  cardinality_scalar_normalize >>
-  large_scalar_certificate >| (List.tabulate (75, K large_scalar_step) @ [
-      cardinality_scalar_finish])),
-      (REWRITE_TAC [bls12381_large_scalar_mult] >>
-  cardinality_scalar_normalize >>
-  large_scalar_certificate >| (List.tabulate (75, K large_scalar_step) @ [
-      (large_scalar_certificate >| (List.tabulate (79, K large_scalar_step) @ [
-      cardinality_scalar_finish]))])),
-      (REWRITE_TAC [bls12381_large_scalar_mult] >>
-  cardinality_scalar_normalize >>
-  large_scalar_certificate >| (List.tabulate (75, K large_scalar_step) @ [
-      (large_scalar_certificate >| (List.tabulate (80, K large_scalar_step) @ [
-      cardinality_scalar_finish]))]))]
+  gen_tac >> DISCH_THEN (REPEAT_TCL DISJ_CASES_THEN SUBST1_TAC) >>
+  REWRITE_TAC [bls12381_cm859267_value] >>
+  cardinality_scalar_normalize >| [
+    cm859267_certificate >|
+      [cm859267_step, cardinality_scalar_finish],
+    cm859267_certificate >|
+      (List.tabulate (5, K cm859267_step) @ [cardinality_scalar_finish]),
+    cm859267_certificate >|
+      (List.tabulate (5, K cm859267_step) @ [cardinality_scalar_finish])
+  ]
 QED
 Theorem bls12381_cm_check_52437899[local]:
   !t. t = 1 ==>

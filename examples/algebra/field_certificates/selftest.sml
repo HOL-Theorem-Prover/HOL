@@ -46,6 +46,12 @@ val _ = conversion_test "Checked polynomial remainder" remainder
 val _ = conversion_test "Checked polynomial modular power" power
   ``poly_mod (GF 3) ((PolyRing (GF 3)).prod.exp [0n;1] 4) [1n;0;1]``
   ``[1n]``;
+val _ = conversion_test "Polynomial modular power at exponent zero" power
+  ``poly_mod (GF 3) ((PolyRing (GF 3)).prod.exp [0n;1] 0) [1n;0;1]``
+  ``[1n]``;
+val _ = conversion_test "Reuse polynomial power with a different base" power
+  ``poly_mod (GF 3) ((PolyRing (GF 3)).prod.exp [1n;1] 3) [1n;0;1]``
+  ``[1n;2]``;
 val _ = conversion_test "Checked quotient addition" quotient
   ``(PolyModRing (GF 3) [1n;0;1]).sum.op [2n;1] [2n;2]`` ``[1n]``;
 val _ = conversion_test "Checked quotient zero" quotient

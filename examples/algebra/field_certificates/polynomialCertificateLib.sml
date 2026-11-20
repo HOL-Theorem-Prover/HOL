@@ -205,15 +205,20 @@ fun context prime f =
       in (bt,ut,vt,result) end
   in (p,r,ring,finite,monic,power,pow,difference,reduce) end
 
-fun MODPOW_CONV prime f tm =
+fun MODPOW_CONV prime f =
   let
     val (_,_,_,_,_,power,_,_,_) = context prime f
-    val norm =
-      (QCONV
-         (RATOR_CONV (RAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV))) tm
-       handle HOL_ERR _ =>
-         raise ERR "MODPOW_CONV" "Expected polynomial power remainder")
-  in TRANS norm (power (rhs (concl norm))) end
+  in
+    fn tm =>
+      let
+        val norm =
+          (QCONV
+             (RATOR_CONV (RAND_CONV
+               (RAND_CONV certificateComputeLib.NAT_CONV))) tm
+           handle HOL_ERR _ =>
+             raise ERR "MODPOW_CONV" "Expected polynomial power remainder")
+      in TRANS norm (power (rhs (concl norm))) end
+  end
 
 fun REMAINDER_CONV prime f =
   let val (_,_,_,_,_,_,_,_,reduce) = context prime f

@@ -515,15 +515,10 @@ Proof
      `r.prod.op (r.sum.exp r.prod.id 2) y = r.sum.op y y` by
        rw[field_num_2, field_mult_ladd, field_mult_lone] >>
      metis_tac[field_add_eq_zero]) >>
-  `r.prod.op (r.sum.exp r.prod.id 2) y IN R+` by
-    rw[field_nonzero_eq] >>
-  `r.prod.op (r.sum.exp r.prod.id 2) y IN
-   monoid_invertibles r.prod` by
-    metis_tac[field_nonzero_unit, monoidTheory.Invertibles_carrier] >>
   `r.prod.inv (r.prod.op (r.sum.exp r.prod.id 2) y) IN r.carrier /\
    r.prod.op (r.prod.op (r.sum.exp r.prod.id 2) y)
      (r.prod.inv (r.prod.op (r.sum.exp r.prod.id 2) y)) = r.prod.id` by
-    metis_tac[field_mult_monoid, monoidTheory.monoid_inv_def] >>
+    metis_tac[sw_field_prod_inv] >>
   PURE_ASM_REWRITE_TAC [sw_add_def] >>
   ASM_SIMP_TAC bool_ss [] >>
   PURE_ASM_REWRITE_TAC
@@ -590,14 +585,10 @@ Proof
      `r.sum.inv x1 = r.sum.inv x2` by
        metis_tac[field_add_eq_zero, field_neg_element] >>
      metis_tac[field_neg_eq]) >>
-  `r.sum.op x2 (r.sum.inv x1) IN R+` by
-    rw[field_nonzero_eq] >>
-  `r.sum.op x2 (r.sum.inv x1) IN monoid_invertibles r.prod` by
-    metis_tac[field_nonzero_unit, monoidTheory.Invertibles_carrier] >>
   `r.prod.inv (r.sum.op x2 (r.sum.inv x1)) IN r.carrier /\
    r.prod.op (r.sum.op x2 (r.sum.inv x1))
      (r.prod.inv (r.sum.op x2 (r.sum.inv x1))) = r.prod.id` by
-    metis_tac[field_mult_monoid, monoidTheory.monoid_inv_def] >>
+    metis_tac[sw_field_prod_inv] >>
   ASM_SIMP_TAC bool_ss [sw_add_def] >>
   ASM_SIMP_TAC bool_ss
     [sw_slope_def, sw_add_x_def, sw_add_y_def, sw_on_curve_def, LET_THM] >>
@@ -772,7 +763,7 @@ Proof
      `add y z = add z y` by metis_tac[] >>
      `add y x = add x y` by metis_tac[] >>
      `add z (add x y) = add (add x y) z` by metis_tac[] >>
-     ntac 5 (qpat_x_assum `!x. _` kall_tac) >>
+     rpt (qpat_x_assum `!x. _` kall_tac) >>
      metis_tac[]) >>
   Cases_on `eq x z` >-
     (`eq z x` by metis_tac[] >>
@@ -782,7 +773,7 @@ Proof
      `add y z = add z y` by metis_tac[] >>
      `add x z = add z x` by metis_tac[] >>
      `add z (add x y) = add (add x y) z` by metis_tac[] >>
-     ntac 5 (qpat_x_assum `!x. _` kall_tac) >>
+     rpt (qpat_x_assum `!x. _` kall_tac) >>
      metis_tac[]) >>
   Cases_on `eq (add x y) z` >-
     metis_tac[] >>
@@ -794,7 +785,7 @@ Proof
      `add y z = add z y` by metis_tac[] >>
      `add y x = add x y` by metis_tac[] >>
      `add z (add x y) = add (add x y) z` by metis_tac[] >>
-     ntac 5 (qpat_x_assum `!x. _` kall_tac) >>
+     rpt (qpat_x_assum `!x. _` kall_tac) >>
      metis_tac[]) >>
   qpat_x_assum
     `!x y z. P x /\ P y /\ P z /\ ~eq x y /\ _ ==> _`
