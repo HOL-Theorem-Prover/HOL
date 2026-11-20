@@ -7,13 +7,25 @@ Libs
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
+(* The components of the specs are those of riscv_state except the hidden
+   ones: the logs (c_update, log, which only the spec's Next, writeCSR,
+   writeFPRS and writeFPRD write; see riscv_frame_hidden below), the
+   counters (c_instret, c_cycles, c_minstret_written), the platform
+   interrupt lines (c_extMEIP, c_extSEIP), the exit state of an emulator
+   (done, c_ExitCode), totalCore, the S-mode CSRs (c_SCSR), and c_UCSR
+   (fcsr) and c_ReserveLoad, which of the instructions that riscv_stepLib
+   steps only the F and D instructions and LR and SC use (riscv_progLib
+   gives no specs for those).  The current privilege, c_privilege, is
+   visible: every step theorem reads it (riscv_ID below). *)
 val _ = stateLib.sep_definitions "riscv" []
           (List.map Lib.list_of_singleton
-             ["c_update", "log", "totalCore", "done", "clock", "c_tlb",
-              "c_instret", "c_cycles", "c_UCSR", "c_SCSR", "c_ReserveLoad",
-              "c_HCSR", "c_ExitCode"])
+             ["c_update", "log", "totalCore", "done", "c_instret",
+              "c_cycles", "c_minstret_written", "c_extMEIP", "c_extSEIP",
+              "c_UCSR", "c_SCSR", "c_ReserveLoad", "c_ExitCode"])
           riscv_stepTheory.NextRISCV_def
 
+(* The code assertion of a spec: riscv_instr (pc, l) says that the
+   opcode bytes l are at pc, pc + 1, ... *)
 Definition riscv_mem_def:
    riscv_mem a (l: word8 list) =
    set (GENLIST (\i. (riscv_c_MEM8 (a + n2w i),
@@ -26,12 +38,16 @@ End
 
 val riscv_proj_def = DB.definition "riscv_proj_def"
 
+(* The model of the specs: a step is one NextRISCV step (riscv_stepTheory)
+   of the visible components, riscv_proj. *)
 Definition RISCV_MODEL_def:
   RISCV_MODEL =
     (STATE riscv_proj, NEXT_REL (=) NextRISCV, riscv_instr,
      ($= :riscv_state -> riscv_state -> bool), K F : riscv_state -> bool)
 End
 
+(* stateLib.spec (riscv_progLib) proves a SPEC, or a TEMPORAL_NEXT, from
+   a step theorem NextRISCV s = SOME s' by these. *)
 val RISCV_IMP_SPEC = Theory.save_thm ("RISCV_IMP_SPEC",
   stateTheory.IMP_SPEC
   |> Q.ISPECL [`riscv_proj`, `NextRISCV`, `riscv_instr`]
@@ -48,37 +64,73 @@ val RISCV_IMP_TEMPORAL = Theory.save_thm ("RISCV_IMP_TEMPORAL",
 
 (* ------------------------------------------------------------------------ *)
 
+(* The M-mode contract of the step theorems (riscv_stepTheory), the same
+   for every instruction: the hart is in M-mode (c_privilege is 3), loads
+   and stores use M-mode (mstatus.MPRV is clear), no PMP entry is locked
+   (pmp_unlocked), every PMP entry is OFF or NAPOT (pmp_off_or_napot) and
+   no interrupt can be taken (mstatus.MIE is clear, which riscv_step
+   assumes for every instruction because NextRISCV takes no interrupts).
+   A step theorem has only the conjuncts that its instruction needs
+   (mstatus.MPRV clear for a data access, pmp_off_or_napot for an 8-byte
+   one); riscv_progLib adds the others, so that every spec has riscv_ID.
+   The alignment of a data address depends on the instruction and stays a
+   condition of its spec. *)
 Definition riscv_ID_def:
    riscv_ID id mcsr =
    riscv_exception NoException * riscv_procID id * riscv_c_NextFetch id NONE *
-   riscv_c_MCSR id mcsr * cond (mcsr.mstatus.VM = 0w)
+   riscv_c_MCSR id mcsr * riscv_c_privilege id 3w *
+   cond ~mcsr.mstatus.MPRV * cond (pmp_unlocked mcsr) *
+   cond (pmp_off_or_napot mcsr) * cond ~mcsr.mstatus.MIE
 End
 
+(* The pc of core id, 2-aligned with C (riscv_ID_PC) and 4-aligned
+   without (riscv_ID_PC_noC), as the fetch of a step theorem requires
+   (riscv_stepTheory.Fetch_def); c_Skip, the length of the instruction,
+   which every instruction writes, is hidden. *)
 Definition riscv_ID_PC_def:
   riscv_ID_PC id pc = riscv_c_PC id pc * cond (aligned 1 pc) * ~ riscv_c_Skip id
 End
 
+Definition riscv_ID_PC_noC_def:
+  riscv_ID_PC_noC id pc =
+  riscv_c_PC id pc * cond (aligned 2 pc) * ~ riscv_c_Skip id
+End
+
 (* ------------------------------------------------------------------------
-   Specialize to RV64I, core 0
+   Specialize to RV64I, core 0: misa.MXL = 2 (64 bits), and misa.C set or
+   clear, as riscv_progLib.riscv_rvc_config selects
    ------------------------------------------------------------------------ *)
 
 Definition riscv_RV64I_def:
-  riscv_RV64I mcsr = cond (mcsr.mcpuid.ArchBase = 2w) * riscv_ID 0w mcsr
+  riscv_RV64I mcsr =
+  cond (mcsr.misa.MXL = 2w) * cond mcsr.misa.C * riscv_ID 0w mcsr
+End
+
+Definition riscv_RV64I_noC_def:
+  riscv_RV64I_noC mcsr =
+  cond (mcsr.misa.MXL = 2w) * cond ~mcsr.misa.C * riscv_ID 0w mcsr
 End
 
 Definition riscv_REG_def:  riscv_REG  = riscv_c_gpr 0w
 End
 Definition riscv_PC_def:  riscv_PC = riscv_ID_PC 0w
 End
+Definition riscv_PC_noC_def:  riscv_PC_noC = riscv_ID_PC_noC 0w
+End
 
 (* ------------------------------------------------------------------------ *)
 
+(* A step theorem has ~word_bit 0 pc (Fetch_def); riscv_introduction
+   states it as riscv_ID_PC does. *)
 Theorem aligned_1_intro:
     ~word_bit 0 pc <=> aligned 1 (pc:word64)
 Proof
   fs [alignmentTheory.aligned_bitwise_and] \\ blastLib.BBLAST_TAC
 QED
 
+(* riscv_introduction introduces riscv_ID_PC (riscv_ID_PC_noC) in the
+   postcondition by these: the next pc must keep the alignment of the
+   current one.  The TEMPORAL forms are for stateLib.set_temporal true. *)
 Theorem RISCV_PC_INTRO:
     SPEC m (p1 * riscv_ID_PC c pc) code
            (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
@@ -102,6 +154,31 @@ Proof
          STAR_ASSOC, SEP_CLAUSES]
 QED
 
+Theorem RISCV_PC_noC_INTRO:
+    SPEC m (p1 * riscv_ID_PC_noC c pc) code
+           (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
+    SPEC m (p1 * riscv_ID_PC_noC c pc) code (p2 * riscv_ID_PC_noC c pc')
+Proof
+   REPEAT STRIP_TAC
+   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
+        [riscv_ID_PC_noC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
+QED
+
+Theorem RISCV_TEMPORAL_PC_noC_INTRO:
+    TEMPORAL_NEXT m (p1 * riscv_ID_PC_noC c pc) code
+                    (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
+    TEMPORAL_NEXT m (p1 * riscv_ID_PC_noC c pc) code (p2 * riscv_ID_PC_noC c pc')
+Proof
+   REPEAT STRIP_TAC
+   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
+        [riscv_ID_PC_noC_def, temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND,
+         STAR_ASSOC, SEP_CLAUSES]
+QED
+
+(* The alignment side condition of RISCV_PC_INTRO for a branch: with C it
+   always holds. *)
 Theorem cond_branch_aligned:
    ((aligned 1 (pc: word64) ==>
      aligned 1 (if b then pc + w << 1 else pc + 4w)) = T) /\
@@ -112,6 +189,56 @@ Proof
   \\ blastLib.FULL_BBLAST_TAC
 QED
 
+(* Without C, the side condition of RISCV_PC_noC_INTRO for a taken branch
+   (cond_branch_aligned_noC), for JAL and for a branch whose condition is
+   decided, such as BEQ x0, x0 (jal_aligned_noC), is that the low bit of
+   the offset is clear. *)
+Theorem cond_branch_aligned_noC:
+   (aligned 2 (pc: word64) ==>
+    aligned 2 (if b then pc + sw2sw (w: word12) << 1 else pc + 4w)) =
+   (aligned 2 pc ==> b ==> ~word_lsb w)
+Proof
+  rw [alignmentTheory.aligned_extract]
+  \\ blastLib.FULL_BBLAST_TAC
+QED
+
+Theorem jal_aligned_noC:
+   ((aligned 2 (pc: word64) ==> aligned 2 (pc + sw2sw (w: word20) << 1)) =
+    (aligned 2 pc ==> ~word_lsb w)) /\
+   ((aligned 2 (pc: word64) ==> aligned 2 (pc + sw2sw (v: word12) << 1)) =
+    (aligned 2 pc ==> ~word_lsb v))
+Proof
+  rw [alignmentTheory.aligned_extract]
+  \\ blastLib.FULL_BBLAST_TAC
+QED
+
+(* JALR clears bit 0 of its target; simp_triple_rule (riscv_progLib)
+   decides the alignment conditions of a JALR spec by this. *)
+Theorem jalr_target_aligned:
+   (aligned 1 (0xFFFFFFFFFFFFFFFEw && w: word64) = T) /\
+   (aligned 2 (0xFFFFFFFFFFFFFFFEw && w) = ~word_bit 1 w) /\
+   (word_bit 1 (0xFFFFFFFFFFFFFFFEw && w) = word_bit 1 w)
+Proof
+  rw [alignmentTheory.aligned_extract]
+  \\ blastLib.BBLAST_TAC
+QED
+
+(* Without C, a spec assumes aligned 2 pc (riscv_ID_PC_noC); config_rule
+   (riscv_progLib) rewrites with this the hypotheses of a step theorem
+   that test bit 0 or 1 of pc, or bit 1 of a JAL or branch target. *)
+Theorem word_bit_aligned_noC:
+   aligned 2 (pc: word64) ==>
+   ~word_bit 0 pc /\ ~word_bit 1 pc /\
+   (word_bit 1 (pc + sw2sw (w: word20) << 1) = word_lsb w) /\
+   (word_bit 1 (pc + sw2sw (v: word12) << 1) = word_lsb v)
+Proof
+  rw [alignmentTheory.aligned_extract]
+  \\ blastLib.FULL_BBLAST_TAC
+QED
+
+(* With C, the alignment of a JAL target follows from that of pc, and that
+   of a JALR target holds because JALR clears bit 0; riscv_introduction
+   removes both from the merged conditions of a spec. *)
 Theorem jal_aligned:
    (aligned 1 (pc: word64) ==> aligned 1 (pc + w << 1)) = T
 Proof
@@ -133,11 +260,17 @@ QED
 
 val riscv_MEM8_def = fetch "-" "riscv_MEM8_def";
 
+(* riscv_MEMORY dmem mem: the bytes at the addresses in dmem, given by
+   mem; riscv_progLib (memory_introduction) states the data that a load,
+   store or AMO accesses with it. *)
 val (riscv_MEMORY_def, riscv_MEMORY_INSERT) =
    stateLib.define_map_component ("riscv_MEMORY", "mem", riscv_MEM8_def)
 
 (* ------------------------------------------------------------------------ *)
 
+(* A write to a register in the footprint x leaves the rest of the state,
+   FRAME_STATE riscv_proj x, unchanged: the frame theorem of c_gpr, which
+   riscv_frame below adds to those of the other written components. *)
 Theorem c_gpr_frame:
    !c_gpr a b w s x.
      riscv_c_c_gpr a b IN x ==>
@@ -160,7 +293,8 @@ QED
 (* Frame theorems moved here from riscv_progLib so that stateLib's
    Tactical.prove-based helpers run inside a Script (with a current
    theory) instead of at library load time.  riscv_progLib pulls
-   these back via riscv_progTheory. *)
+   these back via riscv_progTheory.  riscv_frame_hidden: a write to the
+   hidden logs c_update and log leaves every FRAME_STATE unchanged. *)
 Theorem riscv_frame =
    Thm.CONJ c_gpr_frame
      (stateLib.update_frame_state_thm riscv_proj_def
@@ -173,6 +307,8 @@ Theorem riscv_frame_hidden =
 
 (* ------------------------------------------------------------------------ *)
 
+(* A 32-bit opcode in terms of its four code bytes, for stateLib.spec
+   (riscv_progLib), which reads the code pool byte by byte. *)
 val riscv_opcode_bytes = Theory.save_thm("riscv_opcode_bytes",
    blastLib.BBLAST_PROVE
     ``(d @@ ((c @@ ((b @@ a) : word16)) : word24) = r: word32) =

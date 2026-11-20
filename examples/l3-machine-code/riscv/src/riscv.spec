@@ -16,6 +16,10 @@
 -- See the LICENSE file for details.
 --
 -- For syntax highlighting, treat this file as Haskell source.
+--
+-- Comments cite the RISC-V privileged and unprivileged specifications,
+-- version 20260120, as "P §x p.N" and "U §x p.N", by section and printed
+-- page (see README.md).
 ---------------------------------------------------------------------------
 
 
@@ -54,14 +58,6 @@ type amo      = bits(1)
 construct accessType { Read, Write }
 construct fetchType  { Instruction, Data }
 
-type permType = bits(4)         -- memory permissions
-
-nat ASID_SIZE       = 6
-nat PAGESIZE_BITS   = 12
-nat LEVEL_BITS      = 9
-
-type asidType       = bits(6)
-
 -- RV64* base.
 
 type regType  = dword
@@ -76,59 +72,28 @@ exception UNDEFINED         :: string
 exception INTERNAL_ERROR    :: string
 
 ---------------------------------------------------------------------------
--- Memory types for Load/Store instructions
----------------------------------------------------------------------------
-
-type memWidth       = bits(3)
-
-memWidth BYTE       = 0
-memWidth HALFWORD   = 1
-memWidth WORD       = 3
-memWidth DOUBLEWORD = 7
-
----------------------------------------------------------------------------
 -- Processor architecture
 ---------------------------------------------------------------------------
 
-type arch_base = bits(2)
+-- Only RV64I is implemented (initIdent): XLEN is 64 in every mode.
 
 construct Architecture
 {
   RV32I, RV64I, RV128I
 }
 
-arch_base archBase(a::Architecture) =
-    match a
-    { case RV32I      => 0
-      case RV64I      => 2
-      case RV128I     => 3
-    }
-
-Architecture architecture(ab::arch_base) =
-    match ab
-    { case 0          => RV32I
-      case 2          => RV64I
-      case 3          => RV128I
-      case _          => #UNDEFINED("Unknown architecture: " : [[ab] :: nat])
-    }
-
-string archName(a::Architecture) =
-    match a
-    { case RV32I      => "RV32I"
-      case RV64I      => "RV64I"
-      case RV128I     => "RV128I"
-    }
-
 ---------------------------------------------------------------------------
 -- Privilege levels
 ---------------------------------------------------------------------------
+
+-- Privilege levels and their encoding (P §1.2 Table 1 p.11).  This hart
+-- has M, S and U; the encoding 10 is reserved.
 
 type priv_level = bits(2)
 
 construct Privilege
 { User
 , Supervisor
-, Hypervisor
 , Machine
 }
 
@@ -136,84 +101,23 @@ priv_level privLevel(p::Privilege) =
     match p
     { case User       => 0
       case Supervisor => 1
-      case Hypervisor => 2
       case Machine    => 3
     }
 
+-- Total: the reserved 10 decodes as User, which is also what
+-- legalize_mstatus stores for an mstatus.MPP write of 10.
 Privilege privilege(p::priv_level) =
     match p
-    { case 0          => User
-      case 1          => Supervisor
-      case 2          => Hypervisor
+    { case 1          => Supervisor
       case 3          => Machine
+      case _          => User
     }
 
 string privName(p::Privilege) =
     match p
     { case User       => "U"
       case Supervisor => "S"
-      case Hypervisor => "H"
       case Machine    => "M"
-    }
-
----------------------------------------------------------------------------
--- Memory management and virtualization
----------------------------------------------------------------------------
-
-type vm_mode    = bits(5)
-
-construct VM_Mode
-{ Mbare
-, Mbb
-, Mbbid
-, Sv32
-, Sv39
-, Sv48
-, Sv57
-, Sv64
-}
-
-VM_Mode vmType(vm::vm_mode) =
-    match vm
-    { case  0     => Mbare
-      case  1     => Mbb
-      case  2     => Mbbid
-      case  8     => Sv32
-      case  9     => Sv39
-      case 10     => Sv48
-      case 11     => Sv57
-      case 12     => Sv64
-      case  _     => #UNDEFINED("Unknown address translation mode: " : [[vm]::nat])
-    }
-
-bool isValidVM(vm::vm_mode) =
-    match vm
-    { case 0 or 1 or 2 or 8 or 9 or 10 or 11 or 12 => true
-      case _                                       => false
-    }
-
-vm_mode vmMode(vm::VM_Mode) =
-    match vm
-    { case Mbare  => 0
-      case Mbb    => 1
-      case Mbbid  => 2
-      case Sv32   => 8
-      case Sv39   => 9
-      case Sv48   => 10
-      case Sv57   => 11
-      case Sv64   => 12
-    }
-
-string vmModeName(vm::VM_Mode) =
-    match vm
-    { case Mbare  => "Mbare"
-      case Mbb    => "Mbb"
-      case Mbbid  => "Mbbid"
-      case Sv32   => "Sv32"
-      case Sv39   => "Sv39"
-      case Sv48   => "Sv48"
-      case Sv57   => "Sv57"
-      case Sv64   => "Sv64"
     }
 
 ---------------------------------------------------------------------------
@@ -237,102 +141,85 @@ ext_status ext_status(e::ExtStatus) =
       case Dirty    => 3
     }
 
-ExtStatus extStatus(e::ext_status) =
-    match e
-    { case 0        => Off
-      case 1        => Initial
-      case 2        => Clean
-      case 3        => Dirty
-    }
-
-string extStatusName(e::ExtStatus) =
-    match e
-    { case Off      => "Off"
-      case Initial  => "Initial"
-      case Clean    => "Clean"
-      case Dirty    => "Dirty"
-    }
-
 ---------------------------------------------------------------------------
 -- Exceptions and Interrupts
 ---------------------------------------------------------------------------
 
+-- Interrupts and their codes (P §3.1.15 Table 16 p.50): supervisor and
+-- machine software, timer and external interrupts.
 construct Interrupt
-{ Software
-, Timer
+{ SSI, MSI, STI, MTI, SEI, MEI
 }
 
 exc_code interruptIndex(i::Interrupt) =
     match i
-    { case Software     => 0
-      case Timer        => 1
+    { case SSI          => 1
+      case MSI          => 3
+      case STI          => 5
+      case MTI          => 7
+      case SEI          => 9
+      case MEI          => 11
     }
 
+-- Exceptions and their codes (P §3.1.15 Table 16 p.50).  Address
+-- translation raises the page faults (translateAddr).
 construct ExceptionType
 { Fetch_Misaligned
 , Fetch_Fault
 , Illegal_Instr
 , Breakpoint
+, Load_Misaligned
 , Load_Fault
-, AMO_Misaligned
+, Store_AMO_Misaligned
 , Store_AMO_Fault
 , UMode_Env_Call
 , SMode_Env_Call
-, HMode_Env_Call
 , MMode_Env_Call
+, Fetch_PageFault
+, Load_PageFault
+, Store_AMO_PageFault
 }
 
 exc_code excCode(e::ExceptionType) =
     match e
-    { case Fetch_Misaligned   => 0x0
-      case Fetch_Fault        => 0x1
-      case Illegal_Instr      => 0x2
-      case Breakpoint         => 0x3
+    { case Fetch_Misaligned     => 0x0
+      case Fetch_Fault          => 0x1
+      case Illegal_Instr        => 0x2
+      case Breakpoint           => 0x3
 
-      case Load_Fault         => 0x5
-      case AMO_Misaligned     => 0x6
-      case Store_AMO_Fault    => 0x7
+      case Load_Misaligned      => 0x4
+      case Load_Fault           => 0x5
+      case Store_AMO_Misaligned => 0x6
+      case Store_AMO_Fault      => 0x7
 
-      case UMode_Env_Call     => 0x8
-      case SMode_Env_Call     => 0x9
-      case HMode_Env_Call     => 0xA
-      case MMode_Env_Call     => 0xB
-    }
+      case UMode_Env_Call       => 0x8
+      case SMode_Env_Call       => 0x9
+      case MMode_Env_Call       => 0xB
 
-ExceptionType excType(e::exc_code) =
-    match e
-    { case 0x0 => Fetch_Misaligned
-      case 0x1 => Fetch_Fault
-      case 0x2 => Illegal_Instr
-      case 0x3 => Breakpoint
-
-      case 0x5 => Load_Fault
-      case 0x6 => AMO_Misaligned
-      case 0x7 => Store_AMO_Fault
-
-      case 0x8 => UMode_Env_Call
-      case 0x9 => SMode_Env_Call
-      case 0xA => HMode_Env_Call
-      case 0xB => MMode_Env_Call
-
-      case _   => #UNDEFINED("Unknown exception: " : [[e]::nat])
+      case Fetch_PageFault      => 0xC
+      case Load_PageFault       => 0xD
+      case Store_AMO_PageFault  => 0xF
     }
 
 string excName(e::ExceptionType) =
     match e
-    { case Fetch_Misaligned   => "MISALIGNED_FETCH"
-      case Fetch_Fault        => "FAULT_FETCH"
-      case Illegal_Instr      => "ILLEGAL_INSTRUCTION"
-      case Breakpoint         => "BREAKPOINT"
+    { case Fetch_Misaligned     => "MISALIGNED_FETCH"
+      case Fetch_Fault          => "FAULT_FETCH"
+      case Illegal_Instr        => "ILLEGAL_INSTRUCTION"
+      case Breakpoint           => "BREAKPOINT"
 
-      case Load_Fault         => "FAULT_LOAD"
-      case AMO_Misaligned     => "MISALIGNED_AMO"
-      case Store_AMO_Fault    => "FAULT_STORE_AMO"
+      case Load_Misaligned      => "MISALIGNED_LOAD"
+      case Load_Fault           => "FAULT_LOAD"
+      case Store_AMO_Misaligned => "MISALIGNED_STORE_AMO"
+      case Store_AMO_Fault      => "FAULT_STORE_AMO"
 
-      case UMode_Env_Call     => "U-EnvCall"
-      case SMode_Env_Call     => "S-EnvCall"
-      case HMode_Env_Call     => "H-EnvCall"
-      case MMode_Env_Call     => "M-EnvCall"
+      case UMode_Env_Call       => "U-EnvCall"
+      case SMode_Env_Call       => "S-EnvCall"
+      case MMode_Env_Call       => "M-EnvCall"
+
+      case Fetch_PageFault      => "PAGEFAULT_FETCH"
+      case Load_PageFault       => "PAGEFAULT_LOAD"
+      case Store_AMO_PageFault  => "PAGEFAULT_STORE_AMO"
     }
 
 ---------------------------------------------------------------------------
@@ -341,157 +228,126 @@ string excName(e::ExceptionType) =
 
 -- Machine-Level CSRs
 
-register mcpuid :: regType
-{ 63-62 : ArchBase  -- base architecture, machine mode on reset
-,    20 : U         -- user-mode support
-,    18 : S         -- supervisor-mode support
-,    12 : M         -- integer multiply/divide support
-,     8 : I         -- integer base ISA support (XXX: this seems unnecessary)
+-- Machine ISA (P §3.1.1 Figure 2 p.27, Table 12 p.28).  The hart is
+-- RV64 I M A F D C with S and U; only C is writable.
+register misa :: regType
+{ 63-62 : MXL       -- machine XLEN: 1 = 32, 2 = 64, 3 = 128 (Table 11)
+,    20 : U         -- user mode
+,    18 : S         -- supervisor mode
+,    12 : M         -- integer multiply/divide
+,     8 : I         -- base integer ISA
+,     5 : F         -- single-precision floating point
+,     3 : D         -- double-precision floating point
+,     2 : C         -- compressed instructions (IALIGN = 16)
+,     0 : A         -- atomics
 }
 
-register mimpid :: regType
-{ 63-16 : RVImpl
-,  15-0 : RVSource
-}
-
+-- Machine status (P §3.1.6 Figure 8 p.32).  Only the writable fields are
+-- stored: UXL, SXL and SD are produced when mstatus is read
+-- (read_mstatus) and every other field is read-only zero.
 register mstatus :: regType
-{    63 : MSD       -- extended context dirty status
-, 21-17 : VM        -- memory management and virtualization
-,    16 : MMPRV     -- load/store memory privilege
-, 15-14 : MXS       -- extension context status
-, 13-12 : MFS       -- floating-point context status
-            -- privilege and global interrupt-enable stack
-, 11-10 : MPRV3
-,     9 : MIE3
-,   8-7 : MPRV2
-,     6 : MIE2
-,   5-4 : MPRV1
-,     3 : MIE1
-,   2-1 : MPRV
-,     0 : MIE
+{    22 : TSR       -- trap SRET (P §3.1.6.6 p.37)
+,    21 : TW        -- timeout wait
+,    20 : TVM       -- trap virtual memory
+,    19 : MXR       -- make executable readable (P §3.1.6.4 p.35)
+,    18 : SUM       -- permit supervisor user memory access
+,    17 : MPRV      -- modify privilege of loads and stores
+, 14-13 : FS        -- floating-point context status (P §3.1.6.7 p.38)
+, 12-11 : MPP       -- privilege before the last trap into M-mode
+,     8 : SPP       -- privilege before the last trap into S-mode
+,     7 : MPIE      -- MIE before the last trap into M-mode
+,     5 : SPIE      -- SIE before the last trap into S-mode
+,     3 : MIE       -- M-mode interrupt enable (P §3.1.6.1 p.32)
+,     1 : SIE       -- S-mode interrupt enable
 }
 
-register mtdeleg :: regType
-{ 63-16 : Intr_deleg
-, 15-0  : Exc_deleg
-}
-
+-- Interrupt pending and enable bits (P §3.1.9 Figures 15-16 p.43-44): bit
+-- i is for interrupt code i.  Of mip only SSIP, STIP and the software
+-- SEIP bit are stored; read_mip adds the others.
 register mip :: regType
-{           -- pending timer interrupts (read-only)
-      7 : MTIP
-,     6 : HTIP
-,     5 : STIP
-            -- pending software interrupts (read/write)
-,     3 : MSIP
-,     2 : HSIP
-,     1 : SSIP
+{    11 : MEIP      -- machine external
+,     9 : SEIP      -- supervisor external
+,     7 : MTIP      -- machine timer
+,     5 : STIP      -- supervisor timer
+,     3 : MSIP      -- machine software
+,     1 : SSIP      -- supervisor software
 }
 
 register mie :: regType
-{           -- enable timer interrupts (read-only)
-      7 : MTIE
-,     6 : HTIE
+{    11 : MEIE
+,     9 : SEIE
+,     7 : MTIE
 ,     5 : STIE
-            -- enable software interrupts (read/write)
 ,     3 : MSIE
-,     2 : HSIE
 ,     1 : SSIE
 }
 
+-- mcause and scause (P §3.1.15 Figure 22 p.49)
 register mcause :: regType
-{    63 : Int   -- Interrupt
-    3-0 : EC    -- Exception Code
+{    63 : Int       -- interrupt
+,  62-0 : EC        -- exception code
 }
 
--- Timers and counters are stored as deltas from their system-values
--- at each privilege level; the hardware motivation is explained in
--- the specification.
+-- Machine-level CSRs (P §3.1).  medeleg, mideleg, mtvec, mcounteren,
+-- menvcfg, mcountinhibit and the PMP CSRs are stored as raw values
+-- (legalised on write).  mvendorid, marchid, mimpid, mconfigptr and the
+-- hardware performance-monitoring CSRs are constant zero, and mcycle and
+-- minstret are c_cycles and c_instret.
 
 record MachineCSR
-{ mcpuid        :: mcpuid       -- information registers
-  mimpid        :: mimpid
+{ misa          :: misa         -- information registers
   mhartid       :: regType
 
   mstatus       :: mstatus      -- trap setup
-  mtvec         :: regType
-  mtdeleg       :: mtdeleg
+  medeleg       :: regType
+  mideleg       :: regType
   mie           :: mie
-  mtimecmp      :: regType
+  mtvec         :: regType
+  mcounteren    :: regType
+  menvcfg       :: regType
 
-  mtime_delta   :: regType      -- time wrt global clock
+  mcountinhibit :: regType      -- counter setup
 
   mscratch      :: regType      -- trap handling
   mepc          :: regType
   mcause        :: mcause
-  mbadaddr      :: regType
+  mtval         :: regType
   mip           :: mip
 
-  mbase         :: regType      -- protection and translation
-  mbound        :: regType
-  mibase        :: regType
-  mibound       :: regType
-  mdbase        :: regType
-  mdbound       :: regType
-
-                   -- host-target interface (berkeley extensions)
-  mtohost       :: regType      -- output register to host
-  mfromhost     :: regType      -- input register from host
+  pmpcfg0       :: regType      -- physical memory protection
+  pmpcfg2       :: regType
+  pmpaddr0      :: regType
+  pmpaddr1      :: regType
+  pmpaddr2      :: regType
+  pmpaddr3      :: regType
+  pmpaddr4      :: regType
+  pmpaddr5      :: regType
+  pmpaddr6      :: regType
+  pmpaddr7      :: regType
+  pmpaddr8      :: regType
+  pmpaddr9      :: regType
+  pmpaddr10     :: regType
+  pmpaddr11     :: regType
+  pmpaddr12     :: regType
+  pmpaddr13     :: regType
+  pmpaddr14     :: regType
+  pmpaddr15     :: regType
 }
 
--- Hypervisor-Level CSRs
-
-record HypervisorCSR
-{ hstatus       :: mstatus      -- trap setup
-  htvec         :: regType
-  htdeleg       :: mtdeleg
-  htimecmp      :: regType
-
-  htime_delta   :: regType      -- time wrt to global clock
-
-  hscratch      :: regType      -- trap handling
-  hepc          :: regType
-  hcause        :: mcause
-  hbadaddr      :: regType
-}
-
--- Supervisor-Level CSRs
-
-register sstatus :: regType
-{    63 : SSD       -- extended context dirty status
-,    16 : SMPRV     -- load/store memory privilege
-, 15-14 : SXS       -- extension context status
-, 13-12 : SFS       -- floating-point context status
-,     4 : SPS       -- previous privilege level before entering supervisor mode
-,     3 : SPIE      -- interrupt-enable before entering supervisor mode
-,     0 : SIE       -- supervisor-level interrupt-enable
-}
-
-register sip :: regType
-{     5 : STIP      -- pending timer interrupt
-,     1 : SSIP      -- pending software interrupt
-}
-
-register sie :: regType
-{     5 : STIE      -- enable timer interrupt
-,     1 : SSIE      -- enable software interrupt
-}
+-- Supervisor-Level CSRs (P §12.1).  sstatus, sie and sip are views of
+-- mstatus, mie and mip.
 
 record SupervisorCSR
-{ -- sstatus :: sstatus is a projection of mstatus :: mstatus
-  stvec         :: regType      -- trap setup
-  -- sie :: sie is a projection of mie :: mie
-  stimecmp      :: regType
-
-  stime_delta   :: regType      -- time wrt global clock
+{ stvec         :: regType      -- trap setup
+  scounteren    :: regType
+  senvcfg       :: regType
 
   sscratch      :: regType      -- trap handling
   sepc          :: regType
   scause        :: mcause
-  sbadaddr      :: regType
-  -- sip :: sip is a projection of mip :: mip
+  stval         :: regType
 
-  sptbr         :: regType      -- memory protection and translation
-  sasid         :: regType
+  satp          :: regType      -- address translation and protection
 }
 
 -- User-Level CSRs
@@ -509,120 +365,133 @@ register FPCSR :: word          -- 32-bit control register
 }
 
 record UserCSR
-{ cycle_delta   :: regType      -- timers and counters wrt base values
-  time_delta    :: regType
-  instret_delta :: regType
-  fpcsr         :: FPCSR
+{ fpcsr         :: FPCSR
 }
 
--- Machine state projections
+-- Write legalisation (P §2.3 p.24-25): a write of a WARL field never
+-- raises an exception, and stores a legal value.  The PMP address
+-- registers, mie, mip and the views are legalised in CSRMap.
 
-sip lift_mip_sip(mip::mip) =
-{ var sip = sip(0)
-; sip.STIP  <- mip.STIP
-; sip.SSIP  <- mip.SSIP
-; sip
-}
+-- misa (P §3.1.1 p.27-29)
 
-sie lift_mie_sie(mie::mie) =
-{ var sie = sie(0)
-; sie.STIE  <- mie.STIE
-; sie.SSIE  <- mie.SSIE
-; sie
-}
+regType MISA_RESET = 0x800000000014112D -- MXL = 2; A C D F I M S U (P §3.4 p.63)
 
-mip lower_sip_mip(sip::sip, mip::mip) =
-{ var m = mip
-; m.STIP    <- sip.STIP
-; m.SSIP    <- sip.SSIP
+-- Only C is writable.  "If an instruction that would write misa
+-- increases IALIGN, and the subsequent instruction's address is not
+-- IALIGN-bit aligned, the write to misa is suppressed" (p.29): clearing C
+-- is ignored when bit 1 of the next pc is set.  pc is the address of the
+-- CSR instruction, which is 32 bits long, so (pc + 4)<1> = pc<1>.
+misa legalize_misa(v::regType, m::misa, pc::regType) =
+    if not v<2> and m.C and pc<1> then m
+    else { var n = m
+         ; n.C <- v<2>
+         ; n
+         }
+
+-- mstatus (P §3.1.6 p.31-41)
+
+regType MSTATUS_WMASK = 0x7E79AA           -- the fields of register mstatus
+regType MSTATUS_CONST = 0xA00000000        -- UXL = SXL = 2 (P §3.1.6.3 p.34)
+regType MSTATUS_SD    = 0x8000000000000000
+
+-- An explicit write.  Read-only and WPRI fields are dropped (P §2.3.1
+-- p.24).  MPP is WARL and holds U, S or M (P §3.1.6.2 p.33); the reserved
+-- 10 is stored as U.
+mstatus legalize_mstatus(v::regType) =
+{ var m = mstatus(v && MSTATUS_WMASK)
+; when m.MPP == 2 do m.MPP <- 0
 ; m
 }
 
-mie lower_sie_mie(sie::sie, mie::mie) =
-{ var m = mie
-; m.STIE    <- sie.STIE
-; m.SSIE    <- sie.SSIE
-; m
+-- The value read.  XS and VS are read-only zero, so SD is set iff FS is
+-- Dirty (P §3.1.6.7 p.40).
+regType read_mstatus(m::mstatus) =
+    (&m && MSTATUS_WMASK) || MSTATUS_CONST ||
+    (if m.FS == ext_status(Dirty) then MSTATUS_SD else 0)
+
+-- sstatus is a view of mstatus (P §12.1.1 p.113-114): its fields are the
+-- homonymous fields of mstatus.  Of these, SIE SPIE SPP FS SUM MXR are
+-- writable here.  SUM is writable because satp.MODE is not read-only zero
+-- (P §3.1.6.4 p.35, §12.1.1.2 p.114).
+
+regType SSTATUS_MASK = 0x80000003018DE762  -- SD UXL SDT SPELP MXR SUM XS FS
+                                           -- VS SPP UBE SPIE SIE
+
+regType read_sstatus(m::mstatus) = read_mstatus(m) && SSTATUS_MASK
+
+mstatus legalize_sstatus(v::regType, m::mstatus) =
+    legalize_mstatus((&m && ~SSTATUS_MASK) || (v && SSTATUS_MASK))
+
+-- mtvec and stvec (P §3.1.7 p.41-42, §12.1.2 p.116): MODE is Direct (0) or
+-- Vectored (1), with a 4-byte aligned BASE in both.  A write of a reserved
+-- MODE keeps the old MODE and still writes BASE.
+regType legalize_xtvec(v::regType, old::regType) =
+    if v<1> then v<63:2> : old<1:0> else v
+
+-- mepc and sepc (P §3.1.14 p.48, §12.1.7 p.119): bit 0 is always zero.
+-- Bit 1 stays writable when IALIGN = 32 but is then masked when read, by
+-- read_xepc.
+regType legalize_xepc(v::regType) = v && ~0x1
+
+-- mcause and scause (P §3.1.15 p.49-50, §12.1.8 p.120): the exception
+-- code is WLRL.  A write of a code this hart does not have leaves the
+-- register unchanged; the legal codes are those of sail-riscv's
+-- legalize_cause.  scause holds any code from 0 to 31.
+mcause legalize_mcause(v::regType, old::mcause) =
+{ c = v<62:0>
+; if (if v<63> then c == 1 or c == 3 or c == 5 or c == 7 or c == 9 or c == 11
+      else (c <+ 16 and c != 10 and c != 14) or c == 19)
+  then mcause(v) else old
 }
 
-mstatus update_mstatus(orig::mstatus, v::mstatus) =
-{ var mt = orig
--- update privilege stack
-; mt.MIE   <- v.MIE
-; mt.MPRV  <- v.MPRV
-; mt.MIE1  <- v.MIE1
-; mt.MPRV1 <- v.MPRV1
-; mt.MIE2  <- v.MIE2
-; mt.MPRV2 <- v.MPRV2
-; mt.MIE3  <- v.MIE3
-; mt.MPRV3 <- v.MPRV3
+mcause legalize_scause(v::regType, old::mcause) =
+    if v<62:0> <=+ 31 then mcause(v) else legalize_mcause(v, old)
 
--- ensure a valid address translation mode
-; when isValidVM(v.VM)
-  do mt.VM <- v.VM
-; mt.MMPRV <- v.MMPRV
-
--- update extension context status
-; mt.MFS   <- v.MFS
-; mt.MXS   <- v.MXS
-; mt.MSD   <- extStatus(v.MXS) == Dirty or extStatus(v.MFS) == Dirty
-
-; mt
+-- satp (P §12.1.11 p.124-126, Figure 64 p.125): MODE is Bare, Sv39, Sv48
+-- or Sv57 (Table 40 p.126), and if satp "is written with an
+-- unsupported MODE, the entire write has no effect; no fields in satp are
+-- modified" (p.125).  All 16 ASID bits and all 44 PPN bits are writable.
+-- A write of Bare with a nonzero ASID or PPN, whose effect is UNSPECIFIED
+-- (p.125), stores the value as written.  MODE is compared under a mask
+-- rather than extracted, so that HolBA's lifter can translate the
+-- legaliser.
+regType legalize_satp(v::regType, old::regType) =
+{ m = v && 0xF000000000000000
+; if m == 0 or m == 0x8000000000000000 or m == 0x9000000000000000
+     or m == 0xA000000000000000
+  then v else old
 }
 
-sstatus lift_mstatus_sstatus(mst::mstatus) =
-{ var st = sstatus(0)
-; st.SMPRV  <- mst.MMPRV
-
--- shared state
-; st.SXS    <- mst.MXS
-; st.SFS    <- mst.MFS
-; st.SSD    <- extStatus(mst.MXS) == Dirty or extStatus(mst.MFS) == Dirty
-
--- projected state
-; st.SPS    <- not (privilege(mst.MPRV1) == User)
-; st.SPIE   <- mst.MIE1
-; st.SIE    <- mst.MIE
-
-; st
+-- PMP configuration (P §3.7.1 Figures 31 and 34 p.71-72): one byte per
+-- entry; pmpcfg0 holds entries 0-7 and pmpcfg2 entries 8-15.
+register pmpcfg :: bits(8)
+{     7 : L         -- locked
+,   4-3 : A         -- 0 OFF, 1 TOR, 2 NA4, 3 NAPOT
+,     2 : X
+,     1 : W
+,     0 : R
 }
 
-mstatus lower_sstatus_mstatus(sst::sstatus, mst::mstatus) =
-{ var mt = mstatus(&mst)
+-- A locked entry ignores writes until reset (P §3.7.1.2 p.73).  Bits 6:5
+-- are read-only zero.  R = 0 with W = 1 is reserved and is stored as
+-- R = W = X = 0.  With grain G = 0 every A mode can be selected.
+pmpcfg legalize_pmpcfg_byte(b::bits(8), old::pmpcfg) =
+    if old.L then old
+    else { var n = pmpcfg(b && 0x9F)
+         ; when not n.R and n.W do { n.W <- false; n.X <- false }
+         ; n
+         }
 
-; mt.MMPRV  <- sst.SMPRV
-; mt.MXS    <- sst.SXS
-; mt.MFS    <- sst.SFS
-
-; mt.MPRV1  <- privLevel(if sst.SPS then Supervisor else User)
-; mt.MIE1   <- sst.SPIE
-; mt.MIE    <- sst.SIE
-
-; update_mstatus(mst, mt)
-}
-
--- pop the privilege stack for ERET
-mstatus popPrivilegeStack(mst::mstatus) =
-{ var st = mst
-; st.MIE    <- mst.MIE1
-; st.MPRV   <- mst.MPRV1
-; st.MIE1   <- mst.MIE2
-; st.MPRV1  <- mst.MPRV2
-; st.MIE2   <- true
-; st.MPRV2  <- privLevel(User)
-; st
-}
-
-mstatus pushPrivilegeStack(mst::mstatus, p::Privilege) =
-{ var st = mst
-; st.MIE2   <- mst.MIE1
-; st.MPRV2  <- mst.MPRV1
-; st.MIE1   <- mst.MIE
-; st.MPRV1  <- mst.MPRV
-; st.MIE    <- false
-; st.MPRV   <- privLevel(p)
-; st
-}
+-- The 8 entries of pmpcfg0 or pmpcfg2 are legalised separately.
+regType legalize_pmpcfg(v::regType, old::regType) =
+    &legalize_pmpcfg_byte(v<63:56>, pmpcfg(old<63:56>)) :
+    &legalize_pmpcfg_byte(v<55:48>, pmpcfg(old<55:48>)) :
+    &legalize_pmpcfg_byte(v<47:40>, pmpcfg(old<47:40>)) :
+    &legalize_pmpcfg_byte(v<39:32>, pmpcfg(old<39:32>)) :
+    &legalize_pmpcfg_byte(v<31:24>, pmpcfg(old<31:24>)) :
+    &legalize_pmpcfg_byte(v<23:16>, pmpcfg(old<23:16>)) :
+    &legalize_pmpcfg_byte(v<15:8>,  pmpcfg(old<15:8>))  :
+    &legalize_pmpcfg_byte(v<7:0>,   pmpcfg(old<7:0>))
 
 ---------------------------------------------------------------------------
 -- Instruction fetch control
@@ -630,14 +499,14 @@ mstatus pushPrivilegeStack(mst::mstatus, p::Privilege) =
 
 record SynchronousTrap
 { trap            :: ExceptionType
-  badaddr         :: vAddr option
+  tval            :: regType        -- for mtval or stval (P §3.1.16 p.52-53)
 }
 
 construct TransferControl
 { Trap            :: SynchronousTrap
 , BranchTo        :: regType
-, Ereturn
-, Mrts
+, Mret
+, Sret
 }
 
 ---------------------------------------------------------------------------
@@ -649,10 +518,9 @@ construct TransferControl
 type RegFile    = reg  -> regType
 
 declare
-{ clock         :: regType                      -- global clock and counters
-
-  c_instret     :: id -> regType                -- per-core counters
-  c_cycles      :: id -> regType
+{ c_instret     :: id -> regType                -- minstret
+  c_cycles      :: id -> regType                -- mcycle
+  c_minstret_written :: id -> bool              -- minstret written in this step
 
   c_gpr         :: id -> RegFile                -- general purpose registers
   c_fpr         :: id -> RegFile                -- floating-point registers
@@ -660,26 +528,29 @@ declare
   c_PC          :: id -> regType                -- program counter
   c_Skip        :: id -> regType                -- bytes to next instruction
 
+  c_privilege   :: id -> priv_level             -- current privilege level
+
   c_UCSR        :: id -> UserCSR                -- user-level CSRs
   c_SCSR        :: id -> SupervisorCSR          -- supervisor-level CSRs
-  c_HCSR        :: id -> HypervisorCSR          -- hypervisor-level CSRs
   c_MCSR        :: id -> MachineCSR             -- machine-level CSRs
+
+  c_extMEIP     :: id -> bool                   -- platform interrupt lines:
+  c_extSEIP     :: id -> bool                   --   MEIP and external SEIP
 
   -- interpreter execution context
   c_NextFetch   :: id -> TransferControl option
-  c_ReserveLoad :: id -> vAddr option           -- load reservation for LL/SC
-  c_ExitCode    :: id -> regType                -- derived from Berkeley HTIF
+  c_ReserveLoad :: id -> pAddr option           -- load reservation for LR/SC
+  c_ExitCode    :: id -> regType                -- set by the emulator
 }
 
 -- Number of cores
 declare totalCore :: nat
 
--- ID of the core executing current instruction
+-- ID of the core executing current instruction.  Nothing in the model
+-- changes it: a step runs the hart procID.  A store by one hart does not
+-- invalidate the load reservation of another (c_ReserveLoad), so LR and SC
+-- are modelled for one hart only.
 declare procID :: id
-
-unit scheduleCore(id :: nat) =
-    when id < totalCore
-    do procID <- [id]
 
 -- The following components provide read/write access to state of the
 -- core whose id equals procID.  For example, writing "gpr(r)" refers
@@ -693,11 +564,11 @@ component gpr(n::reg) :: regType
                  }
 }
 
+-- Writing fcsr makes the floating-point state Dirty (P §3.1.6.7 Table 14).
 component fcsr :: FPCSR
 { value        = c_UCSR(procID).fpcsr
-  assign value = { c_UCSR(procID).fpcsr       <- value
-                 ; c_MCSR(procID).mstatus.MFS <- ext_status(Dirty)
-                 ; c_MCSR(procID).mstatus.MSD <- true
+  assign value = { c_UCSR(procID).fpcsr      <- value
+                 ; c_MCSR(procID).mstatus.FS <- ext_status(Dirty)
                  }
 }
 
@@ -729,11 +600,6 @@ component SCSR :: SupervisorCSR
   assign value = c_SCSR(procID) <- value
 }
 
-component HCSR :: HypervisorCSR
-{ value        = c_HCSR(procID)
-  assign value = c_HCSR(procID) <- value
-}
-
 component MCSR :: MachineCSR
 { value        = c_MCSR(procID)
   assign value = c_MCSR(procID) <- value
@@ -744,7 +610,7 @@ component NextFetch :: TransferControl option
   assign value = c_NextFetch(procID) <- value
 }
 
-component ReserveLoad :: vAddr option
+component ReserveLoad :: pAddr option
 { value        = c_ReserveLoad(procID)
   assign value = c_ReserveLoad(procID) <- value
 }
@@ -754,30 +620,164 @@ component ExitCode :: regType
   assign value = c_ExitCode(procID) <- value
 }
 
+-- physical memory
+
+declare MEM8 :: pAddr -> byte
+
+component MEM (a::pAddrIdx) :: regType
+{
+  value =
+    { b = [a] << 3
+    ; ( MEM8 (b + 7) : MEM8 (b + 6) : MEM8 (b + 5) : MEM8 (b + 4) :
+        MEM8 (b + 3) : MEM8 (b + 2) : MEM8 (b + 1) : MEM8 (b) )
+    }
+  assign val =
+    { b = [a] << 3
+    ; MEM8 (b + 7) <- val<63:56>
+    ; MEM8 (b + 6) <- val<55:48>
+    ; MEM8 (b + 5) <- val<47:40>
+    ; MEM8 (b + 4) <- val<39:32>
+    ; MEM8 (b + 3) <- val<31:24>
+    ; MEM8 (b + 2) <- val<23:16>
+    ; MEM8 (b + 1) <- val<15:8 >
+    ; MEM8 (b    ) <- val<7 :0 >
+    }
+}
+
+-- The core-local interruptor (CLINT) of sail-riscv's platform.  mtime,
+-- mtimecmp and msip are memory-mapped registers (P §3.2.1 p.59, §3.1.9
+-- p.44), so here they are words of memory.  Nothing in the model
+-- advances mtime: the emulator does that after every step.  Bits 31 to 1
+-- of msip, which read as zero (P §3.1.9 p.44), are stored as written:
+-- only bit 0 is used, and making the others zero would put a test of the
+-- address into every store.
+
+pAddr CLINT_BASE = 0x2000000
+
+-- shared by all harts
+regType mtime() = MEM((CLINT_BASE + 0xBFF8)<63:3>)
+
+regType mtimecmp(h::id) = MEM((CLINT_BASE + 0x4000 + 8 * ZeroExtend(h))<63:3>)
+
+-- bit 0 of the 32-bit msip register of hart h
+bool msip(h::id) = MEM8(CLINT_BASE + 4 * ZeroExtend(h))<0>
+
 -- machine state utilities
 
-Architecture curArch() =
-    architecture(MCSR.mcpuid.ArchBase)
-
+-- misa.MXL is read-only 2: initIdent accepts only RV64I, and
+-- legalize_misa changes only C.  So this is false in every reachable
+-- state, and the RV32 cases of the instructions are dead code.  They do not
+-- make a complete RV32 (for one, addresses and the pc are not truncated
+-- to 32 bits, and AMO*.D are not illegal): RV32 is not supported.
 bool in32BitMode() =
-    curArch() == RV32I
+    MCSR.misa.MXL == 1
 
+bool haveRVC() =
+    MCSR.misa.C
+
+-- The F and D instructions, and every access to fflags, frm and fcsr, are
+-- illegal while mstatus.FS is Off (P §3.1.6.7 p.38).  misa.F and misa.D
+-- are read-only 1.
+bool fpEnabled() =
+    MCSR.mstatus.FS != ext_status(Off)
+
+-- mepc and sepc as read, also by MRET and SRET: bit 1 reads as zero when
+-- IALIGN = 32 (P §3.1.14 p.48).
+regType read_xepc(epc::regType) =
+    if haveRVC() then epc else epc && ~0x3
+
+-- The current privilege level (P §1.2 p.11) is not held in a CSR.  It is
+-- written only by setPrivilege, so the reserved encoding 10 never occurs.
 Privilege curPrivilege() =
-    privilege(MCSR.mstatus.MPRV)
+    privilege(c_privilege(procID))
 
-regType curEPC() =
-    match curPrivilege()
-    { case User         => #INTERNAL_ERROR("No EPC in U-mode")
-      case Supervisor   => SCSR.sepc
-      case Hypervisor   => HCSR.hepc
-      case Machine      => MCSR.mepc
+unit setPrivilege(p::Privilege) =
+    c_privilege(procID) <- privLevel(p)
+
+-- Explicit loads and stores use the privilege in mstatus.MPP while
+-- mstatus.MPRV is set (P §3.1.6.4 p.35); instruction fetches do
+-- not.  Only an M-mode write of mstatus sets MPRV, and an xRET that leaves
+-- M-mode clears it, so below M-mode it is 0 in every reachable state.
+Privilege effectivePrivilege() =
+    if MCSR.mstatus.MPRV then privilege(MCSR.mstatus.MPP) else curPrivilege()
+
+-- mip as read (P §3.1.9 p.43-45): MSIP and MTIP come from the CLINT
+-- (MTIP is pending while mtime >= mtimecmp, unsigned, P §3.2.1 p.59), MEIP
+-- from the platform, and SEIP is the stored bit or the platform's line.
+regType read_mip() =
+{ var ip = mip(MCSR.&mip && 0x222)
+; ip.MSIP <- msip(procID)
+; ip.MTIP <- mtimecmp(procID) <=+ mtime()
+; ip.SEIP <- MCSR.mip.SEIP or c_extSEIP(procID)
+; ip.MEIP <- c_extMEIP(procID)
+; &ip
+}
+
+-- cycle, time and instret are readable below M-mode only when enabled in
+-- mcounteren, and in U-mode also in scounteren (P §3.1.11 p.47, §12.1.5
+-- p.119).  hpmcounter3-31 do not exist, so i is 0, 1 or 2.
+bool counterReadAllowed(csr::creg, p::Privilege) =
+{ i = [csr<4:0>]::nat
+; match p
+  { case Machine    => true
+    case Supervisor => MCSR.mcounteren<i>
+    case User       => MCSR.mcounteren<i> and SCSR.scounteren<i>
+  }
+}
+
+-- PMP entry i (P §3.7.1 p.70-73)
+
+pmpcfg pmpcfg_ent(i::bits(4)) =
+{ r = if i<3> then MCSR.pmpcfg2 else MCSR.pmpcfg0
+; pmpcfg((r >>+ (8 * ([i<2:0>]::nat)))<7:0>)
+}
+
+regType pmpaddr(i::bits(4)) =
+    match i
+    { case 0  => MCSR.pmpaddr0
+      case 1  => MCSR.pmpaddr1
+      case 2  => MCSR.pmpaddr2
+      case 3  => MCSR.pmpaddr3
+      case 4  => MCSR.pmpaddr4
+      case 5  => MCSR.pmpaddr5
+      case 6  => MCSR.pmpaddr6
+      case 7  => MCSR.pmpaddr7
+      case 8  => MCSR.pmpaddr8
+      case 9  => MCSR.pmpaddr9
+      case 10 => MCSR.pmpaddr10
+      case 11 => MCSR.pmpaddr11
+      case 12 => MCSR.pmpaddr12
+      case 13 => MCSR.pmpaddr13
+      case 14 => MCSR.pmpaddr14
+      case 15 => MCSR.pmpaddr15
     }
 
-unit sendIPI(core::regType) =
-{ id = [core]::id
-; when [id]::nat < totalCore
-  do c_MCSR(id).mip.MSIP <- true
-}
+-- pmpaddr<i> holds bits 55:2 of a physical address, so bits 63:54 are
+-- read-only zero (Figure 33 p.71).  A write is ignored while entry i is
+-- locked, or while entry i+1 is locked and TOR (P §3.7.1.2 p.73).
+unit write_pmpaddr(i::bits(4), v::regType) =
+    when not (pmpcfg_ent(i).L or
+              (i != 15 and pmpcfg_ent(i + 1).L and pmpcfg_ent(i + 1).A == 1))
+    do { a = v && 0x3FFFFFFFFFFFFF
+       ; match i
+         { case 0  => MCSR.pmpaddr0  <- a
+           case 1  => MCSR.pmpaddr1  <- a
+           case 2  => MCSR.pmpaddr2  <- a
+           case 3  => MCSR.pmpaddr3  <- a
+           case 4  => MCSR.pmpaddr4  <- a
+           case 5  => MCSR.pmpaddr5  <- a
+           case 6  => MCSR.pmpaddr6  <- a
+           case 7  => MCSR.pmpaddr7  <- a
+           case 8  => MCSR.pmpaddr8  <- a
+           case 9  => MCSR.pmpaddr9  <- a
+           case 10 => MCSR.pmpaddr10 <- a
+           case 11 => MCSR.pmpaddr11 <- a
+           case 12 => MCSR.pmpaddr12 <- a
+           case 13 => MCSR.pmpaddr13 <- a
+           case 14 => MCSR.pmpaddr14 <- a
+           case 15 => MCSR.pmpaddr15 <- a
+         }
+       }
 
 ---------------------------------------------------------------------------
 -- Floating Point
@@ -812,32 +812,43 @@ Rounding option rnd_mode_dynamic(rnd::fprnd) =
       case _          => None
     }
 
--- currently implemented rounding modes
-ieee_rounding option l3round(rnd::Rounding) =
-    match rnd
-    { case RNE        => Some(roundTiesToEven)
-      case RTZ        => Some(roundTowardZero)
-      case RDN        => Some(roundTowardNegative)
-      case RUP        => Some(roundTowardPositive)
-      case RMM        => None  -- roundTiesToMaxMagnitude not in L3
-      case RDYN       => None  -- invalid
+-- The rounding mode of an instruction: its rm field, or fcsr.frm when the
+-- field is 7 (U §21.2 p.113-114).  It is never RDYN.
+Rounding option round(rnd::fprnd) =
+    match rnd_mode_static(rnd)
+    { case Some(RDYN) => rnd_mode_dynamic(fcsr.FRM)
+      case r          => r
     }
 
--- composed rounding mode
-ieee_rounding option round(rnd::fprnd) =
+-- The IEEE rounding mode of RNE, RTZ, RDN and RUP.  RMM, round to nearest
+-- with ties to max magnitude, has none, in L3 or in HOL's binary_ieee: see
+-- "Rounding to nearest, ties to max magnitude" below.
+ieee_rounding ieeeRounding(rnd::Rounding) =
+    match rnd
+    { case RTZ        => roundTowardZero
+      case RDN        => roundTowardNegative
+      case RUP        => roundTowardPositive
+      case _          => roundTiesToEven
+    }
+
+-- rm of an instruction whose result is exact (FCVT.D.S, FCVT.D.W, FCVT.D.WU):
+-- it is decoded as usual, but it is never used to round (U §21.2 p.114)
+bool validRounding(rnd::fprnd) =
     match rnd_mode_static(rnd)
-    { case Some(RDYN) => match rnd_mode_dynamic(fcsr.FRM)
-                         { case Some(frm) => l3round(frm)
-                           case None      => None
-                         }
-      case Some(frm)  => l3round(frm)
-      case None       => None
+    { case Some(RDYN) => IsSome(rnd_mode_dynamic(fcsr.FRM))
+      case Some(_)    => true
+      case None       => false
     }
 
 -- NaNs
 
 bits(32) RV32_CanonicalNan = 0x7fc00000
 bits(64) RV64_CanonicalNan = 0x7ff8000000000000
+
+-- a NaN result of an arithmetic or conversion instruction is the canonical
+-- NaN (U §21.3 p.114-115 and §22.4 p.122)
+bits(32) canonS(x::bits(32)) = if FP32_IsNan(x) then RV32_CanonicalNan else x
+bits(64) canonD(x::bits(64)) = if FP64_IsNan(x) then RV64_CanonicalNan else x
 
 -- Classification
 
@@ -850,7 +861,18 @@ bool FP64_IsSignalingNan(x::bits(64)) =
 bool FP32_Sign(x::bits(32)) = x<31>
 bool FP64_Sign(x::bits(64)) = x<63>
 
--- setting exception flags
+-- multiplicands of an FMA that must raise NV even when the addend is a quiet
+-- NaN (U §21.6 p.117); IEEE 754-2008 leaves that case open, and neither
+-- export's MulAdd raises it
+bool FP32_InfTimesZero(a::bits(32), b::bits(32)) =
+    (FP32_IsZero(a) and (b == FP32_PosInf or b == FP32_NegInf)) or
+    (FP32_IsZero(b) and (a == FP32_PosInf or a == FP32_NegInf))
+
+bool FP64_InfTimesZero(a::bits(64), b::bits(64)) =
+    (FP64_IsZero(a) and (b == FP64_PosInf or b == FP64_NegInf)) or
+    (FP64_IsZero(b) and (a == FP64_PosInf or a == FP64_NegInf))
+
+-- setting exception flags (fcsr bits 4-0: NV DZ OF UF NX, U §21.2 p.113)
 
 unit setFP_Invalid() =
     fcsr.NV <- true
@@ -862,16 +884,256 @@ unit setFP_Overflow() =
     fcsr.OF <- true
 
 unit setFP_Underflow() =
-    fcsr.OF <- true
+    fcsr.UF <- true
 
 unit setFP_Inexact() =
-    fcsr.OF <- true
+    fcsr.NX <- true
+
+-- accrue the exception flags returned by an IEEE operation (U §21.2 p.114)
+unit accrueFlags(f::ieee_flags) =
+{ when f.InvalidOp    do setFP_Invalid()
+; when f.DivideByZero do setFP_DivZero()
+; when f.Overflow     do setFP_Overflow()
+; when f.Underflow    do setFP_Underflow()
+; when f.Precision    do setFP_Inexact()
+}
+
+-- The sign of a zero result of a conversion is that of its operand, and an
+-- integer zero converts to +0 (IEEE 754-2008 6.3).  HOL's conversions go
+-- through the real value, which has no sign: they give +0, or -0 under
+-- roundTowardNegative.
+
+bits(32) FP32_ZeroSign(v::bits(32), neg::bool) =
+    if FP32_IsZero(v) then (if neg then FP32_NegZero else FP32_PosZero) else v
+
+bits(64) FP64_ZeroSign(v::bits(64), neg::bool) =
+    if FP64_IsZero(v) then (if neg then FP64_NegZero else FP64_PosZero) else v
+
+-- FCVT.D.S is exact
+bits(64) FP64_FromFP32(a::bits(32)) =
+    FP64_ZeroSign(FP32_ToFP64(a), FP32_Sign(a))
+
+---------------------------------------------------------------------------
+-- Rounding to nearest, ties to max magnitude (RMM)
+---------------------------------------------------------------------------
+
+-- Neither L3 nor HOL's binary_ieee has this rounding mode (U §21.2 p.114,
+-- Table 24), so the result under RMM is computed from the result n under
+-- roundTiesToEven.  The two differ only when the exact value lies halfway
+-- between two neighbouring values of the format and n is the one nearer
+-- zero; RMM then gives the other one, which is n + 1 as a bit pattern.
+-- The flags of n are right for RMM in both cases: the result is inexact
+-- under both modes, a value halfway between two subnormal values is tiny
+-- under both, and when n overflows so does RMM.
+--
+-- Whether the exact value is halfway is decided in integers.  FP32_Scaled
+-- and FP64_Scaled give a finite value in units of the least positive value
+-- of its format, 2^-149 and 2^-1074, and the caller gives the exact value
+-- of its operation as x / k of that unit, for integers x and k > 0.  This
+-- is only tested for an inexact n, whose operands are finite.  When n is
+-- the largest finite value, n + 1 is the pattern of an infinity, which
+-- FP32_Scaled and FP64_Scaled read as the next power of two; the exact
+-- value is then below halfway, since at it roundTiesToEven overflows.
+
+-- the flags and the value of an operation
+type fp32_result = ieee_flags * bits(32)
+type fp64_result = ieee_flags * bits(64)
+
+int absInt(x::int) = if x < 0 then -x else x
+
+int FP32_Scaled(a::bits(32)) =
+{ e = [a<30:23>]::nat
+; m = [0`1 : a<22:0>]::int
+; n = if e == 0 then m else (m + 0i2 ** 23) * 0i2 ** (e - 1)
+; if a<31> then -n else n
+}
+
+int FP64_Scaled(a::bits(64)) =
+{ e = [a<62:52>]::nat
+; m = [0`1 : a<51:0>]::int
+; n = if e == 0 then m else (m + 0i2 ** 52) * 0i2 ** (e - 1)
+; if a<63> then -n else n
+}
+
+-- n, or n + 1 if x / k is halfway between them and n is nearer zero
+bits(32) FP32_NearestAway(n::bits(32), x::int, k::int) =
+{ a = absInt(x)
+; m = absInt(FP32_Scaled(n))
+; if m * k < a and 2 * a == (m + absInt(FP32_Scaled(n + 1))) * k
+  then n + 1 else n
+}
+
+bits(64) FP64_NearestAway(n::bits(64), x::int, k::int) =
+{ a = absInt(x)
+; m = absInt(FP64_Scaled(n))
+; if m * k < a and 2 * a == (m + absInt(FP64_Scaled(n + 1))) * k
+  then n + 1 else n
+}
+
+fp32_result FP32_TiesAway(r::fp32_result, x::int, k::int) =
+{ (f, n) = r
+; (f, if f.Precision then FP32_NearestAway(n, x, k) else n)
+}
+
+fp64_result FP64_TiesAway(r::fp64_result, x::int, k::int) =
+{ (f, n) = r
+; (f, if f.Precision then FP64_NearestAway(n, x, k) else n)
+}
+
+-- The arithmetic operations under a rounding mode of RISC-V.  A square
+-- root needs no such function: it is never halfway between two values (the
+-- square of a value with one more significant bit than the format has is
+-- not in the format), so RMM rounds it as roundTiesToEven does.
+
+fp32_result FP32_AddR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Add_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) + FP32_Scaled(b), 1)
+    else FP32_Add_(ieeeRounding(rnd), a, b)
+
+fp32_result FP32_SubR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Sub_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) - FP32_Scaled(b), 1)
+    else FP32_Sub_(ieeeRounding(rnd), a, b)
+
+fp32_result FP32_MulR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Mul_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) * FP32_Scaled(b), 0i2 ** 149)
+    else FP32_Mul_(ieeeRounding(rnd), a, b)
+
+fp32_result FP32_DivR(rnd::Rounding, a::bits(32), b::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_Div_(roundTiesToEven, a, b),
+                       FP32_Scaled(a) * 0i2 ** 149, absInt(FP32_Scaled(b)))
+    else FP32_Div_(ieeeRounding(rnd), a, b)
+
+-- a * b + c
+fp32_result FP32_MulAddR(rnd::Rounding, a::bits(32), b::bits(32), c::bits(32)) =
+    if rnd == RMM
+    then FP32_TiesAway(FP32_MulAdd_(roundTiesToEven, a, b, c),
+                       FP32_Scaled(a) * FP32_Scaled(b) +
+                       FP32_Scaled(c) * 0i2 ** 149, 0i2 ** 149)
+    else FP32_MulAdd_(ieeeRounding(rnd), a, b, c)
+
+fp64_result FP64_AddR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Add_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) + FP64_Scaled(b), 1)
+    else FP64_Add_(ieeeRounding(rnd), a, b)
+
+fp64_result FP64_SubR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Sub_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) - FP64_Scaled(b), 1)
+    else FP64_Sub_(ieeeRounding(rnd), a, b)
+
+fp64_result FP64_MulR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Mul_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) * FP64_Scaled(b), 0i2 ** 1074)
+    else FP64_Mul_(ieeeRounding(rnd), a, b)
+
+fp64_result FP64_DivR(rnd::Rounding, a::bits(64), b::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_Div_(roundTiesToEven, a, b),
+                       FP64_Scaled(a) * 0i2 ** 1074, absInt(FP64_Scaled(b)))
+    else FP64_Div_(ieeeRounding(rnd), a, b)
+
+-- a * b + c
+fp64_result FP64_MulAddR(rnd::Rounding, a::bits(64), b::bits(64), c::bits(64)) =
+    if rnd == RMM
+    then FP64_TiesAway(FP64_MulAdd_(roundTiesToEven, a, b, c),
+                       FP64_Scaled(a) * FP64_Scaled(b) +
+                       FP64_Scaled(c) * 0i2 ** 1074, 0i2 ** 1074)
+    else FP64_MulAdd_(ieeeRounding(rnd), a, b, c)
+
+-- FCVT.S.D: the unit of a double is 2^-925 of that of a single.  The sign
+-- of a zero is set first, so that n + 1 has the sign of the operand.
+fp32_result FP64_ToFP32R(rnd::Rounding, a::bits(64)) =
+{ (f, v) = FP64_ToFP32_(ieeeRounding(rnd), a)
+; n = FP32_ZeroSign(v, FP64_Sign(a))
+; (f, if rnd == RMM and f.Precision
+      then FP32_NearestAway(n, FP64_Scaled(a), 0i2 ** 925) else n)
+}
+
+-- An integer i to a single or a double
+
+bits(32) FP32_FromIntR(rnd::Rounding, i::int) =
+    if i == 0 then FP32_PosZero
+    else if rnd == RMM
+    then FP32_NearestAway(FP32_FromInt(roundTiesToEven, i), i * 0i2 ** 149, 1)
+    else FP32_FromInt(ieeeRounding(rnd), i)
+
+bits(64) FP64_FromIntR(rnd::Rounding, i::int) =
+    if i == 0 then FP64_PosZero
+    else if rnd == RMM
+    then FP64_NearestAway(FP64_FromInt(roundTiesToEven, i), i * 0i2 ** 1074, 1)
+    else FP64_FromInt(ieeeRounding(rnd), i)
+
+-- An unsigned 64-bit x to a single.  FP32.fromInt of L3's SML runtime
+-- takes only signed 64-bit values (above 2^63-1 it raises Fail).  The SML
+-- export therefore converts x >= 2^63 as x/2, rounded to odd so that every
+-- rounding mode gives the same result, times 2.0 (exact); the HOL export
+-- converts x directly.
+bits(32) FP32_FromU64(r::ieee_rounding, x::dword) =
+    if PROVER_EXPORT or not x<63> then FP32_FromInt(r, [0`1 : x]::int)
+    else FP32_Mul(r, FP32_FromInt(r, [(x >>+ 1) || (x && 1)]::int), 0x40000000)
+
+bits(32) FP32_FromU64R(rnd::Rounding, x::dword) =
+    if x == 0 then FP32_PosZero
+    else if rnd == RMM
+    then FP32_NearestAway(FP32_FromU64(roundTiesToEven, x),
+                          ([0`1 : x]::int) * 0i2 ** 149, 1)
+    else FP32_FromU64(ieeeRounding(rnd), x)
+
+-- A signed 64-bit x to a double.  FP64.fromInt of L3's SML runtime
+-- (Poly/ML's Real.fromLargeInt) rounds a value below -2^62 towards the
+-- wrong infinity in RDN and RUP.  The SML export therefore converts such
+-- an x as -(|x|/2, rounded to odd) times 2.0 (exact), as FP32_FromU64
+-- does; the HOL export converts x directly.
+bits(64) FP64_FromS64(r::ieee_rounding, x::dword) =
+    if PROVER_EXPORT or x<63:62> != 0b10 then FP64_FromInt(r, [x]::int)
+    else FP64_Mul(r, FP64_FromInt(r, -([((-x) >>+ 1) || ((-x) && 1)]::int)),
+                  0x4000000000000000)
+
+bits(64) FP64_FromS64R(rnd::Rounding, x::dword) =
+    if x == 0 then FP64_PosZero
+    else if rnd == RMM
+    then FP64_NearestAway(FP64_FromS64(roundTiesToEven, x),
+                          ([x]::int) * 0i2 ** 1074, 1)
+    else FP64_FromS64(ieeeRounding(rnd), x)
+
+-- A single or a double to an integer; None for a NaN or an infinity.
+-- Under RMM the magnitude is rounded to floor(|a| + 1/2).
+
+int option FP32_ToIntR(rnd::Rounding, a::bits(32)) =
+    if rnd == RMM
+    then if FP32_IsFinite(a)
+         then { x = FP32_Scaled(a)
+              ; Some(if x < 0 then -((0i2 ** 148 - x) div 0i2 ** 149)
+                     else (x + 0i2 ** 148) div 0i2 ** 149)
+              }
+         else None
+    else FP32_ToInt(ieeeRounding(rnd), a)
+
+int option FP64_ToIntR(rnd::Rounding, a::bits(64)) =
+    if rnd == RMM
+    then if FP64_IsFinite(a)
+         then { x = FP64_Scaled(a)
+              ; Some(if x < 0 then -((0i2 ** 1073 - x) div 0i2 ** 1074)
+                     else (x + 0i2 ** 1073) div 0i2 ** 1074)
+              }
+         else None
+    else FP64_ToInt(ieeeRounding(rnd), a)
 
 ---------------------------------------------------------------------------
 -- CSR Register address map
 ---------------------------------------------------------------------------
 
--- CSR access control
+-- CSR access control (P §2.1 p.13): csr<11:10> = 11 is read-only and
+-- csr<9:8> is the lowest privilege level that can access the CSR.
 
 type csrRW    = bits(2)         -- read/write check
 type csrPR    = bits(2)         -- privilege check
@@ -884,361 +1146,305 @@ csrPR csrPR(csr::creg)  = csr<9:8>
 bool check_CSR_access(rw::csrRW, pr::csrPR, p::Privilege, a::accessType) =
     (a == Read or rw != 0b11) and (privLevel(p) >=+ pr)
 
--- XXX: Revise this to handle absence of counter regs in RV32E.
+-- The CSRs of this hart (P §2.2 Tables 3-8 p.14-23).  Every other address
+-- is reserved, and accessing it is an illegal instruction (P §2.1 p.13).
+-- This includes the RV32-only halves, hpmcounter3-31, the odd pmpcfg
+-- registers and those of PMP entries 16-63.
 bool is_CSR_defined(csr::creg) =
-    -- user-mode
-    (csr >= 0x001 and csr <= 0x003)
- or (csr >= 0xC00 and csr <= 0xC02)
- or (csr >= 0xC80 and csr <= 0xC82 and in32BitMode())
+    -- unprivileged: floating point, counters and timer
+    (csr >=+ 0x001 and csr <=+ 0x003)
+ or (csr >=+ 0xC00 and csr <=+ 0xC02)
 
-    -- supervisor-mode
- or (csr >= 0x100 and csr <= 0x101)
- or  csr == 0x104 or  csr == 0x121
+    -- supervisor-level
+ or  csr == 0x100 or (csr >=+ 0x104 and csr <=+ 0x106) or csr == 0x10A
+ or (csr >=+ 0x140 and csr <=+ 0x144) or csr == 0x180
 
- or  csr == 0xD01 or (csr == 0xD81 and in32BitMode())
+    -- machine-level
+ or (csr >=+ 0xF11 and csr <=+ 0xF15)
+ or (csr >=+ 0x300 and csr <=+ 0x306) or csr == 0x30A
+ or  csr == 0x320 or (csr >=+ 0x323 and csr <=+ 0x33F)
+ or (csr >=+ 0x340 and csr <=+ 0x344)
+ or  csr == 0x3A0 or csr == 0x3A2 or (csr >=+ 0x3B0 and csr <=+ 0x3BF)
+ or  csr == 0xB00 or (csr >=+ 0xB02 and csr <=+ 0xB1F)
 
- or (csr >= 0x140 and csr <= 0x141) or csr == 0x144
- or (csr >= 0xD42 and csr <= 0xD43)
+-- mhpmevent3-31 and mhpmcounter3-31: read-only zero, writes are ignored
+-- (P §3.1.10 p.46)
+bool is_mhpm_CSR(csr::creg) =
+    (csr >=+ 0x323 and csr <=+ 0x33F) or (csr >=+ 0xB03 and csr <=+ 0xB1F)
 
- or (csr >= 0x180 and csr <= 0x181)
+-- Further conditions on CSR access
+bool check_CSR_conditions(csr::creg, p::Privilege) =
+    -- fflags, frm, fcsr need mstatus.FS != Off (P §3.1.6.7 p.38)
+    if csr >=+ 0x001 and csr <=+ 0x003 then fpEnabled()
+    -- cycle, time, instret
+    else if csr >=+ 0xC00 and csr <=+ 0xC02 then counterReadAllowed(csr, p)
+    -- satp is illegal in S-mode while mstatus.TVM is set (P §3.1.6.6 p.37)
+    else if csr == 0x180 then not (p == Supervisor and MCSR.mstatus.TVM)
+    else true
 
- or (csr >= 0x900 and csr <= 0x902)
- or (csr >= 0x980 and csr <= 0x982 and in32BitMode())
-
-    -- machine-mode
- or (csr >= 0xF00 and csr <= 0xF01) or csr == 0xF10
- or (csr >= 0x300 and csr <= 0x302) or csr == 0x304 or csr == 0x321
- or  csr == 0x701 or (csr == 0x741 and in32BitMode())
- or (csr >= 0x340 and csr <= 0x344)
- or (csr >= 0x380 and csr <= 0x385)
- or  csr >= 0xB01 or (csr == 0xB81 and in32BitMode())
- or (csr >= 0x780 and csr <= 0x783 and csr != 0x782)
-
---- XXX: the CSRMap below is broken in 32-bit mode, since we need to
---- convert from 64-bit regType to 32-bit XLEN.
+-- The read values and write legalisation of the CSRs (P §3.1, §3.7.1,
+-- §12.1; U §7.1 p.51-53, §21.2 p.113-114).  Writes never trap: those that checkCSROp
+-- rejects do not get here.
 component CSRMap(csr::creg) :: regType
 {
   value =
       match csr
-      { -- user floating-point context
+      { -- floating-point control and status (U §21.2 p.113-114)
         case 0x001  => ZeroExtend(c_UCSR(procID).&fpcsr<4:0>)
         case 0x002  => ZeroExtend(c_UCSR(procID).fpcsr.FRM)
         case 0x003  => ZeroExtend(c_UCSR(procID).&fpcsr<7:0>)
 
-        -- user counter/timers
-        case 0xC00  => c_cycles(procID)  + c_UCSR(procID).cycle_delta
-        case 0xC01  => clock             + c_UCSR(procID).time_delta
-        case 0xC02  => c_instret(procID) + c_UCSR(procID).instret_delta
-        case 0xC80  => SignExtend((c_cycles(procID)  + c_UCSR(procID).cycle_delta)<63:32>)
-        case 0xC81  => SignExtend((clock             + c_UCSR(procID).time_delta)<63:32>)
-        case 0xC82  => SignExtend((c_instret(procID) + c_UCSR(procID).instret_delta)<63:32>)
+        -- cycle, time and instret (U §7.1 p.51-53), the read-only shadows
+        -- of mcycle, mtime and minstret (P §3.1.11 p.47)
+        case 0xC00  => c_cycles(procID)
+        case 0xC01  => mtime()
+        case 0xC02  => c_instret(procID)
 
         -- supervisor trap setup
-        case 0x100  => &lift_mstatus_sstatus(c_MCSR(procID).mstatus)
-        case 0x101  => c_SCSR(procID).stvec
-        case 0x104  => &lift_mie_sie(c_MCSR(procID).mie)
-        case 0x121  => c_SCSR(procID).stimecmp
-
-        -- supervisor timer
-        case 0xD01  => clock + c_SCSR(procID).stime_delta
-        case 0xD81  => SignExtend((clock + c_SCSR(procID).stime_delta)<63:32>)
+        case 0x100  => read_sstatus(c_MCSR(procID).mstatus)
+        case 0x104  => c_MCSR(procID).&mie && c_MCSR(procID).mideleg
+        case 0x105  => c_SCSR(procID).stvec
+        case 0x106  => c_SCSR(procID).scounteren
+        case 0x10A  => c_SCSR(procID).senvcfg
 
         -- supervisor trap handling
         case 0x140  => c_SCSR(procID).sscratch
-        case 0x141  => c_SCSR(procID).sepc
-        case 0xD42  => c_SCSR(procID).&scause
-        case 0xD43  => c_SCSR(procID).sbadaddr
-        case 0x144  => &lift_mip_sip(c_MCSR(procID).mip)
+        case 0x141  => read_xepc(c_SCSR(procID).sepc)
+        case 0x142  => c_SCSR(procID).&scause
+        case 0x143  => c_SCSR(procID).stval
+        case 0x144  => read_mip() && c_MCSR(procID).mideleg
 
         -- supervisor protection and translation
-        case 0x180  => c_SCSR(procID).sptbr
-        case 0x181  => c_SCSR(procID).sasid
+        case 0x180  => c_SCSR(procID).satp
 
-        -- supervisor read/write shadow of user read-only registers
-        case 0x900  => c_cycles(procID)  + c_UCSR(procID).cycle_delta
-        case 0x901  => clock             + c_UCSR(procID).time_delta
-        case 0x902  => c_instret(procID) + c_UCSR(procID).instret_delta
-        case 0x980  => SignExtend((c_cycles(procID)  + c_UCSR(procID).cycle_delta)<63:32>)
-        case 0x981  => SignExtend((clock             + c_UCSR(procID).time_delta)<63:32>)
-        case 0x982  => SignExtend((c_instret(procID) + c_UCSR(procID).instret_delta)<63:32>)
-
-        -- hypervisor trap setup
-        case 0x200  => c_HCSR(procID).&hstatus
-        case 0x201  => c_HCSR(procID).htvec
-        case 0x202  => c_HCSR(procID).&htdeleg
-        case 0x221  => c_HCSR(procID).htimecmp
-
-        -- hypervisor timer
-        case 0xE01  => clock + c_HCSR(procID).htime_delta
-        case 0xE81  => SignExtend((clock + c_HCSR(procID).htime_delta)<63:32>)
-
-        -- hypervisor trap handling
-        case 0x240  => c_HCSR(procID).hscratch
-        case 0x241  => c_HCSR(procID).hepc
-        case 0x242  => c_HCSR(procID).&hcause
-        case 0x243  => c_HCSR(procID).hbadaddr
-
-        -- hypervisor read/write shadow of supervisor read-only registers
-        case 0xA01  => clock + c_SCSR(procID).stime_delta
-        case 0xA81  => SignExtend((clock + c_SCSR(procID).stime_delta)<63:32>)
-
-        -- machine information registers
-        case 0xF00  => c_MCSR(procID).&mcpuid
-        case 0xF01  => c_MCSR(procID).&mimpid
-        case 0xF10  => c_MCSR(procID).mhartid
+        -- machine information registers: mvendorid, marchid, mimpid and
+        -- mconfigptr are zero (P §3.1.2-3.1.4 p.29-31, §3.1.17 p.53)
+        case 0xF11  => 0
+        case 0xF12  => 0
+        case 0xF13  => 0
+        case 0xF14  => c_MCSR(procID).mhartid
+        case 0xF15  => 0
 
         -- machine trap setup
-        case 0x300  => c_MCSR(procID).&mstatus
-        case 0x301  => c_MCSR(procID).mtvec
-        case 0x302  => c_MCSR(procID).&mtdeleg
+        case 0x300  => read_mstatus(c_MCSR(procID).mstatus)
+        case 0x301  => c_MCSR(procID).&misa
+        case 0x302  => c_MCSR(procID).medeleg
+        case 0x303  => c_MCSR(procID).mideleg
         case 0x304  => c_MCSR(procID).&mie
-        case 0x321  => c_MCSR(procID).mtimecmp
+        case 0x305  => c_MCSR(procID).mtvec
+        case 0x306  => c_MCSR(procID).mcounteren
+        case 0x30A  => c_MCSR(procID).menvcfg
 
-        -- machine timers and counters
-        case 0x701  => clock + c_MCSR(procID).mtime_delta
-        case 0x741  => SignExtend((clock + c_MCSR(procID).mtime_delta)<63:32>)
+        -- machine counter setup
+        case 0x320  => c_MCSR(procID).mcountinhibit
 
         -- machine trap handling
         case 0x340  => c_MCSR(procID).mscratch
-        case 0x341  => c_MCSR(procID).mepc
+        case 0x341  => read_xepc(c_MCSR(procID).mepc)
         case 0x342  => c_MCSR(procID).&mcause
-        case 0x343  => c_MCSR(procID).mbadaddr
-        case 0x344  => c_MCSR(procID).&mip
+        case 0x343  => c_MCSR(procID).mtval
+        case 0x344  => read_mip()
 
-        -- machine protection and translation
-        case 0x380  => c_MCSR(procID).mbase
-        case 0x381  => c_MCSR(procID).mbound
-        case 0x382  => c_MCSR(procID).mibase
-        case 0x383  => c_MCSR(procID).mibound
-        case 0x384  => c_MCSR(procID).mdbase
-        case 0x385  => c_MCSR(procID).mdbound
+        -- machine memory protection
+        case 0x3A0  => c_MCSR(procID).pmpcfg0
+        case 0x3A2  => c_MCSR(procID).pmpcfg2
+        case 0x3B0  => c_MCSR(procID).pmpaddr0
+        case 0x3B1  => c_MCSR(procID).pmpaddr1
+        case 0x3B2  => c_MCSR(procID).pmpaddr2
+        case 0x3B3  => c_MCSR(procID).pmpaddr3
+        case 0x3B4  => c_MCSR(procID).pmpaddr4
+        case 0x3B5  => c_MCSR(procID).pmpaddr5
+        case 0x3B6  => c_MCSR(procID).pmpaddr6
+        case 0x3B7  => c_MCSR(procID).pmpaddr7
+        case 0x3B8  => c_MCSR(procID).pmpaddr8
+        case 0x3B9  => c_MCSR(procID).pmpaddr9
+        case 0x3BA  => c_MCSR(procID).pmpaddr10
+        case 0x3BB  => c_MCSR(procID).pmpaddr11
+        case 0x3BC  => c_MCSR(procID).pmpaddr12
+        case 0x3BD  => c_MCSR(procID).pmpaddr13
+        case 0x3BE  => c_MCSR(procID).pmpaddr14
+        case 0x3BF  => c_MCSR(procID).pmpaddr15
 
-        -- machine read-write shadow of hypervisor read-only registers
-        case 0xB01  => clock + c_HCSR(procID).htime_delta
-        case 0xB81  => SignExtend((clock + c_HCSR(procID).htime_delta)<63:32>)
+        -- machine counters
+        case 0xB00  => c_cycles(procID)
+        case 0xB02  => c_instret(procID)
 
-        -- machine host-target interface (berkeley extension)
-        case 0x780  => c_MCSR(procID).mtohost
-        case 0x781  => c_MCSR(procID).mfromhost
-        case 0x783  => 0
-
-        case _      => #UNDEFINED("unexpected CSR read at " : [csr])
+        case _      => if is_mhpm_CSR(csr) then 0
+                       else #UNDEFINED("unexpected CSR read at " : [csr])
       }
 
   assign value =
       match csr
-      { -- user floating-point context
+      { -- floating-point control and status (U §21.2 p.113-114); a write
+        -- makes the floating-point state Dirty (P §3.1.6.7 p.39)
         case 0x001  => { c_UCSR(procID).&fpcsr<4:0>     <- value<4:0>
-                       ; c_MCSR(procID).mstatus.MFS     <- ext_status(Dirty)
-                       ; c_MCSR(procID).mstatus.MSD     <- true
+                       ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
         case 0x002  => { c_UCSR(procID).fpcsr.FRM       <- value<2:0>
-                       ; c_MCSR(procID).mstatus.MFS     <- ext_status(Dirty)
-                       ; c_MCSR(procID).mstatus.MSD     <- true
+                       ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
-        case 0x003  => { c_UCSR(procID).&fpcsr          <- value<31:0>
-                       ; c_MCSR(procID).mstatus.MFS     <- ext_status(Dirty)
-                       ; c_MCSR(procID).mstatus.MSD     <- true
+        case 0x003  => { c_UCSR(procID).&fpcsr          <- ZeroExtend(value<7:0>)
+                       ; c_MCSR(procID).mstatus.FS      <- ext_status(Dirty)
                        }
-        -- user counters/timers are URO
 
-        -- supervisor trap setup
-        case 0x100  => c_MCSR(procID).mstatus           <- lower_sstatus_mstatus(sstatus(value),
-                                                                                 c_MCSR(procID).mstatus)
+        -- supervisor trap setup; sie is mie restricted to the interrupts
+        -- delegated in mideleg (P §12.1.3 p.117)
+        case 0x100  => c_MCSR(procID).mstatus           <- legalize_sstatus(value, c_MCSR(procID).mstatus)
+        case 0x104  => c_MCSR(procID).mie               <- mie((c_MCSR(procID).&mie && ~c_MCSR(procID).mideleg)
+                                                               || (value && c_MCSR(procID).mideleg))
+        case 0x105  => c_SCSR(procID).stvec             <- legalize_xtvec(value, c_SCSR(procID).stvec)
+        -- CY, TM, IR (P §12.1.5 p.119)
+        case 0x106  => c_SCSR(procID).scounteren        <- value && 0x7
+        -- only FIOM (P §12.1.10 p.122)
+        case 0x10A  => c_SCSR(procID).senvcfg           <- value && 0x1
 
-        case 0x101  => c_SCSR(procID).stvec             <- value
-        -- sie back-projects to mie
-        case 0x104  => c_MCSR(procID).mie               <- lower_sie_mie(sie(value), c_MCSR(procID).mie)
-        case 0x121  =>
-        { c_SCSR(procID).stimecmp <- value
-        ; c_MCSR(procID).mip.STIP <- false
-        }
-
-        -- supervisor trap handling
+        -- supervisor trap handling; of sip only SSIP is writable, and only
+        -- when delegated (P §12.1.3 p.117-118)
         case 0x140  => c_SCSR(procID).sscratch          <- value
-        case 0x141  => c_SCSR(procID).sepc              <- (value && SignExtend(0b100`3))  -- no 16-bit instr support
-        -- scause, sbadaddr are SRO
-        -- sip back-projects to mip
-        case 0x144  => c_MCSR(procID).mip               <- lower_sip_mip(sip(value), c_MCSR(procID).mip)
+        case 0x141  => c_SCSR(procID).sepc              <- legalize_xepc(value)
+        case 0x142  => c_SCSR(procID).scause            <- legalize_scause(value, c_SCSR(procID).scause)
+        case 0x143  => c_SCSR(procID).stval             <- value
+        case 0x144  => when c_MCSR(procID).mideleg<1>
+                       do c_MCSR(procID).mip.SSIP       <- value<1>
 
         -- supervisor protection and translation
-        case 0x180  => c_SCSR(procID).sptbr             <- value
-        case 0x181  => c_SCSR(procID).sasid             <- value
+        case 0x180  => c_SCSR(procID).satp              <- legalize_satp(value, c_SCSR(procID).satp)
 
-        -- supervisor read/write shadow of user read-only registers
-        case 0x900  => c_UCSR(procID).cycle_delta       <- value - c_cycles(procID)
-        case 0x901  => c_UCSR(procID).time_delta        <- value - clock
-        case 0x902  => c_UCSR(procID).instret_delta     <- value - c_instret(procID)
+        -- machine trap setup.  medeleg: exceptions 0-9, 12, 13 and 15 can
+        -- be delegated (11 and 16 are read-only zero, P §3.1.8 p.43);
+        -- mideleg: SSI, STI, SEI; mie: the six interrupts.
+        case 0x300  => c_MCSR(procID).mstatus           <- legalize_mstatus(value)
+        case 0x301  => c_MCSR(procID).misa              <- legalize_misa(value, c_MCSR(procID).misa, c_PC(procID))
+        case 0x302  => c_MCSR(procID).medeleg           <- value && 0xB3FF
+        case 0x303  => c_MCSR(procID).mideleg           <- value && 0x222
+        case 0x304  => c_MCSR(procID).mie               <- mie(value && 0xAAA)
+        case 0x305  => c_MCSR(procID).mtvec             <- legalize_xtvec(value, c_MCSR(procID).mtvec)
+        -- CY, TM, IR (P §3.1.11 p.46-47)
+        case 0x306  => c_MCSR(procID).mcounteren        <- value && 0x7
+        -- only FIOM (P §3.1.18 p.54)
+        case 0x30A  => c_MCSR(procID).menvcfg           <- value && 0x1
 
-        case 0x980  => c_UCSR(procID).cycle_delta<63:32>    <- (value<31:0> - c_cycles(procID)<63:32>)  << 32
-        case 0x981  => c_UCSR(procID).time_delta<63:32>     <- (value<31:0> - clock<63:32>)             << 32
-        case 0x982  => c_UCSR(procID).instret_delta<63:32>  <- (value<31:0> - c_instret(procID)<63:32>) << 32
+        -- machine counter setup: CY and IR (P §3.1.12 p.47)
+        case 0x320  => c_MCSR(procID).mcountinhibit     <- value && 0x5
 
-        -- TODO: hypervisor register write support
-
-        -- machine information registers are MRO
-
-        -- machine trap setup
-        case 0x300  => c_MCSR(procID).mstatus           <- update_mstatus(c_MCSR(procID).mstatus, mstatus(value))
-        case 0x301  => c_MCSR(procID).mtvec             <- value
-        case 0x302  => c_MCSR(procID).mtdeleg           <- mtdeleg(value)
-        case 0x304  => c_MCSR(procID).mie               <- mie(value)
-        case 0x321  =>
-        { c_MCSR(procID).mtimecmp <- value
-        ; c_MCSR(procID).mip.MTIP <- false
-        }
-
-        -- machine timers and counters
-        case 0x701  => c_MCSR(procID).mtime_delta           <- value - clock
-        case 0x741  => c_MCSR(procID).mtime_delta<63:32>    <- (value<31:0> - clock<63:32>) << 32
-
-        -- machine trap handling
+        -- machine trap handling; of mip only SSIP, STIP and SEIP are
+        -- writable (P §3.1.9 p.44-45)
         case 0x340  => c_MCSR(procID).mscratch          <- value
-        case 0x341  => c_MCSR(procID).mepc              <- (value && SignExtend(0b100`3))  -- no 16-bit instr support
-        case 0x342  => c_MCSR(procID).mcause            <- mcause(value)
-        case 0x343  => c_MCSR(procID).mbadaddr          <- value
-        case 0x344  => c_MCSR(procID).mip               <- mip(value)
+        case 0x341  => c_MCSR(procID).mepc              <- legalize_xepc(value)
+        case 0x342  => c_MCSR(procID).mcause            <- legalize_mcause(value, c_MCSR(procID).mcause)
+        case 0x343  => c_MCSR(procID).mtval             <- value
+        case 0x344  => c_MCSR(procID).mip               <- mip(value && 0x222)
 
-        -- machine protection and translation
-        case 0x380  => c_MCSR(procID).mbase             <- value
-        case 0x381  => c_MCSR(procID).mbound            <- value
-        case 0x382  => c_MCSR(procID).mibase            <- value
-        case 0x383  => c_MCSR(procID).mibound           <- value
-        case 0x384  => c_MCSR(procID).mdbase            <- value
-        case 0x385  => c_MCSR(procID).mdbound           <- value
+        -- machine memory protection
+        case 0x3A0  => c_MCSR(procID).pmpcfg0           <- legalize_pmpcfg(value, c_MCSR(procID).pmpcfg0)
+        case 0x3A2  => c_MCSR(procID).pmpcfg2           <- legalize_pmpcfg(value, c_MCSR(procID).pmpcfg2)
+        case 0x3B0  => write_pmpaddr(0, value)
+        case 0x3B1  => write_pmpaddr(1, value)
+        case 0x3B2  => write_pmpaddr(2, value)
+        case 0x3B3  => write_pmpaddr(3, value)
+        case 0x3B4  => write_pmpaddr(4, value)
+        case 0x3B5  => write_pmpaddr(5, value)
+        case 0x3B6  => write_pmpaddr(6, value)
+        case 0x3B7  => write_pmpaddr(7, value)
+        case 0x3B8  => write_pmpaddr(8, value)
+        case 0x3B9  => write_pmpaddr(9, value)
+        case 0x3BA  => write_pmpaddr(10, value)
+        case 0x3BB  => write_pmpaddr(11, value)
+        case 0x3BC  => write_pmpaddr(12, value)
+        case 0x3BD  => write_pmpaddr(13, value)
+        case 0x3BE  => write_pmpaddr(14, value)
+        case 0x3BF  => write_pmpaddr(15, value)
 
-        -- machine read-write shadow of hypervisor read-only registers
-        case 0xB01  => c_HCSR(procID).htime_delta           <- value - clock
-        case 0xB81  => c_HCSR(procID).htime_delta<63:32>    <- (value<31:0> - clock<63:32>) << 32
+        -- machine counters
+        -- a write of minstret is done instead of the increment for the
+        -- writing instruction (U §6.1 p.49; incrInstret)
+        case 0xB00  => c_cycles(procID)                 <- value
+        case 0xB02  => { c_instret(procID)              <- value
+                       ; c_minstret_written(procID)     <- true
+                       }
 
-        -- machine host-target interface (berkeley extension)
-        -- TODO: XXX: set I/O pending bit
-        case 0x780  =>
-        { c_MCSR(procID).mtohost    <- value }
-        case 0x781  =>
-        { c_MCSR(procID).mfromhost  <- value }
-        case 0x783  =>
-        { sendIPI(value) }
-
-        case _      => #INTERNAL_ERROR("unexpected CSR write to " : [csr])
+        case _      => when not is_mhpm_CSR(csr)
+                       do #INTERNAL_ERROR("unexpected CSR write to " : [csr])
       }
 }
 
 string csrName(csr::creg) =
     match csr
-    { -- user floating-point context
+    { -- floating-point control and status
       case 0x001  => "fflags"
       case 0x002  => "frm"
       case 0x003  => "fcsr"
 
-      -- user counter/timers
+      -- counters and timer
       case 0xC00  => "cycle"
       case 0xC01  => "time"
       case 0xC02  => "instret"
-      case 0xC80  => "cycleh"
-      case 0xC81  => "timeh"
-      case 0xC82  => "instreth"
 
       -- supervisor trap setup
       case 0x100  => "sstatus"
-      case 0x101  => "stvec"
       case 0x104  => "sie"
-      case 0x121  => "stimecmp"
-
-      -- supervisor timer
-      case 0xD01  => "stime"
-      case 0xD81  => "stimeh"
+      case 0x105  => "stvec"
+      case 0x106  => "scounteren"
+      case 0x10A  => "senvcfg"
 
       -- supervisor trap handling
       case 0x140  => "sscratch"
       case 0x141  => "sepc"
-      case 0xD42  => "scause"
-      case 0xD43  => "sbadaddr"
-      case 0x144  => "mip"
+      case 0x142  => "scause"
+      case 0x143  => "stval"
+      case 0x144  => "sip"
 
       -- supervisor protection and translation
-      case 0x180  => "sptbr"
-      case 0x181  => "sasid"
-
-      -- supervisor read/write shadow of user read-only registers
-      case 0x900  => "cycle"
-      case 0x901  => "time"
-      case 0x902  => "instret"
-      case 0x980  => "cycleh"
-      case 0x981  => "timeh"
-      case 0x982  => "instreth"
-
-      -- hypervisor trap setup
-      case 0x200  => "hstatus"
-      case 0x201  => "htvec"
-      case 0x202  => "htdeleg"
-      case 0x221  => "htimecmp"
-
-      -- hypervisor timer
-      case 0xE01  => "htime"
-      case 0xE81  => "htimeh"
-
-      -- hypervisor trap handling
-      case 0x240  => "hscratch"
-      case 0x241  => "hepc"
-      case 0x242  => "hcause"
-      case 0x243  => "hbadaddr"
-
-      -- hypervisor read/write shadow of supervisor read-only registers
-      case 0xA01  => "stime"
-      case 0xA81  => "stimeh"
+      case 0x180  => "satp"
 
       -- machine information registers
-      case 0xF00  => "mcpuid"
-      case 0xF01  => "mimpid"
-      case 0xF10  => "mhartid"
+      case 0xF11  => "mvendorid"
+      case 0xF12  => "marchid"
+      case 0xF13  => "mimpid"
+      case 0xF14  => "mhartid"
+      case 0xF15  => "mconfigptr"
 
       -- machine trap setup
       case 0x300  => "mstatus"
-      case 0x301  => "mtvec"
-      case 0x302  => "mtdeleg"
+      case 0x301  => "misa"
+      case 0x302  => "medeleg"
+      case 0x303  => "mideleg"
       case 0x304  => "mie"
-      case 0x321  => "mtimecmp"
+      case 0x305  => "mtvec"
+      case 0x306  => "mcounteren"
+      case 0x30A  => "menvcfg"
 
-      -- machine timers and counters
-      case 0x701  => "mtime"
-      case 0x741  => "mtimeh"
+      -- machine counter setup
+      case 0x320  => "mcountinhibit"
 
       -- machine trap handling
       case 0x340  => "mscratch"
       case 0x341  => "mepc"
       case 0x342  => "mcause"
-      case 0x343  => "mbadaddr"
+      case 0x343  => "mtval"
       case 0x344  => "mip"
 
-      -- machine protection and translation
-      case 0x380  => "mbase"
-      case 0x381  => "mbound"
-      case 0x382  => "mibase"
-      case 0x383  => "mibound"
-      case 0x384  => "mdbase"
-      case 0x385  => "mdbound"
+      -- machine memory protection
+      case 0x3A0  => "pmpcfg0"
+      case 0x3A2  => "pmpcfg2"
 
-      -- machine read-write shadow of hypervisor read-only registers
-      case 0xB01  => "htime"
-      case 0xB81  => "htimeh"
+      -- machine counters
+      case 0xB00  => "mcycle"
+      case 0xB02  => "minstret"
 
-      -- machine host-target interface (berkeley extension)
-      case 0x780  => "mtohost"
-      case 0x781  => "mfromhost"
-
-      case 0x783  => "send_ipi"
-
-      case _      => "UNKNOWN"
+      -- numbered CSRs, and the hexadecimal address of any other
+      case _      =>
+        if csr >=+ 0x3B0 and csr <=+ 0x3BF then "pmpaddr" : [[csr<3:0>]::nat]
+        else if csr >=+ 0x323 and csr <=+ 0x33F then "mhpmevent" : [[csr<4:0>]::nat]
+        else if csr >=+ 0xB03 and csr <=+ 0xB1F then "mhpmcounter" : [[csr<4:0>]::nat]
+        else "0x" : PadLeft(#"0", 3, [csr])
     }
 
 ---------------------------------------------------------------------------
--- Tandem verification
+-- Trace record
 ---------------------------------------------------------------------------
--- This describes the state update due to every retired instruction,
--- which can be verified against an external oracle.  Currently, the
--- Cissr tool from Bluespec fills the role, and the record below is
--- designed against its API.
+-- This describes the state update due to every retired instruction, which
+-- an emulator can compare with an external oracle.
 
 record StateDelta
 { exc_taken     :: bool                 -- whether an exception (interrupt/trap) was taken
@@ -1285,13 +1491,15 @@ inline unit setupDelta(pc::regType, instr::rawInstType) =
 ; Delta.st_width  <- None
 }
 
-inline unit recordLoad(addr::vAddr, val::regType) =
+-- A load or store is recorded with its physical address, as sail-riscv
+-- logs it.
+inline unit recordLoad(addr::pAddr, val::regType) =
 when not PROVER_EXPORT do
 { Delta.addr      <- Some(addr)
 ; Delta.data1     <- Some(val)
 }
 
-inline unit recordStore(addr::vAddr, val::regType, width::word) =
+inline unit recordStore(addr::pAddr, val::regType, width::word) =
 when not PROVER_EXPORT do
 { Delta.addr      <- Some(addr)
 ; Delta.data2     <- Some(val)
@@ -1408,25 +1616,13 @@ string log_w_mem_mask_misaligned(pAddrIdx::pAddrIdx, vAddr::vAddr, mask::regType
     "] <- (data: 0x" : hex64(data) : ", mask: 0x" : hex64(mask) :
     ", old: 0x"  : hex64(old) : ", new: 0x"  : hex64(new) : ")"
 
-string log_w_mem(pAddrIdx::pAddrIdx, vAddr::vAddr, data::regType) =
-    "MEM[0x" : hex64([pAddrIdx]) : "/" : hex64(vAddr) :
-    "] <- (data: 0x" : hex64(data) : ")"
-
 string log_r_mem(pAddrIdx::pAddrIdx, vAddr::vAddr, data::regType) =
     "data <- MEM[0x" : PadLeft(#"0", 10, [pAddrIdx]) : "/" : hex64(vAddr) :
     "]: 0x" : hex64(data)
 
-string log_exc(e::ExceptionType) =
-    " Exception " : excName(e) : " raised!"
-
-string log_tohost(tohost::regType) =
-    "-> host: " : [[tohost<7:0>]::char]
-
-inline nat LOG_IO      = 0
 inline nat LOG_INSN    = 1
 inline nat LOG_REG     = 2
 inline nat LOG_MEM     = 3
-inline nat LOG_ADDRTR  = 4
 
 declare log :: (nat * string) list
 
@@ -1439,146 +1635,142 @@ unit clear_logs()                   = log <- Nil
 -- Exception and Interrupt processing
 ---------------------------------------------------------------------------
 
--- Signalled exceptions are recorded as traps.
+-- Signalled exceptions are recorded as traps.  The trap value is the
+-- faulting address, or zero; Next replaces it by the instruction bits for
+-- an illegal instruction (P §3.1.16 p.52-53).
 
-unit setTrap(e::ExceptionType, badaddr::vAddr option) =
+unit setTrap(e::ExceptionType, tval::regType) =
 { var trap
 ; trap.trap        <- e
-; trap.badaddr     <- badaddr
+; trap.tval        <- tval
 ; NextFetch        <- Some(Trap(trap))
 }
 
 unit signalException(e::ExceptionType) =
 { mark_log(LOG_INSN, "signalling exception " : excName(e))
-; setTrap(e, None)
+; setTrap(e, 0)
 ; recordException()
 }
 
 unit signalAddressException(e::ExceptionType, vAddr::vAddr) =
 { mark_log(LOG_INSN, "signalling address exception " : excName(e) : " at " : [vAddr])
-; setTrap(e, Some(vAddr))
+; setTrap(e, vAddr)
 ; recordException()
 }
 
+-- ECALL (P §3.3.1 p.60-61)
 unit signalEnvCall() =
-{ e = match privilege(MCSR.mstatus.MPRV)
+{ e = match curPrivilege()
       { case User       => UMode_Env_Call
         case Supervisor => SMode_Env_Call
-        case Hypervisor => HMode_Env_Call
         case Machine    => MMode_Env_Call
       }
 ; signalException(e)
 }
 
--- Delegation logic.
+-- An exception goes to M-mode unless it is raised below M-mode and
+-- delegated in medeleg: traps never go to a less privileged mode (P
+-- §3.1.8 p.42-43).
+Privilege excDest(ec::exc_code, p::Privilege) =
+    if p != Machine and MCSR.medeleg<[ec]::nat> then Supervisor else Machine
 
-Privilege checkDelegation(curPriv::Privilege, intr::bool, ec::exc_code)
-          HOL "checkDelegation.sml" measure [curPriv] =
-{ e = [ec]::nat
-; match curPriv
-  { case User       => #INTERNAL_ERROR("No user-level delegation!")
-    case Supervisor => #INTERNAL_ERROR("No supervisor-level delegation!")
-    case Hypervisor =>
-         if ((intr and HCSR.htdeleg.Intr_deleg<e>)
-             or (!intr and HCSR.htdeleg.Exc_deleg<e>))
-         then Supervisor else curPriv
-    case Machine    =>
-         if ((intr and MCSR.mtdeleg.Intr_deleg<e>)
-             or (!intr and MCSR.mtdeleg.Exc_deleg<e>))
-         then checkDelegation(Hypervisor, intr, ec) else curPriv
-  }
+-- The pending interrupt of highest priority among those in p: MEI, MSI,
+-- MTI, SEI, SSI, STI (P §3.1.9 p.45).
+Interrupt option highestInterrupt(p::regType) =
+{ if      p<11> then Some(MEI)
+  else if p<3>  then Some(MSI)
+  else if p<7>  then Some(MTI)
+  else if p<9>  then Some(SEI)
+  else if p<1>  then Some(SSI)
+  else if p<5>  then Some(STI)
+  else None
 }
 
--- The spec doesn't define a priority between a timer interrupt and a
--- software interrupt.  We treat timer interrupts at higher priority.
-
-(Interrupt * Privilege) option checkPrivInterrupt(curPriv::Privilege) =
-{ ip = MCSR.mip
-; ie = MCSR.mie
-; match curPriv
-  { case User       => #INTERNAL_ERROR("No user-level interrupts!")
-    case Supervisor => if ip.STIP and ie.STIE then Some(Timer, curPriv)
-                       else if ip.SSIP and ie.SSIE then Some(Software, curPriv)
-                       else None
-    case Hypervisor => if ip.HTIP and ie.HTIE then Some(Timer, curPriv)
-                       else if ip.HSIP and ie.HSIE then Some(Software, curPriv)
-                       else None
-    case Machine    => if ip.MTIP and ie.MTIE then Some(Timer, curPriv)
-                       else if ip.MSIP and ie.MSIE then Some(Software, curPriv)
-                       else None
-  }
-}
-
--- The spec says:
---
---    When a hart is running in a given privileged mode, interrupts
---    for higher privileged modes are always enabled while interrupts
---    for lower privileged modes are always disabled.
---    Higher-privilege-level code can use separate per-interrupt
---    enable bits to disable selected interrupts before ceding control
---    to a lower privilege level.
---
--- This is critical to ensuring the monotonically non-decreasing
--- privilege levels in the privilege stack.
-
+-- The interrupt to take and the mode it goes to (P §3.1.9 p.43-45, §12.1.3
+-- p.117).  An interrupt goes to M-mode unless delegated in mideleg.
+-- Interrupts to M-mode are enabled below M-mode, and in M-mode when
+-- mstatus.MIE is set; interrupts to S-mode are enabled in U-mode, and in
+-- S-mode when mstatus.SIE is set (P §3.1.6.1 p.32).
 (Interrupt * Privilege) option checkInterrupts() =
-{ curIE = MCSR.mstatus.MIE  -- if interrupts are enabled at curPrivilege
-; p     = curPrivilege()
-; match p
-  { case User or Supervisor =>
-         match checkPrivInterrupt(Machine)
-         { case None =>
-           { match checkPrivInterrupt(Hypervisor)
-             { case None => -- Always check S-mode interrupts in U-mode
-                            if p == User or curIE
-                            then checkPrivInterrupt(Supervisor) else None
-               case i    => i
-             }
-           }
-           case i    => i
-         }
-    case Hypervisor =>
-         match checkPrivInterrupt(Machine)
-         { case None => if curIE then checkPrivInterrupt(Hypervisor) else None
-           case i    => i
-         }
-    case Machine =>
-         if curIE then checkPrivInterrupt(Machine) else None
+{ p    = curPrivilege()
+; pend = read_mip() && MCSR.&mie
+; m = if p != Machine or MCSR.mstatus.MIE
+      then highestInterrupt(pend && ~MCSR.mideleg) else None
+; s = if p == User or (p == Supervisor and MCSR.mstatus.SIE)
+      then highestInterrupt(pend && MCSR.mideleg) else None
+; match m, s
+  { case Some(i), _    => Some(i, Machine)
+    case None, Some(i) => Some(i, Supervisor)
+    case None, None    => None
   }
 }
 
-unit takeTrap(intr::bool, ec::exc_code, epc::regType, badaddr::vAddr option, toPriv::Privilege) =
+-- The trap handler address (P §3.1.7 p.41-42): BASE, plus 4 times the
+-- cause for an interrupt in Vectored mode.
+regType trapVector(tvec::regType, intr::bool, ec::exc_code) =
+{ base = tvec<63:2> : '00'
+; if intr and tvec<1:0> == 1 then base + 4 * ZeroExtend(ec) else base
+}
+
+-- Trap entry (P §3.1.6.1 p.32, §3.1.14-3.1.16 p.48-53; §12.1.1 p.113,
+-- §12.1.7-12.1.9 p.119-121).  mstatus.MPRV and the load reservation are
+-- unchanged.  A trap goes to M-mode or S-mode, as excDest or
+-- checkInterrupts gives, never to U-mode.
+unit takeTrap(intr::bool, ec::exc_code, epc::regType, tval::regType, toPriv::Privilege) =
 { fromP = curPrivilege()
 ; mark_log(LOG_INSN, ["trapping from " : privName(fromP) : " to " : privName(toPriv) :
                       " at pc " : [epc] : (if intr then " [intr] " else " [exc] ") : [[ec]::nat]])
-
-; ReserveLoad        <- None        -- cancel any load reservation
-; MCSR.mstatus.MMPRV <- false       -- unset MPRV in each privilege level
-
-; MCSR.mstatus       <- pushPrivilegeStack(MCSR.mstatus, toPriv)
-
 ; match toPriv
   { case User       => #INTERNAL_ERROR("Illegal trap to U-mode")
     case Supervisor =>
     { SCSR.scause.Int   <- intr
-    ; SCSR.scause.EC    <- ec
+    ; SCSR.scause.EC    <- ZeroExtend(ec)
     ; SCSR.sepc         <- epc
-    ; when IsSome(badaddr)
-      do SCSR.sbadaddr  <- ValOf(badaddr)
-
-    ; PC    <- SCSR.stvec
+    ; SCSR.stval        <- tval
+    ; MCSR.mstatus.SPIE <- MCSR.mstatus.SIE
+    ; MCSR.mstatus.SIE  <- false
+    ; MCSR.mstatus.SPP  <- fromP != User
+    ; setPrivilege(Supervisor)
+    ; PC                <- trapVector(SCSR.stvec, intr, ec)
     }
-    case Hypervisor => #INTERNAL_ERROR("Unsupported trap to H-mode")
     case Machine    =>
     { MCSR.mcause.Int   <- intr
-    ; MCSR.mcause.EC    <- ec
+    ; MCSR.mcause.EC    <- ZeroExtend(ec)
     ; MCSR.mepc         <- epc
-    ; when IsSome(badaddr)
-      do MCSR.mbadaddr  <- ValOf(badaddr)
-
-    ; PC    <- MCSR.mtvec + ([privLevel(fromP)]::regType) * 0x40
+    ; MCSR.mtval        <- tval
+    ; MCSR.mstatus.MPIE <- MCSR.mstatus.MIE
+    ; MCSR.mstatus.MIE  <- false
+    ; MCSR.mstatus.MPP  <- privLevel(fromP)
+    ; setPrivilege(Machine)
+    ; PC                <- trapVector(MCSR.mtvec, intr, ec)
     }
   }
+}
+
+-- MRET returns to the mode in mstatus.MPP and SRET to the mode in
+-- mstatus.SPP (P §3.3.2 p.61, §3.1.6.1 p.32-33); both clear MPRV when
+-- they leave M-mode (P §3.1.6.4 p.35).  The load reservation is kept.
+
+unit mret() =
+{ p = privilege(MCSR.mstatus.MPP)
+; mark_log(LOG_INSN, "ret-ing from M to " : privName(p))
+; MCSR.mstatus.MIE  <- MCSR.mstatus.MPIE
+; MCSR.mstatus.MPIE <- true
+; MCSR.mstatus.MPP  <- privLevel(User)
+; when p != Machine do MCSR.mstatus.MPRV <- false
+; setPrivilege(p)
+; PC                <- read_xepc(MCSR.mepc)
+}
+
+unit sret() =
+{ p = if MCSR.mstatus.SPP then Supervisor else User
+; mark_log(LOG_INSN, "ret-ing from " : privName(curPrivilege()) : " to " : privName(p))
+; MCSR.mstatus.SIE  <- MCSR.mstatus.SPIE
+; MCSR.mstatus.SPIE <- true
+; MCSR.mstatus.SPP  <- false
+; MCSR.mstatus.MPRV <- false
+; setPrivilege(p)
+; PC                <- read_xepc(SCSR.sepc)
 }
 
 ---------------------------------------------------------------------------
@@ -1613,17 +1805,29 @@ component GPR(n::reg) :: regType
                     }
 }
 
+-- val is bound once, before the write: it may read GPR(rd), and the SML
+-- export would otherwise re-evaluate it for Delta.data1 after the write
+-- (e.g. DIV x2,x1,x2, which must not raise an exception: U §12.2 p.66)
 inline unit writeRD(rd::reg, val::regType) =
-{ GPR(rd)       <- val
-; when not PROVER_EXPORT do Delta.data1   <- Some(val)
+{ v = val
+; GPR(rd)       <- v
+; when not PROVER_EXPORT do Delta.data1   <- Some(v)
 }
 
+-- Single-precision values are NaN-boxed (U §22.2 p.121): a write sets
+-- bits 63:32 to all 1s, and a read of a register that does not hold a
+-- NaN-boxed value gives the canonical NaN.  The transfers out of a register
+-- (FSW, FMV.X.W) use FPRS_raw, which ignores bits 63:32.
 component FPRS(n::reg) :: word
-{ value        = fpr(n)<31:0>
-  assign value = { fpr(n)<31:0> <- value
+{ value        = { v = fpr(n)
+                 ; if v<63:32> == 0xFFFFFFFF then v<31:0> else RV32_CanonicalNan
+                 }
+  assign value = { fpr(n) <- 0xFFFFFFFF`32 : value
                  ; mark_log(LOG_REG, log_w_fprs(n, value))
                  }
 }
+
+word FPRS_raw(n::reg) = fpr(n)<31:0>
 
 component FPRD(n::reg) :: regType
 { value        = fpr(n)
@@ -1634,51 +1838,19 @@ component FPRD(n::reg) :: regType
 
 unit writeFPRS(rd::reg, val::word) =
 { FPRS(rd)          <- val
-; MCSR.mstatus.MFS  <- ext_status(Dirty)
-; MCSR.mstatus.MSD  <- true
-; Delta.data1       <- Some(ZeroExtend(val))
+; MCSR.mstatus.FS   <- ext_status(Dirty)
+; Delta.data1       <- Some(0xFFFFFFFF`32 : val)
 }
 
 unit writeFPRD(rd::reg, val::regType) =
 { FPRD(rd)          <- val
-; MCSR.mstatus.MFS  <- ext_status(Dirty)
-; MCSR.mstatus.MSD  <- true
+; MCSR.mstatus.FS   <- ext_status(Dirty)
 ; Delta.data1       <- Some(val)
 }
 
 ---------------------------------------------------------------------------
 -- Raw memory access
 ---------------------------------------------------------------------------
-
-{- Original memory replaced by byte memory when exporting to HOL
-declare MEM :: pAddrIdx -> regType -- raw memory, laid out in blocks
-                                   -- of (|pAddr|-|pAddrIdx|) bits
-
-unit initMem(val::regType) =
-    MEM <- InitMap(val)
--}
-
-declare MEM8 :: pAddr -> byte
-
-component MEM (a::pAddrIdx) :: regType
-{
-  value =
-    { b = [a] << 3
-    ; ( MEM8 (b + 7) : MEM8 (b + 6) : MEM8 (b + 5) : MEM8 (b + 4) :
-        MEM8 (b + 3) : MEM8 (b + 2) : MEM8 (b + 1) : MEM8 (b) )
-    }
-  assign val =
-    { b = [a] << 3
-    ; MEM8 (b + 7) <- val<63:56>
-    ; MEM8 (b + 6) <- val<55:48>
-    ; MEM8 (b + 5) <- val<47:40>
-    ; MEM8 (b + 4) <- val<39:32>
-    ; MEM8 (b + 3) <- val<31:24>
-    ; MEM8 (b + 2) <- val<23:16>
-    ; MEM8 (b + 1) <- val<15:8 >
-    ; MEM8 (b    ) <- val<7 :0 >
-    }
-}
 
 regType rawReadData(pAddr::pAddr) =
 { pAddrIdx = pAddr<63:3>
@@ -1717,7 +1889,8 @@ unit rawWriteData(pAddr::pAddr, data::regType, nbytes::nat) =
               ; MEM(pAddrIdx) <- new
               ; mark_log(LOG_MEM, log_w_mem_mask_misaligned(pAddrIdx, pAddr, mask, data, align, old, new))
               }
-         -- write touching adjacent regType-sized blocks
+         -- write touching adjacent regType-sized blocks; not reached,
+         -- since every store is naturally aligned
          else { dw_old  = MEM(pAddrIdx+1) : old
               ; dw_data = ZeroExtend(data) << (align*8)
               ; dw_mask = ZeroExtend(mask) << (align*8)
@@ -1726,18 +1899,6 @@ unit rawWriteData(pAddr::pAddr, data::regType, nbytes::nat) =
               ; MEM(pAddrIdx)   <- dw_new<Size(data)-1:0>
               }
        }
-}
-
-half rawReadHalf(pAddr::pAddr) =
-{ pAddrIdx = pAddr<63:3>
-; data     = MEM(pAddrIdx)
-; mark_log(LOG_MEM, log_r_mem(pAddrIdx, pAddr, data))
-; match pAddr<2:1>
-  { case '00' => data<63:48>
-    case '01' => data<47:32>
-    case '10' => data<31:16>
-    case '11' => data<15:0>
-  }
 }
 
 rawInstType rawReadInst(pAddr::pAddr) =
@@ -1751,274 +1912,264 @@ rawInstType rawReadInst(pAddr::pAddr) =
   }
 }
 
--- helper used to preload memory contents
-unit rawWriteMem(pAddr::pAddr, data::regType) =
-{ pAddrIdx = pAddr<63:3>
-; MEM(pAddrIdx) <- data
-; mark_log(LOG_MEM, log_w_mem(pAddrIdx, pAddr, data))
+---------------------------------------------------------------------------
+-- Physical Memory Protection
+---------------------------------------------------------------------------
+
+-- PMP (P §3.7 p.70-74) checks every instruction fetch and explicit data
+-- access, by physical address.  The hart has 16 entries and the grain G
+-- is 0, so pmpaddr is read as stored and every region is a multiple of 4
+-- bytes (P §3.7.1.1 p.73).
+
+-- What an access needs from the entry that matches it (P §3.7.1 p.72): R
+-- for a load or LR, W for a store or SC, both for an AMO, X for a fetch.
+construct pmpAccess { PMP_Read, PMP_Write, PMP_ReadWrite, PMP_Execute }
+
+bool pmpPermits(cfg::pmpcfg, kind::pmpAccess) =
+    match kind
+    { case PMP_Read      => cfg.R
+      case PMP_Write     => cfg.W
+      case PMP_ReadWrite => cfg.R and cfg.W
+      case PMP_Execute   => cfg.X
+    }
+
+-- The bytes lo to hi - 1 that entry i matches, or None (P §3.7.1.1
+-- p.72-73).  OFF matches nothing.  TOR matches pmpaddr(i-1) <= y <
+-- pmpaddr(i), from 0 for entry 0 and whatever the A field of entry i-1,
+-- and nothing if the bounds do not increase.  NA4 matches 4 bytes.  NAPOT
+-- matches 2^(t+3) naturally aligned bytes when pmpaddr(i) ends in t ones
+-- (Table 24 p.72); m has the t+1 lowest bits set.
+(pAddr * pAddr) option pmpRegion(i::bits(4)) =
+{ y = pmpaddr(i)
+; match pmpcfg_ent(i).A
+  { case 0 => None
+    case 1 => { lo = if i == 0 then 0 else pmpaddr(i - 1) << 2
+              ; hi = y << 2
+              ; if lo <+ hi then Some(lo, hi) else None
+              }
+    case 2 => Some(y << 2, (y << 2) + 4)
+    case 3 => { m  = y ?? (y + 1)
+              ; lo = (y && ~m) << 2
+              ; Some(lo, lo + ((m + 1) << 2))
+              }
+  }
+}
+
+-- The verdict of entry i on an access to the bytes a to last, or None if
+-- the entry matches none of them.  It must match all of them, or the
+-- access fails, also in M-mode; if it does, M-mode is allowed unless the
+-- entry is locked (P §3.7.1.2-3.7.1.3 p.73).
+bool option pmpEntryCheck(i::bits(4), a::pAddr, last::pAddr, kind::pmpAccess,
+                          p::Privilege) =
+    match pmpRegion(i)
+    { case None         => None
+      case Some(lo, hi) =>
+        if last <+ lo or hi <=+ a then None
+        else if lo <=+ a and last <+ hi
+        then { cfg = pmpcfg_ent(i)
+             ; Some((p == Machine and not cfg.L) or pmpPermits(cfg, kind))
+             }
+        else Some(false)
+    }
+
+-- Whether PMP allows an access of n bytes at a by privilege p (P
+-- §3.7.1.3 p.73): the lowest-numbered entry that matches any of its bytes
+-- decides, and if none does, only M-mode is allowed.  The access is
+-- naturally aligned, so a + (n - 1) does not wrap.  The caller raises the
+-- access fault.
+bool pmpCheck(a::pAddr, n::nat, kind::pmpAccess, p::Privilege) =
+{ last = a + [n - 1]
+; e0  = pmpEntryCheck(0,  a, last, kind, p)
+; e1  = pmpEntryCheck(1,  a, last, kind, p)
+; e2  = pmpEntryCheck(2,  a, last, kind, p)
+; e3  = pmpEntryCheck(3,  a, last, kind, p)
+; e4  = pmpEntryCheck(4,  a, last, kind, p)
+; e5  = pmpEntryCheck(5,  a, last, kind, p)
+; e6  = pmpEntryCheck(6,  a, last, kind, p)
+; e7  = pmpEntryCheck(7,  a, last, kind, p)
+; e8  = pmpEntryCheck(8,  a, last, kind, p)
+; e9  = pmpEntryCheck(9,  a, last, kind, p)
+; e10 = pmpEntryCheck(10, a, last, kind, p)
+; e11 = pmpEntryCheck(11, a, last, kind, p)
+; e12 = pmpEntryCheck(12, a, last, kind, p)
+; e13 = pmpEntryCheck(13, a, last, kind, p)
+; e14 = pmpEntryCheck(14, a, last, kind, p)
+; e15 = pmpEntryCheck(15, a, last, kind, p)
+; if      IsSome(e0)  then ValOf(e0)
+  else if IsSome(e1)  then ValOf(e1)
+  else if IsSome(e2)  then ValOf(e2)
+  else if IsSome(e3)  then ValOf(e3)
+  else if IsSome(e4)  then ValOf(e4)
+  else if IsSome(e5)  then ValOf(e5)
+  else if IsSome(e6)  then ValOf(e6)
+  else if IsSome(e7)  then ValOf(e7)
+  else if IsSome(e8)  then ValOf(e8)
+  else if IsSome(e9)  then ValOf(e9)
+  else if IsSome(e10) then ValOf(e10)
+  else if IsSome(e11) then ValOf(e11)
+  else if IsSome(e12) then ValOf(e12)
+  else if IsSome(e13) then ValOf(e13)
+  else if IsSome(e14) then ValOf(e14)
+  else if IsSome(e15) then ValOf(e15)
+  else p == Machine
 }
 
 ---------------------------------------------------------------------------
 -- Address Translation
 ---------------------------------------------------------------------------
 
--- memory permissions
+-- Supervisor address translation with Sv39, Sv48 and Sv57 (P §12.1.11
+-- p.124-126, §12.3-12.6 p.130-139).  The hart has no
+-- address-translation cache, so every access walks the page table as it is
+-- in memory at that moment (P §12.3.2 p.135).  A and D are managed
+-- by software, as with Svade (P §12.3.1 p.132), and Svnapot, Svpbmt
+-- and Svrsw60t59b are absent.  The walk only reads the state: it
+-- reads the PTEs from memory without logging them and never writes
+-- them.  PTE reads are physical and have no PMA check.
 
-bool checkMemPermission(ft::fetchType, ac::accessType, priv::Privilege, perm::permType) =
-    match perm
-    { case  0   => #INTERNAL_ERROR("Checking perm on Page-Table pointer!")
-      case  1   => #INTERNAL_ERROR("Checking perm on Page-Table pointer!")
-      case  2   => if priv == User then ac != Write else (ac == Read and ft == Data)
-      case  3   => if priv == User then true else ft != Instruction
-      case  4   => ac == Read and ft == Data
-      case  5   => ft != Instruction
-      case  6   => ac != Write
-      case  7   => true
-      case  8   => priv != User and ac == Read and ft == Data
-      case  9   => priv != User and ft != Instruction
-      case 10   => priv != User and ac != Write
-      case 11   => priv != User
-      case 12   => priv != User and ac == Read and ft == Data
-      case 13   => priv != User and ft != Instruction
-      case 14   => priv != User and ac != Write
-      case 15   => priv != User
-    }
+-- The physical address of an access, or the exception it raises (P §3.1.15
+-- Table 16 p.50).
+construct TransResult { TR_Address :: pAddr, TR_Fault :: ExceptionType }
 
-bool isGlobal(perm::permType) =
-    perm<3:2> == 3
-
--- page table walking (currently 64-bit only)
-
-register SV_PTE :: regType
-{ 47-10 : PTE_PPNi  -- PPN[2,1,0]
-    9-7 : PTE_SW    -- reserved for software
-      6 : PTE_D     -- dirty bit
-      5 : PTE_R     -- referenced bit
-    4-1 : PTE_T     -- PTE type
-      0 : PTE_V     -- valid bit
+-- What one level of the walk gives (P §12.3.2 p.134): the PPN of the
+-- next table, the physical address, a page fault or an access fault.
+construct walkResult
+{ W_Next        :: bits(44)
+, W_Address     :: pAddr
+, W_PageFault
+, W_AccessFault
 }
 
-register SV_Vaddr :: regType
-{ 47-12 : Sv_VPNi
-  11-0  : Sv_PgOfs
+-- The page fault and the access fault of an access (Table 16 p.50): a
+-- fetch is (Instruction, Read); a load or LR is (Data, Read); a store, SC
+-- or AMO is (Data, Write), since "AMOs never raise load page-fault
+-- exceptions" (P §12.3.1 p.132).
+ExceptionType pageFault(ft::fetchType, ac::accessType) =
+    if ft == Instruction then Fetch_PageFault
+    else if ac == Read then Load_PageFault else Store_AMO_PageFault
+
+ExceptionType accessFault(ft::fetchType, ac::accessType) =
+    if ft == Instruction then Fetch_Fault
+    else if ac == Read then Load_Fault else Store_AMO_Fault
+
+-- Whether a leaf PTE allows the access by privilege p (P §12.3.2 steps 6,
+-- 8 and 9 p.134; Figure 70 p.136).  U-mode needs U = 1.  S-mode needs
+-- U = 0, or U = 1 with mstatus.SUM set, but never executes from a page
+-- with U = 1 (P §12.3.1 p.132, §3.1.6.4 p.35).  A fetch needs X, a load R,
+-- or X with mstatus.MXR set, and a store W (p.35).  With Svade, an access
+-- needs A = 1 and a store also D = 1 (step 9).
+bool ptePermits(pte::dword, ft::fetchType, ac::accessType, p::Privilege) =
+{ store = ft == Data and ac == Write
+; uOK   = if p == User then pte<4>
+          else not pte<4> or (ft == Data and MCSR.mstatus.SUM)
+; xwrOK = if ft == Instruction then pte<3>
+          else if ac == Read then pte<1> or (pte<3> and MCSR.mstatus.MXR)
+          else pte<2>
+; adOK  = pte<6> and (not store or pte<7>)
+; uOK and xwrOK and adOK
 }
 
-(pAddr * SV_PTE * nat * bool * pAddr) option
- walk64(vAddr::vAddr, ft::fetchType, ac::accessType, priv::Privilege, ptb::regType, level::nat) measure level =
-{ va        = SV_Vaddr(vAddr)
-; pt_ofs    = ZeroExtend((va.Sv_VPNi >>+ (level * LEVEL_BITS))<(LEVEL_BITS-1):0>) << 3
-; pte_addr  = ptb + pt_ofs
-; pte       = SV_PTE(rawReadData(pte_addr))
-; mark_log(LOG_ADDRTR, ["translate(vaddr=0x" : PadLeft(#"0", 16, [vAddr]) : "): level=" : [level]
-                        : " pt_base=0x" : PadLeft(#"0", 16, [ptb])
-                        : " pt_ofs=" : [[pt_ofs]::nat]
-                        : " pte_addr=0x" : PadLeft(#"0", 16, [pte_addr])
-                        : " pte=0x" : PadLeft(#"0", 16, [&pte])])
-; if not pte.PTE_V
-  then { mark_log(LOG_ADDRTR, "addr_translate: invalid PTE")
-       ; None
-       }
-  else { if pte.PTE_T == 0 or pte.PTE_T == 1
-         then { -- ptr to next level table
-                if level == 0
-                then { mark_log(LOG_ADDRTR, "last-level pt contains a pointer PTE!")
-                     ; None
-                     }
-                else walk64(vAddr, ft, ac, priv, ZeroExtend(pte.PTE_PPNi << PAGESIZE_BITS), level - 1)
-              }
-         else { -- leaf PTE
-                if not checkMemPermission(ft, ac, priv, pte.PTE_T)
-                then { mark_log(LOG_ADDRTR, "PTE permission check failure!")
-                     ; None
-                     }
-                else { var pte_w = pte
-                     -- update referenced and dirty bits
-                     ; old_r = pte.PTE_R
-                     ; old_d = pte.PTE_D
-                     ; pte_w.PTE_R <- true
-                     ; when ac == Write
-                       do pte_w.PTE_D <- true
-                     ; when old_r !=  pte_w.PTE_R or old_d !=  pte_w.PTE_D
-                       do rawWriteData(pte_addr, &pte_w, 8)
-                     -- compute translated address
-                     ; ppn = if level > 0
-                             then ((ZeroExtend((pte.PTE_PPNi >>+ (level * LEVEL_BITS)) << (level * LEVEL_BITS)))
-                                   || ZeroExtend(va.Sv_VPNi && ((1 << (level * LEVEL_BITS)) - 1)))
-                             else pte.PTE_PPNi
-                     ; Some(ZeroExtend(ppn : va.Sv_PgOfs), pte_w, level, isGlobal(pte.PTE_T), pte_addr)
-                     }
-              }
-       }
-}
-
--- TLB
----------------------------------------------------------------------------
--- We maintain an internal model of a TLB.  The spec leaves the TLB
--- unspecified, but we would like to capture the semantics of SFENCE.
--- The TLB also improves simulation speed.
-
--- This implementation stores the global mapping bit from the PTE in
--- the TLB.  This causes an asymmetry between TLB lookup and TLB
--- flush, due to the spec's treatment of an ASID=0 in SFENCE.VM:
---
--- * in TLB lookup, the global bit is used to check for a global
---   match, and this global bit when set overrides the input ASID.
---
--- * in TLB flush, an input ASID of 0 overrides the global bit when
---   checking if a TLB entry needs to be flushed.
-
--- Each TLBEntry also stores the full PTE and its pAddr, so that it
--- can write back the PTE when its dirty bit needs to be updated.
-
-asidType curASID() =
-    SCSR.sasid<ASID_SIZE-1:0>
-
-record TLBEntry
-{ asid          :: asidType
-  global        :: bool
-  vAddr         :: vAddr        -- VPN
-  vMatchMask    :: vAddr        -- matching mask for superpages
-
-  pAddr         :: pAddr        -- PPN
-  vAddrMask     :: vAddr        -- selection mask for superpages
-
-  pte           :: SV_PTE       -- permissions and dirty bit writeback
-  pteAddr       :: pAddr
-
-  age           :: regType      -- derived from instret
-}
-
-TLBEntry mkTLBEntry(asid::asidType, global::bool, vAddr::vAddr, pAddr::pAddr,
-                    pte::SV_PTE, i::nat, pteAddr::pAddr) =
-{ var ent :: TLBEntry
-; ent.asid          <- asid
-; ent.global        <- global
-; ent.pte           <- pte
-; ent.pteAddr       <- pteAddr
-; ent.vAddrMask     <- ((1::vAddr) << ((LEVEL_BITS*i) + PAGESIZE_BITS)) - 1
-; ent.vMatchMask    <- (SignExtend('1')::vAddr) ?? ent.vAddrMask
-; ent.vAddr         <- vAddr && ent.vMatchMask
-; ent.pAddr         <- (pAddr >> (PAGESIZE_BITS + (LEVEL_BITS*i))) << (PAGESIZE_BITS + (LEVEL_BITS*i))
-; ent.age           <- c_cycles(procID)
-; ent
-}
-
-nat  TLBEntries = 16
-type tlbIdx     = bits(4)
-type TLBMap     = tlbIdx -> TLBEntry option
-
-(TLBEntry * tlbIdx) option lookupTLB(asid::asidType, vAddr::vAddr, tlb::TLBMap) =
-{ var ent = None
-; for i in 0 .. TLBEntries - 1 do
-  { match tlb([i])
-    { case Some(e) => when ent == None and (e.global or e.asid == asid)
-                           and (e.vAddr == vAddr && e.vMatchMask)
-                      do ent <- Some(e, [i])
-      case None    => ()
+-- Level i of the walk, with the page table at PPN ppn (P §12.3.2 steps
+-- 2-5 and 10 p.134).  The PTE at ppn * 4096 + VPN[i] * 8 is read as an
+-- implicit access by S-mode, which needs the PMP's read permission or
+-- raises the access fault of the original access type (step 2; P §3.7.2
+-- p.74).  A PTE with V = 0, with W = 1 but R = 0, or with any of
+-- bits 63-54 set is invalid, and so is a pointer (R = W = X = 0) with D,
+-- A or U set: those bits are reserved (step 3; P §12.3.1 p.133, §12.4.1
+-- p.137).  A pointer at level 0 and a misaligned superpage are
+-- page faults (steps 4 and 5).  Otherwise the leaf maps a page of
+-- 2^(12 + 9i) bytes (step 10).
+walkResult ptwLevel(i::nat, ppn::bits(44), va::vAddr, ft::fetchType,
+                    ac::accessType, p::Privilege) =
+{ pteAddr = ((ZeroExtend(ppn)::pAddr) << 12) + (((va >>+ (12 + 9 * i)) && 0x1FF) << 3)
+; if not pmpCheck(pteAddr, 8, PMP_Read, Supervisor) then W_AccessFault
+  else
+  { pte  = MEM(pteAddr<63:3>)
+  ; leaf = pte<1> or pte<3>
+  ; if not pte<0> or (pte<2> and not pte<1>) or (pte && 0xFFC0000000000000) != 0
+       or (not leaf and (pte && 0xD0) != 0)
+    then W_PageFault
+    else if not leaf then (if i == 0 then W_PageFault else W_Next(pte<53:10>))
+    else
+    { base = (ZeroExtend(pte<53:10>)::pAddr) << 12
+    ; mask = ((1::pAddr) << (12 + 9 * i)) - 1
+    ; if (base && mask) != 0 then W_PageFault
+      else if not ptePermits(pte, ft, ac, p) then W_PageFault
+      else W_Address(base || (va && mask))
     }
   }
-; ent
 }
 
-TLBMap addToTLB(asid::asidType, vAddr::vAddr, pAddr::pAddr, pte::SV_PTE, pteAddr::pAddr,
-                i::nat, global::bool, curTLB::TLBMap) =
-{ var ent       = mkTLBEntry(asid, global, vAddr, pAddr, pte, i, pteAddr)
-; var tlb       = curTLB
-; var oldest    = SignExtend('1')
-; var addIdx    = 0
-; var added     = false
-; for i in 0 .. TLBEntries - 1 do
-  { match tlb([i])
-    { case Some(e)  => when e.age <+ oldest
-                       do { oldest      <- e.age
-                          ; addIdx      <- i
-                          }
-      case None     => when not added
-                       do { tlb([i])    <- Some(ent)
-                          ; added       <- true
-                          }
+-- Level i of a walk of the given number of levels: it runs only while the
+-- walk descends and i is below the top level, levels - 1.
+walkResult ptwStep(r::walkResult, i::nat, levels::nat, va::vAddr,
+                   ft::fetchType, ac::accessType, p::Privilege) =
+    match r
+    { case W_Next(ppn) => if i < levels then ptwLevel(i, ppn, va, ft, ac, p) else r
+      case _           => r
     }
-  }
-; when not added
-  do tlb([addIdx]) <- Some(ent)
-; tlb
-}
 
-TLBMap flushTLB(asid::asidType, addr::vAddr option, curTLB::TLBMap) =
-{ var tlb = curTLB
-; for i in 0 .. TLBEntries - 1 do
-  { match tlb([i]), addr
-    { case Some(e), Some(va)    => when (asid == 0 or (asid == e.asid and not e.global))
-                                        and (e.vAddr == va && e.vMatchMask)
-                                   do tlb([i]) <- None
-      case Some(e), None        => when asid == 0 or (asid == e.asid and not e.global)
-                                   do tlb([i]) <- None
-      case None,    _           => ()
-    }
-  }
-; tlb
-}
-
-declare  c_tlb  :: id -> TLBMap
-
-component TLB :: TLBMap
-{ value        = c_tlb(procID)
-  assign value = c_tlb(procID) <- value
-}
-
--- address translation
-
-pAddr option translate64(vAddr::regType, ft::fetchType, ac::accessType, priv::Privilege, level::nat) =
-{ asid = curASID()
-; match lookupTLB(asid, vAddr, TLB)
-  { case Some(e, idx) =>
-    { if checkMemPermission(ft, ac, priv, e.pte.PTE_T)
-      then { mark_log(LOG_ADDRTR, "TLB hit!")
-           -- update dirty bit in page table and TLB if needed
-           ; when ac == Write and not e.pte.PTE_D
-             do { var ent = e
-                ; ent.pte.PTE_D <- true
-                ; rawWriteData(ent.pteAddr, ent.&pte, 8)
-                ; var tlb = TLB
-                ; tlb([idx]) <- Some(ent)
-                ; TLB <- tlb
-                }
-           ; Some(e.pAddr || (vAddr && e.vAddrMask))
-           }
-      else { mark_log(LOG_ADDRTR, "TLB permission check failure")
-           ; None
-           }
-    }
-    case None =>
-    { mark_log(LOG_ADDRTR, "TLB miss!")
-    ; match walk64(vAddr, ft, ac, priv, SCSR.sptbr, level)
-      { case Some(pAddr, pte, i, global, pteAddr)  =>
-        { TLB <- addToTLB(asid, vAddr, pAddr, pte, pteAddr, i, global, TLB)
-        ; Some(pAddr)
+-- The physical address of an access at va by privilege p, which is
+-- curPrivilege() for a fetch and effectivePrivilege() for a load or store
+-- (P §3.1.6.4 p.35).  satp is active, and va translated, only if p
+-- is S or U (P §12.1.11 p.126) and satp.MODE is not Bare (Table 40
+-- p.126).  p is tested first, so that at M nothing else is read.
+-- legalize_satp keeps the reserved MODEs out of satp; they would act as
+-- Bare.  A va whose bits 63 to VALEN - 1 are not all equal raises
+-- a page fault before any PTE is read (P §12.4.1 p.136, §12.5.1 p.137,
+-- §12.6.1 p.138).  The walk starts at level LEVELS - 1 with the root table
+-- at satp.PPN (P §12.3.2 step 1 p.134); it is unrolled, and the
+-- levels at or above LEVELS pass the start on unchanged.
+TransResult translateAddr(va::vAddr, ft::fetchType, ac::accessType, p::Privilege) =
+  if p == Machine then TR_Address(va)
+  else
+  { satp   = SCSR.satp
+  ; levels = match satp<63:60> { case 8 => 3::nat  case 9 => 4  case 10 => 5  case _ => 0 }
+  ; if levels == 0 then TR_Address(va)
+    else
+    { sh = 64 - (12 + 9 * levels)
+    ; if ((va << sh) >> sh) != va then TR_Fault(pageFault(ft, ac))
+      else
+      { r4 = ptwStep(W_Next(satp<43:0>), 4, levels, va, ft, ac, p)
+      ; r3 = ptwStep(r4, 3, levels, va, ft, ac, p)
+      ; r2 = ptwStep(r3, 2, levels, va, ft, ac, p)
+      ; r1 = ptwStep(r2, 1, levels, va, ft, ac, p)
+      ; r0 = ptwStep(r1, 0, levels, va, ft, ac, p)
+      ; match r0
+        { case W_Address(pa)  => TR_Address(pa)
+          case W_AccessFault  => TR_Fault(accessFault(ft, ac))
+          case _              => TR_Fault(pageFault(ft, ac))   -- W_Next cannot occur
         }
-        case None   => None
       }
     }
   }
+
+-- The physical address of the 2-byte instruction parcel at vAddr.  The
+-- parcel is translated with the current privilege, since MPRV does not
+-- apply to fetches (P §3.1.6.4 p.35), and its physical address needs the
+-- PMP's execute permission, or the fetch raises an access fault (P §3.7.1
+-- p.72).
+TransResult fetchAddr(vAddr::vAddr) =
+{ p = curPrivilege()
+; match translateAddr(vAddr, Instruction, Read, p)
+  { case TR_Address(pAddr) => if pmpCheck(pAddr, 2, PMP_Execute, p) then TR_Address(pAddr)
+                              else TR_Fault(Fetch_Fault)
+    case f                 => f
+  }
 }
 
-pAddr option translateAddr(vAddr::regType, ft::fetchType, ac::accessType) =
-{ priv = privilege(if MCSR.mstatus.MMPRV and ft == Data
-                   then MCSR.mstatus.MPRV1 else MCSR.mstatus.MPRV)
-; match vmType(MCSR.mstatus.VM), priv
-  { case Mbare,          _
-    or       _,    Machine  => Some(vAddr)  -- no translation
-    case Sv39,           _  => translate64(vAddr, ft, ac, priv, 2)
-    case Sv48,           _  => translate64(vAddr, ft, ac, priv, 3)
-
-    {- Comment out base/bound modes since there are no tests for them.
-
-    case Mbb,   Machine
-    or   Mbbid, Machine     => Some(vAddr)
-
-     -}
-
-    case     _,          _  => None
+-- The physical address of an explicit, naturally aligned data access of n
+-- bytes at vAddr.  The access is translated with the effective privilege
+-- (P §3.1.6.4 p.35), and its physical address needs the PMP's
+-- permission for that privilege, or the access raises an access fault (P
+-- §3.7 p.70).  A load or LR is a read, and a store, SC or AMO a write.
+TransResult dataAddr(vAddr::vAddr, n::nat, kind::pmpAccess) =
+{ p  = effectivePrivilege()
+; ac = if kind == PMP_Read then Read else Write
+; match translateAddr(vAddr, Data, ac, p)
+  { case TR_Address(pAddr) => if pmpCheck(pAddr, n, kind, p) then TR_Address(pAddr)
+                              else TR_Fault(accessFault(Data, ac))
+    case f                 => f
   }
 }
 
@@ -2026,8 +2177,10 @@ pAddr option translateAddr(vAddr::regType, ft::fetchType, ac::accessType) =
 -- Load Reservation
 ---------------------------------------------------------------------------
 
-bool matchLoadReservation(vAddr::vAddr) =
-    IsSome(ReserveLoad) and ValOf(ReserveLoad) == vAddr
+-- The reservation is of a physical address, since the reservation set lies
+-- within one physical page (P §12.3.1 p.133).
+bool matchLoadReservation(pAddr::pAddr) =
+    IsSome(ReserveLoad) and ValOf(ReserveLoad) == pAddr
 
 ---------------------------------------------------------------------------
 -- Control Flow
@@ -2422,13 +2575,16 @@ define MulDiv > REMUW(rd::reg, rs1::reg, rs2::reg) =
 ---------------------------------------------------------------------------
 
 -- Unconditional jumps
+--
+-- If the C extension is enabled, IALIGN = 16,
+-- meaning JAL and JALR never raise instruction-address-misaligned exceptions.
 
 -----------------------------------
 -- JAL   rd, offs
 -----------------------------------
 define Branch > JAL(rd::reg, imm::imm20) =
 { addr = PC + SignExtend(imm) << 1
-; if addr<1>
+; if addr<1> and not haveRVC()
   then signalAddressException(Fetch_Misaligned, addr)
   else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
@@ -2440,7 +2596,7 @@ define Branch > JAL(rd::reg, imm::imm20) =
 -----------------------------------
 define Branch > JALR(rd::reg, rs1::reg, imm::imm12) =
 { addr = (GPR(rs1) + SignExtend(imm)) && SignExtend('10')
-; if addr<1>
+; if addr<1> and not haveRVC()
   then signalAddressException(Fetch_Misaligned, addr)
   else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
@@ -2456,7 +2612,11 @@ define Branch > BEQ(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 == v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2467,7 +2627,11 @@ define Branch > BNE(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <> v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2478,7 +2642,11 @@ define Branch > BLT(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 < v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2489,7 +2657,11 @@ define Branch > BLTU(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <+ v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2500,7 +2672,11 @@ define Branch > BGE(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >= v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2511,7 +2687,11 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 { v1 = if in32BitMode() then SignExtend(GPR(rs1)<31:0>) else GPR(rs1)
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >=+ v2
-  then branchTo(PC + (SignExtend(offs) << 1))
+  then { addr = PC + (SignExtend(offs) << 1)
+       ; if addr<1> and not haveRVC()
+         then signalAddressException(Fetch_Misaligned, addr)
+         else branchTo(addr)
+       }
   else noBranch(PC + Skip)
 }
 
@@ -2519,18 +2699,31 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 -- Load and Store Instructions
 ---------------------------------------------------------------------------
 
+-- A load or store that is not naturally aligned raises an
+-- address-misaligned exception, which the manual leaves to the execution
+-- environment (U §2.6 p.34), before any other
+-- check, translation included (P §3.1.15 Table 17 p.51), so no
+-- access is ever split or crosses a page.  An aligned access is
+-- translated and needs the permission of the PMP (dataAddr), or raises the
+-- page fault or access fault that dataAddr gives.  The trap value is the
+-- virtual address, for an access fault too (P §3.1.16 p.52).  The access
+-- is recorded with its physical address.  The same holds for the
+-- floating-point loads and stores, LR/SC and the AMOs.
+
 -----------------------------------
 -- LW    rd, rs1, offs
 -----------------------------------
 define Load > LW(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<31:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
+; if vAddr<1:0> != 0
+  then signalAddressException(Load_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_Read)
+       { case TR_Address(pAddr) => { val       = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; GPR(rd)  <- val
+                                   ; recordLoad(pAddr, val)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2540,13 +2733,15 @@ define Load > LWU(rd::reg, rs1::reg, offs::imm12) =
 { if in32BitMode()
   then signalException(Illegal_Instr)
   else { vAddr = GPR(rs1) + SignExtend(offs)
-       ; match translateAddr(vAddr, Data, Read)
-         { case Some(pAddr) => { val        = ZeroExtend(rawReadData(pAddr)<31:0>)
-                               ; GPR(rd)   <- val
-                               ; recordLoad(vAddr, val)
-                               }
-           case None        => signalAddressException(Load_Fault, vAddr)
-         }
+       ; if vAddr<1:0> != 0
+         then signalAddressException(Load_Misaligned, vAddr)
+         else match dataAddr(vAddr, 4, PMP_Read)
+              { case TR_Address(pAddr) => { val        = ZeroExtend(rawReadData(pAddr)<31:0>)
+                                          ; GPR(rd)   <- val
+                                          ; recordLoad(pAddr, val)
+                                          }
+                case TR_Fault(e)       => signalAddressException(e, vAddr)
+              }
        }
 }
 
@@ -2555,13 +2750,15 @@ define Load > LWU(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LH(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<15:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
+; if vAddr<0>
+  then signalAddressException(Load_Misaligned, vAddr)
+  else match dataAddr(vAddr, 2, PMP_Read)
+       { case TR_Address(pAddr) => { val       = SignExtend(rawReadData(pAddr)<15:0>)
+                                   ; GPR(rd)  <- val
+                                   ; recordLoad(pAddr, val)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2569,13 +2766,15 @@ define Load > LH(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LHU(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<15:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
+; if vAddr<0>
+  then signalAddressException(Load_Misaligned, vAddr)
+  else match dataAddr(vAddr, 2, PMP_Read)
+       { case TR_Address(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<15:0>)
+                                   ; GPR(rd)  <- val
+                                   ; recordLoad(pAddr, val)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2583,12 +2782,12 @@ define Load > LHU(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LB(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = SignExtend(rawReadData(pAddr)<7:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
+; match dataAddr(vAddr, 1, PMP_Read)
+  { case TR_Address(pAddr) => { val       = SignExtend(rawReadData(pAddr)<7:0>)
+                              ; GPR(rd)  <- val
+                              ; recordLoad(pAddr, val)
+                              }
+    case TR_Fault(e)       => signalAddressException(e, vAddr)
   }
 }
 
@@ -2597,12 +2796,12 @@ define Load > LB(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Load > LBU(rd::reg, rs1::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<7:0>)
-                        ; GPR(rd)  <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
+; match dataAddr(vAddr, 1, PMP_Read)
+  { case TR_Address(pAddr) => { val       = ZeroExtend(rawReadData(pAddr)<7:0>)
+                              ; GPR(rd)  <- val
+                              ; recordLoad(pAddr, val)
+                              }
+    case TR_Fault(e)       => signalAddressException(e, vAddr)
   }
 }
 
@@ -2613,13 +2812,15 @@ define Load > LD(rd::reg, rs1::reg, offs::imm12) =
     if in32BitMode()
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Read)
-           { case Some(pAddr) => { val      = rawReadData(pAddr)
-                                 ; GPR(rd) <- val
-                                 ; recordLoad(vAddr, val)
-                                 }
-             case None        => signalAddressException(Load_Fault, vAddr)
-           }
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Load_Misaligned, vAddr)
+           else match dataAddr(vAddr, 8, PMP_Read)
+                { case TR_Address(pAddr) => { val      = rawReadData(pAddr)
+                                            ; GPR(rd) <- val
+                                            ; recordLoad(pAddr, val)
+                                            }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
+                }
          }
 
 -----------------------------------
@@ -2627,13 +2828,15 @@ define Load > LD(rd::reg, rs1::reg, offs::imm12) =
 -----------------------------------
 define Store > SW(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = GPR(rs2)
-                        ; rawWriteData(pAddr, data, 4)
-                        ; recordStore(vAddr, data, 4)
-                        }
-    case None        => signalAddressException(Store_AMO_Fault, vAddr)
-  }
+; if vAddr<1:0> != 0
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_Write)
+       { case TR_Address(pAddr) => { data = GPR(rs2)
+                                   ; rawWriteData(pAddr, data, 4)
+                                   ; recordStore(pAddr, data, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2641,13 +2844,15 @@ define Store > SW(rs1::reg, rs2::reg, offs::imm12) =
 -----------------------------------
 define Store > SH(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = GPR(rs2)
-                        ; rawWriteData(pAddr, data, 2)
-                        ; recordStore(vAddr, data, 2)
-                        }
-    case None        => signalAddressException(Store_AMO_Fault, vAddr)
-  }
+; if vAddr<0>
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 2, PMP_Write)
+       { case TR_Address(pAddr) => { data = GPR(rs2)
+                                   ; rawWriteData(pAddr, data, 2)
+                                   ; recordStore(pAddr, data, 2)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2655,12 +2860,12 @@ define Store > SH(rs1::reg, rs2::reg, offs::imm12) =
 -----------------------------------
 define Store > SB(rs1::reg, rs2::reg, offs::imm12) =
 { vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = GPR(rs2)
-                        ; rawWriteData(pAddr, data, 1)
-                        ; recordStore(vAddr, data, 1)
-                        }
-    case None        => signalAddressException(Store_AMO_Fault, vAddr)
+; match dataAddr(vAddr, 1, PMP_Write)
+  { case TR_Address(pAddr) => { data = GPR(rs2)
+                              ; rawWriteData(pAddr, data, 1)
+                              ; recordStore(pAddr, data, 1)
+                              }
+    case TR_Fault(e)       => signalAddressException(e, vAddr)
   }
 }
 
@@ -2671,13 +2876,15 @@ define Store > SD(rs1::reg, rs2::reg, offs::imm12) =
     if in32BitMode()
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1) + SignExtend(offs)
-         ; match translateAddr(vAddr, Data, Write)
-           { case Some(pAddr) => { data = GPR(rs2)
-                                 ; rawWriteData(pAddr, data, 8)
-                                 ; recordStore(vAddr, data, 8)
-                                 }
-             case None        => signalAddressException(Store_AMO_Fault, vAddr)
-           }
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
+           else match dataAddr(vAddr, 8, PMP_Write)
+                { case TR_Address(pAddr) => { data = GPR(rs2)
+                                            ; rawWriteData(pAddr, data, 8)
+                                            ; recordStore(pAddr, data, 8)
+                                            }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
+                }
          }
 
 ---------------------------------------------------------------------------
@@ -2699,15 +2906,16 @@ define FENCE_I(rd::reg, rs1::reg, imm::imm12) = nothing
 -----------------------------------
 -- LR.W [aq,rl] rd, rs1
 -----------------------------------
+-- LR is a load, so a misaligned LR raises a load exception.
 define AMO > LR_W(aq::amo, rl::amo, rd::reg, rs1::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Read)
-       { case Some(pAddr) => { writeRD(rd, SignExtend(rawReadData(pAddr)<31:0>))
-                             ; ReserveLoad  <- Some(vAddr)
-                             }
-         case None        => signalAddressException(Load_Fault, vAddr)
+  then signalAddressException(Load_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_Read)
+       { case TR_Address(pAddr) => { writeRD(rd, SignExtend(rawReadData(pAddr)<31:0>))
+                                   ; ReserveLoad  <- Some(pAddr)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2719,33 +2927,39 @@ define AMO > LR_D(aq::amo, rl::amo, rd::reg, rs1::reg) =
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1)
          ; if vAddr<2:0> != 0
-           then signalAddressException(AMO_Misaligned, vAddr)
-           else match translateAddr(vAddr, Data, Read)
-                { case Some(pAddr) => { writeRD(rd, rawReadData(pAddr))
-                                      ; ReserveLoad <- Some(vAddr)
-                                      }
-                  case None        => signalAddressException(Load_Fault, vAddr)
+           then signalAddressException(Load_Misaligned, vAddr)
+           else match dataAddr(vAddr, 8, PMP_Read)
+                { case TR_Address(pAddr) => { writeRD(rd, rawReadData(pAddr))
+                                            ; ReserveLoad <- Some(pAddr)
+                                            }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
                 }
          }
 
 -----------------------------------
 -- SC.W [aq,rl] rd, rs1, rs2
 -----------------------------------
+-- An SC is translated and needs the PMP's write permission also when it
+-- fails for want of a reservation (P §3.7.1 p.72).  The
+-- reservation is of the physical address (matchLoadReservation).
 define AMO > SC_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else if not matchLoadReservation(vAddr)
-       then writeRD(rd, 1)
-       else match translateAddr(vAddr, Data, Read)
-            { case Some(pAddr) => { data = GPR(rs2)
-                                  ; rawWriteData(pAddr, data, 4)
-                                  ; recordStore(vAddr, data, 4)
-                                  ; writeRD(rd, 0)
-                                  ; ReserveLoad  <- None
-                                  }
-              case None        => signalAddressException(Store_AMO_Fault, vAddr)
-            }
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_Write)
+       { case TR_Address(pAddr) =>
+           if not matchLoadReservation(pAddr)
+           then { writeRD(rd, 1)
+                ; ReserveLoad <- None   -- U §13.2 p.68: a failed SC also invalidates it
+                }
+           else { data = GPR(rs2)
+                ; rawWriteData(pAddr, data, 4)
+                ; recordStore(pAddr, data, 4)
+                ; writeRD(rd, 0)
+                ; ReserveLoad  <- None
+                }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
+       }
 }
 
 -----------------------------------
@@ -2756,18 +2970,21 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
     then signalException(Illegal_Instr)
     else { vAddr = GPR(rs1)
          ; if vAddr<2:0> != 0
-           then signalAddressException(AMO_Misaligned, vAddr)
-           else if not matchLoadReservation(vAddr)
-                then writeRD(rd, 1)
-                else match translateAddr(vAddr, Data, Read)
-                     { case Some(pAddr) => { data = GPR(rs2)
-                                           ; rawWriteData(pAddr, data, 8)
-                                           ; recordStore(vAddr, data, 8)
-                                           ; writeRD(rd, 0)
-                                           ; ReserveLoad  <- None
-                                           }
-                       case None        => signalAddressException(Store_AMO_Fault, vAddr)
-                     }
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
+           else match dataAddr(vAddr, 8, PMP_Write)
+                { case TR_Address(pAddr) =>
+                    if not matchLoadReservation(pAddr)
+                    then { writeRD(rd, 1)
+                         ; ReserveLoad <- None   -- U §13.2 p.68: a failed SC also invalidates it
+                         }
+                    else { data = GPR(rs2)
+                         ; rawWriteData(pAddr, data, 8)
+                         ; recordStore(pAddr, data, 8)
+                         ; writeRD(rd, 0)
+                         ; ReserveLoad  <- None
+                         }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
+                }
          }
 
 -----------------------------------
@@ -2776,16 +2993,16 @@ define AMO > SC_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOSWAP_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; rawWriteData(pAddr, data, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, data, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; rawWriteData(pAddr, data, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, data, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2795,16 +3012,16 @@ define AMO > AMOSWAP_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOSWAP_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; rawWriteData(pAddr, data, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, data, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; rawWriteData(pAddr, data, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, data, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2814,17 +3031,17 @@ define AMO > AMOSWAP_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOADD_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data + memv
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data + memv
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2834,17 +3051,17 @@ define AMO > AMOADD_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOADD_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data + memv
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data + memv
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2854,17 +3071,17 @@ define AMO > AMOADD_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOXOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data ?? memv
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data ?? memv
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2874,17 +3091,17 @@ define AMO > AMOXOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOXOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data ?? memv
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data ?? memv
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2894,17 +3111,17 @@ define AMO > AMOXOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOAND_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data && memv
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data && memv
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2914,17 +3131,17 @@ define AMO > AMOAND_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOAND_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data && memv
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data && memv
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2934,17 +3151,17 @@ define AMO > AMOAND_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data || memv
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data || memv
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2954,17 +3171,17 @@ define AMO > AMOOR_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = data || memv
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = data || memv
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2974,17 +3191,17 @@ define AMO > AMOOR_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = SignedMin(data, memv)
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
+                                   ; GPR(rd) <- memv
+                                   ; val  = SignedMin(data, memv)
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -2994,17 +3211,17 @@ define AMO > AMOMIN_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMIN_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = SignedMin(data, memv)
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = SignedMin(data, memv)
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -3014,17 +3231,17 @@ define AMO > AMOMIN_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = SignedMax(data, memv)
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
+                                   ; GPR(rd) <- memv
+                                   ; val  = SignedMax(data, memv)
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -3034,17 +3251,17 @@ define AMO > AMOMAX_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAX_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = SignedMax(data, memv)
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = SignedMax(data, memv)
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -3054,17 +3271,17 @@ define AMO > AMOMAX_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = Min(data, memv)
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
+                                   ; GPR(rd) <- memv
+                                   ; val  = Min(data, memv)
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -3074,17 +3291,17 @@ define AMO > AMOMINU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMINU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = Min(data, memv)
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = Min(data, memv)
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -3094,17 +3311,17 @@ define AMO > AMOMINU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<1:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = Max(data, memv)
-                             ; rawWriteData(pAddr, val, 4)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 4)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 4, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = SignExtend(rawReadData(pAddr)<31:0>)
+                                   ; data = SignExtend(GPR(rs2)<31:0>)  -- U §13.4 p.72: ignore rs2<63:32>
+                                   ; GPR(rd) <- memv
+                                   ; val  = Max(data, memv)
+                                   ; rawWriteData(pAddr, val, 4)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 4)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -3114,17 +3331,17 @@ define AMO > AMOMAXU_W(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 define AMO > AMOMAXU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 { vAddr = GPR(rs1)
 ; if vAddr<2:0> != 0
-  then signalAddressException(AMO_Misaligned, vAddr)
-  else match translateAddr(vAddr, Data, Write)
-       { case Some(pAddr) => { memv = rawReadData(pAddr)
-                             ; data = GPR(rs2)
-                             ; GPR(rd) <- memv
-                             ; val  = Max(data, memv)
-                             ; rawWriteData(pAddr, val, 8)
-                             ; recordLoad(vAddr, memv)
-                             ; recordStore(vAddr, val, 8)
-                             }
-         case None        => signalAddressException(Store_AMO_Fault, vAddr)
+  then signalAddressException(Store_AMO_Misaligned, vAddr)
+  else match dataAddr(vAddr, 8, PMP_ReadWrite)
+       { case TR_Address(pAddr) => { memv = rawReadData(pAddr)
+                                   ; data = GPR(rs2)
+                                   ; GPR(rd) <- memv
+                                   ; val  = Max(data, memv)
+                                   ; rawWriteData(pAddr, val, 8)
+                                   ; recordLoad(pAddr, memv)
+                                   ; recordStore(pAddr, val, 8)
+                                   }
+         case TR_Fault(e)       => signalAddressException(e, vAddr)
        }
 }
 
@@ -3140,171 +3357,229 @@ define AMO > AMOMAXU_D(aq::amo, rl::amo, rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 
 define FPLoad > FLW(rd::reg, rs1::reg, offs::imm12) =
-{ vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = rawReadData(pAddr)<31:0>
-                        ; FPRS(rd) <- val
-                        ; recordLoad(vAddr, ZeroExtend(val))
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { vAddr = GPR(rs1) + SignExtend(offs)
+         ; if vAddr<1:0> != 0
+           then signalAddressException(Load_Misaligned, vAddr)
+           else match dataAddr(vAddr, 4, PMP_Read)
+                { case TR_Address(pAddr) => { val       = rawReadData(pAddr)<31:0>
+                                            ; writeFPRS(rd, val)  -- sets FS to Dirty (P §3.1.6.7)
+                                            ; recordLoad(pAddr, ZeroExtend(val))
+                                            }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
+                }
+         }
 
 -----------------------------------
 -- FSW   rs1, rs2, offs
 -----------------------------------
 
 define FPStore > FSW(rs1::reg, rs2::reg, offs::imm12) =
-{ vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = FPRS(rs2)
-                        ; rawWriteData(pAddr, ZeroExtend(data), 4)
-                        ; recordStore(vAddr, ZeroExtend(data), 4)
-                        }
-    case None        => signalAddressException(Store_AMO_Fault, vAddr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { vAddr = GPR(rs1) + SignExtend(offs)
+         ; if vAddr<1:0> != 0
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
+           else match dataAddr(vAddr, 4, PMP_Write)
+                { case TR_Address(pAddr) => { data = FPRS_raw(rs2)
+                                            ; rawWriteData(pAddr, ZeroExtend(data), 4)
+                                            ; recordStore(pAddr, ZeroExtend(data), 4)
+                                            }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
+                }
+         }
 
 -- Computational
 
--- TODO: Check for underflow after all rounding
+-- Arithmetic accrues the flags of the IEEE operation (U §21.2 p.114);
+-- tininess is detected after rounding (U §21.4 p.115) by SSE and by HOL's
+-- Underflow_AfterRounding alike.
 
 -----------------------------------
 -- FADD.S   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FADD_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Add(r, FPRS(rs1), FPRS(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_AddR(r, FPRS(rs1), FPRS(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FSUB.S   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FSUB_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Sub(r, FPRS(rs1), FPRS(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_SubR(r, FPRS(rs1), FPRS(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FMUL.S   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FMUL_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Mul(r, FPRS(rs1), FPRS(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_MulR(r, FPRS(rs1), FPRS(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FDIV.S   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FDIV_S(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Div(r, FPRS(rs1), FPRS(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_DivR(r, FPRS(rs1), FPRS(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FSQRT.S   rd, rs
 -----------------------------------
 
 define FArith > FSQRT_S(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Sqrt(r, FPRS(rs)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { a = FPRS(rs)
+                             ; (f, v) = FP32_Sqrt_(ieeeRounding(r), a)
+                             -- no flag for a quiet NaN (IEEE 754-2008 6.2); HOL's
+                             -- float_sqrt raises NV for a negative one
+                             ; when not FP32_IsNan(a) or FP32_IsSignalingNan(a)
+                               do accrueFlags(f)
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FMIN.S    rd, rs1, rs2
 -----------------------------------
 define FArith > FMIN_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRS(rs1)
-; f2  = FPRS(rs2)
-; res = match FP32_Compare(f1, f2)
-        { case FP_LT   => f1
-          case FP_EQ   => f1
-          case FP_GT   => f2
-          case FP_UN   => if (   (FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2))
-                              or (f1 == RV32_CanonicalNan and f2 == RV32_CanonicalNan))
-                          then RV32_CanonicalNan
-                          else -- either f1 or f2 should be a quiet NaN
-                              if f1 == RV32_CanonicalNan then f2 else f1
-        }
-; writeFPRS(rd, res)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRS(rs1)
+         ; f2  = FPRS(rs2)
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- canonical NaN if both are NaNs), and a signalling NaN raises NV
+         ; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
+         ; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
+                 else if FP32_IsNan(f1) then f2
+                 else if FP32_IsNan(f2) then f1
+                 else if FP32_IsZero(f1) and FP32_IsZero(f2)
+                 then (if FP32_Sign(f1) then f1 else f2)
+                 else if FP32_LessThan(f1, f2) then f1 else f2
+         ; writeFPRS(rd, res)
+         }
 
 -----------------------------------
 -- FMAX.S    rd, rs1, rs2
 -----------------------------------
 define FArith > FMAX_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRS(rs1)
-; f2  = FPRS(rs2)
-; res = match FP32_Compare(f1, f2)
-        { case FP_LT   => f2
-          case FP_EQ   => f2
-          case FP_GT   => f1
-          case FP_UN   => if (   (FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2))
-                              or (f1 == RV32_CanonicalNan and f2 == RV32_CanonicalNan))
-                          then RV32_CanonicalNan
-                          else -- either f1 or f2 should be a quiet NaN
-                              if f1 == RV32_CanonicalNan then f2 else f1
-        }
-; writeFPRS(rd, res)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRS(rs1)
+         ; f2  = FPRS(rs2)
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- canonical NaN if both are NaNs), and a signalling NaN raises NV
+         ; when FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2) do setFP_Invalid()
+         ; res = if FP32_IsNan(f1) and FP32_IsNan(f2) then RV32_CanonicalNan
+                 else if FP32_IsNan(f1) then f2
+                 else if FP32_IsNan(f2) then f1
+                 else if FP32_IsZero(f1) and FP32_IsZero(f2)
+                 then (if FP32_Sign(f1) then f2 else f1)
+                 else if FP32_LessThan(f1, f2) then f2 else f1
+         ; writeFPRS(rd, res)
+         }
 
 -----------------------------------
 -- FMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.116: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FPRS(rs1), FPRS(rs2), FPRS(rs3))
+                             ; accrueFlags(f)
+                             ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.116: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FPRS(rs1), FPRS(rs2), FP32_Neg(FPRS(rs3)))
+                             ; accrueFlags(f)
+                             ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FNMADD.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.117: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMADD_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Neg(FP32_Add(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FP32_Neg(FPRS(rs3)))
+                             ; accrueFlags(f)
+                             ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FNMSUB.S   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.116: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_Neg(FP32_Sub(r, FP32_Mul(r, FPRS(rs1), FPRS(rs2)), FPRS(rs3))))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP32_MulAddR(r, FP32_Neg(FPRS(rs1)), FPRS(rs2), FPRS(rs3))
+                             ; accrueFlags(f)
+                             ; when FP32_InfTimesZero(FPRS(rs1), FPRS(rs2)) do setFP_Invalid()
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -- Conversions
 
@@ -3313,136 +3588,213 @@ define FArith > FNMSUB_S(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -----------------------------------
 
 define FConv > FCVT_S_W(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_FromInt(r, [GPR(rs)<31:0>]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { i = [GPR(rs)<31:0>]::int
+                             ; v = FP32_FromIntR(r, i)
+                             -- U §21.7 p.118: NX when the result is not exact
+                             ; when FP32_ToInt(roundTowardZero, v) != Some(i)
+                               do setFP_Inexact()
+                             ; writeFPRS(rd, v)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.S.WU  rd, rs
 -----------------------------------
 
 define FConv > FCVT_S_WU(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_FromInt(r, [0`1 : GPR(rs)<31:0>]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { i = [0`1 : GPR(rs)<31:0>]::int
+                             ; v = FP32_FromIntR(r, i)
+                             -- U §21.7 p.118: NX when the result is not exact
+                             ; when FP32_ToInt(roundTowardZero, v) != Some(i)
+                               do setFP_Inexact()
+                             ; writeFPRS(rd, v)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.W.S   rd, rs
 -----------------------------------
 
 define FConv > FCVT_W_S(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
-                    ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
-                            then [0n2 ** 31 - 1]
-                            else if inp == FP32_NegInf
-                            then -[0n2 ** 31]
-                            else if val > 2 ** 31 - 1
-                            then [0n2 ** 31 - 1]
-                            else if val < -2 ** 31
-                            then -[0n2 ** 31]
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRS(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP32_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
+                                     then [0n2 ** 31 - 1]
+                                     else if inp == FP32_NegInf
+                                     then -[0n2 ** 31]
+                                     else if val > 2 ** 31 - 1
+                                     then [0n2 ** 31 - 1]
+                                     else if val < -2 ** 31
+                                     then -[0n2 ** 31]
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP32_IsFinite(inp)
+                                    or val > 2 ** 31 - 1 or val < -2 ** 31
+                               then setFP_Invalid()
+                               else when not FP32_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, res)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.WU.S  rd, rs
 -----------------------------------
 
 define FConv > FCVT_WU_S(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
-                    ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
-                            then [0n2 ** 32 - 1]
-                            else if inp == FP32_NegInf
-                            then 0x0
-                            else if val > 2 ** 32 - 1
-                            then [0n2 ** 32 - 1]
-                            else if val < 0
-                            then 0x0
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRS(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP32_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
+                                     then [0n2 ** 32 - 1]
+                                     else if inp == FP32_NegInf
+                                     then 0x0
+                                     else if val > 2 ** 32 - 1
+                                     then [0n2 ** 32 - 1]
+                                     else if val < 0
+                                     then 0x0
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP32_IsFinite(inp)
+                                    or val > 2 ** 32 - 1 or val < 0
+                               then setFP_Invalid()
+                               else when not FP32_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §21.7 p.117)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.S.L   rd, rs
 -----------------------------------
 
 define FConv > FCVT_S_L(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_FromInt(r, [GPR(rs)]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { i = [GPR(rs)]::int
+                             ; v = FP32_FromIntR(r, i)
+                             -- U §21.7 p.118: NX when the result is not exact
+                             ; when FP32_ToInt(roundTowardZero, v) != Some(i)
+                               do setFP_Inexact()
+                             ; writeFPRS(rd, v)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.S.LU  rd, rs
 -----------------------------------
 
 define FConv > FCVT_S_LU(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP32_FromInt(r, [0`1 : GPR(rs)]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { x = GPR(rs)
+                             ; i = [0`1 : x]::int
+                             ; v = FP32_FromU64R(r, x)
+                             -- U §21.7 p.118: NX when the result is not exact
+                             ; when FP32_ToInt(roundTowardZero, v) != Some(i)
+                               do setFP_Inexact()
+                             ; writeFPRS(rd, v)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.L.S   rd, rs
 -----------------------------------
 
 define FConv > FCVT_L_S(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
-                    ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
-                            then [0n2 ** 63 - 1]
-                            else if inp == FP32_NegInf
-                            then -[0n2 ** 63]
-                            else if val > 2 ** 63 - 1
-                            then [0n2 ** 63 - 1]
-                            else if val < -2 ** 63
-                            then -[0n2 ** 63]
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRS(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP32_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
+                                     then [0n2 ** 63 - 1]
+                                     else if inp == FP32_NegInf
+                                     then -[0n2 ** 63]
+                                     else if val > 2 ** 63 - 1
+                                     then [0n2 ** 63 - 1]
+                                     else if val < -2 ** 63
+                                     then -[0n2 ** 63]
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP32_IsFinite(inp)
+                                    or val > 2 ** 63 - 1 or val < -2 ** 63
+                               then setFP_Invalid()
+                               else when not FP32_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, res)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.LU.S  rd, rs
 -----------------------------------
 
 define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRS(rs)
-                    ; val = ValOf(FP32_ToInt(r, inp))
-                    ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
-                            then [0n2 ** 64 - 1]
-                            else if inp == FP32_NegInf
-                            then 0x0
-                            else if val > 2 ** 64 - 1
-                            then [0n2 ** 64 - 1]
-                            else if val < 0
-                            then 0x0
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRS(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP32_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP32_IsNan(inp) or inp == FP32_PosInf
+                                     then [0n2 ** 64 - 1]
+                                     else if inp == FP32_NegInf
+                                     then 0x0
+                                     else if val > 2 ** 64 - 1
+                                     then [0n2 ** 64 - 1]
+                                     else if val < 0
+                                     then 0x0
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP32_IsFinite(inp)
+                                    or val > 2 ** 64 - 1 or val < 0
+                               then setFP_Invalid()
+                               else when not FP32_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, res)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -- Sign injection
 
@@ -3451,30 +3803,33 @@ define FConv > FCVT_LU_S(rd::reg, rs::reg, fprnd::fprnd) =
 -----------------------------------
 
 define FConv > FSGNJ_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRS(rs1)
-; f2 = FPRS(rs2)
-; writeFPRS(rd, ([FP32_Sign(f2)]::bits(1)):f1<30:0>)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRS(rs1)
+         ; f2 = FPRS(rs2)
+         ; writeFPRS(rd, ([FP32_Sign(f2)]::bits(1)):f1<30:0>)
+         }
 
 -----------------------------------
 -- FSGNJN.S  rd, rs
 -----------------------------------
 
 define FConv > FSGNJN_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRS(rs1)
-; f2 = FPRS(rs2)
-; writeFPRS(rd, ([!FP32_Sign(f2)]::bits(1)):f1<30:0>)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRS(rs1)
+         ; f2 = FPRS(rs2)
+         ; writeFPRS(rd, ([!FP32_Sign(f2)]::bits(1)):f1<30:0>)
+         }
 
 -----------------------------------
 -- FSGNJX.S  rd, rs
 -----------------------------------
 
 define FConv > FSGNJX_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRS(rs1)
-; f2 = FPRS(rs2)
-; writeFPRS(rd, ([FP32_Sign(f2)]::bits(1) ?? [FP32_Sign(f1)]::bits(1)) : f1<30:0>)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRS(rs1)
+         ; f2 = FPRS(rs2)
+         ; writeFPRS(rd, ([FP32_Sign(f2)]::bits(1) ?? [FP32_Sign(f1)]::bits(1)) : f1<30:0>)
+         }
 
 -- Movement
 
@@ -3483,14 +3838,16 @@ define FConv > FSGNJX_S(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 
 define FConv > FMV_X_S(rd::reg, rs::reg) =
-    GPR(rd) <- SignExtend(FPRS(rs))
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else GPR(rd) <- SignExtend(FPRS_raw(rs))
 
 -----------------------------------
 -- FMV.S.X   rd, rs
 -----------------------------------
 
 define FConv > FMV_S_X(rd::reg, rs::reg) =
-    writeFPRS(rd, GPR(rs)<31:0>)
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else writeFPRS(rd, GPR(rs)<31:0>)
 
 -- Comparisons
 
@@ -3499,63 +3856,66 @@ define FConv > FMV_S_X(rd::reg, rs::reg) =
 -----------------------------------
 
 define FArith > FEQ_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRS(rs1)
-; f2  = FPRS(rs2)
-; if FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2)
-  then { writeRD(rd, 0x0)
-       ; setFP_Invalid()
-       }
-  else { res = match FP32_Compare(f1, f2)
-               { case FP_LT => 0x0
-                 case FP_EQ => 0x1
-                 case FP_GT => 0x0
-                 case FP_UN => 0x0
-               }
-       ; writeRD(rd, res)
-       }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRS(rs1)
+         ; f2  = FPRS(rs2)
+         ; if FP32_IsSignalingNan(f1) or FP32_IsSignalingNan(f2)
+           then { writeRD(rd, 0x0)
+                ; setFP_Invalid()
+                }
+           else { res = match FP32_Compare(f1, f2)
+                        { case FP_LT => 0x0
+                          case FP_EQ => 0x1
+                          case FP_GT => 0x0
+                          case FP_UN => 0x0
+                        }
+                ; writeRD(rd, res)
+                }
+         }
 
 -----------------------------------
 -- FLT.S   rd, rs
 -----------------------------------
 
 define FArith > FLT_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRS(rs1)
-; f2  = FPRS(rs2)
-; if   FP32_IsNan(f1) or FP32_IsNan(f2)
-  then { writeRD(rd, 0x0)
-       ; setFP_Invalid()
-       }
-  else { res = match FP32_Compare(f1, f2)
-               { case FP_LT => 0x1
-                 case FP_EQ => 0x0
-                 case FP_GT => 0x0
-                 case FP_UN => 0x0
-               }
-       ; writeRD(rd, res)
-       }
-  }
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRS(rs1)
+         ; f2  = FPRS(rs2)
+         ; if   FP32_IsNan(f1) or FP32_IsNan(f2)
+           then { writeRD(rd, 0x0)
+                ; setFP_Invalid()
+                }
+           else { res = match FP32_Compare(f1, f2)
+                        { case FP_LT => 0x1
+                          case FP_EQ => 0x0
+                          case FP_GT => 0x0
+                          case FP_UN => 0x0
+                        }
+                ; writeRD(rd, res)
+                }
+         }
 
 -----------------------------------
 -- FLE.S   rd, rs
 -----------------------------------
 
 define FArith > FLE_S(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRS(rs1)
-; f2  = FPRS(rs2)
-; if   FP32_IsNan(f1) or FP32_IsNan(f2)
-  then { writeRD(rd, 0x0)
-       ; setFP_Invalid()
-       }
-  else { res = match FP32_Compare(f1, f2)
-               { case FP_LT => 0x1
-                 case FP_EQ => 0x1
-                 case FP_GT => 0x0
-                 case FP_UN => 0x0
-               }
-       ; writeRD(rd, res)
-       }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRS(rs1)
+         ; f2  = FPRS(rs2)
+         ; if   FP32_IsNan(f1) or FP32_IsNan(f2)
+           then { writeRD(rd, 0x0)
+                ; setFP_Invalid()
+                }
+           else { res = match FP32_Compare(f1, f2)
+                        { case FP_LT => 0x1
+                          case FP_EQ => 0x1
+                          case FP_GT => 0x0
+                          case FP_UN => 0x0
+                        }
+                ; writeRD(rd, res)
+                }
+         }
 
 -- Classification
 
@@ -3564,20 +3924,21 @@ define FArith > FLE_S(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 
 define FConv > FCLASS_S(rd::reg, rs::reg) =
-{ var ret = 0x0`10
-; val = FPRS(rs)
-; ret<0> <- val == FP32_NegInf
-; ret<1> <- FP32_Sign(val) and FP32_IsNormal(val)
-; ret<2> <- FP32_Sign(val) and FP32_IsSubnormal(val)
-; ret<3> <- val == FP32_NegZero
-; ret<4> <- val == FP32_PosZero
-; ret<5> <- !FP32_Sign(val) and FP32_IsSubnormal(val)
-; ret<6> <- !FP32_Sign(val) and FP32_IsNormal(val)
-; ret<7> <- val == FP32_PosInf
-; ret<8> <- FP32_IsSignalingNan(val)
-; ret<9> <- val == RV32_CanonicalNan
-; writeRD(rd, ZeroExtend(ret))
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { var ret = 0x0`10
+         ; val = FPRS(rs)
+         ; ret<0> <- val == FP32_NegInf
+         ; ret<1> <- FP32_Sign(val) and FP32_IsNormal(val)
+         ; ret<2> <- FP32_Sign(val) and FP32_IsSubnormal(val)
+         ; ret<3> <- val == FP32_NegZero
+         ; ret<4> <- val == FP32_PosZero
+         ; ret<5> <- !FP32_Sign(val) and FP32_IsSubnormal(val)
+         ; ret<6> <- !FP32_Sign(val) and FP32_IsNormal(val)
+         ; ret<7> <- val == FP32_PosInf
+         ; ret<8> <- FP32_IsSignalingNan(val)
+         ; ret<9> <- FP32_IsNan(val) and not FP32_IsSignalingNan(val)  -- any quiet NaN (U §21.9 p.120)
+         ; writeRD(rd, ZeroExtend(ret))
+         }
 
 ---------------------------------------------------------------------------
 -- Floating Point Instructions (Double Precision)
@@ -3590,172 +3951,229 @@ define FConv > FCLASS_S(rd::reg, rs::reg) =
 -----------------------------------
 
 define FPLoad > FLD(rd::reg, rs1::reg, offs::imm12) =
-{ vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Read)
-  { case Some(pAddr) => { val       = rawReadData(pAddr)
-                        ; FPRD(rd) <- val
-                        ; recordLoad(vAddr, val)
-                        }
-    case None        => signalAddressException(Load_Fault, vAddr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { vAddr = GPR(rs1) + SignExtend(offs)
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Load_Misaligned, vAddr)
+           else match dataAddr(vAddr, 8, PMP_Read)
+                { case TR_Address(pAddr) => { val       = rawReadData(pAddr)
+                                            ; writeFPRD(rd, val)  -- sets FS to Dirty (P §3.1.6.7)
+                                            ; recordLoad(pAddr, val)
+                                            }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
+                }
+         }
 
 -----------------------------------
 -- FSD   rs1, rs2, offs
 -----------------------------------
 
 define FPStore > FSD(rs1::reg, rs2::reg, offs::imm12) =
-{ vAddr = GPR(rs1) + SignExtend(offs)
-; match translateAddr(vAddr, Data, Write)
-  { case Some(pAddr) => { data = FPRD(rs2)
-                        ; rawWriteData(pAddr, data, 8)
-                        ; recordStore(vAddr, data, 8)
-                        }
-    case None        => signalAddressException(Store_AMO_Fault, vAddr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { vAddr = GPR(rs1) + SignExtend(offs)
+         ; if vAddr<2:0> != 0
+           then signalAddressException(Store_AMO_Misaligned, vAddr)
+           else match dataAddr(vAddr, 8, PMP_Write)
+                { case TR_Address(pAddr) => { data = FPRD(rs2)
+                                            ; rawWriteData(pAddr, data, 8)
+                                            ; recordStore(pAddr, data, 8)
+                                            }
+                  case TR_Fault(e)       => signalAddressException(e, vAddr)
+                }
+         }
 
 -- Computational
 
--- TODO: Check for underflow after all rounding
+-- Arithmetic accrues the flags of the IEEE operation (U §21.2 p.114);
+-- tininess is detected after rounding (U §21.4 p.115) by SSE and by HOL's
+-- Underflow_AfterRounding alike.
 
 -----------------------------------
 -- FADD.D   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FADD_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Add(r, FPRD(rs1), FPRD(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_AddR(r, FPRD(rs1), FPRD(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FSUB.D   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FSUB_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Sub(r, FPRD(rs1), FPRD(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_SubR(r, FPRD(rs1), FPRD(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FMUL.D   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FMUL_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Mul(r, FPRD(rs1), FPRD(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_MulR(r, FPRD(rs1), FPRD(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FDIV.D   rd, rs1, rs2
 -----------------------------------
 
 define FArith > FDIV_D(rd::reg, rs1::reg, rs2::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Div(r, FPRD(rs1), FPRD(rs2)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_DivR(r, FPRD(rs1), FPRD(rs2))
+                             ; accrueFlags(f)
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FSQRT.D   rd, rs
 -----------------------------------
 
 define FArith > FSQRT_D(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Sqrt(r, FPRD(rs)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { a = FPRD(rs)
+                             ; (f, v) = FP64_Sqrt_(ieeeRounding(r), a)
+                             -- no flag for a quiet NaN (IEEE 754-2008 6.2); HOL's
+                             -- float_sqrt raises NV for a negative one
+                             ; when not FP64_IsNan(a) or FP64_IsSignalingNan(a)
+                               do accrueFlags(f)
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FMIN.D    rd, rs1, rs2
 -----------------------------------
 define FArith > FMIN_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRD(rs1)
-; f2 = FPRD(rs2)
-; res = match FP64_Compare(f1, f2)
-        { case FP_LT => f1
-          case FP_EQ => f1
-          case FP_GT => f2
-          case FP_UN => if (   (FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2))
-                            or (f1 == RV64_CanonicalNan and f2 == RV64_CanonicalNan))
-                        then RV64_CanonicalNan
-                        else -- either f1 or f2 should be a quiet NaN
-                            if f1 == RV64_CanonicalNan then f2 else f1
-
-        }
-; writeFPRD(rd, res)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRD(rs1)
+         ; f2 = FPRD(rs2)
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- canonical NaN if both are NaNs), and a signalling NaN raises NV
+         ; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
+         ; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
+                 else if FP64_IsNan(f1) then f2
+                 else if FP64_IsNan(f2) then f1
+                 else if FP64_IsZero(f1) and FP64_IsZero(f2)
+                 then (if FP64_Sign(f1) then f1 else f2)
+                 else if FP64_LessThan(f1, f2) then f1 else f2
+         ; writeFPRD(rd, res)
+         }
 
 -----------------------------------
 -- FMAX.D    rd, rs1, rs2
 -----------------------------------
 define FArith > FMAX_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRD(rs1)
-; f2 = FPRD(rs2)
-; res = match FP64_Compare(f1, f2)
-        { case FP_LT => f2
-          case FP_EQ => f2
-          case FP_GT => f1
-          case FP_UN => if (   (FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2))
-                            or (f1 == RV64_CanonicalNan and f2 == RV64_CanonicalNan))
-                        then RV64_CanonicalNan
-                        else -- either f1 or f2 should be a quiet NaN
-                            if f1 == RV64_CanonicalNan then f2 else f1
-  }
-; writeFPRD(rd, res)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRD(rs1)
+         ; f2 = FPRD(rs2)
+         -- U §21.6 p.116: -0.0 < +0.0, a NaN operand gives the other operand (the
+         -- canonical NaN if both are NaNs), and a signalling NaN raises NV
+         ; when FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2) do setFP_Invalid()
+         ; res = if FP64_IsNan(f1) and FP64_IsNan(f2) then RV64_CanonicalNan
+                 else if FP64_IsNan(f1) then f2
+                 else if FP64_IsNan(f2) then f1
+                 else if FP64_IsZero(f1) and FP64_IsZero(f2)
+                 then (if FP64_Sign(f1) then f2 else f1)
+                 else if FP64_LessThan(f1, f2) then f2 else f1
+         ; writeFPRD(rd, res)
+         }
 
 -----------------------------------
 -- FMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.116: fused (rs1*rs2)+rs3, rounded once
 define FArith > FMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FPRD(rs1), FPRD(rs2), FPRD(rs3))
+                             ; accrueFlags(f)
+                             ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.116: fused (rs1*rs2)-rs3, rounded once
 define FArith > FMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FPRD(rs1), FPRD(rs2), FP64_Neg(FPRD(rs3)))
+                             ; accrueFlags(f)
+                             ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FNMADD.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.117: fused -(rs1*rs2)-rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMADD_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Neg(FP64_Add(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FP64_Neg(FPRD(rs3)))
+                             ; accrueFlags(f)
+                             ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FNMSUB.D   rd, rs1, rs2, rs3
 -----------------------------------
 
+-- U §21.6 p.116: fused -(rs1*rs2)+rs3, rounded once; the product is
+-- negated, not the result
 define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_Neg(FP64_Sub(r, FP64_Mul(r, FPRD(rs1), FPRD(rs2)), FPRD(rs3))))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_MulAddR(r, FP64_Neg(FPRD(rs1)), FPRD(rs2), FPRD(rs3))
+                             ; accrueFlags(f)
+                             ; when FP64_InfTimesZero(FPRD(rs1), FPRD(rs2)) do setFP_Invalid()
+                             ; writeFPRD(rd, canonD(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -- Conversions
 
@@ -3764,158 +4182,226 @@ define FArith > FNMSUB_D(rd::reg, rs1::reg, rs2::reg, rs3::reg, fprnd::fprnd) =
 -----------------------------------
 
 define FConv > FCVT_D_W(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_FromInt(r, [GPR(rs)<31:0>]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else if validRounding(fprnd)  -- exact (U §22.5 p.123)
+    then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [GPR(rs)<31:0>]::int))
+    else signalException(Illegal_Instr)
 
 -----------------------------------
 -- FCVT.D.WU  rd, rs
 -----------------------------------
 
 define FConv > FCVT_D_WU(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_FromInt(r, [0`1 : GPR(rs)<31:0>]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else if validRounding(fprnd)  -- exact (U §22.5 p.123)
+    then writeFPRD(rd, FP64_FromInt(roundTiesToEven, [0`1 : GPR(rs)<31:0>]::int))
+    else signalException(Illegal_Instr)
 
 -----------------------------------
 -- FCVT.W.D   rd, rs
 -----------------------------------
 
 define FConv > FCVT_W_D(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
-                    ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
-                            then [0n2 ** 31 - 1]
-                            else if inp == FP64_NegInf
-                            then -[0n2 ** 31]
-                            else if val > 2 ** 31 - 1
-                            then [0n2 ** 31 - 1]
-                            else if val < -2 ** 31
-                            then -[0n2 ** 31]
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRD(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP64_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
+                                     then [0n2 ** 31 - 1]
+                                     else if inp == FP64_NegInf
+                                     then -[0n2 ** 31]
+                                     else if val > 2 ** 31 - 1
+                                     then [0n2 ** 31 - 1]
+                                     else if val < -2 ** 31
+                                     then -[0n2 ** 31]
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP64_IsFinite(inp)
+                                    or val > 2 ** 31 - 1 or val < -2 ** 31
+                               then setFP_Invalid()
+                               else when not FP64_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, res)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.WU.D  rd, rs
 -----------------------------------
 
 define FConv > FCVT_WU_D(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
-                    ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
-                            then [0n2 ** 32 - 1]
-                            else if inp == FP64_NegInf
-                            then 0x0
-                            else if val > 2 ** 32 - 1
-                            then [0n2 ** 32 - 1]
-                            else if val < 0
-                            then 0x0
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRD(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP64_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
+                                     then [0n2 ** 32 - 1]
+                                     else if inp == FP64_NegInf
+                                     then 0x0
+                                     else if val > 2 ** 32 - 1
+                                     then [0n2 ** 32 - 1]
+                                     else if val < 0
+                                     then 0x0
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP64_IsFinite(inp)
+                                    or val > 2 ** 32 - 1 or val < 0
+                               then setFP_Invalid()
+                               else when not FP64_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, SignExtend(res::word))  -- sign-extended (U §22.5 p.123)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.D.L   rd, rs
 -----------------------------------
 
 define FConv > FCVT_D_L(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_FromInt(r, [GPR(rs)]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { x = GPR(rs)
+                             ; i = [x]::int
+                             ; v = FP64_FromS64R(r, x)
+                             -- U §21.7 p.118: NX when the result is not exact
+                             ; when FP64_ToInt(roundTowardZero, v) != Some(i)
+                               do setFP_Inexact()
+                             ; writeFPRD(rd, v)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.D.LU  rd, rs
 -----------------------------------
 
 define FConv > FCVT_D_LU(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP64_FromInt(r, [0`1 : GPR(rs)]::int))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { i = [0`1 : GPR(rs)]::int
+                             ; v = FP64_FromIntR(r, i)
+                             -- U §21.7 p.118: NX when the result is not exact
+                             ; when FP64_ToInt(roundTowardZero, v) != Some(i)
+                               do setFP_Inexact()
+                             ; writeFPRD(rd, v)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.L.D   rd, rs
 -----------------------------------
 
 define FConv > FCVT_L_D(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
-                    ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
-                            then [0n2 ** 63 - 1]
-                            else if inp == FP64_NegInf
-                            then -[0n2 ** 63]
-                            else if val > 2 ** 63 - 1
-                            then [0n2 ** 63 - 1]
-                            else if val < -2 ** 63
-                            then -[0n2 ** 63]
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRD(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP64_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
+                                     then [0n2 ** 63 - 1]
+                                     else if inp == FP64_NegInf
+                                     then -[0n2 ** 63]
+                                     else if val > 2 ** 63 - 1
+                                     then [0n2 ** 63 - 1]
+                                     else if val < -2 ** 63
+                                     then -[0n2 ** 63]
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP64_IsFinite(inp)
+                                    or val > 2 ** 63 - 1 or val < -2 ** 63
+                               then setFP_Invalid()
+                               else when not FP64_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, res)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.LU.D  rd, rs
 -----------------------------------
 
 define FConv > FCVT_LU_D(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => { inp = FPRD(rs)
-                    ; val = ValOf(FP64_ToInt(r, inp))
-                    ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
-                            then [0n2 ** 64 - 1]
-                            else if inp == FP64_NegInf
-                            then 0x0
-                            else if val > 2 ** 64 - 1
-                            then [0n2 ** 64 - 1]
-                            else if val < 0
-                            then 0x0
-                            else [val]
-                    ; writeRD(rd, res)
-                    }
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { inp = FPRD(rs)
+                             -- None for a NaN or an infinity, which saturate below
+                             -- (U §21.7 p.117-118, Table 27) before val is used
+                             ; val = match FP64_ToIntR(r, inp)
+                                     { case Some(i) => i
+                                       case None    => 0
+                                     }
+                             ; res = if   FP64_IsNan(inp) or inp == FP64_PosInf
+                                     then [0n2 ** 64 - 1]
+                                     else if inp == FP64_NegInf
+                                     then 0x0
+                                     else if val > 2 ** 64 - 1
+                                     then [0n2 ** 64 - 1]
+                                     else if val < 0
+                                     then 0x0
+                                     else [val]
+                             -- U §21.7 p.117-118: NV for a NaN, infinite or out-of-range
+                             -- input, otherwise NX if the input is not an integer
+                             ; if   not FP64_IsFinite(inp)
+                                    or val > 2 ** 64 - 1 or val < 0
+                               then setFP_Invalid()
+                               else when not FP64_IsIntegral(inp) do setFP_Inexact()
+                             ; writeRD(rd, res)
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.S.D  rd, rs
 -----------------------------------
 
 define FConv > FCVT_S_D(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRS(rd, FP64_ToFP32(r, FPRD(rs)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { match round(fprnd)
+           { case Some(r) => { (f, v) = FP64_ToFP32R(r, FPRD(rs))
+                             ; accrueFlags(f)
+                             ; writeFPRS(rd, canonS(v))
+                             }
+             case None    => signalException(Illegal_Instr)
+           }
+         }
 
 -----------------------------------
 -- FCVT.D.S  rd, rs
 -----------------------------------
 
 define FConv > FCVT_D_S(rd::reg, rs::reg, fprnd::fprnd) =
-{ match round(fprnd)
-  { case Some(r) => writeFPRD(rd, FP32_ToFP64(FPRS(rs)))
-    case None    => signalException(Illegal_Instr)
-  }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else if validRounding(fprnd)  -- exact (U §22.5 p.123)
+    then { a = FPRS(rs)
+         -- only a signalling NaN raises a flag (NV)
+         ; when FP32_IsSignalingNan(a) do setFP_Invalid()
+         ; writeFPRD(rd, canonD(FP64_FromFP32(a)))
+         }
+    else signalException(Illegal_Instr)
 
 -- Sign injection
 
@@ -3924,30 +4410,33 @@ define FConv > FCVT_D_S(rd::reg, rs::reg, fprnd::fprnd) =
 -----------------------------------
 
 define FConv > FSGNJ_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRD(rs1)
-; f2 = FPRD(rs2)
-; writeFPRD(rd, ([FP64_Sign(f2)]::bits(1)):f1<62:0>)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRD(rs1)
+         ; f2 = FPRD(rs2)
+         ; writeFPRD(rd, ([FP64_Sign(f2)]::bits(1)):f1<62:0>)
+         }
 
 -----------------------------------
 -- FSGNJN.D  rd, rs
 -----------------------------------
 
 define FConv > FSGNJN_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRD(rs1)
-; f2 = FPRD(rs2)
-; writeFPRD(rd, ([!FP64_Sign(f2)]::bits(1)):f1<62:0>)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRD(rs1)
+         ; f2 = FPRD(rs2)
+         ; writeFPRD(rd, ([!FP64_Sign(f2)]::bits(1)):f1<62:0>)
+         }
 
 -----------------------------------
 -- FSGNJX.D  rd, rs
 -----------------------------------
 
 define FConv > FSGNJX_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1 = FPRD(rs1)
-; f2 = FPRD(rs2)
-; writeFPRD(rd, ([FP64_Sign(f2)]::bits(1) ?? [FP64_Sign(f1)]::bits(1)) : f1<62:0>)
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1 = FPRD(rs1)
+         ; f2 = FPRD(rs2)
+         ; writeFPRD(rd, ([FP64_Sign(f2)]::bits(1) ?? [FP64_Sign(f1)]::bits(1)) : f1<62:0>)
+         }
 
 -- Movement
 
@@ -3956,14 +4445,16 @@ define FConv > FSGNJX_D(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 
 define FConv > FMV_X_D(rd::reg, rs::reg) =
-    GPR(rd) <- SignExtend(FPRD(rs))
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else GPR(rd) <- SignExtend(FPRD(rs))
 
 -----------------------------------
 -- FMV.D.X   rd, rs
 -----------------------------------
 
 define FConv > FMV_D_X(rd::reg, rs::reg) =
-    writeFPRD(rd, GPR(rs))
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else writeFPRD(rd, GPR(rs))
 
 -- Comparisons
 
@@ -3972,63 +4463,66 @@ define FConv > FMV_D_X(rd::reg, rs::reg) =
 -----------------------------------
 
 define FArith > FEQ_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRD(rs1)
-; f2  = FPRD(rs2)
-; if FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2)
-  then { writeRD(rd, 0x0)
-       ; setFP_Invalid()
-       }
-  else { res = match FP64_Compare(f1, f2)
-               { case FP_LT => 0x0
-                 case FP_EQ => 0x1
-                 case FP_GT => 0x0
-                 case FP_UN => 0x0
-               }
-       ; writeRD(rd, res)
-       }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRD(rs1)
+         ; f2  = FPRD(rs2)
+         ; if FP64_IsSignalingNan(f1) or FP64_IsSignalingNan(f2)
+           then { writeRD(rd, 0x0)
+                ; setFP_Invalid()
+                }
+           else { res = match FP64_Compare(f1, f2)
+                        { case FP_LT => 0x0
+                          case FP_EQ => 0x1
+                          case FP_GT => 0x0
+                          case FP_UN => 0x0
+                        }
+                ; writeRD(rd, res)
+                }
+         }
 
 -----------------------------------
 -- FLT.D   rd, rs
 -----------------------------------
 
 define FArith > FLT_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRD(rs1)
-; f2  = FPRD(rs2)
-; if   FP64_IsNan(f1) or FP64_IsNan(f2)
-  then { writeRD(rd, 0x0)
-       ; setFP_Invalid()
-       }
-  else { res = match FP64_Compare(f1, f2)
-               { case FP_LT => 0x1
-                 case FP_EQ => 0x0
-                 case FP_GT => 0x0
-                 case FP_UN => 0x0
-               }
-       ; writeRD(rd, res)
-       }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRD(rs1)
+         ; f2  = FPRD(rs2)
+         ; if   FP64_IsNan(f1) or FP64_IsNan(f2)
+           then { writeRD(rd, 0x0)
+                ; setFP_Invalid()
+                }
+           else { res = match FP64_Compare(f1, f2)
+                        { case FP_LT => 0x1
+                          case FP_EQ => 0x0
+                          case FP_GT => 0x0
+                          case FP_UN => 0x0
+                        }
+                ; writeRD(rd, res)
+                }
+         }
 
 -----------------------------------
 -- FLE.D   rd, rs
 -----------------------------------
 
 define FArith > FLE_D(rd::reg, rs1::reg, rs2::reg) =
-{ f1  = FPRD(rs1)
-; f2  = FPRD(rs2)
-; if   FP64_IsNan(f1) or FP64_IsNan(f2)
-  then { writeRD(rd, 0x0)
-       ; setFP_Invalid()
-       }
-  else { res = match FP64_Compare(f1, f2)
-               { case FP_LT => 0x1
-                 case FP_EQ => 0x1
-                 case FP_GT => 0x0
-                 case FP_UN => 0x0
-               }
-       ; writeRD(rd, res)
-       }
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { f1  = FPRD(rs1)
+         ; f2  = FPRD(rs2)
+         ; if   FP64_IsNan(f1) or FP64_IsNan(f2)
+           then { writeRD(rd, 0x0)
+                ; setFP_Invalid()
+                }
+           else { res = match FP64_Compare(f1, f2)
+                        { case FP_LT => 0x1
+                          case FP_EQ => 0x1
+                          case FP_GT => 0x0
+                          case FP_UN => 0x0
+                        }
+                ; writeRD(rd, res)
+                }
+         }
 
 -- Classification
 
@@ -4037,20 +4531,22 @@ define FArith > FLE_D(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 
 define FConv > FCLASS_D(rd::reg, rs::reg) =
-{ var ret = 0x0`10
-; val = FPRD(rs)
-; ret<0> <- val == FP64_NegInf
-; ret<1> <- FP64_Sign(val) and FP64_IsNormal(val)
-; ret<2> <- FP64_Sign(val) and FP64_IsSubnormal(val)
-; ret<3> <- val == FP64_NegZero
-; ret<4> <- val == FP64_PosZero
-; ret<5> <- !FP64_Sign(val) and FP64_IsSubnormal(val)
-; ret<6> <- !FP64_Sign(val) and FP64_IsNormal(val)
-; ret<7> <- val == FP64_PosInf
-; ret<8> <- FP64_IsSignalingNan(val)
-; ret<9> <- val == RV64_CanonicalNan
-; writeRD(rd, ZeroExtend(ret))
-}
+    if not fpEnabled() then signalException(Illegal_Instr)
+    else { var ret = 0x0`10
+         ; val = FPRD(rs)
+         ; ret<0> <- val == FP64_NegInf
+         ; ret<1> <- FP64_Sign(val) and FP64_IsNormal(val)
+         ; ret<2> <- FP64_Sign(val) and FP64_IsSubnormal(val)
+         ; ret<3> <- val == FP64_NegZero
+         ; ret<4> <- val == FP64_PosZero
+         ; ret<5> <- !FP64_Sign(val) and FP64_IsSubnormal(val)
+         ; ret<6> <- !FP64_Sign(val) and FP64_IsNormal(val)
+         ; ret<7> <- val == FP64_PosInf
+         ; ret<8> <- FP64_IsSignalingNan(val)
+         ; ret<9> <- FP64_IsNan(val) and not FP64_IsSignalingNan(val)  -- any quiet NaN (U §21.9 p.120)
+         ; writeRD(rd, ZeroExtend(ret))
+         }
+
 
 ---------------------------------------------------------------------------
 -- System Instructions
@@ -4064,118 +4560,137 @@ define System > ECALL  = signalEnvCall()
 -----------------------------------
 -- EBREAK
 -----------------------------------
-
-define System > EBREAK = signalException(Breakpoint)
-
------------------------------------
--- ERET
------------------------------------
-define System > ERET   =
-    NextFetch <- Some(Ereturn)
+-- The trap value is the address of the EBREAK (P §3.1.16 p.52).
+define System > EBREAK = signalAddressException(Breakpoint, PC)
 
 -----------------------------------
--- MRTS
+-- MRET
 -----------------------------------
-define System > MRTS   =
-{ SCSR.scause       <- MCSR.mcause
-; SCSR.sbadaddr     <- MCSR.mbadaddr
-; SCSR.sepc         <- MCSR.mepc
+-- MRET is legal only in M-mode (P §3.3.2 p.61).  Next does the return.
+define System > MRET   =
+    if curPrivilege() == Machine then NextFetch <- Some(Mret)
+    else signalException(Illegal_Instr)
 
-; MCSR.mstatus.MPRV <- privLevel(Supervisor)
-
-; NextFetch         <- Some(Mrts)
-}
+-----------------------------------
+-- SRET
+-----------------------------------
+-- SRET is illegal in U-mode, and in S-mode while mstatus.TSR is set; it is
+-- legal in M-mode whatever TSR is (P §3.3.2 p.61, §3.1.6.6 p.37).
+define System > SRET   =
+    match curPrivilege()
+    { case User       => signalException(Illegal_Instr)
+      case Supervisor => if MCSR.mstatus.TSR then signalException(Illegal_Instr)
+                         else NextFetch <- Some(Sret)
+      case Machine    => NextFetch <- Some(Sret)
+    }
 
 -----------------------------------
 -- WFI
 -----------------------------------
-define System > WFI    = nothing
+-- WFI does not wait (P §3.3.3 p.62 allows a no-op).  In S-mode with
+-- mstatus.TW set it is illegal unless it completes within the time limit
+-- (P §3.1.6.6 p.37), which is zero here: it completes at once iff an
+-- interrupt is pending and enabled in mie, whatever mstatus.MIE,
+-- mstatus.SIE and mideleg are (P §3.3.3 p.62).  In U-mode it is
+-- always illegal: with S-mode implemented, WFI is not available to U-mode
+-- (P §3.1.6.6 p.37, §3.3.3 p.61).
+define System > WFI    =
+    match curPrivilege()
+    { case User       => signalException(Illegal_Instr)
+      case Supervisor => when MCSR.mstatus.TW and (read_mip() && MCSR.&mie) == 0
+                         do signalException(Illegal_Instr)
+      case Machine    => nothing
+    }
 
 -- Control and Status Registers
 
 bool checkCSROp(csr::imm12, rs1::reg, a::accessType) =
-    is_CSR_defined(csr) and check_CSR_access(csrRW(csr), csrPR(csr), curPrivilege(), a)
+    is_CSR_defined(csr) and
+    check_CSR_access(csrRW(csr), csrPR(csr), curPrivilege(), a) and
+    check_CSR_conditions(csr, curPrivilege())
+
+construct csrOp { CSR_Write, CSR_Set, CSR_Clear }
+
+-- The six Zicsr instructions (U §6.1 p.47-48, Table 7).  f is the rs1
+-- or uimm field and src the value it stands for.  CSRRW and CSRRWI always
+-- write; the others write iff f is not 0, whatever the value of src, and
+-- only a write needs a writable CSR.  A CSRRW or CSRRWI with rd = 0 shall
+-- not read the CSR (U §6.1 p.47); here it is read, which cannot be
+-- observed, since no CSR has a side effect on a read (P §2.1 p.13).
+-- The CSRRS and CSRRC of mip see SEIP without the platform's line (P
+-- §3.1.9 p.45).  Those of sip see the value read, line included, but
+-- SEIP is read-only in sip (P §12.1.3 p.118), so the line never reaches
+-- mip.
+unit accessCSR(op::csrOp, rd::reg, f::reg, src::regType, csr::creg) =
+{ isWrite = op == CSR_Write or f != 0
+; if checkCSROp(csr, f, if isWrite then Write else Read)
+  then { old = CSR(csr)
+       ; when isWrite
+         do { base = if csr == 0x344 then (old && ~0x200) || (MCSR.&mip && 0x200)
+                     else old
+            ; writeCSR(csr, match op
+                            { case CSR_Write => src
+                              case CSR_Set   => base || src
+                              case CSR_Clear => base && ~src
+                            })
+            }
+       ; writeRD(rd, old)
+       }
+  else signalException(Illegal_Instr)
+}
 
 -----------------------------------
--- CSRRW  rd, rs1, imm
+-- CSRRW  rd, rs1, csr
 -----------------------------------
 define System > CSRRW(rd::reg, rs1::reg, csr::imm12) =
-    if checkCSROp(csr, rs1, Write)
-    then { val = CSR(csr)
-         ; writeCSR(csr, GPR(rs1))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Write, rd, rs1, GPR(rs1), csr)
 
 -----------------------------------
--- CSRRS  rd, rs1, imm
+-- CSRRS  rd, rs1, csr
 -----------------------------------
 define System > CSRRS(rd::reg, rs1::reg, csr::imm12) =
-    if checkCSROp(csr, rs1, if rs1 == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when rs1 != 0
-           do writeCSR(csr, val || GPR(rs1))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Set, rd, rs1, GPR(rs1), csr)
 
 -----------------------------------
--- CSRRC  rd, rs1, imm
+-- CSRRC  rd, rs1, csr
 -----------------------------------
 define System > CSRRC(rd::reg, rs1::reg, csr::imm12) =
-    if checkCSROp(csr, rs1, if rs1 == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when rs1 != 0
-           do writeCSR(csr, val && ~GPR(rs1))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Clear, rd, rs1, GPR(rs1), csr)
 
 -----------------------------------
--- CSRRWI rd, rs1, imm
+-- CSRRWI rd, uimm, csr
 -----------------------------------
 define System > CSRRWI(rd::reg, zimm::reg, csr::imm12) =
-    if checkCSROp(csr, zimm, if zimm == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when zimm != 0
-           do writeCSR(csr, ZeroExtend(zimm))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Write, rd, zimm, ZeroExtend(zimm), csr)
 
 -----------------------------------
--- CSRRSI rd, rs1, imm
+-- CSRRSI rd, uimm, csr
 -----------------------------------
 define System > CSRRSI(rd::reg, zimm::reg, csr::imm12) =
-    if checkCSROp(csr, zimm, if zimm == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when zimm != 0
-           do writeCSR(csr, val || ZeroExtend(zimm))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Set, rd, zimm, ZeroExtend(zimm), csr)
 
 -----------------------------------
--- CSRRCI rd, rs1, imm
+-- CSRRCI rd, uimm, csr
 -----------------------------------
 define System > CSRRCI(rd::reg, zimm::reg, csr::imm12) =
-    if checkCSROp(csr, zimm, if zimm == 0 then Read else Write)
-    then { val = CSR(csr)
-         ; when zimm != 0
-           do writeCSR(csr, val && ~ZeroExtend(zimm))
-         ; writeRD(rd, val)
-         }
-    else signalException(Illegal_Instr)
+    accessCSR(CSR_Clear, rd, zimm, ZeroExtend(zimm), csr)
 
 -- Address translation cache flush
 
 -----------------------------------
--- SFENCE.VM
+-- SFENCE.VMA rs1, rs2
 -----------------------------------
-define System > SFENCE_VM(rs1::reg) =
-{ addr = if rs1 == 0 then None else Some(GPR(rs1))
-; TLB <- flushTLB(curASID(), addr, TLB)
-}
+-- The hart has no address-translation cache, so the fence has nothing to
+-- do: every access uses the translation current when it is made, which is
+-- always one that the fence allows (P §12.2.1 p.128).
+-- SFENCE.VMA is illegal in U-mode, and in S-mode while mstatus.TVM is set
+-- (P §12.2.1 p.127, §3.1.6.6 p.37).
+define System > SFENCE_VMA(rs1::reg, rs2::reg) =
+    match curPrivilege()
+    { case User       => signalException(Illegal_Instr)
+      case Supervisor => when MCSR.mstatus.TVM do signalException(Illegal_Instr)
+      case Machine    => nothing
+    }
 
 -----------------------------------
 -- Unsupported instructions
@@ -4194,8 +4709,9 @@ define Internal > FETCH_MISALIGNED(addr::regType) =
 ; recordFetchException(addr)
 }
 
-define Internal > FETCH_FAULT(addr::regType) =
-{ signalAddressException(Fetch_Fault, [addr])
+-- e is the instruction page fault or access fault that fetchAddr gives.
+define Internal > FETCH_FAULT(e::ExceptionType, addr::regType) =
+{ signalAddressException(e, [addr])
 ; recordFetchException(addr)
 }
 
@@ -4210,16 +4726,32 @@ construct FetchResult
 , F_Result  :: rawInstType
 }
 
+-- An instruction is fetched in 2-byte parcels, each translated and
+-- checked by the PMP, the upper half of a 32-bit instruction only after
+-- the lower one, since it can lie in another page or PMP region.  A
+-- parcel that fails raises the instruction page fault or
+-- access fault of fetchAddr, with the virtual address of the parcel as the
+-- trap value (P §3.1.16 p.52, §12.1.9 p.121).
 FetchResult Fetch() =
 { vPC = PC
-; if vPC<0>
+; if vPC<0> or (vPC<1> and not haveRVC())
   then F_Error(Internal(FETCH_MISALIGNED(vPC)))
-  else match translateAddr(vPC, Instruction, Read)
-       { case Some(pPC) => { instw = rawReadInst(pPC)
-                           ; setupDelta(vPC, instw)
-                           ; F_Result(instw)
-                           }
-         case None      => F_Error(Internal(FETCH_FAULT(vPC)))
+  else match fetchAddr(vPC)
+       { case TR_Address(pPC) =>
+           match rawReadInst(pPC)
+           { case Half(h) => { setupDelta(vPC, Half(h))
+                             ; F_Result(Half(h))
+                             }
+             case Word(w) =>
+               match fetchAddr(vPC + 2)
+               { case TR_Address(pPC2) => { instw = Word(MEM8(pPC2 + 1) : MEM8(pPC2) : w<15:0>)
+                                          ; setupDelta(vPC, instw)
+                                          ; F_Result(instw)
+                                          }
+                 case TR_Fault(e)       => F_Error(Internal(FETCH_FAULT(e, vPC + 2)))
+               }
+           }
+         case TR_Fault(e)      => F_Error(Internal(FETCH_FAULT(e, vPC)))
        }
 }
 
@@ -4424,11 +4956,11 @@ instruction Decode(w::word) =
 
      case '000000000000  00000 000 00000 11100 11' => System( ECALL)
      case '000000000001  00000 000 00000 11100 11' => System(EBREAK)
-     case '000100000000  00000 000 00000 11100 11' => System(  ERET)
-     case '001100000101  00000 000 00000 11100 11' => System( MRTS)
-     case '000100000010  00000 000 00000 11100 11' => System(  WFI)
+     case '000100000010  00000 000 00000 11100 11' => System(  SRET)
+     case '001100000010  00000 000 00000 11100 11' => System(  MRET)
+     case '000100000101  00000 000 00000 11100 11' => System(   WFI)
 
-     case '000100000001    rs1 000 00000 11100 11' => System(SFENCE_VM(rs1))
+     case '0001001  rs2  rs1 000 00000 11100 11' => System(SFENCE_VMA(rs1, rs2))
 
      -- unsupported instructions
      case _                                        => UnknownInstruction
@@ -4480,8 +5012,8 @@ string pUJtype(o::string, rd::reg, i::bits(N)) =
 string pN0type(o::string) =
     instr(o)
 
-string pN1type(o::string, r::reg) =
-    instr(o) : " " : reg(r)
+string pN2type(o::string, r1::reg, r2::reg) =
+    instr(o) : " " : reg(r1) : ", " : reg(r2)
 
 string pFRtype(o::string, rd::reg, rs1::reg, rs2::reg) =
     instr(o) : " " : fpreg(rd) : ", " : fpreg(rs1) : ", " : fpreg(rs2)
@@ -4685,8 +5217,8 @@ string instructionToString(i::instruction) =
 
      case System( ECALL)                    => pN0type("ECALL")
      case System(EBREAK)                    => pN0type("EBREAK")
-     case System(  ERET)                    => pN0type("ERET")
-     case System(  MRTS)                    => pN0type("MRTS")
+     case System(  MRET)                    => pN0type("MRET")
+     case System(  SRET)                    => pN0type("SRET")
      case System(   WFI)                    => pN0type("WFI")
 
      case System( CSRRW(rd, rs1, csr))      => pCSRtype("CSRRW",  rd, rs1, csr)
@@ -4696,7 +5228,7 @@ string instructionToString(i::instruction) =
      case System(CSRRSI(rd, imm, csr))      => pCSRItype("CSRRSI", rd, imm, csr)
      case System(CSRRCI(rd, imm, csr))      => pCSRItype("CSRRCI", rd, imm, csr)
 
-     case System(SFENCE_VM(rs1))            => pN1type("SFENCE.VM", rs1)
+     case System(SFENCE_VMA(rs1, rs2))      => pN2type("SFENCE.VMA", rs1, rs2)
 
      case UnknownInstruction                => pN0type("UNKNOWN")
 
@@ -4884,7 +5416,7 @@ word Encode(i::instruction) =
      case AMO(     LR_W(aq, rl, rd, rs1))       => Rtype(opc(0x0B), 2, rd, rs1, 0,   amofunc('00010', aq, rl))
      case AMO(     LR_D(aq, rl, rd, rs1))       => Rtype(opc(0x0B), 3, rd, rs1, 0,   amofunc('00010', aq, rl))
      case AMO(     SC_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00011', aq, rl))
-     case AMO(     SC_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00010', aq, rl))
+     case AMO(     SC_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00011', aq, rl))
 
      case AMO(AMOSWAP_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00001', aq, rl))
      case AMO( AMOADD_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00000', aq, rl))
@@ -4908,11 +5440,11 @@ word Encode(i::instruction) =
 
      case System( ECALL)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x000)
      case System(EBREAK)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x001)
-     case System(  ERET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x100)
-     case System(  MRTS)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x305)
-     case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
+     case System(  MRET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x302)
+     case System(  SRET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
+     case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x105)
 
-     case System(SFENCE_VM(rs1))            =>  Itype(opc(0x1C), 0, 0, rs1, 0x101)
+     case System(SFENCE_VMA(rs1, rs2))      =>  Rtype(opc(0x1C), 0, 0, rs1, rs2, '0001001')
 
      case System( CSRRW(rd, rs1, csr))      =>  Itype(opc(0x1C), 1, rd, rs1, csr)
      case System( CSRRS(rd, rs1, csr))      =>  Itype(opc(0x1C), 2, rd, rs1, csr)
@@ -4947,6 +5479,7 @@ instruction DecodeRVC(h::half) =
      case '000 0 00000 00000 01' => ArithI(ADDI(0, 0, 0))
 
      case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi))
+     case '001 i5`1 00000 imi`5                01' => UnknownInstruction  -- U §28.5.2 p.160: C.ADDIW rd=x0 is reserved
      case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi))
      case '010 i5`1 rd    imi`5                01' => ArithI( ADDI(rd, 0, i5 ^ 7 : imi))
      case '011 0    00010 00000                01' => UnknownInstruction
@@ -4994,211 +5527,6 @@ instruction DecodeRVC(h::half) =
      case _ => UnknownInstruction
    }
 
-type rvcreg = bits(3)
-
-half CBtype(o::bits(2), f3::bits(3), rs1::rvcreg, imm::bits(8)) =
-    f3 : [imm<7>]::bits(1) : imm<3:2> : rs1 : imm<6:5> : imm<1:0> : [imm<5>]::bits(1) : o
-
-construct rvc { Comp :: half, Full :: word }
-
-rvc EncodeRVC(i::instruction) =
-   match i
-   { case Branch(  BEQ('01 rs1', '00000', '00000 imm')) => Comp(CBtype(1, 0, rs1, '0' : imm))
-     case Branch(  BEQ('01 rs1', '00000', '11111 imm')) => Comp(CBtype(1, 0, rs1, '1' : imm))
-     -- case Branch(  BNE(rs1, rs2, imm))      => SBtype(opc(0x18), 1, rs1, rs2, imm)
-     -- case Branch(  BLT(rs1, rs2, imm))      => SBtype(opc(0x18), 4, rs1, rs2, imm)
-     -- case Branch(  BGE(rs1, rs2, imm))      => SBtype(opc(0x18), 5, rs1, rs2, imm)
-     -- case Branch( BLTU(rs1, rs2, imm))      => SBtype(opc(0x18), 6, rs1, rs2, imm)
-     -- case Branch( BGEU(rs1, rs2, imm))      => SBtype(opc(0x18), 7, rs1, rs2, imm)
-
-     -- case Branch( JALR(rd, rs1, imm))       =>  Itype(opc(0x19), 0, rd, rs1, imm)
-     -- case Branch(  JAL(rd, imm))            => UJtype(opc(0x1b), rd, imm)
-
-     -- case ArithI(  LUI(rd, imm))            =>  Utype(opc(0x0D), rd, imm)
-     -- case ArithI(AUIPC(rd, imm))            =>  Utype(opc(0x05), rd, imm)
-
-     -- case ArithI( ADDI(rd, rs1, imm))       =>  Itype(opc(0x04), 0, rd, rs1, imm)
-     -- case  Shift( SLLI(rd, rs1, imm))       =>  Itype(opc(0x04), 1, rd, rs1, '000000' : imm)
-     -- case ArithI( SLTI(rd, rs1, imm))       =>  Itype(opc(0x04), 2, rd, rs1, imm)
-     -- case ArithI(SLTIU(rd, rs1, imm))       =>  Itype(opc(0x04), 3, rd, rs1, imm)
-     -- case ArithI( XORI(rd, rs1, imm))       =>  Itype(opc(0x04), 4, rd, rs1, imm)
-     -- case  Shift( SRLI(rd, rs1, imm))       =>  Itype(opc(0x04), 5, rd, rs1, '000000' : imm)
-     -- case  Shift( SRAI(rd, rs1, imm))       =>  Itype(opc(0x04), 5, rd, rs1, '010000' : imm)
-     -- case ArithI(  ORI(rd, rs1, imm))       =>  Itype(opc(0x04), 6, rd, rs1, imm)
-     -- case ArithI( ANDI(rd, rs1, imm))       =>  Itype(opc(0x04), 7, rd, rs1, imm)
-
-     -- case ArithR(  ADD(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 0, rd, rs1, rs2, 0)
-     -- case ArithR(  SUB(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 0, rd, rs1, rs2, 0x20)
-     -- case  Shift(  SLL(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 1, rd, rs1, rs2, 0)
-     -- case ArithR(  SLT(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 2, rd, rs1, rs2, 0)
-     -- case ArithR( SLTU(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 3, rd, rs1, rs2, 0)
-     -- case ArithR(  XOR(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 4, rd, rs1, rs2, 0)
-     -- case  Shift(  SRL(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 5, rd, rs1, rs2, 0)
-     -- case  Shift(  SRA(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 5, rd, rs1, rs2, 0x20)
-     -- case ArithR(   OR(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 6, rd, rs1, rs2, 0)
-     -- case ArithR(  AND(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 7, rd, rs1, rs2, 0)
-
-     -- case ArithI(ADDIW(rd, rs1, imm))       =>  Itype(opc(0x06), 0, rd, rs1, imm)
-     -- case  Shift(SLLIW(rd, rs1, imm))       =>  Itype(opc(0x06), 1, rd, rs1, '0000000' : imm)
-     -- case  Shift(SRLIW(rd, rs1, imm))       =>  Itype(opc(0x06), 5, rd, rs1, '0000000' : imm)
-     -- case  Shift(SRAIW(rd, rs1, imm))       =>  Itype(opc(0x06), 5, rd, rs1, '0100000' : imm)
-
-     -- case ArithR( ADDW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 0, rd, rs1, rs2, '0000000')
-     -- case ArithR( SUBW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 0, rd, rs1, rs2, '0100000')
-     -- case  Shift( SLLW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 1, rd, rs1, rs2, '0000000')
-     -- case  Shift( SRLW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 5, rd, rs1, rs2, '0000000')
-     -- case  Shift( SRAW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 5, rd, rs1, rs2, '0100000')
-
-     -- case MulDiv(    MUL(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 0, rd, rs1, rs2, '0000001')
-     -- case MulDiv(   MULH(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 1, rd, rs1, rs2, '0000001')
-     -- case MulDiv( MULHSU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 2, rd, rs1, rs2, '0000001')
-     -- case MulDiv(  MULHU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 3, rd, rs1, rs2, '0000001')
-     -- case MulDiv(    DIV(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 4, rd, rs1, rs2, '0000001')
-     -- case MulDiv(   DIVU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 5, rd, rs1, rs2, '0000001')
-     -- case MulDiv(    REM(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 6, rd, rs1, rs2, '0000001')
-     -- case MulDiv(   REMU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 7, rd, rs1, rs2, '0000001')
-
-     -- case MulDiv(   MULW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 0, rd, rs1, rs2, '0000001')
-     -- case MulDiv(   DIVW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 4, rd, rs1, rs2, '0000001')
-     -- case MulDiv(  DIVUW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 5, rd, rs1, rs2, '0000001')
-     -- case MulDiv(   REMW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 6, rd, rs1, rs2, '0000001')
-     -- case MulDiv(  REMUW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 7, rd, rs1, rs2, '0000001')
-
-     -- case   Load(   LB(rd, rs1, imm))       =>  Itype(opc(0x00), 0, rd, rs1, imm)
-     -- case   Load(   LH(rd, rs1, imm))       =>  Itype(opc(0x00), 1, rd, rs1, imm)
-     -- case   Load(   LW(rd, rs1, imm))       =>  Itype(opc(0x00), 2, rd, rs1, imm)
-     -- case   Load(   LD(rd, rs1, imm))       =>  Itype(opc(0x00), 3, rd, rs1, imm)
-     -- case   Load(  LBU(rd, rs1, imm))       =>  Itype(opc(0x00), 4, rd, rs1, imm)
-     -- case   Load(  LHU(rd, rs1, imm))       =>  Itype(opc(0x00), 5, rd, rs1, imm)
-     -- case   Load(  LWU(rd, rs1, imm))       =>  Itype(opc(0x00), 6, rd, rs1, imm)
-
-     -- case  Store(   SB(rs1, rs2, imm))      =>  Stype(opc(0x08), 0, rs1, rs2, imm)
-     -- case  Store(   SH(rs1, rs2, imm))      =>  Stype(opc(0x08), 1, rs1, rs2, imm)
-     -- case  Store(   SW(rs1, rs2, imm))      =>  Stype(opc(0x08), 2, rs1, rs2, imm)
-     -- case  Store(   SD(rs1, rs2, imm))      =>  Stype(opc(0x08), 3, rs1, rs2, imm)
-
-     -- case   FENCE(rd, rs1, pred, succ)      =>  Itype(opc(0x03), 0, rd, rs1, '0000' : pred : succ)
-     -- case FENCE_I(rd, rs1, imm)             =>  Itype(opc(0x03), 1, rd, rs1, imm)
-
-     -- case FArith(  FADD_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x00)
-     -- case FArith(  FSUB_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x04)
-     -- case FArith(  FMUL_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x08)
-     -- case FArith(  FDIV_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x0c)
-     -- case FArith( FSQRT_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs,    0, 0x2c)
-     -- case FArith(  FMIN_S(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x14)
-     -- case FArith(  FMAX_S(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x14)
-     -- case FArith(   FEQ_S(rd, rs1, rs2))      => Rtype(opc(0x14), 2,   rd, rs1, rs2, 0x50)
-     -- case FArith(   FLT_S(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x50)
-     -- case FArith(   FLE_S(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x50)
-
-     -- case FArith(  FADD_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x01)
-     -- case FArith(  FSUB_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x05)
-     -- case FArith(  FMUL_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x09)
-     -- case FArith(  FDIV_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x0d)
-     -- case FArith( FSQRT_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs,    0, 0x2d)
-     -- case FArith(  FMIN_D(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x15)
-     -- case FArith(  FMAX_D(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x15)
-     -- case FArith(   FEQ_D(rd, rs1, rs2))      => Rtype(opc(0x14), 2,   rd, rs1, rs2, 0x51)
-     -- case FArith(   FLT_D(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x51)
-     -- case FArith(   FLE_D(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x51)
-
-     -- case FPLoad(  FLW(rd, rs1, imm))         => Itype(opc(0x01), 2, rd, rs1, imm)
-     -- case FPLoad(  FLD(rd, rs1, imm))         => Itype(opc(0x01), 3, rd, rs1, imm)
-     -- case FPStore( FSW(rs1, rs2, imm))        => Stype(opc(0x09), 2, rs1, rs2, imm)
-     -- case FPStore( FSD(rs1, rs2, imm))        => Stype(opc(0x09), 3, rs1, rs2, imm)
-
-     -- case FArith( FMADD_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x10), frm, rd, rs1, rs2, rs3, 0)
-     -- case FArith( FMSUB_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x11), frm, rd, rs1, rs2, rs3, 0)
-     -- case FArith(FNMSUB_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x12), frm, rd, rs1, rs2, rs3, 0)
-     -- case FArith(FNMADD_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x13), frm, rd, rs1, rs2, rs3, 0)
-
-     -- case FArith( FMADD_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x10), frm, rd, rs1, rs2, rs3, 1)
-     -- case FArith( FMSUB_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x11), frm, rd, rs1, rs2, rs3, 1)
-     -- case FArith(FNMSUB_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x12), frm, rd, rs1, rs2, rs3, 1)
-     -- case FArith(FNMADD_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x13), frm, rd, rs1, rs2, rs3, 1)
-
-     -- case FConv(  FSGNJ_S(rd, rs1, rs2))      => Rtype(opc(0x14), 0, rd, rs1, rs2, 0x10)
-     -- case FConv( FSGNJN_S(rd, rs1, rs2))      => Rtype(opc(0x14), 1, rd, rs1, rs2, 0x10)
-     -- case FConv( FSGNJX_S(rd, rs1, rs2))      => Rtype(opc(0x14), 2, rd, rs1, rs2, 0x10)
-
-     -- case FConv( FCVT_W_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x60)
-     -- case FConv(FCVT_WU_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x60)
-     -- case FConv(  FMV_X_S(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x70)
-     -- case FConv( FCLASS_S(rd, rs))            => Rtype(opc(0x14), 1,   rd, rs, 0, 0x70)
-     -- case FConv( FCVT_S_W(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x68)
-     -- case FConv(FCVT_S_WU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x68)
-     -- case FConv(  FMV_S_X(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x78)
-
-     -- case FConv(  FSGNJ_D(rd, rs1, rs2))      => Rtype(opc(0x14), 0, rd, rs1, rs2, 0x11)
-     -- case FConv( FSGNJN_D(rd, rs1, rs2))      => Rtype(opc(0x14), 1, rd, rs1, rs2, 0x11)
-     -- case FConv( FSGNJX_D(rd, rs1, rs2))      => Rtype(opc(0x14), 2, rd, rs1, rs2, 0x11)
-
-     -- case FConv( FCVT_W_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x61)
-     -- case FConv(FCVT_WU_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x61)
-     -- case FConv( FCLASS_D(rd, rs))            => Rtype(opc(0x14), 1,   rd, rs, 0, 0x71)
-     -- case FConv( FCVT_D_W(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x69)
-     -- case FConv(FCVT_D_WU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x69)
-     -- case FConv( FCVT_S_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x20)
-     -- case FConv( FCVT_D_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x21)
-
-     -- case FConv( FCVT_L_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x60)
-     -- case FConv(FCVT_LU_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x60)
-     -- case FConv( FCVT_S_L(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x68)
-     -- case FConv(FCVT_S_LU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x68)
-     -- case FConv( FCVT_L_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x61)
-     -- case FConv(FCVT_LU_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x61)
-     -- case FConv(  FMV_X_D(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x71)
-     -- case FConv( FCVT_D_L(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x69)
-     -- case FConv(FCVT_D_LU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x69)
-     -- case FConv(  FMV_D_X(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x79)
-
-     -- case AMO(     LR_W(aq, rl, rd, rs1))       => Rtype(opc(0x0B), 2, rd, rs1, 0,   amofunc('00010', aq, rl))
-     -- case AMO(     LR_D(aq, rl, rd, rs1))       => Rtype(opc(0x0B), 3, rd, rs1, 0,   amofunc('00010', aq, rl))
-     -- case AMO(     SC_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00011', aq, rl))
-     -- case AMO(     SC_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00010', aq, rl))
-
-     -- case AMO(AMOSWAP_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00001', aq, rl))
-     -- case AMO( AMOADD_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00000', aq, rl))
-     -- case AMO( AMOXOR_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00100', aq, rl))
-     -- case AMO( AMOAND_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('01100', aq, rl))
-     -- case AMO(  AMOOR_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('01000', aq, rl))
-     -- case AMO( AMOMIN_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('10000', aq, rl))
-     -- case AMO( AMOMAX_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('10100', aq, rl))
-     -- case AMO(AMOMINU_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('11000', aq, rl))
-     -- case AMO(AMOMAXU_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('11100', aq, rl))
-
-     -- case AMO(AMOSWAP_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00001', aq, rl))
-     -- case AMO( AMOADD_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00000', aq, rl))
-     -- case AMO( AMOXOR_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00100', aq, rl))
-     -- case AMO( AMOAND_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('01100', aq, rl))
-     -- case AMO(  AMOOR_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('01000', aq, rl))
-     -- case AMO( AMOMIN_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('10000', aq, rl))
-     -- case AMO( AMOMAX_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('10100', aq, rl))
-     -- case AMO(AMOMINU_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('11000', aq, rl))
-     -- case AMO(AMOMAXU_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('11100', aq, rl))
-
-     -- case System( ECALL)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x000)
-     -- case System(EBREAK)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x001)
-     -- case System(  ERET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x100)
-     -- case System(  MRTS)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x305)
-     -- case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
-
-     -- case System(SFENCE_VM(rs1))            =>  Itype(opc(0x1C), 0, 0, rs1, 0x101)
-
-     -- case System( CSRRW(rd, rs1, csr))      =>  Itype(opc(0x1C), 1, rd, rs1, csr)
-     -- case System( CSRRS(rd, rs1, csr))      =>  Itype(opc(0x1C), 2, rd, rs1, csr)
-     -- case System( CSRRC(rd, rs1, csr))      =>  Itype(opc(0x1C), 3, rd, rs1, csr)
-     -- case System(CSRRWI(rd, imm, csr))      =>  Itype(opc(0x1C), 5, rd, imm, csr)
-     -- case System(CSRRSI(rd, imm, csr))      =>  Itype(opc(0x1C), 6, rd, imm, csr)
-     -- case System(CSRRCI(rd, imm, csr))      =>  Itype(opc(0x1C), 7, rd, imm, csr)
-
-     -- case UnknownInstruction                => 0
-
-     -- case Internal(FETCH_MISALIGNED(_))     => 0
-     -- case Internal(FETCH_FAULT(_))          => 0
-     case _ => Full(Encode(i))
-   }
-
 ---------------------------------------------------------------------------
 -- The next state function
 ---------------------------------------------------------------------------
@@ -5207,143 +5535,159 @@ string log_instruction(w::word, inst::instruction) =
     "instr " : [procID] : " " : [[c_instret(procID)]::nat] :
     " 0x" : hex64(PC) : " : " : hex32(w) : "   " : instructionToString(inst)
 
+-- Termination for an emulator.  Nothing in the model sets these: the
+-- host-target interface (HTIF) belongs to the emulator.
 declare done :: bool   -- Flag to request termination
 
 nat exitCode() =
     [ExitCode]::nat
 
--- The clock/timer factor here is arbitrary, except it that if it is
--- >= approx 200, some 32-bit -pt- tests unexpectedly pass.
+-- minstret counts the instructions that retire (P §3.1.10 p.46): not
+-- those that raise an exception (U §7.1 p.53), nor a step that takes an
+-- interrupt.  It does not count while mcountinhibit.IR is set,
+-- sampled before the step (P §3.1.12 p.47), nor for an instruction that
+-- writes minstret itself (U §6.1 p.49).
+unit incrInstret(incIR::bool) =
+    when incIR and not c_minstret_written(procID)
+    do c_instret(procID) <- c_instret(procID) + 1
 
-nat CYCLES_PER_TIMER_TICK = 200
+-- Fetch and run one instruction.  The result is the trap value of an
+-- illegal instruction: the instruction bits, zero-extended (P §3.1.16
+-- p.52-53).
+regType fetchAndExecute() =
+    match Fetch()
+    { case F_Result(Half(h)) =>
+      { inst = if haveRVC() then DecodeRVC(h) else UnknownInstruction
+      ; mark_log(LOG_INSN, log_instruction(ZeroExtend(h), inst))
+      ; Run(inst)
+      ; ZeroExtend(h)
+      }
+      case F_Result(Word(w)) =>
+      { inst = Decode(w)
+      ; mark_log(LOG_INSN, log_instruction(w, inst))
+      ; Run(inst)
+      ; ZeroExtend(w)
+      }
+      case F_Error(inst)  =>
+      { mark_log(LOG_INSN, log_instruction([0::word], inst))
+      ; Run(inst)
+      ; 0
+      }
+    }
 
-unit tickClock() =
-{ cycles             = c_cycles(procID) + 1
-; c_cycles(procID)  <- cycles
-; clock             <- cycles div [CYCLES_PER_TIMER_TICK]
-}
-
-unit incrInstret() =
-    c_instret(procID) <- c_instret(procID) + 1
-
-unit checkTimers() =
-{ when (clock >+ MCSR.mtimecmp + MCSR.mtime_delta)
-  do MCSR.mip.MTIP <- true
-; when (clock >+ SCSR.stimecmp + SCSR.stime_delta)
-  do MCSR.mip.STIP <- true
-}
-
+-- One step of the hart, in M-, S- or U-mode.
 unit Next =
 { clear_logs()
+; c_minstret_written(procID) <- false
+; incIR = not MCSR.mcountinhibit<2>
 
--- Handle the char i/o section of the Berkeley HTIF protocol
--- following cissrStandalone.c.
-; when MCSR.mtohost <> 0x0
-  do   { mark_log(LOG_IO, log_tohost(MCSR.mtohost))
-       -- The HTIF protocol sets bit 0 to indicate exit, with actual
-       -- exit code left-shifted by 1 bit.
-       ; if MCSR.mtohost<0>
-         then { done <- true
-              ; ExitCode <- MCSR.mtohost >> 1
-              }
-         else MCSR.mtohost <- 0x0   -- TODO: rest of relevant HTIF protocol
-       }
+-- An interrupt is taken between instructions, at the start of a step:
+-- the step does not fetch, and mepc is the instruction not executed
+-- (P §3.1.14 p.49).
+; match checkInterrupts()
+  { case Some(i, p) => takeTrap(true, interruptIndex(i), PC, 0, p)
+    case None =>
+    { ibits = fetchAndExecute()
 
-; match Fetch()
-  { case F_Result(Half(h)) =>
-    { inst = DecodeRVC(h)
-    ; mark_log(LOG_INSN, log_instruction(ZeroExtend(h), inst))
-    ; Run(inst)
-    }
-    case F_Result(Word(w)) =>
-    { inst = Decode(w)
-    ; mark_log(LOG_INSN, log_instruction(w, inst))
-    ; Run(inst)
-    }
-    case F_Error(inst)  =>
-    { mark_log(LOG_INSN, log_instruction([0::word], inst))
-    ; Run(inst)
+    -- A trapping instruction does not retire (P §3.3.1 p.61).
+    ; match NextFetch
+      { case None =>
+                 { incrInstret(incIR)
+                 ; PC <- PC + Skip
+                 }
+        case Some(BranchTo(addr)) =>
+                 { incrInstret(incIR)
+                 ; NextFetch    <- None
+                 ; PC           <- addr
+                 }
+        case Some(Mret) =>
+                 { incrInstret(incIR)
+                 ; NextFetch    <- None
+                 ; mret()
+                 }
+        case Some(Sret) =>
+                 { incrInstret(incIR)
+                 ; NextFetch    <- None
+                 ; sret()
+                 }
+        case Some(Trap(t)) =>
+                 { NextFetch    <- None
+                 ; ec   = excCode(t.trap)
+                 ; tval = if t.trap == Illegal_Instr then ibits else t.tval
+                 ; takeTrap(false, ec, PC, tval, excDest(ec, curPrivilege()))
+                 }
+      }
     }
   }
 
-; checkTimers()     -- this can trigger timer interrupts
-
-; match NextFetch, checkInterrupts()
-  { case None, None =>
-             { incrInstret()
-             ; PC <- PC + Skip
-             }
-    case None, Some(i, p) =>
-             { incrInstret()
-             ; takeTrap(true, interruptIndex(i), PC + Skip, None, p)
-             }
-    case Some(BranchTo(addr)), _ =>
-             { incrInstret()
-             ; NextFetch    <- None
-             ; PC           <- addr
-             }
-    case Some(Ereturn), _ =>
-             { incrInstret()
-             ; NextFetch    <- None
-             ; PC           <- curEPC()
-
-             ; from = curPrivilege()
-             ; MCSR.mstatus <- popPrivilegeStack(MCSR.mstatus)
-             ; to   = curPrivilege()
-
-             ; mark_log(LOG_INSN, ["exception return from " : privName(from)
-                                   : " to " : privName(to)])
-             }
-    case Some(Trap(t)), _ =>
-             { NextFetch    <- None
-             -- We currently don't implement delegation, so always trap to M-mode.
-             ; takeTrap(false, excCode(t.trap), PC, t.badaddr, Machine)
-             }
-    case Some(Mrts), _ =>
-             { incrInstret()
-             ; NextFetch    <- None
-             ; PC           <- SCSR.stvec
-             }
-  }
-
-; tickClock()
+-- mcycle counts every step, unless mcountinhibit.CY is set after it
+-- (P §3.1.10 p.46, §3.1.12 p.47).  An emulator advances
+-- mtime by one after each step, so mtime counts steps too.
+; when not MCSR.mcountinhibit<0>
+  do c_cycles(procID) <- c_cycles(procID) + 1
 }
 
-unit initIdent(arch::Architecture) =
-{ MCSR.mcpuid.ArchBase <- archBase(arch)
-; MCSR.mcpuid.U        <- true
-; MCSR.mcpuid.S        <- true
-; MCSR.mcpuid.M        <- true
-; MCSR.mcpuid.I        <- true
+-- Reset (P §3.4 p.63): M-mode, mstatus.MIE = mstatus.MPRV = 0, misa
+-- with every extension, mcause = 0 and every PMP entry OFF and unlocked.
+-- What the reset leaves unspecified is zero: the
+-- read value of mstatus is 0x0000000A00000000 (FS Off, MPP U), mtvec and
+-- stvec are Direct at address 0, and the counters are zero.  The
+-- emulator sets the pc and the CLINT memory.
 
-; MCSR.mimpid.RVSource <- 0x8000 -- anonymous source
-; MCSR.mimpid.RVImpl   <- 0x0
+unit initIdent(arch::Architecture) =
+{ when arch != RV64I do #UNDEFINED("only RV64I is implemented")
+; MCSR.misa <- misa(MISA_RESET)
 }
 
 unit initMachine(hartid::id) =
-{ -- Startup in Mbare machine mode, with interrupts disabled.
-  MCSR.mstatus.VM   <- vmMode(Mbare)
-; MCSR.mstatus.MPRV <- privLevel(Machine)
-; MCSR.mstatus.MIE  <- false
-  -- initialize extension context state
-; MCSR.mstatus.MFS  <- ext_status(Initial)
-; MCSR.mstatus.MXS  <- ext_status(Off)
-; MCSR.mstatus.MSD  <- false
+{ setPrivilege(Machine)
+; MCSR.mhartid       <- ZeroExtend(hartid)
+; MCSR.mstatus       <- mstatus(0)
+; MCSR.medeleg       <- 0
+; MCSR.mideleg       <- 0
+; MCSR.mie           <- mie(0)
+; MCSR.mtvec         <- 0
+; MCSR.mcounteren    <- 0
+; MCSR.menvcfg       <- 0
+; MCSR.mcountinhibit <- 0
+; MCSR.mscratch      <- 0
+; MCSR.mepc          <- 0
+; MCSR.mcause        <- mcause(0)
+; MCSR.mtval         <- 0
+; MCSR.mip           <- mip(0)
+; MCSR.pmpcfg0       <- 0
+; MCSR.pmpcfg2       <- 0
+; MCSR.pmpaddr0  <- 0; MCSR.pmpaddr1  <- 0; MCSR.pmpaddr2  <- 0; MCSR.pmpaddr3  <- 0
+; MCSR.pmpaddr4  <- 0; MCSR.pmpaddr5  <- 0; MCSR.pmpaddr6  <- 0; MCSR.pmpaddr7  <- 0
+; MCSR.pmpaddr8  <- 0; MCSR.pmpaddr9  <- 0; MCSR.pmpaddr10 <- 0; MCSR.pmpaddr11 <- 0
+; MCSR.pmpaddr12 <- 0; MCSR.pmpaddr13 <- 0; MCSR.pmpaddr14 <- 0; MCSR.pmpaddr15 <- 0
 
-  -- MPRV1/MIE1 and MPRV2/MIE2 are unspecified.
+; SCSR.stvec         <- 0
+; SCSR.scounteren    <- 0
+; SCSR.senvcfg       <- 0
+; SCSR.sscratch      <- 0
+; SCSR.sepc          <- 0
+; SCSR.scause        <- mcause(0)
+; SCSR.stval         <- 0
+; SCSR.satp          <- 0
 
-  -- Setup hartid
-; MCSR.mhartid      <- ZeroExtend(hartid)
-  -- Initialize mtvec to lower address (other option is 0xF...FFE00)
-; MCSR.mtvec        <- ZeroExtend(0x100`16)
+; UCSR.fpcsr         <- FPCSR(0)
+
+; c_cycles(procID)           <- 0
+; c_instret(procID)          <- 0
+; c_minstret_written(procID) <- false
+; c_extMEIP(procID)          <- false
+; c_extSEIP(procID)          <- false
+; ReserveLoad        <- None
+; ExitCode           <- 0
 }
+
 -- This initializes each core (via setting procID appropriately) on
--- startup before execution begins.
+-- startup before execution begins.  The registers are UNSPECIFIED after
+-- reset (P §3.4 p.63) and zero here; an emulator then sets a0 and
+-- a1 as its boot convention requires.
 unit initRegs(pc::nat) =
-{ -- TODO: Check if the specs specify the initial values of the registers
-  -- on startup.  Initializing to an arbitrary value causes issues with
-  -- the verifier, which assumes 0-valued initialization.
-  for i in 0 .. 31 do
+{ for i in 0 .. 31 do
     gpr([i])   <- 0x0
 ; for i in 0 .. 31 do
     fpr([i])   <- 0x0
