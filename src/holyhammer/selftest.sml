@@ -4871,6 +4871,133 @@ fun test_schedule_legacy_sharing () =
     remove_tree root
   end
 
+(* Launch pacing: within one run, prover launches are launch_gap apart,
+   a cache hit is not paced, and a stop or an interrupt during the ramp
+   launches nothing more. *)
+fun test_schedule_pacing parser =
+  let
+    val name = "hh-schedule-pacing"
+    val gap = Time.fromMilliseconds 400
+    fun slices file =
+      map (fn delay => fixture_slice Z3 [delay, file] 1)
+        ["0", "0.0", "0.00", "0.000"]
+    fun with_gap time f =
+      let
+        val old = !hhSchedule_Test.launch_gap
+        val _ = hhSchedule_Test.launch_gap := SOME time
+        val result = f () handle e =>
+          (hhSchedule_Test.launch_gap := old; raise e)
+      in
+        (hhSchedule_Test.launch_gap := old; result)
+      end
+    val times = ref ([] : Time.time list)
+    val times_mutex = Mutex.mutex ()
+    fun note _ =
+      (Mutex.lock times_mutex;
+       times := Time.now () :: !times;
+       Mutex.unlock times_mutex)
+    val root = OS.FileSys.tmpName ()
+    val cache = join root "cache"
+    val _ = remove_tree root
+    val _ = mkdir root
+    fun timed_run options =
+      let
+        val start = Time.now ()
+        val (result, _) = run_schedule options
+      in
+        (result, Time.toReal (Time.- (Time.now (), start)))
+      end
+    fun diffs (a :: (rest as b :: _)) =
+          Time.toReal (Time.- (b, a)) :: diffs rest
+      | diffs _ = []
+    val wanted = Time.toReal gap
+    (* Spaced launches (cache off, so that mk_command runs once each). *)
+    val config = printer_config name (slices "e-gave-up.out") note parser
+    val options = fixture_options [Z3] 4 4 30 1 false "" NONE
+    val (first, ordered) =
+      with_fixtures [(Z3, config)] (fn () =>
+        with_gap gap (fn () =>
+          let
+            val (first, _) = timed_run options
+            val ordered = Portable.sort
+              (fn a => fn b => Time.compare (a, b) <> GREATER) (!times)
+          in
+            (first, ordered)
+          end))
+    val _ = expect "pacing: every slice of the run is launched"
+      (length ordered = 4 andalso length (#slices_run first) = 4)
+    val _ = expect "pacing: consecutive launches are at least the gap apart"
+      (List.all (fn d => d >= wanted - 0.05) (diffs ordered))
+    (* Cache hits: filled without a gap, then read with a long one. *)
+    val cache_options = fixture_options [Z3] 4 4 30 1 true cache NONE
+    val (second, spawns2, elapsed2) =
+      with_fixtures [(Z3, config)] (fn () =>
+        let
+          val _ = with_gap Time.zeroTime (fn () => timed_run cache_options)
+          val _ = hhProver.reset_spawn_count ()
+          val (second, elapsed2) =
+            with_gap (Time.fromSeconds 2) (fn () => timed_run cache_options)
+        in
+          (second, hhProver.spawn_count (), elapsed2)
+        end)
+    val _ = expect "pacing: cache hits launch nothing and never wait"
+      (spawns2 = 0 andalso length (#slices_run second) = 4 andalso
+       List.all #4 (#slices_run second) andalso elapsed2 < 3.0)
+    val _ = remove_tree root
+    (* A stop during the ramp: the first proof ends the run at once and
+       the slices still waiting for their launch slot are never launched. *)
+    val long_gap = Time.fromSeconds 4
+    val stop_config = printer_config name (slices "schedule-truth.out")
+      (fn _ => ()) parser
+    val stop_options = fixture_options [Z3] 4 4 30 1 false "" NONE
+    val ((stopped, elapsed), stop_spawns) =
+      with_fixtures [(Z3, stop_config)] (fn () =>
+        with_gap long_gap (fn () =>
+          let
+            val _ = hhProver.reset_spawn_count ()
+            val r = timed_run stop_options
+          in
+            (r, hhProver.spawn_count ())
+          end))
+    val _ = expect "pacing: a stop during the ramp returns at once"
+      (#stopped stopped = hhSchedule.MaxProofs andalso
+       length (#suggestions stopped) = 1 andalso elapsed < 3.0)
+    val _ = expect "pacing: a stop during the ramp launches nothing more"
+      (stop_spawns = 1)
+    (* An interrupt of the caller during the ramp. *)
+    val int_config = printer_config name (slices "e-gave-up.out")
+      (fn _ => ()) parser
+    val result = ref NONE
+    val (int_elapsed, int_spawns) =
+      with_fixtures [(Z3, int_config)] (fn () =>
+        with_gap (Time.fromSeconds 20) (fn () =>
+          let
+            val _ = hhProver.reset_spawn_count ()
+            val thread = Thread.fork
+              (fn () => result := SOME (#1 (run_schedule stop_options)),
+               [])
+            val _ = await_schedule_test "no slice was launched"
+              (fn () => hhProver.spawn_count () > 0)
+            val _ = OS.Process.sleep (Time.fromMilliseconds 300)
+            val start = Time.now ()
+            val _ = Thread.interrupt thread
+            val _ = await_schedule_test "interrupted run did not finish"
+              (fn () => not (Thread.isActive thread))
+          in
+            (Time.toReal (Time.- (Time.now (), start)),
+             hhProver.spawn_count ())
+          end))
+    val _ = expect "pacing: an interrupt during the ramp returns at once"
+      (int_elapsed < 3.0 andalso
+       (case !result of
+            SOME value => #stopped value = hhSchedule.Interrupted
+          | NONE => false))
+    val _ = expect "pacing: an interrupt during the ramp launches nothing more"
+      (int_spawns = 1)
+  in
+    ()
+  end
+
 fun test_hhSchedule () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       SOME _ => ()
@@ -4890,6 +5017,7 @@ fun test_hhSchedule () =
           val _ = test_schedule_isolation parser
           val _ = test_schedule_timeout parser
           val _ = test_schedule_filter_rankings parser
+          val _ = test_schedule_pacing parser
         in
           expect "scheduler hermetic suite stays within its wall-time bound"
             (Time.toReal (Time.- (Time.now (), started)) < 60.0)

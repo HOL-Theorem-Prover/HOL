@@ -161,6 +161,11 @@ sig
      safe.  (A warning of the export goes to the file that hides the
      output of a replay running at the time.)
 
+     Launch pacing.  Within one run_in two prover launches are at least
+     45 ms apart, in the order of the slots reserved by the workers (a
+     cache hit launches nothing and never waits).  A slice whose wait
+     ends in a stop or the soft deadline is not launched.
+
      Stops.  At the soft deadline no slice is started and the export is
      cancelled, as it has no consumer.  MaxProofs, the hard deadline, an
      interrupt of the caller (also during the launch) and a failed export

@@ -9,7 +9,8 @@
    index), act where an item is handed to the pool ([after_submit]) or
    before it is prepared ([before_prepare]), act at the launch points of
    run_in ([launch_point]) and before a slice worker claims work
-   ([before_claim]), select the export of run_in ([export_choice]) and read
+   ([before_claim]), set the gap between prover launches ([launch_gap]),
+   select the export of run_in ([export_choice]) and read
    the export state of the problems of the last pipelined run
    ([export_states]).  Production leaves the hooks at their defaults. *)
 structure hhSchedule_Test =
@@ -51,6 +52,9 @@ struct
   (* Called on a slice worker before each claim of work, with a test of
      whether the run is stopping. *)
   val before_claim = ref (fn (_ : unit -> bool) => ())
+  (* The gap between two prover launches of a run_in, where not NONE (see
+     launch_gap in hhSchedule.sml). *)
+  val launch_gap = ref (NONE : Time.time option)
 end
 
 structure hhSchedule :> hhSchedule =
@@ -95,6 +99,16 @@ val with_mutex = hhProver.with_mutex
 val elapsed = hhProver.elapsed
 
 fun time_before left right = Time.compare (left, right) = LESS
+
+(* The least time between two prover launches of one run_in.  hhProver
+   starts a prover with posix_spawn, which takes about a millisecond, so
+   without a gap all the provers of a run start at once.  Many wall-clock
+   timed prover strategies then miss their slices when the host is loaded.
+   The fork it replaced took about 45 ms of the HOL heap and so spaced the
+   launches that much, which measured better: the earlier slices of the
+   schedule get the start-up CPU first.  A cache hit launches nothing and
+   is never delayed. *)
+val launch_gap = Time.fromMilliseconds 45
 
 fun time_min left right = if time_before left right then left else right
 
@@ -843,6 +857,10 @@ fun run_in root {options, goal, rankings, progress} =
     val threads = ref ([] : Thread.thread list)
     val launch_point = !hhSchedule_Test.launch_point
     val before_claim = !hhSchedule_Test.before_claim
+    val gap = getOpt (!hhSchedule_Test.launch_gap, launch_gap)
+    (* The earliest time the next prover launch may take (see
+       await_launch_slot). *)
+    val next_launch = ref Time.zeroTime
 
     fun signal () = ConditionVar.broadcast state_changed
 
@@ -908,6 +926,32 @@ fun run_in root {options, goal, rankings, progress} =
       handle exn => (Mutex.unlock state_mutex handle _ => (); raise exn)
 
     fun get_work () = with_locked claim
+
+    (* Reserves the next launch slot (never earlier than gap after the
+       previous one, in the order of the reservations) and waits for it,
+       with the mutex released while waiting and not held by the launch
+       that follows.  False, with the slice not to be launched, when the
+       run is stopping or past its soft deadline by then, like a claim
+       (kill_all and the deadline checks signal state_changed); an
+       interrupt of the wait propagates. *)
+    fun await_launch_slot () =
+      with_locked (fn () =>
+        let
+          val now = Time.now ()
+          val slot = if time_before now (!next_launch) then !next_launch
+                     else now
+          val _ = next_launch := Time.+ (slot, gap)
+          fun wait () =
+            if !stopping orelse not (time_before (Time.now ()) deadline)
+            then false
+            else if not (time_before (Time.now ()) slot) then true
+            else (ignore (ConditionVar.waitUntil
+                            (state_changed, state_mutex,
+                             time_min slot deadline));
+                  wait ())
+        in
+          wait ()
+        end)
 
     fun worker_finished () =
       with_mutex state_mutex (fn () =>
@@ -1158,35 +1202,37 @@ fun run_in root {options, goal, rankings, progress} =
           {timeout = Real.ceil budget,
            problem = problem_path root slice, extra = #extra_opts slice,
            debug_dir = #debug_dir options}
-        val _ = emit (SliceStarted slice)
         val key = if #cache options then cache_key config request else NONE
         val cached = Option.mapPartial (hhCache.lookup options) key
-        val result =
-          case cached of
-              SOME value => value
-            | NONE =>
-                let
-                  val process = hhProver.run_async config request
-                in
-                  case register_running (#kill process) of
-                      NONE =>
-                        (#kill process (); #wait process ())
-                    | SOME id =>
-                        let
-                          val result =
-                            (#wait process ()
-                             handle error =>
-                               (ignore (unregister_running id); raise error))
-                          val cancelled = unregister_running id
-                          val _ = if cancelled then () else
-                            Option.app
-                              (fn key => hhCache.store options key result) key
-                        in
-                          result
-                        end
-                end
+        fun launch () =
+          let
+            val _ = emit (SliceStarted slice)
+            val process = hhProver.run_async config request
+          in
+            case register_running (#kill process) of
+                NONE =>
+                  (#kill process (); #wait process ())
+              | SOME id =>
+                  let
+                    val result =
+                      (#wait process ()
+                       handle error =>
+                         (ignore (unregister_running id); raise error))
+                    val cancelled = unregister_running id
+                    val _ = if cancelled then () else
+                      Option.app
+                        (fn key => hhCache.store options key result) key
+                  in
+                    result
+                  end
+          end
       in
-        note_result slice (Option.isSome cached) result
+        case cached of
+            SOME value =>
+              (emit (SliceStarted slice); note_result slice true value)
+          | NONE =>
+              if await_launch_slot () then note_result slice false (launch ())
+              else ()
       end
 
     fun worker_loop () =
