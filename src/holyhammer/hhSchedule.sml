@@ -807,9 +807,10 @@ fun run_in root {options, goal, rankings, progress} =
     val retries = ref ([] : {origin : string, success : success} list)
     val recovered = ref ([] : string list)
     (* stopping: the run ends and reconstruction with it (MaxProofs, the
-       caller's interrupt, a failed export).  halted: the provers are
-       killed and no prover starts, which the hard deadline does without
-       ending the reconstruction of the proofs found. *)
+       caller's interrupt, a failed export, end_run).  halted: the provers
+       are killed and no prover starts (the same stops, and the hard
+       deadline, which does not end the reconstruction of the proofs
+       found). *)
     val stopping = ref false
     val halted = ref false
     (* When every worker and the producer had finished (see signal). *)
@@ -1262,8 +1263,13 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun take_success () =
       let
+        (* Past the soft deadline a verified proof ends the run: nothing
+           more is taken. *)
         fun wait () =
           if !stopping then NONE
+          else if not (null (!suggestions))
+                  andalso not (time_before (Time.now ()) deadline)
+          then NONE
           else
             case (!recon, !retries) of
                 (item :: rest, _) => (recon := rest; SOME (Fresh item))
@@ -1361,6 +1367,11 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun completed () = with_mutex state_mutex finished_locked
 
+    (* Past the soft deadline with a proof verified, and not yet ended. *)
+    fun verified_pending_end () =
+      with_mutex state_mutex (fn () =>
+        not (!stopping) andalso not (null (!suggestions)))
+
     (* Waits for the run to finish.  The soft deadline cancels the export,
        the hard deadline kills the provers that are left and stops the
        producer, and the wait goes on until the reconstruction has
@@ -1376,6 +1387,8 @@ fun run_in root {options, goal, rankings, progress} =
           val hard = time_before now hard_deadline
           val _ = if soft then () else cancel_exports ()
           val _ = if hard then () else stop_search NONE
+          val _ = if soft orelse not (verified_pending_end ()) then ()
+                  else end_run ()
           val wake = Time.+ (now, Time.fromMilliseconds 100)
           val wake = if soft then time_min deadline wake
                      else if hard then time_min hard_deadline wake

@@ -4986,7 +4986,7 @@ fun test_schedule_deadline_recon sleeper_parser =
     (* A proof is found before the soft deadline, and its reconstruction
        runs past the hard deadline and verifies.  The provers had finished
        before the soft deadline: Exhausted. *)
-    val (ra, loga, elapsed_a) = run [after "0.6" three] false 2 false
+    val (ra, loga, elapsed_a) = run [after "0.3" three] false 2 false
       (fn _ => Delay 4200)
     val _ = expect "deadline: a reconstruction outlives the hard deadline"
       (loga = ["start|c1,c2,c3", "verified|fake c1,c2,c3"] andalso
@@ -5005,7 +5005,7 @@ fun test_schedule_deadline_recon sleeper_parser =
       (loge = ["start|c1,c2,c3", "verified|fake c1,c2,c3"] andalso
        (case killed of
             [(_, szs, time, _)] =>
-              szs <> hhProver.SzsTheorem andalso time > 2.5 andalso
+              szs <> hhProver.SzsTheorem andalso time > 2.0 andalso
               time < 3.9
           | _ => false) andalso elapsed_e > 4.0 andalso
        #stopped re = hhSchedule.Timeout andalso
@@ -5020,7 +5020,7 @@ fun test_schedule_deadline_recon sleeper_parser =
        null (#suggestions rb) andalso #stopped rb = hhSchedule.Timeout andalso
        elapsed_b > 4.4)
     (* Before the soft deadline max_proofs proofs are collected. *)
-    val (rf, logf, _) = run [one, after "0.1" two, after "0.2" three]
+    val (rf, logf, _) = run [one, after "0.3" two, after "0.6" three]
       false 2 false (fn _ => Delay 100)
     val _ = expect "deadline: before the soft deadline several are collected"
       (logf = ["start|a1", "verified|fake a1", "start|b1,b2",
@@ -5029,12 +5029,34 @@ fun test_schedule_deadline_recon sleeper_parser =
     (* Past it the first proof that verifies ends the run, although
        max_proofs is not reached: the second list is dropped and the slow
        prover killed (not waited for until the hard deadline). *)
-    val (rg, logg, elapsed_g) = run [one, after "0.1" two, slow] false 4 false
+    val (rg, logg, _) = run [one, after "0.3" two, slow] false 4 false
       (fn _ => Delay 1500)
+    val slow_time =
+      case List.filter (fn (_, _, time, _) => time > 0.5) (#slices_run rg) of
+          [(_, _, time, _)] => time
+        | _ => 100.0
     val _ = expect "deadline: past the soft deadline the first proof ends it"
       (logg = ["start|a1", "verified|fake a1"] andalso
        length (#suggestions rg) = 1 andalso
-       #stopped rg = hhSchedule.Timeout andalso elapsed_g < 2.6)
+       #stopped rg = hhSchedule.Timeout andalso slow_time < 2.5)
+    (* With max_proofs 1 the late proof ends the run as MaxProofs. *)
+    val (rl, logl, _) = run [one] false 1 false (fn _ => Delay 1500)
+    val _ = expect "deadline: a late proof reaches max_proofs 1"
+      (logl = ["start|a1", "verified|fake a1"] andalso
+       length (#suggestions rl) = 1 andalso
+       #stopped rl = hhSchedule.MaxProofs)
+    (* A proof verified before the soft deadline ends the run at it, with
+       max_proofs not reached: the reconstruction in progress is not cut,
+       the one queued is dropped. *)
+    val (rh, logh, elapsed_h) =
+      run [one, after "0.3" two, after "0.6" three] false 4 false
+        (fn lemmas => if length lemmas = 1 then Delay 100
+                      else DelayFail 1500)
+    val _ = expect "deadline: an earlier proof ends the run at the deadline"
+      (logh = ["start|a1", "verified|fake a1", "start|b1,b2"] andalso
+       length (#suggestions rh) = 1 andalso
+       #stopped rh = hhSchedule.Exhausted andalso
+       elapsed_h > 1.6 andalso elapsed_h < 2.6)
     (* A drop-one variant is derived, not found by a prover: when the list
        fails before the soft deadline the variants are tried (the first
        verifies), and past it they are dropped. *)

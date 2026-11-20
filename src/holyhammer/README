@@ -58,12 +58,13 @@ export that no slice waits for any more is cancelled; slices already started
 keep their grace period, and at the hard deadline the provers still running
 are killed.  Reconstruction is not bounded by the timeout: the proofs the
 provers found are all reconstructed, in the order they arrived, so a call
-can return after the timeout.  Before the soft deadline `max_proofs`
-applies: the run ends when that many proofs verified.  Past it the first
-proof that verifies ends the run, and until one does every list is
-reconstructed or fails.  Each replay takes about `preplay_timeout` at most,
-with its compilation; a list costs about two, its minimisation, which stops
-at the soft deadline and keeps the shortest verified list, and a final
+can return after the timeout.  `max_proofs` ends the run whenever that many
+proofs have verified; past the soft deadline the first verified proof also
+ends it (a proof verified before the deadline included), kills the provers
+still running and drops the lists still queued.  Until one has verified, the
+lists are reconstructed until one does or all fail.  Each replay takes about
+`preplay_timeout` at most, with its compilation; a list costs about two, its
+minimisation, which stops at the soft deadline and keeps the shortest verified list, and a final
 replay.  An interrupt and a failed export stop
 everything at once, `max_proofs` stops the provers and the export (a replay is
 not cut); the provers are killed, the exports cancelled and every thread has

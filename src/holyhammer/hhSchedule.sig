@@ -167,12 +167,13 @@ sig
      hard deadline (soft plus grace) the provers still running are killed
      and the producer stopped.  The reconstruction is not bounded by
      either: every list a prover has found is reconstructed, in the order
-     of arrival, so a call can return after the timeout.  Before the soft
-     deadline max_proofs applies: MaxProofs ends the run when that many
-     proofs have verified.  Past it the first proof that verifies ends
-     the run (the provers still running are killed, the lists still
-     queued dropped); until one does, the reconstruction goes on until
-     every list has been reconstructed or has failed.  Each replay takes
+     of arrival, so a call can return after the timeout.  MaxProofs ends
+     the run whenever max_proofs proofs have verified; past the soft
+     deadline the first verified proof also ends it (the provers still
+     running are killed, the lists still queued dropped), including one
+     verified before the deadline.  Until a proof has verified, the
+     reconstruction goes on until every list has been reconstructed or
+     has failed.  Each replay takes
      about preplay_timeout at most, with its compilation; a list costs
      about two (the list, then without its permutative equations), its
      minimisation, which stops at the soft deadline and keeps the
