@@ -148,18 +148,12 @@ fun ptype_compare ((order, patterns), (order', patterns')) =
 fun empty_pconst_table () = dempty String.compare
 
 fun add_pconst_to_table (name, ptype) table =
-  let
-    val old =
-      case Redblackmap.peek (table, name) of
-          SOME ptypes => ptypes
-        | NONE => []
-    val ptypes =
-      if List.exists (fn old_ptype => ptype_eq (ptype, old_ptype)) old
-      then old
-      else ptype :: old
-  in
-    dadd name ptypes table
-  end
+  case Redblackmap.peek (table, name) of
+      NONE => dadd name [ptype] table
+    | SOME old =>
+        if List.exists (fn old_ptype => ptype_eq (ptype, old_ptype)) old
+        then table
+        else dadd name (ptype :: old) table
 
 fun const_ptype tm =
   let
@@ -448,11 +442,12 @@ fun fact_weight fudge stature frequency_table rel_table chained_table
     val (relevant, rest) =
       List.partition (pconst_hyper_mem match_ptype rel_table) fact_pconsts
     val irrelevant =
-      List.filter
-        (not o pconst_hyper_mem swapped_match rel_table) rest
+      if null relevant then []
+      else List.filter (not o pconst_hyper_mem swapped_match rel_table) rest
   in
-    if null relevant then 0.0
-    else if List.all (odd_const_name o fst) (relevant @ irrelevant) then 0.0
+    if null relevant orelse
+       (List.all (odd_const_name o fst) relevant andalso
+        List.all (odd_const_name o fst) irrelevant) then 0.0
     else
       let
         val irrelevant' =
@@ -695,13 +690,17 @@ fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
       (if could_benefit_from_ext accepted then [ext_thmid] else []) @
       (if uses_set then special_set_thmids else [])
     fun wanted_thmid thmid = List.exists (fn item => item = thmid) wanted
-    val add = take max_facts
-      (List.filter (wanted_thmid o #thmid) all_facts)
-    val without = List.filter (not o wanted_thmid o #thmid) accepted
-    val trimmed = take (max_facts - length add) without
-    val (prefix, after) = split_at (#special_fact_index fudge) trimmed
   in
-    prefix @ add @ after
+    if null wanted then accepted
+    else
+      let
+        val add = first_test_n (wanted_thmid o #thmid) max_facts all_facts
+        val without = List.filter (not o wanted_thmid o #thmid) accepted
+        val trimmed = take (max_facts - length add) without
+        val (prefix, after) = split_at (#special_fact_index fudge) trimmed
+      in
+        prefix @ add @ after
+      end
   end
 
 fun mepo_rank_with_fudge (fudge : fudge)
@@ -716,14 +715,10 @@ fun mepo_rank_with_fudge (fudge : fudge)
             add_pconsts_in_term current_theory term table)
           (empty_pconst_table ()) assumptions
       val goal_table0 =
-        foldl
-          (fn (term, table) =>
-            add_pconsts_in_term current_theory term table)
-          (empty_pconst_table ()) (assumptions @ [conclusion])
-      fun has_significant_pconst table =
-        List.exists (not o odd_const_name o fst) (pconsts_of_table table)
+        add_pconsts_in_term current_theory conclusion chained_table
       val goal_table =
-        if not (has_significant_pconst goal_table0) then
+        if not (Redblackmap.existsi
+          (fn (name, _) => not (odd_const_name name)) goal_table0) then
           foldl
             (fn (fact, table) =>
               if #theory fact = current_theory then
@@ -762,42 +757,46 @@ fun mepo_rank_with_fudge (fudge : fudge)
                          remaining_max = remaining,
                          candidates = candidates}
                     val accepted = map (#1 o #1) accepted_candidates
-                    val rel_table' =
-                      foldl
-                        (fn (fact, table) => add_fact_pconsts fact table)
-                        rel_table accepted
-                    (* Only names the accepted facts add to can change. *)
-                    val changed = List.filter
-                      (table_name_changed rel_table rel_table')
-                      (mk_fast_set String.compare
-                        (map #1 (List.concat (map #pconsts accepted))))
-                    val changed_set = Redblackset.addList
-                      (Redblackset.empty String.compare, changed)
-                    fun dirty fact =
-                      not (null changed) andalso
-                      List.exists
-                        (fn (name, _) =>
-                          Redblackset.member (changed_set, name))
-                        (#pconsts fact)
-                    fun reconsider ((fact, weight), (hope, lost)) =
-                      if dirty fact then ((fact, NONE) :: hope, lost)
-                      else (hope, (fact, weight) :: lost)
-                    val (dirty_rejects, clean_rejects) =
-                      foldl reconsider ([], []) (rejects @ hopeless')
-                    val overflow = map
-                      (fn ((fact, _), weight) =>
-                        (fact, if dirty fact then NONE else SOME weight))
-                      unaccepted
-                    val next_hopeful = overflow @ dirty_rejects
-                    val threshold' =
-                      1.0 - (1.0 - threshold) *
-                        Math.pow (decay, Real.fromInt (length accepted))
-                    val remaining' = remaining - length accepted
+                    val accepted_count = length accepted
+                    val remaining' = remaining - accepted_count
                   in
-                    accepted @
-                    (if remaining' = 0 then []
-                     else iter (iteration + 1) remaining' threshold'
-                       rel_table' clean_rejects next_hopeful)
+                    if remaining' = 0 then accepted
+                    else
+                      let
+                        val rel_table' =
+                          foldl
+                            (fn (fact, table) => add_fact_pconsts fact table)
+                            rel_table accepted
+                        (* Only names the accepted facts add to can change. *)
+                        val changed = List.filter
+                          (table_name_changed rel_table rel_table')
+                          (mk_fast_set String.compare
+                            (map #1 (List.concat (map #pconsts accepted))))
+                        val changed_set = Redblackset.addList
+                          (Redblackset.empty String.compare, changed)
+                        fun dirty fact =
+                          not (null changed) andalso
+                          List.exists
+                            (fn (name, _) =>
+                              Redblackset.member (changed_set, name))
+                            (#pconsts fact)
+                        fun reconsider ((fact, weight), (hope, lost)) =
+                          if dirty fact then ((fact, NONE) :: hope, lost)
+                          else (hope, (fact, weight) :: lost)
+                        val (dirty_rejects, clean_rejects) =
+                          foldl reconsider ([], []) (rejects @ hopeless')
+                        val overflow = map
+                          (fn ((fact, _), weight) =>
+                            (fact, if dirty fact then NONE else SOME weight))
+                          unaccepted
+                        val next_hopeful = overflow @ dirty_rejects
+                        val threshold' =
+                          1.0 - (1.0 - threshold) *
+                            Math.pow (decay, Real.fromInt accepted_count)
+                      in
+                        accepted @ iter (iteration + 1) remaining' threshold'
+                          rel_table' clean_rejects next_hopeful
+                      end
                   end
             | scan candidates rejects ((fact, cached) :: rest) =
                 let

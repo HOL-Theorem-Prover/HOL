@@ -611,7 +611,7 @@ fun append_journal path entry =
     ()
   end
 
-fun read_journal path =
+fun fold_journal path add initial =
   if OS.FileSys.access (path, [OS.FileSys.A_READ]) then
     let
       (* A torn line can appear anywhere, not just at the end: a resume
@@ -630,12 +630,28 @@ fun read_journal path =
                     | error => raise Fail
                         ("unsupported hhEval journal entry in " ^ path ^
                          ": " ^ General.exnMessage error))
+      val input = HOLFileSys.openIn path
+      fun loop acc =
+        case HOLFileSys.inputLine input of
+            NONE => acc
+          | SOME line =>
+              if Substring.isEmpty
+                   (Substring.dropl Char.isSpace (Substring.full line))
+              then loop acc
+              else
+                case parse line of
+                    NONE => loop acc
+                  | SOME entry => loop (add (entry, acc))
+      val result = loop initial
+        handle error => (HOLFileSys.closeIn input; raise error)
     in
-      List.mapPartial parse
-        (List.filter (fn line => trim line <> "") (read_lines path))
+      HOLFileSys.closeIn input;
+      result
     end
-  else []
-  handle OS.SysErr _ => [] | IO.Io _ => []
+  else initial
+  handle OS.SysErr _ => initial | IO.Io _ => initial
+
+fun read_journal path = List.rev (fold_journal path (op ::) [])
 
 (* Environment-level failures (no prover binary, prover would not start)
    say nothing about the cell, so they must not mark it done: otherwise a
@@ -649,8 +665,8 @@ fun add_completed entry pairs =
   else Binaryset.add (pairs, (#goal_id entry, #cond entry))
 
 fun read_completed path =
-  List.foldl (fn (entry, pairs) => add_completed entry pairs)
-    (Binaryset.empty cell_key_compare) (read_journal path)
+  fold_journal path (fn (entry, pairs) => add_completed entry pairs)
+    (Binaryset.empty cell_key_compare)
 
 fun cell_completed pairs pair = Binaryset.member (pairs, pair)
 
@@ -824,15 +840,15 @@ fun journal_files expdir =
 
 fun cell_key entry = (#goal_id entry, #cond entry)
 
-fun latest_cells entries =
+fun latest_cells reversed_entries =
   let
     fun add_latest (entry, (seen, cells)) =
       let val key = cell_key entry in
         if Binaryset.member (seen, key) then (seen, cells)
         else (Binaryset.add (seen, key), entry :: cells)
       end
-    val (_, cells) = List.foldr add_latest
-      (Binaryset.empty cell_key_compare, []) entries
+    val (_, cells) = List.foldl add_latest
+      (Binaryset.empty cell_key_compare, []) reversed_entries
   in
     List.rev cells
   end
@@ -1026,20 +1042,35 @@ fun schedule_report (name, cells) : schedule_report =
 
 fun report_data entries : report_data =
   let
-    val prover_groups = group_by portfolio_key (List.filter prover_cell entries)
-    val schedule_groups = group_by #cond (List.filter sched_cell entries)
+    val conditions = map condition_report (group_by #cond entries)
+    val (prover_entries, schedule_entries) = List.partition prover_cell entries
+    val portfolios =
+      map portfolio_report (group_by portfolio_key prover_entries)
+    val schedule_groups = group_by #cond schedule_entries
+    val condition_metrics = List.foldl
+      (fn ({name, cells, metrics, ...} : condition_report, lookup) =>
+        if List.all sched_cell cells then
+          Redblackmap.insert (lookup, name, metrics)
+        else lookup)
+      (Redblackmap.mkDict String.compare) conditions
+    val portfolio_metrics = List.foldl
+      (fn ({key, metrics, ...} : portfolio_report, lookup) =>
+        Redblackmap.insert (lookup, key, metrics))
+      (Redblackmap.mkDict String.compare) portfolios
     fun comparison (name, cells) =
       let val key = portfolio_key (hd cells) in
-        case List.find (fn (other, _) => other = key) prover_groups of
-            NONE => NONE
-          | SOME (_, union) =>
-              SOME {name = name, key = key, schedule = make_metrics cells,
-                    union = make_metrics union}
+        Option.map (fn union =>
+          {name = name, key = key,
+           schedule = (case Redblackmap.peek (condition_metrics, name) of
+                           SOME metrics => metrics
+                         | NONE => make_metrics cells),
+           union = union})
+          (Redblackmap.peek (portfolio_metrics, key))
       end
   in
-    {conditions = map condition_report (group_by #cond entries),
+    {conditions = conditions,
      contributions = slice_contributions entries,
-     portfolios = map portfolio_report prover_groups,
+     portfolios = portfolios,
      schedules = map schedule_report schedule_groups,
      comparisons = List.mapPartial comparison schedule_groups,
      theories = map (fn (theory, cells) =>
@@ -1284,8 +1315,9 @@ fun report_markdown (data : report_data) =
 fun report expdir =
   let
     val paths = map (join (join expdir "journal")) (journal_files expdir)
-    val entries = List.filter regular_cell
-      (latest_cells (List.concat (map read_journal paths)))
+    val reversed_entries = List.foldl (fn (path, acc) =>
+      fold_journal path (op ::) acc) [] paths
+    val entries = List.filter regular_cell (latest_cells reversed_entries)
     val data = report_data entries
     val _ = ensure_dir expdir
   in
@@ -1372,32 +1404,50 @@ fun append_theory_error path expdir thy message =
 fun journal_theory_error expdir thy message =
   append_theory_error (journal_path expdir thy) expdir thy message
 
-(* Each theorem's pool is its theory's older theorems followed by every
-   theorem of the earlier theories.  Pools are only ever used as sets, so
-   they all share one list of the earlier theories' ids as their tail. *)
-fun chainy_pools thy =
+(* Share the inventories across goals. Dependency selection only needs
+   membership, while ranking the pool needs its names. *)
+fun chainy_for thy theorems =
   let
     val order = hhExportLib.sorted_ancestry [thy]
     val earlier_theories =
       if List.exists (fn name => name = thy) order then
         hhExportLib.before_elem thy order
       else order
-    fun qualify theory (name, _) = theory ^ "Theory." ^ name
+    fun qualify theory name = theory ^ "Theory." ^ name
     val earlier_ids = List.concat (map (fn theory =>
-      map (qualify theory) (DB.thms theory)) earlier_theories)
-    fun one (name, thm) =
-      (name,
-       map (qualify thy)
-         (List.filter (hhExportLib.older_than thm) (DB.thms thy)) @
-       earlier_ids)
+      map (qualify theory o #1) (DB.thms theory)) earlier_theories)
+    val ancestors = Redblackset.fromList String.compare earlier_ids
+    val local_facts =
+      if null theorems then []
+      else map (fn (name, thm) =>
+        (qualify thy name, mlThmData.depnumber_of_thm thm)) (DB.thms thy)
+    fun add_fact ((name, age), ages) =
+      let val age = case Redblackmap.peek (ages, name) of
+                        NONE => age
+                      | SOME other => Int.min (age, other)
+      in Redblackmap.insert (ages, name, age) end
+    val oldest_facts = List.foldl add_fact
+      (Redblackmap.mkDict String.compare) local_facts
+    (* Goals with duplicate names use the first theorem's age. *)
+    val goal_ages = if null local_facts then Redblackmap.mkDict String.compare
+      else List.foldr (fn ((name, thm), dict) =>
+        Redblackmap.insert (dict, name, mlThmData.depnumber_of_thm thm))
+        (Redblackmap.mkDict String.compare) theorems
+    fun earlier name = Redblackset.member (ancestors, name)
+    fun facts name =
+      case Redblackmap.peek (goal_ages, name) of
+          NONE => {pool = fn () => earlier_ids, permits = earlier}
+        | SOME age =>
+            {pool = fn () => List.foldr (fn ((name, fact_age), acc) =>
+               if fact_age < age then name :: acc else acc)
+               earlier_ids local_facts,
+             permits = fn fact => earlier fact orelse
+               (case Redblackmap.peek (oldest_facts, fact) of
+                    NONE => false
+                  | SOME fact_age => fact_age < age)}
   in
-    map one (DB.theorems thy)
+    facts
   end
-
-fun lookup_pool name pools =
-  case List.find (fn (other, _) => other = name) pools of
-      SOME (_, pool) => pool
-    | NONE => []
 
 fun restrict_features_to_pool pool features =
   let val permitted = Redblackset.fromList String.compare pool in
@@ -1410,8 +1460,7 @@ fun select_knn thy pool count goal =
     val (weights, features) = hhLearn.create_thmdata_for thy
     val permitted = restrict_features_to_pool pool features
   in
-    mlNearestNeighbor.thmknn_wdep (weights, permitted) count
-      (mlFeature.fea_of_goal true goal)
+    hhLearn.rank_knn (weights, permitted) count goal
   end
 
 fun select_filter thy filter pool count goal =
@@ -1423,15 +1472,9 @@ fun select_filter thy filter pool count goal =
       {filter = filter, pool = SOME pool, goal = goal, n = count}
   end
 
-fun selected_premises_at thy condition pool thm goal knn_count =
+fun selected_premises_at thy condition {pool, dependencies} goal knn_count =
   case #selector condition of
-      Deps =>
-        let val dependencies = #2 (mlThmData.intactdep_of_thm thm) in
-          case #regime condition of
-              Bushy => dependencies
-            | Chainy => List.filter (fn name =>
-                List.exists (fn allowed => allowed = name) pool) dependencies
-        end
+      Deps => dependencies
     | Knn count => select_knn thy pool
         (case knn_count of NONE => count | SOME maximum => maximum) goal
     | Mepo count => select_filter thy "mepo" pool count goal
@@ -1439,9 +1482,6 @@ fun selected_premises_at thy condition pool thm goal knn_count =
     | Mesh count => select_filter thy "mesh" pool count goal
     | PerSlice => raise Fail
         "invalid hhEval premise selection: perslice requires Sched"
-
-fun selected_premises thy condition pool thm goal =
-  selected_premises_at thy condition pool thm goal NONE
 
 fun json_string_list values =
   JSONPrinter.valueToString (JSON.ARRAY (map JSON.STRING values))
@@ -1511,7 +1551,7 @@ fun version_of_prover prover =
       NONE => NONE
     | SOME {version, ...} => version
 
-fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
+fun schedule_cell_entry expdir thy (name, thm) facts condition parameters =
   let
     val goal = dest_thm thm
     val options = schedule_options condition parameters
@@ -1519,19 +1559,19 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
     val maximum = max_schedule_facts schedule
     val rankings =
       case #selector condition of
-          PerSlice => per_slice_rankings thy schedule pool goal
+          PerSlice => per_slice_rankings thy schedule (#pool facts) goal
         | _ =>
             let
               (* Legacy schedule selectors share one longest-first ranking.
                  In particular, chainy kNN uses the schedule maximum. *)
-              val premises = selected_premises_at thy condition pool thm
+              val premises = selected_premises_at thy condition facts
                 goal (SOME maximum)
             in
               rankings_for_schedule schedule premises
             end
-    val proofs = ref
-      ([] : (hhProver.slice * string list) list)
-    fun progress (hhSchedule.ProofFound proof) = proofs := !proofs @ [proof]
+    val first_proof = ref (NONE : (hhProver.slice * string list) option)
+    fun progress (hhSchedule.ProofFound proof) =
+          if isSome (!first_proof) then () else first_proof := SOME proof
       | progress _ = ()
     val result = hhSchedule.run
       {options = options, goal = goal,
@@ -1569,8 +1609,8 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
             (SOME (#lemmas suggestion)) (SOME true) (SOME "metis")
             (SOME (#t_recon suggestion)) (SOME (#stac suggestion)) NONE
       | [] =>
-          (case !proofs of
-               (slice, lemmas) :: _ =>
+          (case !first_proof of
+               SOME (slice, lemmas) =>
                  let
                    val elapsed =
                      case slice_result slice of
@@ -1582,7 +1622,7 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
                      (SOME false) (SOME "metis") NONE NONE
                      (SOME "ATP proof found but reconstruction failed")
                  end
-             | [] =>
+             | NONE =>
                  (case #slices_run result of
                       (slice, status, elapsed, _) :: _ =>
                         finish NONE (SOME (#prover slice)) (#nfacts slice)
@@ -1594,10 +1634,10 @@ fun schedule_cell_entry expdir thy (name, thm) pool condition parameters =
                         (SOME "schedule contained no runnable slices")))
   end
 
-fun prover_cell_entry expdir thy (name, thm) pool condition prover =
+fun prover_cell_entry expdir thy (name, thm) facts condition prover =
   let
     val goal = dest_thm thm
-    val premises = selected_premises thy condition pool thm goal
+    val premises = selected_premises_at thy condition facts goal NONE
     val named_premises = mlThmData.thml_of_namel premises
     val nfacts = length named_premises
     val directory = join (join (join expdir "pb") (safe_component thy))
@@ -1629,14 +1669,14 @@ fun prover_cell_entry expdir thy (name, thm) pool condition prover =
       (#used_axioms result) (#version result) outcome
   end
 
-fun run_cell expdir thy theorem pool condition =
+fun run_cell expdir thy theorem facts condition =
   let
     val entry =
       case #engine condition of
           Sched parameters =>
-            schedule_cell_entry expdir thy theorem pool condition parameters
+            schedule_cell_entry expdir thy theorem facts condition parameters
         | Prover prover =>
-            prover_cell_entry expdir thy theorem pool condition prover
+            prover_cell_entry expdir thy theorem facts condition prover
   in
     append_journal (journal_path expdir thy) entry
   end
@@ -1663,41 +1703,67 @@ fun evaluation_error_cell expdir thy name goal condition message =
 fun eval_loaded_theory expdir thy =
   let
     val completed = read_completed (journal_path expdir thy)
-    val pools =
+    val theorems = DB.theorems thy
+    val chainy_data =
       if List.exists (fn condition => #regime condition = Chainy)
          (!worker_conditions)
-      then SOME (chainy_pools thy)
+      then SOME (chainy_for thy theorems)
            handle Interrupt => raise Interrupt | error => NONE
-      else SOME []
+      else SOME (fn _ => {pool = fn () => [], permits = fn _ => false})
     fun evaluate (name, thm) =
       let
         val id = goal_id thy name
-        val (dependencies_ok, intact_deps) =
-          mlThmData.intactdep_of_thm thm
-        fun one condition =
-          if cell_completed completed (id, #cond_id condition) then ()
-          else
-            case pools of
-                NONE => evaluation_error_cell expdir thy name
-                  (list_mk_imp (dest_thm thm)) condition
-                  "could not construct the chainy premise pool"
-              | SOME pool_map =>
-                  let val pool = lookup_pool name pool_map in
-                    if #regime condition = Bushy andalso not dependencies_ok
-                    then broken_deps_cell expdir thy name
-                      (list_mk_imp (dest_thm thm)) condition
-                    else run_cell expdir thy (name, thm)
-                      (case #regime condition of
-                           Bushy => intact_deps
-                         | Chainy => pool)
-                      condition
-                  end
+        val pending = if worker_selects id then
+            List.filter (fn condition =>
+              not (cell_completed completed (id, #cond_id condition)))
+              (!worker_conditions)
+          else []
       in
-        if worker_selects id then app one (!worker_conditions)
-        else ()
+        if null pending then ()
+        else
+          let
+            val (dependencies_ok, intact_deps) =
+              mlThmData.intactdep_of_thm thm
+            fun evaluate_cells facts_for =
+              let
+                val {pool, permits} = facts_for name
+                val chainy = List.filter
+                  (fn condition => #regime condition = Chainy) pending
+                val chainy_pool =
+                  if List.exists (fn condition => #selector condition <> Deps)
+                       chainy then pool () else []
+                val chainy_dependencies =
+                  if List.exists (fn condition => #selector condition = Deps)
+                       chainy then List.filter permits intact_deps
+                  else []
+                fun one condition =
+                  case #regime condition of
+                      Bushy =>
+                        if dependencies_ok then
+                          run_cell expdir thy (name, thm)
+                            {pool = intact_deps, dependencies = intact_deps}
+                            condition
+                        else broken_deps_cell expdir thy name
+                          (list_mk_imp (dest_thm thm)) condition
+                    | Chainy =>
+                        run_cell expdir thy (name, thm)
+                          {pool = chainy_pool,
+                           dependencies = chainy_dependencies}
+                          condition
+              in
+                app one pending
+              end
+          in
+            case chainy_data of
+                NONE => app (fn condition =>
+                  evaluation_error_cell expdir thy name
+                  (list_mk_imp (dest_thm thm)) condition
+                  "could not construct the chainy premise pool") pending
+              | SOME facts_for => evaluate_cells facts_for
+          end
       end
   in
-    app evaluate (DB.theorems thy)
+    app evaluate theorems
   end
 
 fun eval_thy expdir thy =
@@ -2145,7 +2211,8 @@ fun run_smoke {expdir, timeout} =
           val condition = smoke_condition timeout kind
         in
           if dependencies_ok then
-            run_cell expdir thy (name, thm) dependencies condition
+            run_cell expdir thy (name, thm)
+              {pool = dependencies, dependencies = dependencies} condition
           else broken_deps_cell expdir thy name
             (list_mk_imp (dest_thm thm)) condition
         end
@@ -2156,6 +2223,8 @@ fun run_smoke {expdir, timeout} =
           | NONE => raise Fail "smoke suite has no schedule cell"
       val sched_thm = DB.fetch sched_thy sched_name
       val (_, sched_dependencies) = mlThmData.intactdep_of_thm sched_thm
+      val sched_facts = {pool = sched_dependencies,
+                         dependencies = sched_dependencies}
       val sched_condition = smoke_condition timeout SmokeSched
       val sched_parameters =
         case #engine sched_condition of
@@ -2165,7 +2234,7 @@ fun run_smoke {expdir, timeout} =
          results must not enter the cache.  Prime the entire schedule with
          an unreachable proof limit before testing a process-free replay. *)
       val primed = schedule_cell_entry expdir sched_thy
-        (sched_name, sched_thm) sched_dependencies sched_condition
+        (sched_name, sched_thm) sched_facts sched_condition
         {provers = #provers sched_parameters,
          slices = #slices sched_parameters, cores = #cores sched_parameters,
          max_proofs = #slices sched_parameters + 1,
@@ -2176,7 +2245,7 @@ fun run_smoke {expdir, timeout} =
         else raise Fail "HolyHammer schedule cache priming did not finish"
       val _ = hhProver.reset_spawn_count ()
       val repeated = schedule_cell_entry expdir sched_thy
-        (sched_name, sched_thm) sched_dependencies sched_condition
+        (sched_name, sched_thm) sched_facts sched_condition
         sched_parameters
       val repeat_spawns = hhProver.spawn_count ()
       val _ =

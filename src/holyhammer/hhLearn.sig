@@ -135,6 +135,8 @@ sig
   val mash_details : context ->
     {pool : mlThmData.thmid list option, goal : Abbrev.goal,
      max_facts : int} -> mash_result
+  val rank_knn : mlThmData.thmdata -> int -> Abbrev.goal ->
+    mlThmData.thmid list
   val rank : context ->
     {filter : string, pool : mlThmData.thmid list option,
      goal : Abbrev.goal, n : int} -> mlThmData.thmid list

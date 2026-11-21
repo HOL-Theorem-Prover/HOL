@@ -34,15 +34,7 @@ struct
           | GREATER => old :: insert_type ty rest
 
   fun lookup name table =
-    case List.find (fn (other, _) => other = name) table of
-        SOME (_, value) => value
-      | NONE => []
-
-  fun has_name name table = List.exists (fn (other, _) => other = name) table
-
-  fun update name value table =
-    map (fn (other, old) => if other = name then (other, value)
-                            else (other, old)) table
+    Option.getOpt (Redblackmap.peek (table, name), [])
 
   fun schematic_consts tm =
     let
@@ -80,58 +72,64 @@ struct
      premise match a goal occurrence such as count_occ : 'a -> ... at the
      goal's own 'a; Type.match_type drops identity bindings, so an
      unrenamed premise could never be instantiated there. *)
-  fun rename_apart names rigid theorem =
+  fun rename_apart names rigid theorem tvars =
     let
-      val clashing = List.filter (fn ty => mem ty rigid)
-        (Term.type_vars_in_term theorem)
+      val clashing = List.filter (fn ty => mem ty rigid) tvars
     in
-      if null clashing then theorem
-      else Term.inst (map (fn ty =>
-        {redex = ty, residue = names ()}) clashing) theorem
+      if null clashing then (theorem, tvars)
+      else
+        let
+          val renamed = Term.inst (map (fn ty =>
+            {redex = ty, residue = names ()}) clashing) theorem
+        in
+          (renamed, Term.type_vars_in_term renamed)
+        end
     end
 
   fun classify names rigid rank (nickname, original) =
-    let
-      val theorem = rename_apart names rigid original
-      val tvars = Term.type_vars_in_term theorem
-      val schematics = schematic_consts theorem
-      val prioritized = Listsort.sort (fn ((left_name, left_ty),
-          (right_name, right_ty)) =>
-        case Int.compare (length (Type.type_vars right_ty),
-                          length (Type.type_vars left_ty)) of
-            EQUAL =>
-              (case String.compare (left_name, right_name) of
-                   EQUAL => Type.compare (left_ty, right_ty)
-                 | order => order)
-          | order => order) schematics
-    in
-      if null tvars then Ground (nickname, theorem)
-      else if not (groundable tvars schematics) then Ignored
-      else Schematic {
-        nickname = nickname,
-        theorem = theorem,
-        tvars = tvars,
-        schematics = prioritized,
-        initial_round = if rank < privileged_facts then 1 else 2,
-        instances = ref []
-      }
-    end
+    case Term.type_vars_in_term original of
+        [] => Ground (nickname, original)
+      | original_vars =>
+          let
+            val (theorem, tvars) = rename_apart names rigid original
+              original_vars
+            val schematics = schematic_consts theorem
+            fun compare ((left_name, left_ty), (right_name, right_ty)) =
+              case Int.compare (length (Type.type_vars right_ty),
+                                length (Type.type_vars left_ty)) of
+                  EQUAL =>
+                    (case String.compare (left_name, right_name) of
+                         EQUAL => Type.compare (left_ty, right_ty)
+                       | order => order)
+                | order => order
+          in
+            if not (groundable tvars schematics) then Ignored
+            else Schematic {
+              nickname = nickname,
+              theorem = theorem,
+              tvars = tvars,
+              schematics = sort compare schematics,
+              initial_round = if rank < privileged_facts then 1 else 2,
+              instances = ref []
+            }
+          end
 
   fun schema_names infos =
     let
       fun add (Schematic {schematics, ...}, names) =
             List.foldl (fn ((name, _), result) =>
-              if has_name name result then result else (name, []) :: result)
+              if Redblackmap.inDomain (result, name) then result
+              else Redblackmap.insert (result, name, []))
               names schematics
         | add (_, names) = names
     in
-      List.rev (List.foldl add [] infos)
+      List.foldl add (Redblackmap.mkDict String.compare) infos
     end
 
   fun add_ground (name, ty) table =
-    if has_name name table then
-      update name (insert_type ty (lookup name table)) table
-    else table
+    case Redblackmap.peek (table, name) of
+        SOME tys => Redblackmap.insert (table, name, insert_type ty tys)
+      | NONE => table
 
   fun is_ground rigid ty =
     List.all (fn tvar => mem tvar rigid) (Type.type_vars ty)
@@ -157,9 +155,9 @@ struct
       add_ground constant result) tm table
 
   fun merge_grounds left right =
-    map (fn (name, tys) =>
-      (name, List.foldl (fn (ty, result) => insert_type ty result)
-        tys (lookup name right))) left
+    Redblackmap.map (fn (name, tys) =>
+      List.foldl (fn (ty, result) => insert_type ty result)
+        tys (lookup name right)) left
 
   fun type_size ty = Type.type_size ty
 
@@ -301,7 +299,7 @@ struct
             let
               val (old, fresh, require_new) =
                 if round = initial_round then
-                  ([], merged, false)
+                  (Redblackmap.mkDict String.compare, merged, false)
                 else (known, new, true)
               val room = Int.min (max_thm_instances - length (!instances),
                 !remaining)
@@ -409,14 +407,11 @@ struct
       val infos = Portable.mapi (classify (#fresh pool) rigid) premises
       val names = schema_names infos
       val initial =
-        if null names then names
+        if Redblackmap.numItems names = 0 then names
         else
           let val index = #force (#index pool) () in
             add_premise_grounds rigid infos
-              (map (fn (name, _) =>
-                      (name, Option.getOpt (Redblackmap.peek (index, name),
-                                            [])))
-                   names)
+              (Redblackmap.map (fn (name, _) => lookup name index) names)
           end
       val remaining = ref (Int.max (0, max_new_instances))
 

@@ -196,11 +196,12 @@ fun build_dep_table dependencies facts =
       else dadd thmid (intact_dependencies (dependencies thmid)) table)
     (dempty String.compare) facts
 
-(* mlThmData.intactdep_of_thm on a theorem's raw dependency list, with
-   each theory's depnumber index built once instead of rescanning the
-   theory per dependency.  A theory with a theorem lacking a dependency
-   number keeps the original scan, which raises exactly where it did. *)
-fun intact_dependency_resolver () =
+val raw_dependencies = Dep.depidl_of o Tag.dep_of o Thm.tag
+
+(* Resolve the same entries as mlThmData, building each theory's index
+   once. A theory with an unsaved theorem keeps the original scan, which
+   raises if it reaches that theorem before finding the dependency. *)
+fun dependency_resolver () =
   let
     val indices = ref (dempty String.compare)
     fun build theory =
@@ -229,22 +230,21 @@ fun intact_dependency_resolver () =
       in
         case found of
             SOME name =>
-              if can (DB.fetch theory) name andalso
-                 uptodate_thm (DB.fetch theory name)
-              then SOME (theory ^ "Theory." ^ name)
-              else NONE
+              (case total (DB.fetch theory) name of
+                   SOME theorem =>
+                     if uptodate_thm theorem
+                     then SOME (theory ^ "Theory." ^ name)
+                     else NONE
+                 | NONE => NONE)
           | NONE => NONE
       end
   in
-    fn raw =>
-      let val resolved = List.mapPartial thmid_of_depid raw in
-        (length raw = length resolved, resolved)
-      end
+    List.mapPartial thmid_of_depid
   end
 
 fun create_dep_table (_, facts) =
   let
-    val intact_dependencies_of = intact_dependency_resolver ()
+    val resolve_dependencies = dependency_resolver ()
     fun dependency_info thmid =
       case total mlThmData.thm_of_name thmid of
           SOME (SOME (_, theorem)) =>
@@ -253,11 +253,12 @@ fun create_dep_table (_, facts) =
                 SOME (intact_dependencies [])
               else
                 let
-                  val raw = Dep.depidl_of (Tag.dep_of (Thm.tag theorem))
-                  val (intact, fetchable) = intact_dependencies_of raw
+                  val raw = raw_dependencies theorem
+                  val fetchable = resolve_dependencies raw
+                  val count = length raw
                 in
-                  SOME {fetchable = fetchable, intact = intact,
-                        count = length raw}
+                  SOME {fetchable = fetchable,
+                        intact = count = length fetchable, count = count}
                 end
             end
         | _ => NONE
@@ -729,20 +730,19 @@ fun same_key ((left_current, left_facts),
    themselves. *)
 fun proposition_key facts =
   let
-    fun add ((thmid, _), (conclusions, representatives)) =
+    fun add ((thmid, _), (keys, representatives)) =
       case conclusion_of thmid of
           SOME conclusion =>
-            (dadd thmid conclusion conclusions,
-             if dmem conclusion representatives then representatives
-             else dadd conclusion thmid representatives)
-        | NONE => (conclusions, representatives)
-    val (conclusions, representatives) =
-      foldl add (dempty String.compare, dempty Term.compare) facts
+            (case Redblackmap.peek (representatives, conclusion) of
+                 SOME representative =>
+                   if thmid = representative then (keys, representatives)
+                   else (dadd thmid representative keys, representatives)
+               | NONE => (keys, dadd conclusion thmid representatives))
+        | NONE => (keys, representatives)
+    val (keys, _) = foldl add
+      (dempty String.compare, dempty Term.compare) facts
   in
-    fn thmid =>
-      case Redblackmap.peek (conclusions, thmid) of
-          SOME conclusion => dfind conclusion representatives
-        | NONE => thmid
+    fn thmid => Option.getOpt (Redblackmap.peek (keys, thmid), thmid)
   end
 
 fun make_context_for current
@@ -813,14 +813,26 @@ fun unknown_facts model facts =
 
 fun add_thmdep dependencies max_facts predictions =
   let
-    fun with_dependencies prediction =
-      prediction ::
-        (case dependencies_of dependencies prediction of
-             SOME names => names
-           | NONE => [])
+    fun expand remaining seen result pending predictions =
+      if remaining <= 0 then rev result
+      else
+        case pending of
+            name :: rest =>
+              if Redblackset.member (seen, name) then
+                expand remaining seen result rest predictions
+              else
+                expand (remaining - 1) (Redblackset.add (seen, name))
+                  (name :: result) rest predictions
+          | [] =>
+              case predictions of
+                  [] => rev result
+                | prediction :: rest =>
+                    expand remaining seen result
+                      (prediction :: Option.getOpt
+                        (dependencies_of dependencies prediction, []))
+                      rest
   in
-    take max_facts
-      (distinct (List.concat (map with_dependencies predictions)))
+    expand max_facts (Redblackset.empty String.compare) [] [] predictions
   end
 
 type mash_result =
@@ -830,13 +842,12 @@ type mash_result =
    max_suggestions : int}
 
 fun mash_leg ({model, dependencies, fact_key, ...} : context)
-      restricted goal max_facts =
+      restricted pool goal max_facts =
   if max_facts <= 0 then
     {ranking = [], unknown = [], learner = [], max_suggestions = 0}
   else
     let
       val (weights, facts) = restricted
-      val pool = map #1 facts
       val features = mlFeature.fea_of_goal true goal
       val goal_features = map
         (fn feature => (feature, #unit_weight default_constants))
@@ -862,8 +873,30 @@ fun mash_leg ({model, dependencies, fact_key, ...} : context)
        max_suggestions = max_suggestions}
     end
 
+fun restricted_names context NONE _ = context_thmids context
+  | restricted_names _ (SOME _) facts = map (fn (thmid, _) => thmid) facts
+
 fun mash_details context {pool, goal, max_facts} =
-  mash_leg context (restrict_thmdata context pool) goal max_facts
+  let val restricted as (_, facts) = restrict_thmdata context pool in
+    mash_leg context restricted (restricted_names context pool facts)
+      goal max_facts
+  end
+
+fun rank_knn thmdata n goal =
+  let
+    val predictions = mlNearestNeighbor.thmknn thmdata n
+      (mlFeature.fea_of_goal true goal)
+    val resolve_dependencies = dependency_resolver ()
+    fun with_dependencies thmid =
+      let val (theory, name) = split_string "Theory." thmid in
+        thmid ::
+          (if theory = mlThmData.namespace_tag then []
+           else resolve_dependencies
+             (raw_dependencies (DB.fetch theory name)))
+      end
+  in
+    take n (distinct (List.concat (map with_dependencies predictions)))
+  end
 
 fun is_induction statures thmid =
   #induction (hhStature.stature_of statures thmid)
@@ -872,24 +905,23 @@ fun rank (context as {statures, mepo, fact_key, ...} : context)
       {filter, pool, goal, n} =
   let
     val restricted as (_, facts) = restrict_thmdata context pool
-    val pool_names = map #1 facts
+    fun pool_names () = restricted_names context pool facts
     val generous = over_request n
-    fun mepo_leg () =
+    fun mepo_leg names =
       hhMePo.mepo_rank
         (case pool of
              NONE => mepo
-           | SOME _ => hhMePo.restrict_context mepo pool_names)
+           | SOME _ => hhMePo.restrict_context mepo names)
         goal generous
-    fun mash () = mash_leg context restricted goal generous
+    fun mash names = mash_leg context restricted names goal generous
     fun finish ranking =
-      exclude_and_take (is_induction statures) n ranking
+      first_test_n (not o is_induction statures) n ranking
   in
     case filter of
-        "none" => pool_names
-      | "knn" => mlNearestNeighbor.thmknn_wdep restricted n
-          (mlFeature.fea_of_goal true goal)
-      | "mepo" => finish (mepo_leg ())
-      | "mash" => finish (#ranking (mash ()))
+        "none" => pool_names ()
+      | "knn" => rank_knn restricted n goal
+      | "mepo" => finish (mepo_leg (pool_names ()))
+      | "mash" => finish (#ranking (mash (pool_names ())))
       | "mesh" =>
           let
             (* Each component is a complete standalone leg before MeSh sees
@@ -897,8 +929,9 @@ fun rank (context as {statures, mepo, fact_key, ...} : context)
                caller's bound.  Meshing the raw over-requested lists and
                excluding only afterwards changes both normalization and the
                candidate cutoff. *)
-            val mepo_ranking = finish (mepo_leg ())
-            val mash_result = mash ()
+            val names = pool_names ()
+            val mepo_ranking = finish (mepo_leg names)
+            val mash_result = mash names
             val mash_ranking = finish (#ranking mash_result)
             val unknown = #unknown mash_result
           in
