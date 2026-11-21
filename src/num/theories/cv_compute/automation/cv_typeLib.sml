@@ -163,12 +163,11 @@ fun from_to_for tyvars_alist ty =
       SOME tyvar_assum => ASSUME tyvar_assum
     | NONE => if is_vartype ty then from_to_for_tyvar ty else
     let
-      val entries = cv_from_to_entries ()
+      fun entry_ty th =
+        th |> UNDISCH_ALL |> concl |> rand |> type_of |> dest_fun_type |> snd
       fun match_from_to_thm th =
         let
-          val th1 = th |> UNDISCH_ALL
-          val ty1 = th1 |> concl |> rand |> type_of |> dest_fun_type |> snd
-          val i = match_type ty1 ty
+          val i = match_type (entry_ty th) ty
           val th2 = th |> INST_TYPE i |> DISCH_ALL
         in
           if not (is_imp (concl th2)) then th2 else
@@ -193,39 +192,43 @@ fun from_to_for tyvars_alist ty =
             case try th of
               SOME res => SOME (name, res, es)
             | NONE => find_first es
-      fun thy_of "" = current_theory ()
-        | thy_of name = #Thy (ThmSetData.toKName name)
-      (* An entry added later takes precedence; that is the descendant's
-         over its ancestors' and the current theory's or session's over
-         all.  Between unrelated theories it would be load order, so
-         another entry giving a different translation must come from
-         the winner's theory or one of its ancestors. *)
-      fun check (name, res, es) = let
-        val thy = thy_of name
-        fun differs (_, th) =
-          case (try th handle Missing_from_to _ => NONE) of
-            SOME res' => not (aconv (concl res') (concl res))
-          | NONE => false
-        val others = if thy = current_theory () then []
-                     else map #1 (filter differs es)
-        val ancs = if null others then [] else thy :: Theory.ancestry thy
+      (* the current theory's entries and the session's (cv_from_to_add
+         gives them no name) take precedence over inherited ones *)
+      fun is_own name =
+        name = "" orelse
+        (case Thm.getCT () of
+           SOME thy => String.isPrefix (thy ^ ".") name
+         | NONE => false)
+      val (own, inherited) =
+          List.partition (is_own o #1) (cv_from_to_entries ())
+      fun thy_of name = hd (String.fields (fn c => c = #".") name)
+      (* Inherited entries come latest added first, so a descendant's
+         before its ancestors'.  Between unrelated theories that order is
+         load order, so another entry giving a different translation must
+         come from the winner's theory or one of its ancestors. *)
+      fun check (name, res, es) =
+        if is_own name then res else let
+          val thy = thy_of name
+          val matching =
+              filter (fn (_, th) => can (match_type (entry_ty th)) ty) es
+          val ancs = if null matching then [] else thy :: Theory.ancestry thy
+          fun clashes (n, th) =
+            not (mem (thy_of n) ancs) andalso
+            (case (try th handle Missing_from_to _ => NONE) of
+               SOME res' => not (aconv (concl res') (concl res))
+             | NONE => false)
         in
-          case List.find (fn n => not (mem (thy_of n) ancs)) others of
+          case List.find clashes matching of
             NONE => res
-          | SOME other => let
-              fun show "" = "a theorem added by cv_from_to_add"
-                | show n = n
-              in
-                raise ERR "from_to_for"
-                  ("unrelated theories give different from/to translations" ^
-                   " of " ^ type_to_string ty ^ ": " ^ show name ^ " and " ^
-                   show other ^ "; choose one by removing the other with " ^
-                   "cv_transLib.cv_from_to_delete " ^
-                   Lib.quote (if other = "" then name else other))
-              end
+          | SOME (other, _) =>
+              raise ERR "from_to_for"
+                ("unrelated theories give different from/to translations" ^
+                 " of " ^ type_to_string ty ^ ": " ^ name ^ " and " ^
+                 other ^ "; choose one by removing the other with " ^
+                 "cv_transLib.cv_from_to_delete " ^ Lib.quote other)
         end
     in
-      case find_first entries of
+      case find_first (own @ inherited) of
         SOME found => check found
       | NONE =>
          if can dom_rng ty then (

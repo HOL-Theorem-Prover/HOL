@@ -1,12 +1,21 @@
 Theory cvftuse1
 Ancestors
-  cvftleft cvftright
+  cvftleft
 Libs
   cv_transLib
 
 (* cvftleft and cvftright translate colour differently, and neither is an
    ancestor of the other, so using the translation is an error until one
-   of them is removed; cvftuse2 lists the parents the other way round *)
+   of them is removed.  cvftright is loaded after cv_memLib, so its entry
+   comes first; cvftuse2 tests the other order. *)
+
+val _ = load "cvftrightTheory"
+
+fun first_colour_entry () =
+  valOf (List.find (String.isSuffix "colour_thm")
+                   (map #1 (cv_memLib.cv_from_to_entries ())))
+
+val _ = assert (String.isPrefix "cvftright." o first_colour_entry) ()
 
 fun from_thy ty =
   cv_typeLib.from_term_for ty |> strip_comb |> fst |> dest_thy_const |> #Thy
