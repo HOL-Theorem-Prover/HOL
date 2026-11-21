@@ -713,7 +713,10 @@ type context =
    pool_order : mlThmData.thmid list}
 
 type cache_key = string * (mlThmData.thmid * mlFeature.fea) list
-val context_cache = ref (NONE : (cache_key * context) option)
+datatype cached_context =
+    Lightweight of mlThmData.thmdata
+  | Full of context
+val context_cache = ref (NONE : (cache_key * cached_context) option)
 
 fun clean_context_cache () =
   (context_cache := NONE; clean_target_thmdata_cache ())
@@ -723,6 +726,12 @@ fun context_key_for current (_, facts) = (current, facts)
 fun same_key ((left_current, left_facts),
               (right_current, right_facts)) =
   left_current = right_current andalso left_facts = right_facts
+
+fun cached_context key =
+  case !context_cache of
+      SOME (cached_key, data) =>
+        if same_key (key, cached_key) then SOME data else NONE
+    | NONE => NONE
 
 (* Facts whose conclusions are alpha-equivalent state the same
    proposition; each such class is represented by its first fact.  Other
@@ -768,28 +777,27 @@ fun make_context parameters =
 
 (* Externally built thmdata (mlThmData.create_thmdata, as holyhammer and
    TacticToe pass it) may hold top-level theorems with hypotheses. *)
-fun build_context_for current (weights, all_facts) =
-  let
-    val thmdata = (weights, filter (not o has_hypotheses o #1) all_facts)
-  in
-    make_context_for current
-      {thmdata = thmdata, model_thmdata = thmdata,
-       dependencies = create_dep_table thmdata}
-  end
+fun without_hypotheses (weights, facts) =
+  (weights, filter (not o has_hypotheses o #1) facts)
+
+fun build_context_for current thmdata =
+  make_context_for current
+    {thmdata = thmdata, model_thmdata = thmdata,
+     dependencies = create_dep_table thmdata}
 
 fun create_context_for current thmdata =
   let
     val key = context_key_for current thmdata
-    fun rebuild () =
-      let val context = build_context_for current thmdata in
-        context_cache := SOME (key, context);
+    fun build data =
+      let val context = build_context_for current data in
+        context_cache := SOME (key, Full context);
         context
       end
   in
-    case !context_cache of
-        SOME (cached_key, context) =>
-          if same_key (key, cached_key) then context else rebuild ()
-      | NONE => rebuild ()
+    case cached_context key of
+        SOME (Full context) => context
+      | SOME (Lightweight data) => build data
+      | NONE => build (without_hypotheses thmdata)
   end
 
 fun create_context thmdata =
@@ -882,11 +890,10 @@ fun mash_details context {pool, goal, max_facts} =
       goal max_facts
   end
 
-fun rank_knn thmdata n goal =
+fun rank_knn_with resolve_dependencies thmdata n goal =
   let
     val predictions = mlNearestNeighbor.thmknn thmdata n
       (mlFeature.fea_of_goal true goal)
-    val resolve_dependencies = dependency_resolver ()
     fun with_dependencies thmid =
       let val (theory, name) = split_string "Theory." thmid in
         thmid ::
@@ -896,6 +903,24 @@ fun rank_knn thmdata n goal =
       end
   in
     take n (distinct (List.concat (map with_dependencies predictions)))
+  end
+
+fun rank_knn thmdata n goal =
+  rank_knn_with (dependency_resolver ()) thmdata n goal
+
+fun make_dependency_lookup () =
+  let
+    val resolve = dependency_resolver ()
+    fun intact theorem =
+      let
+        val deps = raw_dependencies theorem
+          handle HOL_ERR _ => raise mk_HOL_ERR "mlThmData" "depidl_of_thm" ""
+        val names = resolve deps
+      in
+        (length deps = length names, names)
+      end
+  in
+    {intact = intact, knn = rank_knn_with resolve}
   end
 
 fun is_induction statures thmid =
@@ -943,5 +968,34 @@ fun rank (context as {statures, mepo, fact_key, ...} : context)
           end
       | _ => raise ERR "rank" ("unknown premise filter " ^ filter)
   end
+
+fun rank_filters thmdata goal filters =
+  if List.all (fn (filter, _) => filter = "knn" orelse filter = "none")
+       filters then
+    let
+      val key = context_key_for (Theory.current_theory ()) thmdata
+      val data as (_, facts) =
+        case cached_context key of
+            SOME (Full {thmdata, ...}) => thmdata
+          | SOME (Lightweight data) => data
+          | NONE =>
+              let val data = without_hypotheses thmdata in
+                context_cache := SOME (key, Lightweight data);
+                data
+              end
+      fun one ("knn", n) = ("knn", rank_knn data n goal)
+        | one (filter, _) = (filter, map #1 facts)
+    in
+      map one filters
+    end
+  else
+    let
+      val context = create_context thmdata
+      fun one (filter, n) =
+        (filter, rank context
+          {filter = filter, pool = NONE, goal = goal, n = n})
+    in
+      map one filters
+    end
 
 end

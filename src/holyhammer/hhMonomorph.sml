@@ -154,40 +154,45 @@ struct
     fold_ground_consts rigid (fn (constant, result) =>
       add_ground constant result) tm table
 
+  (* Both inputs are sorted and unique.  Keep the left representative of
+     an equal type, as repeated insertion would. *)
+  fun merge_types [] right = right
+    | merge_types left [] = left
+    | merge_types (left as ty :: tys) (right as other :: others) =
+        case Type.compare (ty, other) of
+            LESS => ty :: merge_types tys right
+          | EQUAL => ty :: merge_types tys others
+          | GREATER => other :: merge_types left others
+
   fun merge_grounds left right =
     Redblackmap.map (fn (name, tys) =>
-      List.foldl (fn (ty, result) => insert_type ty result)
-        tys (lookup name right)) left
+      merge_types tys (lookup name right)) left
 
-  fun type_size ty = Type.type_size ty
+  fun subst_size (subst : subst) =
+    List.foldl (fn ({residue, ...}, total) => Type.type_size residue + total)
+      0 subst
 
-  fun subst_pairs subst =
+  fun subst_pairs (subst : subst) =
     sort (fn ({redex = left, ...}, {redex = right, ...}) =>
       Type.compare (left, right)) subst
 
-  fun subst_compare (left, right) =
-    let
-      fun size subst =
-        List.foldl (fn ({residue, ...}, total) => type_size residue + total)
-          0 subst
-      fun compare_pairs ([], []) = EQUAL
-        | compare_pairs ([], _) = LESS
-        | compare_pairs (_, []) = GREATER
-        | compare_pairs ((lvar, lty) :: ls, (rvar, rty) :: rs) =
-            (case Type.compare (lvar, rvar) of
-                 EQUAL =>
-                   (case Type.compare (lty, rty) of
-                        EQUAL => compare_pairs (ls, rs)
-                      | result => result)
-               | result => result)
-      val size_order = Int.compare (size left, size right)
-    in
-      if size_order = EQUAL then
-        compare_pairs (map (fn {redex, residue} => (redex, residue))
-          (subst_pairs left),
-          map (fn {redex, residue} => (redex, residue)) (subst_pairs right))
-      else size_order
-    end
+  fun compare_pairs ([] : subst, []) = EQUAL
+    | compare_pairs ([], _) = LESS
+    | compare_pairs (_, []) = GREATER
+    | compare_pairs ({redex = lvar, residue = lty} :: ls,
+                     {redex = rvar, residue = rty} :: rs) =
+        case Type.compare (lvar, rvar) of
+            EQUAL =>
+              (case Type.compare (lty, rty) of
+                   EQUAL => compare_pairs (ls, rs)
+                 | result => result)
+          | result => result
+
+  (* Reverse preference order, so the least preferred key is first. *)
+  fun compare_keys ((left_size, left_pairs), (right_size, right_pairs)) =
+    case Int.compare (right_size, left_size) of
+        EQUAL => compare_pairs (right_pairs, left_pairs)
+      | order => order
 
   fun complete tvars subst =
     List.all (fn tvar =>
@@ -197,30 +202,37 @@ struct
     SOME (Type.match_type_in_context ty ground subst)
       handle HOL_ERR _ => NONE
 
-  fun matching_grounds name ty subst known new =
-    let
-      fun try_one is_new ground =
-        case match ty ground subst of
-            SOME refined => [(is_new, refined)]
-          | NONE => []
-    in
-      List.concat (map (try_one true) (lookup name new)) @
-      List.concat (map (try_one false) (lookup name known))
-    end
-
   fun substitutions tvars schematics known new require_new limit =
     let
       val visited = ref 0
-      fun same_subst left right = subst_compare (left, right) = EQUAL
-      fun add_best subst result =
-        if List.exists (fn old => same_subst subst old) result then result
-        else aiLib.first_n limit
-          (Listsort.sort subst_compare (subst :: result))
-      (* The exhaustive branch still visits the same bounded search tree,
-         but only its canonical best [limit] substitutions can reach the
-         caller.  Keeping that prefix incrementally avoids constructing and
-         sorting a large discarded tail before theorem instantiation. *)
-      val best = ref []
+      val best = ref (Redblackmap.mkDict compare_keys)
+      fun add_best subst =
+        let
+          val size = subst_size subst
+          val current = !best
+          fun keep key pool =
+            best := Redblackmap.insert (pool, key, subst)
+        in
+          if Redblackmap.numItems current < limit then
+            let
+              val key = (size, subst_pairs subst)
+            in
+              if Redblackmap.inDomain (current, key) then ()
+              else keep key current
+            end
+          else
+            case Redblackmap.firsti current of
+                SOME (worst as (worst_size, _), _) =>
+                  if size > worst_size then ()
+                  else
+                    let val key = (size, subst_pairs subst) in
+                      if compare_keys (worst, key) = LESS andalso
+                         not (Redblackmap.inDomain (current, key)) then
+                        keep key (#1 (Redblackmap.remove (current, worst)))
+                      else ()
+                    end
+              | NONE => ()
+        end
       fun matches_new subst (name, ty) =
         List.exists (fn ground =>
           case match ty ground subst of SOME _ => true | NONE => false)
@@ -230,7 +242,7 @@ struct
         else if complete tvars subst then
           if not require_new orelse used_new orelse
              List.exists (matches_new subst) remaining
-          then best := add_best subst (!best)
+          then add_best subst
           else ()
         else
           (visited := !visited + 1;
@@ -238,38 +250,45 @@ struct
               [] => ()
             | (name, ty) :: rest =>
             let
-              val matched = matching_grounds name ty subst known new
+              fun visit _ [] = ()
+                | visit is_new (ground :: grounds) =
+                    if !visited >= max_substitution_nodes then ()
+                    else
+                      (case match ty ground subst of
+                           SOME refined =>
+                             search rest refined (used_new orelse is_new)
+                         | NONE => ();
+                       visit is_new grounds)
             in
-              List.app (fn (is_new, subst') =>
-                search rest subst' (used_new orelse is_new)) matched;
+              visit true (lookup name new);
+              visit false (lookup name known);
               search rest subst used_new
             end)
       fun covers_all ty =
         let val vars = Type.type_vars ty in
           List.all (fn tvar => mem tvar vars) tvars
         end
-      fun direct all_schematics (name, ty) initial =
+      fun direct (name, ty) =
         let
-          fun consider is_new ground result =
+          fun consider is_new ground =
             case match ty ground [] of
                 SOME subst =>
                   if complete tvars subst andalso
                      (not require_new orelse is_new orelse
-                      List.exists (matches_new subst) all_schematics)
-                  then add_best subst result
-                  else result
-              | NONE => result
-          val from_new = List.foldl (fn (ground, result) =>
-            consider true ground result) initial (lookup name new)
+                      List.exists (matches_new subst) schematics)
+                  then add_best subst
+                  else ()
+              | NONE => ()
         in
-          List.foldl (fn (ground, result) => consider false ground result)
-            from_new (lookup name known)
+          List.app (consider true) (lookup name new);
+          List.app (consider false) (lookup name known)
         end
+      val _ =
+        case List.filter (covers_all o #2) schematics of
+            [] => search schematics [] false
+          | covering => List.app direct covering
     in
-      case List.filter (covers_all o #2) schematics of
-          [] => (search schematics [] false; !best)
-        | covering => List.foldl (fn (schematic, result) =>
-            direct schematics schematic result) [] covering
+      Redblackmap.foldl' op:: [] (!best)
     end
 
   fun unique_terms candidates old =

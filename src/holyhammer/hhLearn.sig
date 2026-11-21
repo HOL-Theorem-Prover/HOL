@@ -137,7 +137,13 @@ sig
      max_facts : int} -> mash_result
   val rank_knn : mlThmData.thmdata -> int -> Abbrev.goal ->
     mlThmData.thmid list
+  (* The lookup reuses dependency indices for a fixed loaded corpus. *)
+  val make_dependency_lookup : unit ->
+    {intact : Thm.thm -> bool * mlThmData.thmid list,
+     knn : mlThmData.thmdata -> int -> Abbrev.goal -> mlThmData.thmid list}
   val rank : context ->
     {filter : string, pool : mlThmData.thmid list option,
      goal : Abbrev.goal, n : int} -> mlThmData.thmid list
+  val rank_filters : mlThmData.thmdata -> Abbrev.goal ->
+    (string * int) list -> (string * mlThmData.thmid list) list
 end

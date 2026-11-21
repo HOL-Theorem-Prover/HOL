@@ -887,12 +887,12 @@ fun percentage numerator denominator =
   if denominator = 0 then NONE
   else SOME (100.0 * Real.fromInt numerator / Real.fromInt denominator)
 
-fun make_metrics entries : metrics =
+fun make_metrics count_goals entries : metrics =
   let
-    val goals = length (goal_ids entries (fn _ => true))
-    val attempted = length (goal_ids entries attempted_cell)
-    val proved = length (goal_ids entries proven_cell)
-    val reconstructed = length (goal_ids entries reconstructed_cell)
+    val goals = count_goals entries (fn _ => true)
+    val attempted = count_goals entries attempted_cell
+    val proved = count_goals entries proven_cell
+    val reconstructed = count_goals entries reconstructed_cell
     fun cell_time entry =
       case #engine entry of
           SOME (Sched _) =>
@@ -908,6 +908,11 @@ fun make_metrics entries : metrics =
      reconstructed_pct = percentage reconstructed attempted, p50 = p50,
      p90 = p90, maximum = maximum}
   end
+
+(* Within one condition, latest_cells has already deduplicated the goals. *)
+fun count_cells entries predicate =
+  List.foldl (fn (entry, count) =>
+    if predicate entry then count + 1 else count) 0 entries
 
 (* Groups keyed and ordered by [key], each in its original entry order. *)
 fun group_by key items =
@@ -964,9 +969,10 @@ type report_data =
 
 fun condition_report (name, cells) : condition_report =
   let
-    fun subset predicate = make_metrics (List.filter predicate cells)
+    fun subset predicate = make_metrics count_cells
+      (List.filter predicate cells)
   in
-    {name = name, cells = cells, metrics = make_metrics cells,
+    {name = name, cells = cells, metrics = make_metrics count_cells cells,
      ho = subset #ho, non_ho = subset (not o #ho),
      seen = subset (not o #fresh), fresh = subset #fresh}
   end
@@ -1028,7 +1034,8 @@ fun unique_count prover predicate entries =
   end
 
 fun portfolio_report (key, cells) : portfolio_report =
-  {key = key, cells = cells, metrics = make_metrics cells,
+  {key = key, cells = cells,
+   metrics = make_metrics (fn entries => length o goal_ids entries) cells,
    unique = map (fn prover =>
      (prover, unique_count prover proven_cell cells,
       unique_count prover reconstructed_cell cells))
@@ -1063,7 +1070,7 @@ fun report_data entries : report_data =
           {name = name, key = key,
            schedule = (case Redblackmap.peek (condition_metrics, name) of
                            SOME metrics => metrics
-                         | NONE => make_metrics cells),
+                         | NONE => make_metrics count_cells cells),
            union = union})
           (Redblackmap.peek (portfolio_metrics, key))
       end
@@ -1455,31 +1462,40 @@ fun restrict_features_to_pool pool features =
       features
   end
 
-fun select_knn thy pool count goal =
+fun selection_data thy =
   let
-    val (weights, features) = hhLearn.create_thmdata_for thy
+    val thmdata = Susp.delay (fn () => hhLearn.create_thmdata_for thy)
+    val context = Susp.delay (fn () =>
+      hhLearn.create_context_for thy (Susp.force thmdata))
+    val {intact, knn} = hhLearn.make_dependency_lookup ()
+  in
+    {thmdata = thmdata, context = context, intact = intact, knn = knn}
+  end
+
+fun select_knn {thmdata, context, intact, knn} pool count goal =
+  let
+    val (weights, features) = Susp.force thmdata
     val permitted = restrict_features_to_pool pool features
   in
-    hhLearn.rank_knn (weights, permitted) count goal
+    knn (weights, permitted) count goal
   end
 
-fun select_filter thy filter pool count goal =
-  let
-    val thmdata = hhLearn.create_thmdata_for thy
-    val context = hhLearn.create_context_for thy thmdata
-  in
-    hhLearn.rank context
-      {filter = filter, pool = SOME pool, goal = goal, n = count}
-  end
+fun select_filter (data as {thmdata, context, ...}) filter pool count goal =
+  case filter of
+      "none" =>
+        map #1 (restrict_features_to_pool pool (#2 (Susp.force thmdata)))
+    | "knn" => select_knn data pool count goal
+    | _ => hhLearn.rank (Susp.force context)
+        {filter = filter, pool = SOME pool, goal = goal, n = count}
 
-fun selected_premises_at thy condition {pool, dependencies} goal knn_count =
+fun selected_premises_at data condition {pool, dependencies} goal knn_count =
   case #selector condition of
       Deps => dependencies
-    | Knn count => select_knn thy pool
+    | Knn count => select_knn data pool
         (case knn_count of NONE => count | SOME maximum => maximum) goal
-    | Mepo count => select_filter thy "mepo" pool count goal
-    | Mash count => select_filter thy "mash" pool count goal
-    | Mesh count => select_filter thy "mesh" pool count goal
+    | Mepo count => select_filter data "mepo" pool count goal
+    | Mash count => select_filter data "mash" pool count goal
+    | Mesh count => select_filter data "mesh" pool count goal
     | PerSlice => raise Fail
         "invalid hhEval premise selection: perslice requires Sched"
 
@@ -1535,13 +1551,10 @@ fun max_schedule_facts schedule =
 fun rankings_for_schedule schedule premises =
   map (fn (filter, _) => (filter, premises)) (hhSlice.filter_maxima schedule)
 
-fun per_slice_rankings thy schedule pool goal =
+fun per_slice_rankings data schedule pool goal =
   let
-    val context = hhLearn.create_context_for thy
-      (hhLearn.create_thmdata_for thy)
     fun rank (filter, maximum) =
-      (filter, hhLearn.rank context
-        {filter = filter, pool = SOME pool, goal = goal, n = maximum})
+      (filter, select_filter data filter pool maximum goal)
   in
     map rank (hhSlice.filter_maxima schedule)
   end
@@ -1551,7 +1564,8 @@ fun version_of_prover prover =
       NONE => NONE
     | SOME {version, ...} => version
 
-fun schedule_cell_entry expdir thy (name, thm) facts condition parameters =
+fun schedule_cell_entry expdir thy data (name, thm) facts condition
+      parameters =
   let
     val goal = dest_thm thm
     val options = schedule_options condition parameters
@@ -1559,12 +1573,12 @@ fun schedule_cell_entry expdir thy (name, thm) facts condition parameters =
     val maximum = max_schedule_facts schedule
     val rankings =
       case #selector condition of
-          PerSlice => per_slice_rankings thy schedule (#pool facts) goal
+          PerSlice => per_slice_rankings data schedule (#pool facts) goal
         | _ =>
             let
               (* Legacy schedule selectors share one longest-first ranking.
                  In particular, chainy kNN uses the schedule maximum. *)
-              val premises = selected_premises_at thy condition facts
+              val premises = selected_premises_at data condition facts
                 goal (SOME maximum)
             in
               rankings_for_schedule schedule premises
@@ -1634,10 +1648,10 @@ fun schedule_cell_entry expdir thy (name, thm) facts condition parameters =
                         (SOME "schedule contained no runnable slices")))
   end
 
-fun prover_cell_entry expdir thy (name, thm) facts condition prover =
+fun prover_cell_entry expdir thy data (name, thm) facts condition prover =
   let
     val goal = dest_thm thm
-    val premises = selected_premises_at thy condition facts goal NONE
+    val premises = selected_premises_at data condition facts goal NONE
     val named_premises = mlThmData.thml_of_namel premises
     val nfacts = length named_premises
     val directory = join (join (join expdir "pb") (safe_component thy))
@@ -1669,14 +1683,15 @@ fun prover_cell_entry expdir thy (name, thm) facts condition prover =
       (#used_axioms result) (#version result) outcome
   end
 
-fun run_cell expdir thy theorem facts condition =
+fun run_cell expdir thy data theorem facts condition =
   let
     val entry =
       case #engine condition of
           Sched parameters =>
-            schedule_cell_entry expdir thy theorem facts condition parameters
+            schedule_cell_entry expdir thy data theorem facts condition
+              parameters
         | Prover prover =>
-            prover_cell_entry expdir thy theorem facts condition prover
+            prover_cell_entry expdir thy data theorem facts condition prover
   in
     append_journal (journal_path expdir thy) entry
   end
@@ -1704,6 +1719,7 @@ fun eval_loaded_theory expdir thy =
   let
     val completed = read_completed (journal_path expdir thy)
     val theorems = DB.theorems thy
+    val data = selection_data thy
     val chainy_data =
       if List.exists (fn condition => #regime condition = Chainy)
          (!worker_conditions)
@@ -1723,7 +1739,7 @@ fun eval_loaded_theory expdir thy =
         else
           let
             val (dependencies_ok, intact_deps) =
-              mlThmData.intactdep_of_thm thm
+              #intact data thm
             fun evaluate_cells facts_for =
               let
                 val {pool, permits} = facts_for name
@@ -1740,13 +1756,13 @@ fun eval_loaded_theory expdir thy =
                   case #regime condition of
                       Bushy =>
                         if dependencies_ok then
-                          run_cell expdir thy (name, thm)
+                          run_cell expdir thy data (name, thm)
                             {pool = intact_deps, dependencies = intact_deps}
                             condition
                         else broken_deps_cell expdir thy name
                           (list_mk_imp (dest_thm thm)) condition
                     | Chainy =>
-                        run_cell expdir thy (name, thm)
+                        run_cell expdir thy data (name, thm)
                           {pool = chainy_pool,
                            dependencies = chainy_dependencies}
                           condition
@@ -2211,7 +2227,7 @@ fun run_smoke {expdir, timeout} =
           val condition = smoke_condition timeout kind
         in
           if dependencies_ok then
-            run_cell expdir thy (name, thm)
+            run_cell expdir thy (selection_data thy) (name, thm)
               {pool = dependencies, dependencies = dependencies} condition
           else broken_deps_cell expdir thy name
             (list_mk_imp (dest_thm thm)) condition
@@ -2233,7 +2249,8 @@ fun run_smoke {expdir, timeout} =
       (* The first successful schedule cancels its remaining slices, whose
          results must not enter the cache.  Prime the entire schedule with
          an unreachable proof limit before testing a process-free replay. *)
-      val primed = schedule_cell_entry expdir sched_thy
+      val primed =
+        schedule_cell_entry expdir sched_thy (selection_data sched_thy)
         (sched_name, sched_thm) sched_facts sched_condition
         {provers = #provers sched_parameters,
          slices = #slices sched_parameters, cores = #cores sched_parameters,
@@ -2244,7 +2261,8 @@ fun run_smoke {expdir, timeout} =
            length (#slices primed) = #slices sched_parameters then ()
         else raise Fail "HolyHammer schedule cache priming did not finish"
       val _ = hhProver.reset_spawn_count ()
-      val repeated = schedule_cell_entry expdir sched_thy
+      val repeated =
+        schedule_cell_entry expdir sched_thy (selection_data sched_thy)
         (sched_name, sched_thm) sched_facts sched_condition
         sched_parameters
       val repeat_spawns = hhProver.spawn_count ()

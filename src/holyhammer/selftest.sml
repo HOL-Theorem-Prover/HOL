@@ -8980,6 +8980,25 @@ fun test_hhLearn_target_thmdata () =
 
 val _ = test_hhLearn_target_thmdata ()
 
+fun test_hhLearn_dependency_lookup () =
+  let
+    val {intact, knn} = hhLearn.make_dependency_lookup ()
+    val theorems =
+      map #2 (aiLib.first_n 8 (DB.theorems "list") @
+              aiLib.first_n 8 (DB.theorems "arithmetic"))
+    val data = hhLearn.create_thmdata_for "list"
+    fun agrees theorem =
+      let val goal = Thm.dest_thm theorem in
+        intact theorem = mlThmData.intactdep_of_thm theorem andalso
+        knn data 12 goal = hhLearn.rank_knn data 12 goal
+      end
+  in
+    expect "worker dependency lookup preserves dependency and kNN order"
+      (not (null theorems) andalso List.all agrees theorems)
+  end
+
+val _ = test_hhLearn_dependency_lookup ()
+
 (* A theorem with hypotheses is no premise.  Exported by its bare
    conclusion, [F] |- F hands the provers a false axiom (ContradictoryAxioms,
    bogus proofs Metis then rejects); discharged, it is unusable by replay. *)
@@ -8997,10 +9016,16 @@ fun test_hypothesis_premises () =
     val goal = ([], boolSyntax.T)
     val features = mlFeature.fea_of_goal true goal
     val rows = [(truth, features), (fixture, features)]
-    val context =
-      hhLearn.create_context (mlFeature.learn_tfidf rows, rows)
+    val data = (mlFeature.learn_tfidf rows, rows)
+    val filters = [("knn", 1), ("none", 0)]
+    val lightweight = hhLearn.rank_filters data goal filters
+    val warm = hhLearn.rank_filters data goal filters
+    val context = hhLearn.create_context data
     val none = hhLearn.rank context
       {filter = "none", pool = NONE, goal = goal, n = 2}
+    val knn = hhLearn.rank context
+      {filter = "knn", pool = NONE, goal = goal, n = 1}
+    val promoted = hhLearn.rank_filters data goal filters
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val options : hhConfig.hh_options =
       {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
@@ -9030,6 +9055,9 @@ fun test_hypothesis_premises () =
        not (List.exists (fn name => name = fixture) target_names));
     expect "premise ranking skips theorems with hypotheses"
       (hhLearn.context_thmids context = [truth] andalso none = [truth]);
+    expect "lightweight rankings preserve filter order and hypothesis checks"
+      (lightweight = [("knn", knn), ("none", none)] andalso
+       warm = lightweight andalso promoted = lightweight);
     expect "legacy and generated exports drop theorems with hypotheses"
       (with_fixture = without_fixture);
     remove_tree root;
