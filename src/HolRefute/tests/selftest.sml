@@ -3158,6 +3158,9 @@ val _ = mf_test "circular presentations are not definitions" (fn () =>
              List.exists (String.isSubstring
                "zoo_circ_lt are circular, not a definition") reasons
          | _ => false) andalso
+  (* Such a model may be spurious, so it spends the potential budget. *)
+  not (isSome (first_cex (refute (mf_short |> upd_max_potential 0)
+    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==> zoo_circ_lt x z``))) andalso
   genuine_certified (refute mf ``!x y. zoo_circ_lt x y``))
 
 (* A definition's own pattern variable over a pair type stays unboxed: boxed,

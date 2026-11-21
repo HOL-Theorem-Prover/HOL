@@ -1064,19 +1064,21 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       (table_lookup table constant))
     |> Util.distinct_terms
 
+  (* Whether a list of arguments consists of distinct variables. *)
+  fun distinct_vars [] = true
+    | distinct_vars (variable :: rest) =
+        Term.is_var variable andalso
+        not (List.exists (Term.aconv variable) rest) andalso
+        distinct_vars rest
+
   fun normalized_rhs_of prop =
     let
       val (_, body) = boolSyntax.strip_forall prop
       val (premises, conclusion) = boolSyntax.strip_imp body
       val (left, right) = boolSyntax.dest_eq conclusion
       val (_, arguments) = HolKernel.strip_comb left
-      fun distinct_variables [] = true
-        | distinct_variables (variable :: rest) =
-            Term.is_var variable andalso
-            not (List.exists (Term.aconv variable) rest) andalso
-            distinct_variables rest
     in
-      if null premises andalso distinct_variables arguments then
+      if null premises andalso distinct_vars arguments then
         SOME (Term.list_mk_abs (arguments, right))
       else NONE
     end handle HOL_ERR _ => NONE
@@ -2125,12 +2127,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      cycle of the definitions the back end sends, is recorded in
      [underdetermined]; a model that depends on it is only Potential.  The
      equations are still sent: they are theorems. *)
-  fun distinct_vars [] = true
-    | distinct_vars (variable :: rest) =
-        Term.is_var variable andalso
-        not (List.exists (Term.aconv variable) rest) andalso
-        distinct_vars rest
-
   fun is_variable_equation equation =
     let
       val (_, body) = boolSyntax.strip_forall equation

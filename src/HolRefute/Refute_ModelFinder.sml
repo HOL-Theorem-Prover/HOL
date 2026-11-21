@@ -1078,10 +1078,14 @@ fun run_instance deadline started (config : Refute_Core.config)
                            spend it.  A sound problem's model is a real
                            result whatever certainty reconstruction lands
                            on (quasi-genuine for an inexact encoding,
-                           potential when kernel certification got stuck
-                           or a constant's equations are circular),
+                           potential when kernel certification got stuck),
                            so it is always reported, never discarded for
-                           want of potential budget.  Only a genuine model
+                           want of potential budget.  The exception is a
+                           problem where a constant's equations are
+                           circular: that constant is free, so its
+                           uncertified models may be spurious and each
+                           spends a [max_potential] slot, or is dropped
+                           when none is left.  Only a genuine model
                            spends a [max_genuine] slot, so the search for
                            one carries on past the weaker models it
                            reported.  This diverges from upstream, whose
@@ -1094,19 +1098,34 @@ fun run_instance deadline started (config : Refute_Core.config)
                            rejection paths. *)
                         val attempted =
                           MFS.take_at_most max_genuine conservative
-                        fun harvest kept [] = kept
-                          | harvest kept ((index, bounds) :: models) =
+                        val circular =
+                          not (null (!(#underdetermined context)))
+                        fun keep (kept, budget) cex models =
+                          (keep_counterexample cex;
+                           harvest (cex :: kept, budget) models)
+                        and harvest state [] = state
+                          | harvest (kept, budget)
+                                    ((index, bounds) :: models) =
                               let
                                 val _ = check_deadline deadline
                               in
                                 case reconstruct
                                   (List.nth (problems, index)) bounds of
-                                     NONE => harvest kept models
+                                     NONE => harvest (kept, budget) models
                                    | SOME cex =>
-                                       (keep_counterexample cex;
-                                        harvest (cex :: kept) models)
+                                       if circular andalso not
+                                         (certainty_is_genuine
+                                           (#certainty cex))
+                                       then
+                                         if budget <= 0 then
+                                           harvest (kept, budget) models
+                                         else
+                                           keep (kept, budget - 1) cex
+                                             models
+                                       else keep (kept, budget) cex models
                               end
-                        val results = harvest [] attempted
+                        val (results, max_potential) =
+                          harvest ([], max_potential) attempted
                         val genuine_results = List.filter
                           (certainty_is_genuine o #certainty) results
                         val max_genuine = max_genuine - length genuine_results
