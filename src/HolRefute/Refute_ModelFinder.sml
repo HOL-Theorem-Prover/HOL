@@ -1078,7 +1078,8 @@ fun run_instance deadline started (config : Refute_Core.config)
                            spend it.  A sound problem's model is a real
                            result whatever certainty reconstruction lands
                            on (quasi-genuine for an inexact encoding,
-                           potential when kernel certification got stuck),
+                           potential when kernel certification got stuck
+                           or a constant's equations are circular),
                            so it is always reported, never discarded for
                            want of potential budget.  Only a genuine model
                            spends a [max_genuine] slot, so the search for
