@@ -6,8 +6,8 @@ tff(ty_2Ety__2Enum__2Enum, type,
     ty_2Enum_2Enum : $tType).
 tff(ty_2Ety__2Emin__2Ebool, type,
     ty_2Emin_2Ebool : $tType).
-tff(ty_2Ety__2Emin__2Efun__28min__2Efun__28num__2Enum__2Cmin__2Eb__739b055471e8b6d0, type,
-    ty_2Emin_2Efun_28min_2Efun_28num_2Enum_2Cmin_2Eb_739b055471e8b6d0 : $tType).
+tff(ty_2Ety__2Emin__2Efun__28min__2Efun__28num__2Enum__2Cmin__2Eb__h739b055471e8b6d0, type,
+    ty_2Emin_2Efun_28min_2Efun_28num_2Enum_2Cmin_2Eb_h739b055471e8b6d0 : $tType).
 tff(ty_2Ety__2Emin__2Efun__28min__2Efun__28num__2Enum__2Cmin__2Ebool__29__2Cmin__2Ebool__29, type,
     ty_2Emin_2Efun_28min_2Efun_28num_2Enum_2Cmin_2Ebool_29_2Cmin_2Ebool_29 : $tType).
 tff(ty_2Ety__2Emin__2Efun__28num__2Enum__2Cnum__2Enum__29, type,

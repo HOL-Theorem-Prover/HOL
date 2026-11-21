@@ -10,14 +10,14 @@ thf(ty_2Ety__2Emin__2Efun__28num__2Enum__2Cmin__2Efun__28num__2Enum__2Cmin__2Ebo
     ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cmin_2Ebool_29_29 : $tType).
 thf(ty_2Ety__2Emin__2Efun__28num__2Enum__2Cmin__2Ebool__29, type,
     ty_2Emin_2Efun_28num_2Enum_2Cmin_2Ebool_29 : $tType).
-thf(ty_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Efun__28num__2E__e8f5e6c92c53dfd6, type,
-    ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Efun_28num_2E_e8f5e6c92c53dfd6 : $tType).
+thf(ty_2Ety__2Emin__2Efun__28min__2Ebool__2Cmin__2Efun__28num__2E__he8f5e6c92c53dfd6, type,
+    ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Efun_28num_2E_he8f5e6c92c53dfd6 : $tType).
 thf(ty_2Ety__2Emin__2Efun__28num__2Enum__2Cmin__2Efun__28num__2Enum__2Cnum__2Enum__29__29, type,
     ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cnum_2Enum_29_29 : $tType).
 thf(ty_2Ety__2Emin__2Efun__28num__2Enum__2Cnum__2Enum__29, type,
     ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29 : $tType).
-thf(ty_2Ety__2Emin__2Efun__28min__2Efun__28num__2Enum__2Cnum__2En__8a18d1490a2089c5, type,
-    ty_2Emin_2Efun_28min_2Efun_28num_2Enum_2Cnum_2En_8a18d1490a2089c5 : $tType).
+thf(ty_2Ety__2Emin__2Efun__28min__2Efun__28num__2Enum__2Cnum__2En__h8a18d1490a2089c5, type,
+    ty_2Emin_2Efun_28min_2Efun_28num_2Enum_2Cnum_2En_h8a18d1490a2089c5 : $tType).
 thf(ty_2Ety__2Emin__2Efun__28min__2Efun__28num__2Enum__2Cnum__2Enum__29__2Cmin__2Ebool__29, type,
     ty_2Emin_2Efun_28min_2Efun_28num_2Enum_2Cnum_2Enum_29_2Cmin_2Ebool_29 : $tType).
 thf(sy_2Epxy__2Eite__2Enum__2Enum, type,

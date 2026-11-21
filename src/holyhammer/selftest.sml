@@ -1921,8 +1921,24 @@ fun test_hhProblemGen_bounded_names () =
            length (Lib.mk_set symbols) = length symbols andalso
            null (mono_tff_errors problem))
       end
+    (* FOF has no declarations: read the guard predicates and witness
+       constants off the printed problem. *)
+    val fof = hhTptpProblem.FOF
+    val fof_text = string_of_problem fof "bounded names"
+      (hhProblemGen.generate_problem
+        {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
+         lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+         mono_instances = 100} {conjecture = goal, facts = []})
+    val guard_symbols = List.filter (fn word =>
+        String.isPrefix "gd_2E" word orelse String.isPrefix "wit_2E" word)
+      (String.tokens (fn c => not (Char.isAlphaNum c orelse c = #"_"))
+         fof_text)
   in
-    List.app check [("tf0", "mono_native"), ("tx0", "mono_native_fool")]
+    List.app check [("tf0", "mono_native"), ("tx0", "mono_native_fool")];
+    expect "hhProblemGen bounds guard and witness names in fof"
+      (List.exists (String.isPrefix "gd_2E") guard_symbols andalso
+       List.exists (String.isPrefix "wit_2E") guard_symbols andalso
+       List.all (fn symbol => size symbol <= 80) guard_symbols)
   end
 
 val _ = test_hhProblemGen_bounded_names ()
