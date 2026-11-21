@@ -83,7 +83,9 @@ signature Refute_ModelFinder_HOL = sig
         bodies monotone, least or greatest fixpoint): the group's first
         member, the condition, and whether it was proved *)
      fixpoint_checks : (term * string * bool) list ref,
-     definition_successors : term list KNametab.table ref,
+     (* note_circular_definition's memo and the constants it found
+        circular *)
+     definition_successors : (term, term list) Redblackmap.dict ref,
      underdetermined : term list ref,
      choice_guard_inserted : bool ref,
      choice_empty_cache : (term * bool) list ref,

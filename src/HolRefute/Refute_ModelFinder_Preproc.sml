@@ -2162,6 +2162,8 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
       recurse term []
     end
 
+  (* [deviation from upstream] [shared] lists the variables of the
+     nondefinitions; see the variable case below. *)
   fun box_fun_and_pair_in_term context def shared original =
     let
       val original_vars = Term.all_vars original
@@ -2433,10 +2435,10 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
         in
           if box then uncurry_term uncurry_table binarized else binarized
         end
-      (* Binarization and uncurrying retype variables, and
-         [box_fun_and_pair_in_term] tells a shared variable by its type, so
-         the shared ones are read off the nondefinitions as it receives
-         them. *)
+      (* [deviation from upstream] Binarization and uncurrying retype
+         variables, and [box_fun_and_pair_in_term] tells a shared variable
+         by its type, so the shared ones are read off the nondefinitions as
+         it receives them. *)
       val shared_variables =
         if box then
           List.concat (map (Term.free_vars o before_box)

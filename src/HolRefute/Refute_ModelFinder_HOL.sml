@@ -286,7 +286,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
      fixpoint_checks : (term * string * bool) list ref,
-     definition_successors : term list KNametab.table ref,
+     (* note_circular_definition's memo and the constants it found
+        circular *)
+     definition_successors : (term, term list) Redblackmap.dict ref,
      underdetermined : term list ref,
      choice_guard_inserted : bool ref,
      choice_empty_cache : (term * bool) list ref,
@@ -2123,31 +2125,32 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      cycle of the definitions the back end sends, is recorded in
      [underdetermined]; a model that depends on it is only Potential.  The
      equations are still sent: they are theorems. *)
+  fun distinct_vars [] = true
+    | distinct_vars (variable :: rest) =
+        Term.is_var variable andalso
+        not (List.exists (Term.aconv variable) rest) andalso
+        distinct_vars rest
+
   fun is_variable_equation equation =
     let
       val (_, body) = boolSyntax.strip_forall equation
       val conclusion = #2 (boolSyntax.strip_imp body)
-      val (_, arguments) =
-        HolKernel.strip_comb (#1 (boolSyntax.dest_eq conclusion))
-      fun distinct [] = true
-        | distinct (argument :: rest) =
-            Term.is_var argument andalso
-            not (List.exists (Term.aconv argument) rest) andalso
-            distinct rest
     in
-      distinct arguments
+      distinct_vars
+        (#2 (HolKernel.strip_comb (#1 (boolSyntax.dest_eq conclusion))))
     end handle HOL_ERR _ => false
 
   (* Whether [constant] reaches itself through the constants of the
      definitions the back end sends, by way of another constant: every
-     equation names its own constant on the left.  Each constant's
-     successors are found once per run, in [definition_successors]. *)
+     equation names its own constant on the left.  Constants are compared
+     with their types, since the tables give each instance of a polymorphic
+     constant its own equations.  Each constant's successors are found once
+     per run, in [definition_successors]. *)
   fun on_definition_cycle
         (context as {definition_successors, ...} : mf_context) constant =
     let
-      val key = const_key constant
       fun successors c =
-        case KNametab.lookup (!definition_successors) (const_key c) of
+        case Redblackmap.peek (!definition_successors, c) of
             SOME found => found
           | NONE =>
               let
@@ -2156,23 +2159,19 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                     (sent_definitions context c))
                   |> List.filter (fn d =>
                        not (is_built_in_const d) andalso
-                       not (same_key (const_key d) (const_key c)))
+                       not (Term.aconv d c))
               in
                 definition_successors :=
-                  KNametab.update (const_key c, found)
-                    (!definition_successors);
+                  Redblackmap.insert (!definition_successors, c, found);
                 found
               end
       fun search _ [] = false
         | search visited (c :: rest) =
-            let val k = const_key c
-            in
-              if same_key k key then true
-              else if KNametab.defined visited k then search visited rest
-              else search (KNametab.update (k, ()) visited) (successors c @ rest)
-            end
+            if Term.aconv c constant then true
+            else if HOLset.member (visited, c) then search visited rest
+            else search (HOLset.add (visited, c)) (successors c @ rest)
     in
-      search KNametab.empty (successors constant)
+      search (HOLset.empty Term.compare) (successors constant)
     end
     handle HOL_ERR _ => false
 
@@ -2896,11 +2895,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           let
             val (_, body) = boolSyntax.strip_forall equation
             val (premises, conclusion) = boolSyntax.strip_imp body
-            fun distinct_vars [] = true
-              | distinct_vars (variable :: rest) =
-                  Term.is_var variable andalso
-                  not (List.exists (Term.aconv variable) rest) andalso
-                  distinct_vars rest
           in
             null premises andalso
             (case Lib.total boolSyntax.dest_eq conclusion of
@@ -7375,7 +7369,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        ersatz_table = current_ersatz_table (),
        whack_weakening = ref false,
        fixpoint_checks = ref [],
-       definition_successors = ref KNametab.empty,
+       definition_successors = ref (Redblackmap.mkDict Term.compare),
        underdetermined = ref [],
        choice_guard_inserted = ref false,
        choice_empty_cache = ref [],
