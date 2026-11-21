@@ -529,7 +529,37 @@ struct
         (if null Args then "" else "(" ^
           String.concatWith "," (map raw_mangle_type Args) ^ ")")
       end
-  fun mangle_type ty = aiLib.escape ("ty." ^ raw_mangle_type ty)
+
+  (* The longest prefix of an escaped name of at most [limit] characters
+     that ends between two of aiLib.escape's tokens (a letter or digit,
+     __, or _ and two hex digits). *)
+  fun token_prefix name limit =
+    let
+      fun width i =
+        if String.sub (name, i) <> #"_" then 1
+        else if i + 1 < size name andalso String.sub (name, i + 1) = #"_"
+        then 2
+        else 3
+      fun walk i =
+        if i >= size name orelse i + width i > limit then i
+        else walk (i + width i)
+    in
+      String.substring (name, 0, walk 0)
+    end
+
+  (* A mangled name spells out whole types, so nested types make it
+     arbitrarily long, and it is printed at every use.  A name over 80
+     characters keeps a readable prefix and ends in a hash of the whole
+     name, as app_symbol does.  The hash follows _h, which aiLib.escape
+     never writes at a token boundary, so a shortened name is never an
+     escaped name that was not shortened. *)
+  fun bounded_name name =
+    if size name <= 80 then name
+    else token_prefix name 48 ^ "_h" ^
+      String.substring (aiLib.sha1_string name, 0, 16)
+
+  fun mangle_type ty =
+    bounded_name (aiLib.escape ("ty." ^ raw_mangle_type ty))
 
   fun native_type ty =
     if is_vartype ty then
@@ -649,8 +679,8 @@ struct
                          else raw_symbol head
             in
               if null args then aiLib.escape base
-              else aiLib.escape (base ^ "." ^
-                String.concatWith "." (map raw_mangle_type args))
+              else bounded_name (aiLib.escape (base ^ "." ^
+                String.concatWith "." (map raw_mangle_type args)))
             end
 
   fun app_symbol (hhTypeEnc.Native {poly = false, ...})
@@ -766,7 +796,7 @@ struct
       collect formula []
     end
 
-  fun guard_name ty = aiLib.escape ("gd." ^ mangle_type ty)
+  fun guard_name ty = bounded_name (aiLib.escape ("gd." ^ mangle_type ty))
   fun guard_atom ty tm =
     hhTptpProblem.Atom (hhTptpProblem.Tm ((guard_name ty, []), [tm]))
 
@@ -952,11 +982,11 @@ struct
 
   fun witness_line encoding ty =
     let
-      val witness = aiLib.escape ("wit." ^ mangle_type ty)
+      val witness = bounded_name (aiLib.escape ("wit." ^ mangle_type ty))
       val term = hhTptpProblem.Tm ((witness, []), [])
     in
-      hhTptpProblem.FormLine (aiLib.escape ("wit." ^ mangle_type ty),
-        hhTptpProblem.Axiom, guard_atom ty term)
+      hhTptpProblem.FormLine (witness, hhTptpProblem.Axiom,
+        guard_atom ty term)
     end
 
   fun is_helper_name name = String.isPrefix "help." name
