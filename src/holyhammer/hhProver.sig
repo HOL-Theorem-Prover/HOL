@@ -80,6 +80,13 @@ sig
     {path : string, version : string option, tested : bool} option
   (* Shared with the scheduler: lock discipline must have one definition. *)
   val with_mutex : Mutex.mutex -> (unit -> 'a) -> 'a
+  (* Runs a program to its end, killing it after the limit in seconds,
+     through the spawn the provers use, and returns its output (stdout and
+     stderr together).  Other modules start their programs this way too, so
+     that no child inherits a prover's pipe. *)
+  val read_process : string -> string list -> real ->
+    {output : string, exec_failed : bool, killed : bool,
+     status : Posix.Process.exit_status, time : real}
   val elapsed : Time.time -> real
 
   (* Test hook: counts every successful fork, including version probes. *)

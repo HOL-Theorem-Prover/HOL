@@ -690,18 +690,20 @@ fun journal_complete path cells =
     List.all (cell_completed pairs) cells
   end
 
+(* Not Unix.execute: its pipes are not close-on-exec, so a prover that
+   another thread spawns meanwhile inherits one, and reading the command's
+   output waits for that prover to exit.  hhProver's spawn is serialised
+   with the prover spawns and makes its pipe close-on-exec. *)
 fun read_command path arguments =
   let
-    val process = Unix.execute (path, arguments)
-    val (input, output) = Unix.streamsOf process
-    val _ = TextIO.closeOut output
-    val text = TextIO.inputAll input
-    val _ = TextIO.closeIn input
-    val _ = Unix.reap process
+    val {output, exec_failed, killed, status, ...} =
+      hhProver.read_process path arguments 60.0
   in
-    SOME text
+    if exec_failed orelse killed orelse status <> Posix.Process.W_EXITED
+    then NONE
+    else SOME output
   end
-  handle OS.SysErr _ => NONE | IO.Io _ => NONE
+  handle OS.SysErr _ => NONE
 
 fun first_word text =
   case String.tokens Char.isSpace text of [] => NONE | word :: _ => SOME word
