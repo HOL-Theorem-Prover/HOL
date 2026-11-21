@@ -2140,11 +2140,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   (* Whether [constant] reaches itself through the constants of the
      definitions the back end sends, by way of another constant: every
-     equation names its own constant on the left.  As in
-     [equational_fun_axioms], an inductive predicate is sent as its cases
-     theorem alone and an equational constant as its simps (or psimps)
-     alone, so only those count for it; any other constant counts
-     everything in [sent_definitions].  Constants are compared with their types, since
+     equation names its own constant on the left.  A constant's
+     successors are those of what Refute_ModelFinder_Preproc sends or
+     unfolds for it: an inductive predicate's cases theorem, an equational
+     constant's simps (or psimps), a choice specification, or else the one
+     definition [def_of_const] picks (the unfold table before the
+     fallback).  Only a constant with none of these counts everything in
+     [sent_definitions].  Constants are compared with their types, since
      the tables give each instance of a polymorphic constant its own
      equations.  Each constant's successors are found once per run, in
      [definition_successors]. *)
@@ -2159,7 +2161,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           case def_props_for_const (!simp_table) c of
               [] => def_props_for_const psimp_table c
             | simps => simps
-        else sent_definitions context c
+        else if is_choice_spec_fun context c then
+          choice_spec_props_for_const context c
+        else
+          case def_of_const context c of
+              SOME definition => [boolSyntax.mk_eq (c, definition)]
+            | NONE => sent_definitions context c
       fun successors c =
         case Redblackmap.peek (!definition_successors, c) of
             SOME found => found

@@ -1599,3 +1599,25 @@ val _ = DefnBase.register_defn
           {tag = "user", thmname = "zoo_circ_le_presentation"};
 val _ = DefnBase.register_defn
           {tag = "user", thmname = "zoo_circ_lt_presentation"};
+
+(* An inductive predicate presented through an alias of itself.  The
+   model finder sends the predicate as its cases theorem only, so the
+   alias's definition is not on a cycle of what it sends, though the
+   predicate's presentation mentions the alias. *)
+Inductive zoo_cyc_ind:
+  zoo_cyc_ind (0 : num) /\
+  (!n : num. zoo_cyc_ind n ==> zoo_cyc_ind (n + 2))
+End
+
+Definition zoo_cyc_alias_def:
+  zoo_cyc_alias (n : num) <=> zoo_cyc_ind n
+End
+
+Theorem zoo_cyc_ind_presentation:
+  !n : num. zoo_cyc_ind n <=> zoo_cyc_alias n
+Proof
+  simp [zoo_cyc_alias_def]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_cyc_ind_presentation"};

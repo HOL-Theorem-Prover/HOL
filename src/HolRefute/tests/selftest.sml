@@ -3163,6 +3163,19 @@ val _ = mf_test "circular presentations are not definitions" (fn () =>
     ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==> zoo_circ_lt x z``))) andalso
   genuine_certified (refute mf ``!x y. zoo_circ_lt x y``))
 
+(* Only what the model finder sends closes a cycle: zoo_cyc_ind is sent as
+   its cases theorem, not the presentation that mentions zoo_cyc_alias. *)
+fun flags_circular constant =
+  let
+    val context = Refute_ModelFinder_HOL.make_context (#mf mf) []
+  in
+    ignore (Refute_ModelFinder_HOL.equational_fun_axioms context constant);
+    not (null (!(#underdetermined context)))
+  end
+val _ = mf_test "only sent equations close a definition cycle" (fn () =>
+  flags_circular ``zoo_circ_lt`` andalso
+  not (flags_circular ``zoo_cyc_alias``))
+
 (* A definition's own pattern variable over a pair type stays unboxed: boxed,
    it ranged over the box atoms only, and with none in scope [MAP f (h::t)]
    or [EVERY P (h::t)] matched no list of flat tuples. *)
