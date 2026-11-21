@@ -1099,13 +1099,14 @@ fun del_split name ss =
     List.foldl (fn (id,result) => del_looper_id_quiet id result) ss ids
   end
 
-fun splitter_looper ss (asms, goal) =
+(* The [split] rules are those of the context the tactic runs in. *)
+fun splitter_looper ss (asms, goal) ctxt =
   let
     val excluded = #excl_loopers (strategy_of ss)
     val unfiltered = Binaryset.isEmpty excluded
     fun enabled name = not (Binaryset.member (excluded, name))
     fun enabled_named (name, th) = enabled (split_looper_display name th)
-    val named = splitLib.named_split_thms ()
+    val named = splitLib.named_split_thms_of ctxt
     val persistent =
       map #2 (if unfiltered then named else List.filter enabled_named named)
     fun type_enabled ty =
@@ -1121,7 +1122,7 @@ fun splitter_looper ss (asms, goal) =
       List.concat (map #2
         (if unfiltered then groups else List.filter (type_enabled o #1) groups))
   in
-    splitLib.SPLIT_TAC (persistent @ datatype_rules) (asms, goal)
+    splitLib.SPLIT_TAC (persistent @ datatype_rules) (asms, goal) ctxt
   end
 
 val cases_simp =

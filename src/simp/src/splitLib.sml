@@ -109,6 +109,7 @@ fun enable_split_attribute () =
   SplitData.initialize {validate=ignore o is_asm_split}
 val exclude_split = SplitData.exclude
 val named_split_thms = SplitData.named_rules
+val named_split_thms_of = SplitData.named_rules_of
 fun split_thms () = map #2 (named_split_thms ())
 
 (* Turn a conclusion split rule [!P. P (c ...) = ...] into the rule for a

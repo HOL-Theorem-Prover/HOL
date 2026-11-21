@@ -50,6 +50,10 @@ sig
   val split_thms : unit -> thm list
   val named_split_thms : unit -> (string * thm) list
 
+  (* The [split] rules of the given context; none if the attribute is not
+     enabled there *)
+  val named_split_thms_of : Context.t -> (string * thm) list
+
   (* Whether a split rule splits assumptions, and the name a split rule
      is known by (in del_split and ExclX "split:...") *)
   val is_asm_split : thm -> bool

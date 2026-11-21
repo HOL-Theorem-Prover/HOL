@@ -6,6 +6,7 @@ sig
   val initialize : {validate : Thm.thm -> unit} -> unit
   val exclude : string -> unit
   val named_rules : unit -> (string * Thm.thm) list
+  val named_rules_of : Context.t -> (string * Thm.thm) list
   val theory_data : string -> raw_delta list
   val current_data : unit -> raw_delta list
 end
