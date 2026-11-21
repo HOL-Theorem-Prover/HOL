@@ -320,6 +320,10 @@ Incompatibilities
     When two independently loaded ancestors translate the same pattern differently, loading still works, but using that pattern fails with an "ambiguous translation" error naming both theorems until one is removed with `cv_rep_delete`.
     The same theorem reached through several ancestors is not a conflict.
 
+-   The `cv_compute` translator no longer picks by load order between two from/to translations of a type (the `cv_from_to` theorems that `define_from_to` saves) that come from theories neither of which is an ancestor of the other.
+    Using such a type is now an error naming both theorems; keep one by removing the other with the new `cv_transLib.cv_from_to_delete "thy.name"`, which holds in descendant theories too.
+    A translation added by a descendant of both, or in the current theory or session (`cv_memLib.cv_from_to_add`), still takes precedence without an error.
+
 -   AKS's `computeBasic` no longer defines numeric modular exponentiation;
     use `expModTheory` for `exp_mod_binary`, `exp_mod_step`, their definitions,
     and their correctness equations. The `exp_mod_compute` wrapper and its

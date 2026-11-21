@@ -120,6 +120,10 @@ fun list_dest_conj tm =
 
 exception Missing_from_to of hol_type;
 
+fun is_clash e =
+  Feedback.top_structure_of e = "cv_typeLib" andalso
+  Feedback.top_function_of e = "from_to_for"
+
 fun from_to_for_tyvar tyvar = let
   val name = dest_vartype tyvar
   val name = if String.isPrefix "'" name
@@ -159,7 +163,7 @@ fun from_to_for tyvars_alist ty =
       SOME tyvar_assum => ASSUME tyvar_assum
     | NONE => if is_vartype ty then from_to_for_tyvar ty else
     let
-      val thms = cv_from_to_thms ()
+      val entries = cv_from_to_entries ()
       fun match_from_to_thm th =
         let
           val th1 = th |> UNDISCH_ALL
@@ -178,11 +182,51 @@ fun from_to_for tyvars_alist ty =
               val th4 = LIST_CONJ (map prove_from_to_thm tms)
             in MATCH_MP th3 th4 end
         end
-      fun find_first f [] = NONE
-        | find_first f (x::xs) = SOME (f x) handle HOL_ERR e => find_first f xs
+      (* a clash found for an argument type is not a failure of this
+         entry, so that it is reported rather than taken as a missing
+         translation *)
+      fun try th = SOME (match_from_to_thm th)
+                   handle HOL_ERR e =>
+                     if is_clash e then raise HOL_ERR e else NONE
+      fun find_first [] = NONE
+        | find_first ((name, th)::es) =
+            case try th of
+              SOME res => SOME (name, res, es)
+            | NONE => find_first es
+      fun thy_of "" = current_theory ()
+        | thy_of name = #Thy (ThmSetData.toKName name)
+      (* An entry added later takes precedence; that is the descendant's
+         over its ancestors' and the current theory's or session's over
+         all.  Between unrelated theories it would be load order, so
+         another entry giving a different translation must come from
+         the winner's theory or one of its ancestors. *)
+      fun check (name, res, es) = let
+        val thy = thy_of name
+        fun differs (_, th) =
+          case (try th handle Missing_from_to _ => NONE) of
+            SOME res' => not (aconv (concl res') (concl res))
+          | NONE => false
+        val others = if thy = current_theory () then []
+                     else map #1 (filter differs es)
+        val ancs = if null others then [] else thy :: Theory.ancestry thy
+        in
+          case List.find (fn n => not (mem (thy_of n) ancs)) others of
+            NONE => res
+          | SOME other => let
+              fun show "" = "a theorem added by cv_from_to_add"
+                | show n = n
+              in
+                raise ERR "from_to_for"
+                  ("unrelated theories give different from/to translations" ^
+                   " of " ^ type_to_string ty ^ ": " ^ show name ^ " and " ^
+                   show other ^ "; choose one by removing the other with " ^
+                   "cv_transLib.cv_from_to_delete " ^
+                   Lib.quote (if other = "" then name else other))
+              end
+        end
     in
-      case find_first match_from_to_thm thms of
-        SOME th => th
+      case find_first entries of
+        SOME found => check found
       | NONE =>
          if can dom_rng ty then (
            cv_print Silent ("cv translator encountered a function type: " ^
