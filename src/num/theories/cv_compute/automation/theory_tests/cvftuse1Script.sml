@@ -29,6 +29,22 @@ val _ = assert fails_with_clash “:colour”
 (* also when colour is the argument of another type's translation *)
 val _ = assert fails_with_clash “:num |-> colour”
 
+(* and when cv_trans checks an argument of function type: with a (test
+   only, assumed) translation of bool -> 'a, the clash for colour is
+   reported, not taken as a higher-order argument *)
+val _ = cv_memLib.cv_from_to_add (mk_thm ([],
+  “from_to (f:'a -> cv) (t:cv -> 'a) ==>
+   from_to (bf:(bool -> 'a) -> cv) (bt:cv -> bool -> 'a)”))
+
+Definition pick_def:
+  pick (f:bool -> colour) = shade (f T)
+End
+
+val _ = assert (fn def =>
+  (cv_trans def; false)
+  handle HOL_ERR e =>
+    String.isSubstring "cv_from_to_delete" (Feedback.message_of e)) pick_def
+
 val _ = cv_from_to_delete
           "cvftright.from_cvftbase_to_cvftbase_colour_thm"
 val _ = cv_rep_delete "cvftright.cv_rep_cvftbase_cvftbase_colour_datatype"

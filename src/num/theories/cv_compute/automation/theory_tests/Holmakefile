@@ -1,1 +1,14 @@
 INCLUDES = ..
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+# Theories that load another at run time wait for it through a stamp:
+# depending on its .uo directly would link it in before the script runs.
+.hol/runtime-loads.stamp: cvftleftTheory.uo cvftrightTheory.uo \
+                          cvftrightdupTheory.uo cvftpickrightTheory.uo
+	touch $@
+cvftuse1Theory.sml cvftuse2Theory.sml cvftprec1Theory.sml \
+cvftprec2Theory.sml: .hol/runtime-loads.stamp
+
+EXTRA_CLEANS = .hol/runtime-loads.stamp

@@ -202,30 +202,35 @@ fun from_to_for tyvars_alist ty =
       val (own, inherited) =
           List.partition (is_own o #1) (cv_from_to_entries ())
       fun thy_of name = hd (String.fields (fn c => c = #".") name)
+      fun theory_and_ancestors name =
+        let val thy = thy_of name in thy :: Theory.ancestry thy end
       (* Inherited entries come latest added first, so a descendant's
-         before its ancestors'.  Between unrelated theories that order is
-         load order, so another entry giving a different translation must
-         come from the winner's theory or one of its ancestors. *)
+         before its ancestors'; between unrelated theories that order is
+         load order.  An entry from the theory of an applying entry, or
+         from one of that theory's ancestors, gives way to it; the other
+         entries that apply must give the winner's translation. *)
       fun check (name, res, es) =
         if is_own name then res else let
-          val thy = thy_of name
+          fun go _ [] = res
+            | go kept ((n, th)::es) =
+                if exists (mem (thy_of n)) kept then go kept es else
+                case (try th handle Missing_from_to _ => NONE) of
+                  NONE => go kept es
+                | SOME res' =>
+                    if aconv (concl res') (concl res) then
+                      go (theory_and_ancestors n :: kept) es
+                    else
+                      raise ERR "from_to_for"
+                        ("unrelated theories give different from/to " ^
+                         "translations of " ^ type_to_string ty ^ ": " ^
+                         name ^ " and " ^ n ^ "; choose one by removing " ^
+                         "the other with cv_transLib.cv_from_to_delete " ^
+                         Lib.quote n)
           val matching =
               filter (fn (_, th) => can (match_type (entry_ty th)) ty) es
-          val ancs = if null matching then [] else thy :: Theory.ancestry thy
-          fun clashes (n, th) =
-            not (mem (thy_of n) ancs) andalso
-            (case (try th handle Missing_from_to _ => NONE) of
-               SOME res' => not (aconv (concl res') (concl res))
-             | NONE => false)
         in
-          case List.find clashes matching of
-            NONE => res
-          | SOME (other, _) =>
-              raise ERR "from_to_for"
-                ("unrelated theories give different from/to translations" ^
-                 " of " ^ type_to_string ty ^ ": " ^ name ^ " and " ^
-                 other ^ "; choose one by removing the other with " ^
-                 "cv_transLib.cv_from_to_delete " ^ Lib.quote other)
+          if null matching then res
+          else go [theory_and_ancestors name] matching
         end
     in
       case find_first (own @ inherited) of
