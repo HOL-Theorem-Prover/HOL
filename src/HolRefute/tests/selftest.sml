@@ -3142,6 +3142,35 @@ fun iterator_card (c : counterexample) =
 val mf_num2 = mf |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
 val mf_num3 = mf |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
 
+(* True statements that once came back Genuine.  The search only has to
+   stay short of Genuine, so a short budget keeps the true goals, which run
+   to it, cheap. *)
+fun never_genuine (Counterexample cexs) = not (List.exists is_genuine cexs)
+  | never_genuine _ = true
+val mf_short = mf |> upd_timeout 10.0
+
+val _ = mf_test "circular presentations are not definitions" (fn () =>
+  never_genuine (refute mf_short
+    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==> zoo_circ_lt x z``) andalso
+  genuine_certified (refute mf ``!x y. zoo_circ_lt x y``))
+
+(* A definition's own pattern variable over a pair type stays unboxed: boxed,
+   it ranged over the box atoms only, and with none in scope [MAP f (h::t)]
+   or [EVERY P (h::t)] matched no list of flat tuples. *)
+val _ = mf_test "pair patterns in definitions cover unboxed tuples" (fn () =>
+  List.all (never_genuine o refute mf_short)
+    [``MAP (\p : 'a # num # num. SND (SND p)) [(x, 0, 0)] = [0]``,
+     ``!l : ('a # 'b # num) list.
+          LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [SND (SND (HD l))]``,
+     ``SUM (MAP (\(a : 'a, b : num, n : num, c : bool). n)
+               (TAKE k (REPLICATE m (x, 0n, 0n, F)))) = 0``,
+     ``EVERY (\kv : 'a # num # num. 1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l /\
+       MEM x l ==> 1 <= FST (SND x)``] andalso
+  List.all (genuine_certified o refute mf)
+    [``MAP (\p : 'a # num # num. SND (SND p)) (REPLICATE m (x, 0, 1)) =
+       REPLICATE m 0``,
+     ``!l : ('a # 'b # num) list. LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [0]``])
+
 val _ = mf_test "unregistered typedefs are reported before solving" (fn () =>
   List.all (fn goal =>
     case refute (mf |> upd_timeout 2.0) goal of

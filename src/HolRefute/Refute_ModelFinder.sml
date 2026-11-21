@@ -214,6 +214,11 @@ fun unproved_conditions (context : MFH.mf_context) =
                " not proved " ^ condition))
     (rev (!(#fixpoint_checks context)))
 
+fun underdetermined_reasons (context : MFH.mf_context) =
+  map (fn constant => "equations of " ^ Parse.term_to_string constant ^
+                      " are circular, not a definition")
+    (rev (!(#underdetermined context)))
+
 fun none_true assignments =
   List.all (fn (_, value) => value <> SOME true) assignments
 
@@ -870,19 +875,25 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val sound = not (#unsound extension)
+        (* [deviation from upstream] A constant whose equations do not
+           determine it (Refute_ModelFinder_HOL.note_circular_definition)
+           is free in the problem, so even a sound problem's model is only
+           Potential. *)
+        val underdetermined = underdetermined_reasons context
+        val sound = not (#unsound extension) andalso null underdetermined
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
         val weakened = !(#whack_weakening context)
         val unproved = unproved_conditions context
-        val reasons = if sound then
+        val reasons = if #unsound extension then
+            ["model comes from the liberal, unsound-by-design problem"]
+          else
             authenticity_reasons mf got_all_mono_user_axioms
               no_poly_user_axioms (#codatatypes_ok reconstructed) @
             (if weakened then
                ["formula was semantically weakened by whack"]
              else []) @
-            unproved
-          else ["model comes from the liberal, unsound-by-design problem"]
+            unproved @ underdetermined
         fun discard () = if sound then discarded_sound_model := true else ()
       in
         case MFM.certify

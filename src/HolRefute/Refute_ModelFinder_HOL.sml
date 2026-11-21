@@ -286,6 +286,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
      fixpoint_checks : (term * string * bool) list ref,
+     definition_successors : term list KNametab.table ref,
+     underdetermined : term list ref,
      choice_guard_inserted : bool ref,
      choice_empty_cache : (term * bool) list ref,
      choice_predicate_attempts : int ref,
@@ -2110,12 +2112,87 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       map (Term.subst substitution) own_cases
     end
 
+  (* [deviation from upstream] Equations taken from the definition tables
+     determine a constant only if they are a definition.  A DefnBase
+     presentation can name a theorem that is not: realax's [real_lt] is
+     presented by the rebound theorem [x < y <=> ~(y <= x)], and
+     [real_lte] is defined as [~(y < x)], so the two equations hold of any
+     relation and leave [<] unconstrained.  A constant whose equations all
+     have distinct variables as arguments, that has no registered
+     induction theorem (a recursive Define has one) and that lies on a
+     cycle of the definitions the back end sends, is recorded in
+     [underdetermined]; a model that depends on it is only Potential.  The
+     equations are still sent: they are theorems. *)
+  fun is_variable_equation equation =
+    let
+      val (_, body) = boolSyntax.strip_forall equation
+      val conclusion = #2 (boolSyntax.strip_imp body)
+      val (_, arguments) =
+        HolKernel.strip_comb (#1 (boolSyntax.dest_eq conclusion))
+      fun distinct [] = true
+        | distinct (argument :: rest) =
+            Term.is_var argument andalso
+            not (List.exists (Term.aconv argument) rest) andalso
+            distinct rest
+    in
+      distinct arguments
+    end handle HOL_ERR _ => false
+
+  (* Whether [constant] reaches itself through the constants of the
+     definitions the back end sends, by way of another constant: every
+     equation names its own constant on the left.  Each constant's
+     successors are found once per run, in [definition_successors]. *)
+  fun on_definition_cycle
+        (context as {definition_successors, ...} : mf_context) constant =
+    let
+      val key = const_key constant
+      fun successors c =
+        case KNametab.lookup (!definition_successors) (const_key c) of
+            SOME found => found
+          | NONE =>
+              let
+                val found =
+                  List.concat (map (HolKernel.find_terms Term.is_const)
+                    (sent_definitions context c))
+                  |> List.filter (fn d =>
+                       not (is_built_in_const d) andalso
+                       not (same_key (const_key d) (const_key c)))
+              in
+                definition_successors :=
+                  KNametab.update (const_key c, found)
+                    (!definition_successors);
+                found
+              end
+      fun search _ [] = false
+        | search visited (c :: rest) =
+            let val k = const_key c
+            in
+              if same_key k key then true
+              else if KNametab.defined visited k then search visited rest
+              else search (KNametab.update (k, ()) visited) (successors c @ rest)
+            end
+    in
+      search KNametab.empty (successors constant)
+    end
+    handle HOL_ERR _ => false
+
+  fun note_circular_definition
+        (context as {underdetermined, ...} : mf_context) constant equations =
+    if not (Term.is_const constant) orelse null equations orelse
+       List.exists (Term.same_const constant) (!underdetermined) orelse
+       not (List.all is_variable_equation equations) orelse
+       Option.isSome (DefnBase.lookup_indn constant) orelse
+       not (on_definition_cycle context constant)
+    then equations
+    else (underdetermined := constant :: !underdetermined; equations)
+
   fun equational_fun_axioms
         (context as {simp_table, psimp_table, ...} : mf_context) constant =
     if is_fixpoint_pred_const context constant then
       case_props_for_const context constant
     else
-    case def_props_for_const (!simp_table) constant of
+    note_circular_definition context constant
+    (case def_props_for_const (!simp_table) constant of
         [] =>
           (case def_props_for_const psimp_table constant of
                [] =>
@@ -2130,7 +2207,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                            | NONE => [])
                     | NONE => [])
              | psimps => psimps)
-      | simps => simps
+      | simps => simps)
 
   fun term_mentions_const constant term =
     List.exists (fn candidate =>
@@ -7298,6 +7375,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        ersatz_table = current_ersatz_table (),
        whack_weakening = ref false,
        fixpoint_checks = ref [],
+       definition_successors = ref KNametab.empty,
+       underdetermined = ref [],
        choice_guard_inserted = ref false,
        choice_empty_cache = ref [],
        choice_predicate_attempts = ref 0,

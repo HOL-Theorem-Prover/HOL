@@ -1570,3 +1570,32 @@ Theorem zoo_hidnw_cases[allow_rebind]:
 Proof
   rw [zoo_hidnw_helper_def] >> metis_tac []
 QED
+
+(* Two orders whose DefnBase presentations define each through the other,
+   as realax's rebound [real_lt] and [real_lte] do: neither presentation is
+   a definition, so a model finder that reads them as one leaves both
+   orders free. *)
+Definition zoo_circ_le_def:
+  zoo_circ_le (x : num) y <=> x <= y
+End
+
+Definition zoo_circ_lt_def:
+  zoo_circ_lt (x : num) y <=> x < y
+End
+
+Theorem zoo_circ_le_presentation:
+  !x y. zoo_circ_le x y <=> ~zoo_circ_lt y x
+Proof
+  simp [zoo_circ_le_def, zoo_circ_lt_def, arithmeticTheory.NOT_LESS]
+QED
+
+Theorem zoo_circ_lt_presentation:
+  !x y. zoo_circ_lt x y <=> ~zoo_circ_le y x
+Proof
+  simp [zoo_circ_le_def, zoo_circ_lt_def, arithmeticTheory.NOT_LESS_EQUAL]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_circ_le_presentation"};
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_circ_lt_presentation"};
