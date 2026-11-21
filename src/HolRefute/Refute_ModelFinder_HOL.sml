@@ -2140,10 +2140,11 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   (* Whether [constant] reaches itself through the constants of the
      definitions the back end sends, by way of another constant: every
-     equation names its own constant on the left.  An equational constant
-     is sent as its simps (or psimps) alone, as in [equational_fun_axioms],
-     so only those count for it; any other constant counts everything in
-     [sent_definitions].  Constants are compared with their types, since
+     equation names its own constant on the left.  As in
+     [equational_fun_axioms], an inductive predicate is sent as its cases
+     theorem alone and an equational constant as its simps (or psimps)
+     alone, so only those count for it; any other constant counts
+     everything in [sent_definitions].  Constants are compared with their types, since
      the tables give each instance of a polymorphic constant its own
      equations.  Each constant's successors are found once per run, in
      [definition_successors]. *)
@@ -2152,7 +2153,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
            : mf_context) constant =
     let
       fun sent c =
-        if is_raw_equational_fun context c then
+        if is_fixpoint_pred_const context c then
+          case_props_for_const context c
+        else if is_raw_equational_fun context c then
           case def_props_for_const (!simp_table) c of
               [] => def_props_for_const psimp_table c
             | simps => simps
