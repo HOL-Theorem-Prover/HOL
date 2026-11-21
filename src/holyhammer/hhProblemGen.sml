@@ -942,7 +942,7 @@ struct
           | order => order
       fun declarations operators =
         map (fn (symbol, arity) => hhTptpProblem.TypeDecl
-          (aiLib.escape ("ty." ^ symbol), symbol, arity)) operators
+          (aiLib.escape "ty." ^ symbol, symbol, arity)) operators
     in
       case encoding of
           hhTypeEnc.Native {poly = true, ...} =>
@@ -950,7 +950,7 @@ struct
               (List.mapPartial native_op distinct))
         | _ =>
             map (fn symbol => hhTptpProblem.TypeDecl
-              (aiLib.escape ("ty." ^ symbol), symbol, 0))
+              (aiLib.escape "ty." ^ symbol, symbol, 0))
               (aiLib.mk_sameorder_set String.compare
                 (map mangle_type distinct))
     end
@@ -975,7 +975,7 @@ struct
             (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
         in
           SOME (hhTptpProblem.FormLine
-            (aiLib.escape ("gsy." ^ #head symbols head),
+            (aiLib.escape "gsy." ^ #head symbols head,
              hhTptpProblem.Axiom, formula))
         end
     end
@@ -1289,7 +1289,7 @@ struct
             fun head_arity head =
               Option.getOpt (Redblackmap.peek (head_arities, head), 0)
             val sym_decls = map (fn head => hhTptpProblem.SymDecl
-              (aiLib.escape ("sy." ^ #head symbols head),
+              (aiLib.escape "sy." ^ #head symbols head,
                #head symbols head,
                declaration_type encoding (head_arity head) head))
               declaration_heads
@@ -1300,7 +1300,7 @@ struct
                                               result_type) =>
                       let val symbol = #app symbols app_signature in
                         hhTptpProblem.SymDecl
-                          (aiLib.escape ("sy." ^ symbol), symbol,
+                          (aiLib.escape "sy." ^ symbol, symbol,
                            hhTptpProblem.TyFun
                              (type_for encoding function_type,
                               hhTptpProblem.TyFun
@@ -1322,7 +1322,7 @@ struct
               case encoding of
                   hhTypeEnc.Native {poly = false, ...} =>
                     map (fn head => hhTptpProblem.SymDecl
-                      (aiLib.escape ("sy." ^ #value symbols head),
+                      (aiLib.escape "sy." ^ #value symbols head,
                        #value symbols head,
                        type_for encoding (type_of head)))
                       (distinct_heads

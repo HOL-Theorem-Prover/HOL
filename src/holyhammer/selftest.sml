@@ -1891,6 +1891,51 @@ fun test_hhProblemGen_mono_extensionality () =
 
 val _ = test_hhProblemGen_mono_extensionality ()
 
+(* A line name is an escaped ty., sy. or gsy. prefix before its symbol,
+   which is already escaped. *)
+fun test_hhProblemGen_declaration_names () =
+  let
+    open hhTptpProblem
+    val goal = ``LENGTH (l : num list) = SUC n``
+    fun problem_of format encoding = hhProblemGen.generate_problem
+      {format = hhTypeEnc.format_of_string format,
+       type_enc = hhTypeEnc.of_string encoding,
+       lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+       mono_instances = 100} {conjecture = goal, facts = []}
+    fun named_once (TypeDecl (name, symbol, _)) =
+          name = aiLib.escape "ty." ^ symbol
+      | named_once (SymDecl (name, symbol, _)) =
+          symbol = "app_2E" orelse symbol = "pp_2E" orelse
+          name = aiLib.escape "sy." ^ symbol
+      | named_once _ = true
+    fun check (format, encoding) =
+      let val lines = List.concat (map #2 (problem_of format encoding)) in
+        expect ("hhProblemGen escapes declaration names once in " ^ format)
+          (List.exists (fn TypeDecl _ => true | _ => false) lines andalso
+           List.exists (fn SymDecl _ => true | _ => false) lines andalso
+           List.all named_once lines)
+      end
+    (* FOF has no declarations: a gsy. line's symbol is one the printed
+       problem uses. *)
+    val guards = problem_of "fof" "mono_guards"
+    val words = String.tokens
+      (fn c => not (Char.isAlphaNum c orelse c = #"_"))
+      (string_of_problem FOF "line names" guards)
+    val gsy = aiLib.escape "gsy."
+    val gsy_symbols = List.mapPartial
+      (fn FormLine (name, _, _) =>
+            if String.isPrefix gsy name
+            then SOME (String.extract (name, size gsy, NONE)) else NONE
+        | _ => NONE) (List.concat (map #2 guards))
+  in
+    List.app check [("tf0", "mono_native"), ("tf1", "poly_native")];
+    expect "hhProblemGen escapes gsy line names once"
+      (not (null gsy_symbols) andalso
+       List.all (fn symbol => Lib.mem symbol words) gsy_symbols)
+  end
+
+val _ = test_hhProblemGen_declaration_names ()
+
 (* A mangled name spells out a whole type.  Nested types must not make
    symbols arbitrarily long, and distinct types must keep distinct
    symbols. *)
