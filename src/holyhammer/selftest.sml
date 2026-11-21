@@ -3531,6 +3531,10 @@ fun test_hhEval root =
        (hol_commit = "unknown" orelse
         (size hol_commit = 40 orelse size hol_commit = 64) andalso
         CharVector.all Char.isHexDigit hol_commit))
+    (* Their stderr stays out of the output that is read. *)
+    val _ = expect "read_stdout leaves out stderr"
+      (#output (hhProver.read_stdout "/bin/sh"
+                  ["-c", "echo 0123 >&2; echo out"] 10.0) = "out\n")
     val _ = hhEval.write_run_header expdir header
     val _ = expect "sample one selects every goal"
       (hhEval.sample_goal 1 "list.nil")

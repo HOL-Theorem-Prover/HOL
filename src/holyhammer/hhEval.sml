@@ -697,7 +697,7 @@ fun journal_complete path cells =
 fun read_command path arguments =
   let
     val {output, exec_failed, killed, status, ...} =
-      hhProver.read_process path arguments 60.0
+      hhProver.read_stdout path arguments 60.0
   in
     if exec_failed orelse killed orelse status <> Posix.Process.W_EXITED
     then NONE
@@ -705,13 +705,15 @@ fun read_command path arguments =
   end
   handle OS.SysErr _ => NONE
 
-(* The command's stderr shares its output pipe and may come first (a
-   warning, or GIT_TRACE), so take the first word that is a SHA-1 or
-   SHA-256 digest in hex. *)
+(* The first word, if it is a SHA-1 or SHA-256 digest in hex. *)
 fun hex_digest text =
-  List.find (fn word => (size word = 40 orelse size word = 64) andalso
-                        CharVector.all Char.isHexDigit word)
-    (String.tokens Char.isSpace text)
+  case String.tokens Char.isSpace text of
+      word :: _ =>
+        if (size word = 40 orelse size word = 64) andalso
+           CharVector.all Char.isHexDigit word
+        then SOME word
+        else NONE
+    | [] => NONE
 
 fun sha256 path =
   let
