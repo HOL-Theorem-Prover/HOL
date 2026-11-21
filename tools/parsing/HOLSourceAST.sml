@@ -384,8 +384,15 @@ fun mkInt (p, s) = IntegerConstant (p, Int.toString s)
 
 fun mkList (p, ls) =
   List {left = p, elems = {args = ls, seps = [], stop = p}, right = NONE, stop = p}
-fun mkTuple (p, ls) =
-  Tuple {left = p, elems = {args = ls, seps = [], stop = p}, right = NONE, stop = p}
+(* A synthetic tuple reaching STOP.  The IDE derives a node's span
+   from the AST, so a tuple holding user-written arguments needs a
+   stop past them: left at the anchor it would claim nothing, and
+   navigation into the arguments -- hover, go-to-definition -- stops
+   at the tuple. *)
+fun mkTupleTo (p, stop, ls) =
+  Tuple {left = p, elems = {args = ls, seps = [], stop = stop},
+         right = NONE, stop = stop}
+fun mkTuple (p, ls) = mkTupleTo (p, p, ls)
 
 fun mkLabEq (p, lab, exp) = LabEq {lab = (p, lab), eq = p, exp = exp}
 fun mkRecord (p, ls) =

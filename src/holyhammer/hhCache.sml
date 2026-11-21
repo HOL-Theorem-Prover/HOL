@@ -114,10 +114,27 @@ fun is_hex character =
   (#"a" <= character andalso character <= #"f")
 
 fun is_entry_name name =
-  String.size name = 40 andalso List.all is_hex (String.explode name)
+  String.size name = 40 andalso CharVector.all is_hex name
 
 fun entry_names directory =
   List.filter is_entry_name (hhConfig.directory_names directory)
+
+fun over_limit directory maximum =
+  let
+    val stream = OS.FileSys.openDir directory
+    fun loop remaining =
+      case OS.FileSys.readDir stream of
+          NONE => false
+        | SOME name =>
+            if is_entry_name name then
+              remaining <= 0 orelse loop (remaining - 1)
+            else loop remaining
+    val over = loop maximum
+      handle error => (OS.FileSys.closeDir stream; raise error)
+  in
+    OS.FileSys.closeDir stream;
+    over
+  end
 
 fun cache_entries directory names =
   let
@@ -146,19 +163,24 @@ fun prune (options : hhConfig.hh_options) =
   else
     ((let
         val directory = #cache_dir options
-        val names = entry_names directory
         val maximum = #cache_max_entries options
       in
-        (* Count names first: stat every entry only when over the limit. *)
-        if length names <= maximum then ()
+        (* Retain names and stat entries only when pruning may be needed. *)
+        if not (over_limit directory maximum) then ()
         else
           let
-            val entries = cache_entries directory names
-            val target = ninety_percent maximum
-            val oldest = aiLib.first_n (length entries - target)
-              (Portable.sort entry_before entries)
+            val names = entry_names directory
           in
-            List.app (remove o #3) oldest
+            if length names <= maximum then ()
+            else
+              let
+                val entries = cache_entries directory names
+                val target = ninety_percent maximum
+                val oldest = aiLib.first_n (length entries - target)
+                  (Portable.sort entry_before entries)
+              in
+                List.app (remove o #3) oldest
+              end
           end
       end)
      handle Interrupt => raise Interrupt

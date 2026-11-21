@@ -56,6 +56,9 @@ Some components include C/C++ code that requires a C compiler:
 - `examples/muddy/` contains the BDD library, which requires building
   the shared library in `examples/muddy/muddyC/`.
 
+See [proof traces](src/postkernel/prooftrace/README.md) for conversion,
+target merging, formats and replay regressions.
+
 ### Dealing with failure
 
 If the build fails, try `bin/build cleanAll` before rebuilding. To

@@ -855,6 +855,30 @@ fun test_hhLamTrans () =
        List.all (fn (name, _) =>
          has_name (name ^ ".combs") both_defs) lift_defs andalso
        List.all (not o formula_abs o #2) both_defs)
+    val capturing_lam = Term.mk_abs (x,
+      Term.list_mk_comb (f, [Term.mk_comb (g, x), y]))
+    val capturing_consumer = Term.mk_var ("CC", Type.mk_type
+      ("fun", [unary, Type.bool]))
+    val (_, capturing_defs) =
+      hhLamTrans.translate hhLamTrans.CombsAndLifting
+        [Term.mk_comb (capturing_consumer, capturing_lam)]
+    val _ = expect "combs_and_lifting abstracts only the bound variables"
+      (case capturing_defs of
+           [(_, lifted), (combs_name, combs)] =>
+             let
+               val (captured, equation) = strip_forall combs
+               val (replacement, combinators) = dest_eq equation
+             in
+               combs_name = "lam.0.combs" andalso
+               ListPair.allEq (Lib.uncurry Term.aconv)
+                 (captured, [f, g, y]) andalso
+               Term.aconv replacement
+                 (rator (lhs (#2 (strip_forall lifted)))) andalso
+               not (term_abs combinators) andalso
+               Term.aconv (normalise (Term.mk_comb (combinators, x)))
+                 (Term.list_mk_comb (f, [Term.mk_comb (g, x), y]))
+             end
+         | _ => false)
     val _ = expect "keep_lams only eta-contracts"
       (null kept_defs andalso List.exists formula_abs kept andalso
        length kept = length fixtures)
@@ -9016,6 +9040,48 @@ fun test_hhLearn_target_thmdata () =
 
 val _ = test_hhLearn_target_thmdata ()
 
+fun test_hhLearn_dependency_lookup () =
+  let
+    val {intact, knn} = hhLearn.make_dependency_lookup ()
+    val theorems =
+      map #2 (aiLib.first_n 8 (DB.theorems "list") @
+              aiLib.first_n 8 (DB.theorems "arithmetic"))
+    val data = hhLearn.create_thmdata_for "list"
+    fun agrees theorem =
+      let val goal = Thm.dest_thm theorem in
+        intact theorem = mlThmData.intactdep_of_thm theorem andalso
+        knn data 12 goal = hhLearn.rank_knn data 12 goal
+      end
+  in
+    expect "worker dependency lookup preserves dependency and kNN order"
+      (not (null theorems) andalso List.all agrees theorems)
+  end
+
+val _ = test_hhLearn_dependency_lookup ()
+
+fun test_hhLearn_shared_predictions () =
+  let
+    val entries = aiLib.first_n 40 (DB.theorems "list")
+    val goal = Thm.dest_thm (#2 (hd entries))
+    val features = mlFeature.fea_of_goal true goal
+    (* Equal feature vectors force kNN to break ties at both cutoffs. *)
+    val rows = map (fn (name, _) => ("listTheory." ^ name, features)) entries
+    val data = (mlFeature.learn_tfidf rows, rows)
+    val context = hhLearn.create_context data
+    val filters = [("knn", 3), ("mash", 2), ("mesh", 14), ("knn", 11),
+                   ("mash", 7), ("mepo", 5), ("mesh", 4), ("none", 0)]
+    fun separate (filter, n) =
+      (filter, hhLearn.rank context
+        {filter = filter, pool = NONE, goal = goal, n = n})
+    fun agrees requests =
+      hhLearn.rank_filters data goal requests = map separate requests
+  in
+    expect "shared learner rankings preserve ties, cutoffs and filter order"
+      (agrees filters andalso agrees (rev filters))
+  end
+
+val _ = test_hhLearn_shared_predictions ()
+
 (* A theorem with hypotheses is no premise.  Exported by its bare
    conclusion, [F] |- F hands the provers a false axiom (ContradictoryAxioms,
    bogus proofs Metis then rejects); discharged, it is unusable by replay. *)
@@ -9033,10 +9099,16 @@ fun test_hypothesis_premises () =
     val goal = ([], boolSyntax.T)
     val features = mlFeature.fea_of_goal true goal
     val rows = [(truth, features), (fixture, features)]
-    val context =
-      hhLearn.create_context (mlFeature.learn_tfidf rows, rows)
+    val data = (mlFeature.learn_tfidf rows, rows)
+    val filters = [("knn", 1), ("none", 0)]
+    val lightweight = hhLearn.rank_filters data goal filters
+    val warm = hhLearn.rank_filters data goal filters
+    val context = hhLearn.create_context data
     val none = hhLearn.rank context
       {filter = "none", pool = NONE, goal = goal, n = 2}
+    val knn = hhLearn.rank context
+      {filter = "knn", pool = NONE, goal = goal, n = 1}
+    val promoted = hhLearn.rank_filters data goal filters
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val options : hhConfig.hh_options =
       {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
@@ -9066,6 +9138,9 @@ fun test_hypothesis_premises () =
        not (List.exists (fn name => name = fixture) target_names));
     expect "premise ranking skips theorems with hypotheses"
       (hhLearn.context_thmids context = [truth] andalso none = [truth]);
+    expect "lightweight rankings preserve filter order and hypothesis checks"
+      (lightweight = [("knn", knn), ("none", none)] andalso
+       warm = lightweight andalso promoted = lightweight);
     expect "legacy and generated exports drop theorems with hypotheses"
       (with_fixture = without_fixture);
     remove_tree root;

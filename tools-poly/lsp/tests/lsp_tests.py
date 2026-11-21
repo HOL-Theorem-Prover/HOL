@@ -1051,6 +1051,86 @@ def test_thm_hover_shows_statement():
         c.close()
 
 
+def test_simple_thm_rhs_hovers():
+    """`Theorem foo = <exp>` hovers the identifiers on its right.
+
+    The form expands to `val foo = save_thm_at <loc> (\"foo\", <exp>)`,
+    whose synthetic tuple used to stop at the `Theorem` keyword.  The
+    declaration the IDE derived from it was therefore zero-width, and
+    `builtNavigateTo`'s `findChild` could not descend into it: every
+    identifier on the line, the theorem's own name included, answered
+    null.  `Overload`/`Type` expanded the same way and were just as
+    dead.
+
+    The controls are the keywords, which belong to the wrapper and
+    must stay silent.  The wrapper's own identifier -- `save_thm_at`,
+    `Parse.type_abbrev` -- is anchored at the keyword and spanned by
+    the width of its *name*, so it claims bytes the user wrote.
+    Widening the tuple is what makes those claims reachable: before
+    holide collapsed them, hovering anywhere in the first 17 bytes of
+    a `Type` line answered with `Parse.type_abbrev`'s type over
+    whatever source text sat under it."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/simple_thm_rhs.sml"
+        src = ("Theory simple_thm_rhs\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "Theorem both = CONJ CONJ_ASSOC CONJ_COMM\n"
+               "\n"
+               "Overload incr = \u201c\\x. x + 1\u201d\n"
+               "\n"
+               "Type pairfn = \u201c:num -> num\u201d\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        lines = src.split("\n")
+
+        def hover(line, needle, offset=0):
+            """Hover inside NEEDLE on LINE, counting bytes (the
+            negotiated position encoding) rather than characters."""
+            idx = lines[line].index(needle) + offset
+            col = len(lines[line][:idx].encode("utf8"))
+            res = _hover_at(c, 7000 + line * 100 + col, uri, line, col)
+            return None if res is None else res["contents"]["value"]
+
+        md = hover(3, "CONJ_ASSOC", 1)
+        assert_true(md is not None, "hover on a `Theorem id =` argument")
+        assert_contains(md, "t1 ∧ t2 ∧ t3", "the argument's statement")
+
+        md = hover(3, "CONJ ", 1)
+        assert_true(md is not None, "hover on the applied function")
+        assert_contains(md, "Thm.thm -> Thm.thm", "`CONJ`'s SML type")
+
+        md = hover(3, "both", 1)
+        assert_true(md is not None, "hover on the theorem's own name")
+        assert_contains(md, "⊢", "the theorem it was saved as")
+
+        # Inside the `Overload` quotation, which expands through the
+        # same synthetic tuple.
+        md = hover(5, "x + 1", 0)
+        assert_true(md is not None, "hover inside an `Overload` body")
+        assert_contains(md, "bound variable x",
+                        "the variable under the cursor")
+
+        # Controls: the keyword and the `=` are the wrapper's own
+        # territory and must stay silent.  `Type` is the sharp one --
+        # `Parse.type_abbrev` is applied directly, with nothing
+        # zero-width above it to stop the descent, so its 17 bytes of
+        # claimed source reach from the keyword into the quotation.
+        for (line, needle, offset, label) in [
+                (3, "Theorem", 1, "the `Theorem` keyword"),
+                (3, "= CONJ", 0, "the `=`"),
+                (5, "Overload", 1, "the `Overload` keyword"),
+                (7, "Type", 1, "the `Type` keyword"),
+                (7, "pairfn", 1, "a type abbreviation's name")]:
+            assert_eq(hover(line, needle, offset), None,
+                      "no hover on " + label)
+    finally:
+        c.close()
+
+
 def test_hover_shows_entry_documentation():
     """Hover on a documented entry point carries its Reference entry
     and a link to the file the entry was read from.
@@ -13284,6 +13364,7 @@ TESTS = [
     ("workdone_progress",            test_workdone_progress),
     ("cheat_proofs_installed",       test_cheat_proofs_installed),
     ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
+    ("simple_thm_rhs_hovers",        test_simple_thm_rhs_hovers),
     ("hover_shows_entry_documentation",
                                      test_hover_shows_entry_documentation),
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),

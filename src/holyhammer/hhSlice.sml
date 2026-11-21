@@ -105,7 +105,16 @@ fun mk_schedule (options : hhConfig.hh_options) =
       map (fn prover =>
         let val config = hhProver.config_of prover
         in (prover, config, #slices config) end) requested
-    val order = schedule_of_provers requested (#slices options)
+    (* The portfolio prefix can consume some entries. After at most as
+       many full rotations as the longest table, every table is empty. *)
+    val longest = foldl
+      (fn ((_, _, slices), maximum) => Int.max (length slices, maximum))
+      0 tables
+    val limit = IntInf.fromInt (length rotation) +
+      IntInf.fromInt (length requested) * IntInf.fromInt longest
+    val count = IntInf.toInt (IntInf.min
+      (IntInf.fromInt (#slices options), limit))
+    val order = schedule_of_provers requested count
 
     fun consume _ [] = NONE
       | consume prover ((entry as (other, config, slices)) :: rest) =

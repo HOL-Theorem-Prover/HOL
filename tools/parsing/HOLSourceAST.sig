@@ -312,6 +312,7 @@ val mkString: int * string -> exp
 val mkInt: int * int -> exp
 val mkList: int * exp list -> exp
 val mkTuple: int * exp list -> exp
+val mkTupleTo: int * int * exp list -> exp
 val mkApp: exp -> exp list -> exp
 val mkLabEq: int * string * exp -> row
 val mkRecord: int * row list -> exp
@@ -447,7 +448,8 @@ end;
       - mkIdent / mkString / mkInt / mkList / mkTuple / mkApp /
         mkLabEq / mkRecord build synthetic nodes using a single
         position parameter; the parser uses these when emitting
-        expansion results.
+        expansion results.  mkTupleTo takes a stop as well, for a
+        tuple whose span has to cover arguments the user wrote.
       - decodeStr / encodeStr move between SML string literals and
         their raw character contents, handling \NNN / \uXXXX /
         line-continuation escapes.

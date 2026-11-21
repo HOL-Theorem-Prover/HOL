@@ -197,7 +197,8 @@ fun partition_skip (SOME n) Args =
    recursive equations straightforward.
 
    A compset can be "sealed" to prevent mutation of existing constant entries.
-   This allows base compsets (like bool_compset) to be shared safely as values.
+   This allows base compsets (like bool_compset) to be shared safely as values:
+   a change to a sealed compset is made to a copy of it (see `unshare`).
    Adding rules for NEW constants to a sealed compset works fine.
    Adding rules for EXISTING constants in a sealed compset raises an exception.
    Use `copy` to create an unsealed copy if you need to extend existing
@@ -224,10 +225,44 @@ val empty_rws = Compset { sealed = true, dict = SSPairTab.empty };
 fun seal (Compset {dict, ...}) = Compset {sealed = true, dict = dict}
 
 (* Create an unsealed copy of a compset with fresh refs for all constants.
-   Use this when you need to extend rules for existing constants. *)
+   Use this when you need to extend rules for existing constants.
+   The rules' shadow terms are made to point at the fresh refs too, so rules
+   added to the copy are seen inside the copy's existing rules, and none of
+   them reaches the original. *)
 fun copy (Compset {dict, ...}) =
-  Compset { sealed = false,
-            dict = SSPairTab.map (fn _ => fn r => ref (!r)) dict }
+  let
+    val fresh = SSPairTab.map (fn _ => fn r => ref (!r)) dict
+    fun new_ref c r =
+      let val {Name,Thy,...} = dest_thy_const c
+      in
+        case SSPairTab.lookup dict (Name,Thy) of
+          SOME r0 => if r0 = r then valOf (SSPairTab.lookup fresh (Name,Thy))
+                     else r
+        | NONE => r
+      end
+    fun dterm (Cst (c, r)) = Cst (c, new_ref c r)
+      | dterm (App (h, l)) = App (dterm h, map dterm l)
+      | dterm (Abs b) = Abs (dterm b)
+      | dterm t = t
+    fun rewrite (RW {cst, ants, lhs, npv, rhs, thm}) =
+      RW {cst = cst, ants = map dterm ants, lhs = lhs, npv = npv,
+          rhs = dterm rhs, thm = thm}
+    fun action (Rewrite rws) = Rewrite (map rewrite rws)
+      | action a = a
+    fun db EndDb = EndDb
+      | db (NeedArg d) = NeedArg (db d)
+      | db (Try {Hcst, Rws, Tail}) =
+          Try {Hcst = Hcst, Rws = action Rws, Tail = db Tail}
+    fun update (_, r) () = let val (d, sk) = !r in r := (db d, sk) end
+  in
+    SSPairTab.fold update fresh ();
+    Compset {sealed = false, dict = fresh}
+  end
+
+(* A compset that may be written to: other compsets may share a sealed one's
+   refs, so a sealed compset is copied, and the copy stays sealed. *)
+fun unshare (cs as Compset {sealed, ...}) =
+  if sealed then seal (copy cs) else cs
 
 (*
    Look up the per-constant database of `cst` in the given compset. If it does
@@ -278,8 +313,9 @@ fun add_in_db_upd compset (name,arity,hcst) action =
    ; compset'
   end;
 
-fun set_skip compset p sk =
-  let val _ = if is_sealed_existing compset p then
+fun set_skip compset0 p sk =
+  let val compset = unshare compset0
+      val _ = if is_sealed_existing compset p then
                 raise CL_ERR "set_skip"
                   ("cannot modify skip for existing constant " ^
                    #2 p ^ "$" ^ #1 p ^
@@ -291,8 +327,9 @@ fun set_skip compset p sk =
    ; compset'
   end;
 
-fun scrub_const (Compset {sealed, dict}) c =
+fun scrub_const cs c =
   let val {Thy,Name,Ty} = dest_thy_const c
+      val Compset {dict, ...} = unshare cs
   in Compset {sealed=false, dict = SSPairTab.delete_safe (Name,Thy) dict}
   end;
 
@@ -455,7 +492,7 @@ fun split_conjuncts thm =
 fun add_thms lthm compset =
   foldl (fn (thm, cs) =>
             foldl (fn (t, cs') => enter_thm cs' t) cs (split_conjuncts thm))
-        compset lthm;
+        (unshare compset) lthm;
 
 fun add_thmset setname compset = let
   open ThmSetData
@@ -466,13 +503,14 @@ end
 
 fun add_extern (cst,arity,fconv) compset =
   let val {Name,Thy,...} = dest_thy_const cst in
-  add_in_db_upd compset ((Name,Thy),arity,cst) (Conv fconv)
+  add_in_db_upd (unshare compset) ((Name,Thy),arity,cst) (Conv fconv)
   end;
 
 val new_rws =
   add_thms [boolTheory.REFL_CLAUSE] empty_rws;
 
-fun from_list lthm = add_thms lthm new_rws;
+(* `new_rws` is not sealed, so each compset built from it gets its own copy *)
+fun from_list lthm = add_thms lthm (copy new_rws);
 
 fun scrub_thms lthm compset =
  let val tmlist = map (concl o hd o BODY_CONJUNCTS) lthm
