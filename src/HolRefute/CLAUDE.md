@@ -103,8 +103,10 @@ repository.
   and never "fix" a test expecting `Genuine, cert = NONE` from kodkod.  See
   README; 3948a7bed and 2db19131b did this and were reverted, as was
   92c24de7e, which did it as a budget.  `max_potential` bounds models whose
-  *encoding* is unsound, so only liberal problems spend it; every model of a
-  sound problem is charged to `max_genuine`.
+  *encoding* is unsound: those of liberal problems, and those of a problem
+  where a constant's equations are circular (they leave it free), which
+  are Potential unless replay certifies them.  Every other model of a
+  sound problem is charged to `max_genuine` (QuasiGenuine spends neither).
 - Substrate selection: `Auto` falls through inapplicable substrates
   (NativeSML, then Compute); an explicitly selected substrate never falls
   through — inapplicability reports `Unknown`.
