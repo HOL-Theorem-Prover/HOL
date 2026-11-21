@@ -1064,7 +1064,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       (table_lookup table constant))
     |> Util.distinct_terms
 
-  (* Whether a list of arguments consists of distinct variables. *)
+  (* [deviation from upstream] Whether a list of arguments consists of
+     distinct variables; shared by [normalized_rhs_of],
+     [is_variable_equation] and [is_equational_fun_surely_complete]. *)
   fun distinct_vars [] = true
     | distinct_vars (variable :: rest) =
         Term.is_var variable andalso
@@ -2138,13 +2140,23 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   (* Whether [constant] reaches itself through the constants of the
      definitions the back end sends, by way of another constant: every
-     equation names its own constant on the left.  Constants are compared
-     with their types, since the tables give each instance of a polymorphic
-     constant its own equations.  Each constant's successors are found once
-     per run, in [definition_successors]. *)
+     equation names its own constant on the left.  An equational constant
+     is sent as its simps (or psimps) alone, as in [equational_fun_axioms],
+     so only those count for it; any other constant counts everything in
+     [sent_definitions].  Constants are compared with their types, since
+     the tables give each instance of a polymorphic constant its own
+     equations.  Each constant's successors are found once per run, in
+     [definition_successors]. *)
   fun on_definition_cycle
-        (context as {definition_successors, ...} : mf_context) constant =
+        (context as {definition_successors, simp_table, psimp_table, ...}
+           : mf_context) constant =
     let
+      fun sent c =
+        if is_raw_equational_fun context c then
+          case def_props_for_const (!simp_table) c of
+              [] => def_props_for_const psimp_table c
+            | simps => simps
+        else sent_definitions context c
       fun successors c =
         case Redblackmap.peek (!definition_successors, c) of
             SOME found => found
@@ -2152,7 +2164,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               let
                 val found =
                   List.concat (map (HolKernel.find_terms Term.is_const)
-                    (sent_definitions context c))
+                    (sent c))
                   |> List.filter (fn d =>
                        not (is_built_in_const d) andalso
                        not (Term.aconv d c))

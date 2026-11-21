@@ -214,6 +214,8 @@ fun unproved_conditions (context : MFH.mf_context) =
                " not proved " ^ condition))
     (rev (!(#fixpoint_checks context)))
 
+(* [deviation from upstream] The reasons a model is only Potential because
+   a constant's equations are circular (MFH.note_circular_definition). *)
 fun underdetermined_reasons (context : MFH.mf_context) =
   map (fn constant => "equations of " ^ Parse.term_to_string constant ^
                       " are circular, not a definition")

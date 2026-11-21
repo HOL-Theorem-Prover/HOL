@@ -60,8 +60,9 @@ Verdicts and trust
   as Nitpick trusts Kodkod and is never stricter.  A model-finder verdict is
   decided by the encoding (`Refute_ModelFinder_Model.fallback_certainty`),
   never by whether a certificate was built.  `max_potential` bounds models of
-  the unsound liberal problem only; every model of a sound problem is
-  charged to `max_genuine`.  3948a7bed, 2db19131b and 92c24de7e required a
+  the unsound liberal problem, and the uncertified models of a problem
+  where a constant's equations are circular (that constant is left free);
+  every other model of a sound problem is charged to `max_genuine`.  3948a7bed, 2db19131b and 92c24de7e required a
   certificate and were reverted.
 * A polymorphic goal never earns `NoCounterexample` on any engine; a
   counterexample found at a monomorphic proxy stands.  Refuting an
