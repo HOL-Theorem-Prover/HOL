@@ -690,28 +690,37 @@ fun journal_complete path cells =
     List.all (cell_completed pairs) cells
   end
 
+(* Not Unix.execute: its pipes are not close-on-exec, so a prover that
+   another thread spawns meanwhile inherits one, and reading the command's
+   output waits for that prover to exit.  hhProver's spawn is serialised
+   with the prover spawns and makes its pipe close-on-exec. *)
 fun read_command path arguments =
   let
-    val process = Unix.execute (path, arguments)
-    val (input, output) = Unix.streamsOf process
-    val _ = TextIO.closeOut output
-    val text = TextIO.inputAll input
-    val _ = TextIO.closeIn input
-    val _ = Unix.reap process
+    val {output, exec_failed, killed, status, ...} =
+      hhProver.read_stdout path arguments 60.0
   in
-    SOME text
+    if exec_failed orelse killed orelse status <> Posix.Process.W_EXITED
+    then NONE
+    else SOME output
   end
-  handle OS.SysErr _ => NONE | IO.Io _ => NONE
+  handle OS.SysErr _ => NONE
 
-fun first_word text =
-  case String.tokens Char.isSpace text of [] => NONE | word :: _ => SOME word
+(* The first word, if it is a SHA-1 or SHA-256 digest in hex. *)
+fun hex_digest text =
+  case String.tokens Char.isSpace text of
+      word :: _ =>
+        if (size word = 40 orelse size word = 64) andalso
+           CharVector.all Char.isHexDigit word
+        then SOME word
+        else NONE
+    | [] => NONE
 
 fun sha256 path =
   let
     fun digest executable arguments =
       case read_command executable arguments of
           NONE => NONE
-        | SOME output => first_word output
+        | SOME output => hex_digest output
   in
     if OS.FileSys.access (path, [OS.FileSys.A_READ]) then
       case digest "/usr/bin/sha256sum" [path] of
@@ -747,7 +756,7 @@ fun host_name () =
 fun hol_commit () =
   case read_command "/usr/bin/git" ["rev-parse", "HEAD"] of
       SOME output =>
-        (case first_word output of SOME hash => hash | NONE => "unknown")
+        (case hex_digest output of SOME hash => hash | NONE => "unknown")
     | NONE => "unknown"
 
 fun loaded_corpus_entry thy =

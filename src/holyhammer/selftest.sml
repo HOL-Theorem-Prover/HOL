@@ -3519,6 +3519,22 @@ fun test_hhEval root =
       (JSONPrinter.valueToString legacy_header)
     val _ = expect "resume rejects headers without hammer settings"
       (resume_rejected "hammer_options" header)
+    (* A run header reads the HOL commit with git, which must start
+       through hhProver's spawn as the provers do. *)
+    val _ = hhProver.reset_spawn_count ()
+    val {hol_commit, ...} = hhEval.new_run_header
+      {expname = "fixture", corpus = [], added_from_dat = [],
+       conditions = [], sample = 1}
+    val _ = expect "run header commands spawn through hhProver"
+      (not (OS.FileSys.access ("/usr/bin/git", [OS.FileSys.A_EXEC])) orelse
+       hhProver.spawn_count () = 1 andalso
+       (hol_commit = "unknown" orelse
+        (size hol_commit = 40 orelse size hol_commit = 64) andalso
+        CharVector.all Char.isHexDigit hol_commit))
+    (* Their stderr stays out of the output that is read. *)
+    val _ = expect "read_stdout leaves out stderr"
+      (#output (hhProver.read_stdout "/bin/sh"
+                  ["-c", "echo 0123 >&2; echo out"] 10.0) = "out\n")
     val _ = hhEval.write_run_header expdir header
     val _ = expect "sample one selects every goal"
       (hhEval.sample_goal 1 "list.nil")
