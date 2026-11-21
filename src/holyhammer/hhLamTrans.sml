@@ -232,11 +232,9 @@ struct
           val lam_type = list_mk_fun (map type_of arguments, type_of tm)
           val lam = mk_var (fresh_name (), lam_type)
           val replacement = list_mk_comb (lam, arguments)
-          val lhs = list_mk_comb (replacement, bound)
-          val definition = list_mk_forall (captured @ bound,
-            mk_eq (lhs, matrix'))
-          val _ =
-            definitions := (fst (dest_var lam), definition) :: !definitions
+          val _ = definitions :=
+            {name = fst (dest_var lam), captured = captured, bound = bound,
+             replacement = replacement, matrix = matrix'} :: !definitions
         in
           replacement
         end
@@ -246,27 +244,31 @@ struct
       (rewritten, List.rev (!definitions))
     end
 
-  fun intentionalize definition =
-    let
-      val (_, equation) = strip_forall definition
-      val (left, right) = dest_eq equation
-      val (head, args) = strip_comb left
-      val (witnesses, variables) = Lib.partition (not o is_var) args
-    in
-      mk_eq (list_mk_comb (head, witnesses), list_mk_abs (variables, right))
-    end
+  fun lifted_definition {name, captured, bound, replacement, matrix} =
+    (name, list_mk_forall (captured @ bound,
+      mk_eq (list_mk_comb (replacement, bound), matrix)))
 
-  fun translate_with _ Lifting formulas = lift formulas
+  (* Only the bound variables become combinators.  The captured ones stay
+     quantified arguments of the lifted symbol: abstracting them too wraps
+     the body in one more combinator layer per captured variable, so the
+     definition grows quadratically in their number. *)
+  fun combinator_definition names {name, captured, bound, replacement,
+                                   matrix} =
+    (name ^ ".combs", eliminate_abs names (list_mk_forall (captured,
+      mk_eq (replacement, list_mk_abs (bound, matrix)))))
+
+  fun translate_with _ Lifting formulas =
+        let val (rewritten, definitions) = lift formulas in
+          (rewritten, map lifted_definition definitions)
+        end
     | translate_with names Combs formulas =
         (map (eliminate_abs names o close_formula) formulas, [])
     | translate_with names CombsAndLifting formulas =
         let
           val (rewritten, definitions) = lift formulas
-          val combinator_definitions = map (fn (name, definition) =>
-            (name ^ ".combs", eliminate_abs names (intentionalize definition)))
-            definitions
         in
-          (rewritten, definitions @ combinator_definitions)
+          (rewritten, map lifted_definition definitions @
+            map (combinator_definition names) definitions)
         end
     | translate_with _ KeepLams formulas =
         (map (eta_contract o close_formula) formulas, [])
