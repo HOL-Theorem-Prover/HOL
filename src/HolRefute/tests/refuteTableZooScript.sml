@@ -1621,3 +1621,18 @@ QED
 
 val _ = DefnBase.register_defn
           {tag = "user", thmname = "zoo_cyc_ind_presentation"};
+
+(* A predicate presented through itself: the presentation holds of the
+   true predicate it defines, and also of the false one. *)
+Definition zoo_self_def:
+  zoo_self (b : bool) <=> T
+End
+
+Theorem zoo_self_presentation:
+  !b. zoo_self b <=> zoo_self (~b)
+Proof
+  simp [zoo_self_def]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_self_presentation"};

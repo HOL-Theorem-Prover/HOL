@@ -2139,13 +2139,15 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     end handle HOL_ERR _ => false
 
   (* Whether [constant] reaches itself through the constants of the
-     definitions the back end sends, by way of another constant: every
-     equation names its own constant on the left.  A constant's
-     successors are those of what Refute_ModelFinder_Preproc sends or
-     unfolds for it: an inductive predicate's cases theorem, an equational
-     constant's simps (or psimps), a choice specification, or else the one
-     definition [def_of_const] picks (the unfold table before the
-     fallback).  A constant with none of these is sent no definition, only
+     definitions the back end sends, by way of other constants or by an
+     equation naming its own constant on the right-hand side.  Its other
+     occurrences, on the left or in a premise (Hilbert choice's
+     [P x ==> ~P y ==> $@ P = y ==> $@ P = x]), make no cycle.  A
+     constant's successors are those of what Refute_ModelFinder_Preproc
+     sends or unfolds for it: an inductive predicate's cases theorem, an
+     equational constant's simps (or psimps), a choice specification, or
+     else the one definition [def_of_const] picks (the unfold table before
+     the fallback).  A constant with none of these is sent no definition, only
      user axioms, which are not definitions, so it has no successors.
      Constants are compared with their types, since the tables give each
      instance of a polymorphic constant its own equations.  Each
@@ -2168,17 +2170,25 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           case def_of_const context c of
               SOME definition => [boolSyntax.mk_eq (c, definition)]
             | NONE => []
+      fun on_right c prop =
+        case Lib.total boolSyntax.dest_eq
+               (#2 (boolSyntax.strip_imp
+                      (#2 (boolSyntax.strip_forall prop)))) of
+            SOME (_, right) => Lib.can (HolKernel.find_term (Term.aconv c))
+                                 right
+          | NONE => false
       fun successors c =
         case Redblackmap.peek (!definition_successors, c) of
             SOME found => found
           | NONE =>
               let
+                val props = sent c
                 val found =
-                  List.concat (map (HolKernel.find_terms Term.is_const)
-                    (sent c))
+                  List.concat (map (HolKernel.find_terms Term.is_const) props)
                   |> List.filter (fn d =>
                        not (is_built_in_const d) andalso
                        not (Term.aconv d c))
+                  |> (if List.exists (on_right c) props then cons c else I)
               in
                 definition_successors :=
                   Redblackmap.insert (!definition_successors, c, found);

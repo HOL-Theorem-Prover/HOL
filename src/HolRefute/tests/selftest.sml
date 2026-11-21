@@ -3164,18 +3164,25 @@ val _ = mf_test "circular presentations are not definitions" (fn () =>
               zoo_circ_lt x z``))) andalso
   genuine_certified (refute mf ``!x y. zoo_circ_lt x y``))
 
-(* Only what the model finder sends closes a cycle: zoo_cyc_ind is sent as
-   its cases theorem, not the presentation that mentions zoo_cyc_alias. *)
-fun flags_circular constant =
-  let
-    val context = Refute_ModelFinder_HOL.make_context (#mf mf) []
-  in
-    ignore (Refute_ModelFinder_HOL.equational_fun_axioms context constant);
-    not (null (!(#underdetermined context)))
-  end
+(* Unreplayed, a model that leans on a circular presentation says so,
+   whether the presentation names the constant itself or goes through
+   another.  Only what the model finder sends closes a cycle:
+   zoo_cyc_ind is sent as its cases theorem, not the presentation that
+   mentions zoo_cyc_alias. *)
+fun circular_reason name (c : counterexample) =
+  case #certainty c of
+      Potential reasons =>
+        List.exists (String.isSubstring
+          (name ^ " are circular, not a definition")) reasons
+    | _ => false
+val mf_unreplayed = mf_short |> upd_certify false
 val _ = mf_test "only sent equations close a definition cycle" (fn () =>
-  flags_circular ``zoo_circ_lt`` andalso
-  not (flags_circular ``zoo_cyc_alias``))
+  cex_where (circular_reason "zoo_self")
+    (refute mf_unreplayed ``!b. zoo_self b``) andalso
+  (case refute mf_unreplayed ``!n. zoo_cyc_alias n`` of
+       Counterexample cexs =>
+         not (List.exists (circular_reason "zoo_cyc_alias") cexs)
+     | _ => false))
 
 (* A definition's own pattern variable over a pair type stays unboxed: boxed,
    it ranged over the box atoms only, and with none in scope [MAP f (h::t)]
@@ -3187,7 +3194,8 @@ val _ = mf_test "pair patterns in definitions cover unboxed tuples" (fn () =>
           LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [SND (SND (HD l))]``,
      ``SUM (MAP (\(a : 'a, b : num, n : num, c : bool). n)
                (TAKE k (REPLICATE m (x, 0n, 0n, F)))) = 0``,
-     ``EVERY (\kv : 'a # num # num. 1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l /\
+     ``EVERY (\kv : 'a # num # num.
+               1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l /\
        MEM x l ==> 1 <= FST (SND x)``,
      ``EVERY (\kv : 'a # num # num.
                1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l ==>
@@ -3195,6 +3203,8 @@ val _ = mf_test "pair patterns in definitions cover unboxed tuples" (fn () =>
   List.all (genuine_certified o refute mf)
     [``MAP (\p : 'a # num # num. SND (SND p)) (REPLICATE m (x, 0, 1)) =
        REPLICATE m 0``,
+     ``SUM (MAP (\(a : 'a, b : num, n : num, c : bool). n)
+               (TAKE k (REPLICATE m (x, 0n, 1n, F)))) = 0``,
      ``!l : ('a # 'b # num) list.
           LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [0]``,
      ``EVERY (\kv : 'a # num # num. 1 <= SND (SND kv)) l ==>
