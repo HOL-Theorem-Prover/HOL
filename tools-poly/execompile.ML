@@ -47,7 +47,10 @@ fun exe_compile {fnname: string, output_exe: string, keep_temp_files: bool} =
                              keep_file = keep_temp_files}
                             withobj
   in
-    OS.Process.exit res
+    (* res is cc's raw wait status (256 for exit code 1): passed to
+       OS.Process.exit, only its low byte would survive, often 0 *)
+    OS.Process.exit (if OS.Process.isSuccess res then OS.Process.success
+                     else OS.Process.failure)
   end
 
 end (* struct *)

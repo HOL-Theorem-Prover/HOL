@@ -21,6 +21,10 @@ Contents
 New features
 ------------
 
+-   Proof traces can be converted to version 0.1.0 binary PFT files and replayed in HOL4 or Candle.
+    `src/postkernel/prooftrace/pft.sh` converts a theory's proof dump, and `pft.sh merge` combines selected exports and their dependencies into one file; see `src/postkernel/prooftrace/README.md`.
+    Raw traces from earlier versions must be regenerated.
+
 -   Types and constants of theories loaded from disk now get canonical kernel ids, the same in every process whatever was loaded before.
     On Poly/ML runtimes with dependent modules, `Meta.configureTheoryModuleCache` saves a loaded theory's signature, theorems and decoded data in a module (up to `Meta.theoryModuleWriteLimit` per process), so later loads skip compiling the generated code and reading the `.dat`, and repeat only the theory's registration and load hooks.  `Meta.writeTheoryModules` writes modules from `.dat` files alone, for stores the loading processes must not write.
     Missing or unusable modules fall back to source loading.
@@ -157,6 +161,9 @@ New features
 Bugs fixed
 ----------
 
+-   `hol buildheap --exe` exited with status 0 when linking the executable failed, so callers took a missing or broken executable for a built one.
+    It now exits with a failure status.
+
 - HolRefute's model finder now builds adaptive scopes one solver batch at
   a time, avoids repeated cardinality-repair and monotonicity work, and
   reports counted reasons when Kodkod problems cannot be assembled.
@@ -172,6 +179,10 @@ Bugs fixed
 -   `computeLib.del_persistent_consts` in an ancestor could undo a descendant's later `computeLib.add_persistent_funs` for the same constant.
     Loading a theory with more than one parent could re-run the ancestor's deletion against the global compset.
     Persistent compset deletions and `set_EVAL_skip` calls are now applied once, when the theory recording them is loaded.
+
+-   Rules added to a compset could be used by the compset it was built from.
+    After `computeLib.new_compset`, or `computeLib.add_thms` on a sealed compset such as `bool_compset` or `reduceLib.num_compset`, evaluating with the original could use the added rules; it no longer does.
+    Rules added to a `computeLib.copy` of a compset are now also used when evaluating inside the rules the copy started with.
 
 -   A definition that recursed through a higher-order function was saved with the recursive call eta-expanded.
     Writing `g n (Nd ts) = Nd (MAP (g n) ts)` stored `MAP (\a. g n a) ts`, which matches neither a goal nor a lemma stated the way it was written, so proofs unfolding such a definition carried an `SF ETA_ss` step to compensate.

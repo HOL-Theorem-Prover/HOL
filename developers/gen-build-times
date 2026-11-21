@@ -328,7 +328,8 @@ def main() -> None:
     w = sys.stdout.write
     w('# Holmake build-time seed: scheduling costs for a fresh checkout.\n')
     w('#\n')
-    w('# Child CPU seconds, keyed as HM_DepGraph.cost_key builds them.\n')
+    w('# Child CPU seconds (user + system), keyed as HM_DepGraph.cost_key\n'
+      '# builds them.\n')
     w('# Locally measured values in .hol/build-logs/target-times always\n')
     w('# win over these.  Regenerate with developers/gen-build-times\n')
     w('# after a full build; see Manual/Developers/developers.md.\n')

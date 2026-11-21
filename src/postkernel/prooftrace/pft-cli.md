@@ -1,4 +1,4 @@
-# Converting proof traces
+# Converting and merging proof traces
 
 The `pft.sh` driver converts HOL4 proof dumps into version 0.1.0 binary PFT files.
 It supports the `hol4` and `candle` rulesets. It needs the original proof
@@ -52,6 +52,46 @@ that use computation. Computation uses a shared stateful `COMPUTE_INIT`, which r
 across files until replaced by another initialization. The compute preamble
 supplies shared computation equations in Candle vocabulary.
 
+## Select and merge exports
+
+Provide input files in dependency order. An order file contains one PFT
+path per line, relative to that order file; blank lines are ignored. For
+Candle the shared preamble comes first. The merger checks headers before
+opening the output and rejects mixed rulesets, unsupported versions,
+unresolved theorem references, and references to a later dependency.
+
+```sh
+src/postkernel/prooftrace/pft.sh merge --ruleset candle \
+  --order traces.order --target 'example$THEOREM' --output selected.pft
+```
+
+Repeat `--target` to select more named exports. Use `--all example` for all
+named exports of one theory. `--save-defs` also saves the definitions used
+by the selected targets. Anonymous cross-theory references (`theory#0`,
+for example) resolve through their original SAVE/LOAD names automatically.
+Single quotes around `theory$THEOREM` prevent shell variable expansion.
+
+Repeated `--input FILE` arguments supply the order directly. `--order`
+expands at its position among those arguments. The merger discards exports
+and proof steps unreachable from the selected targets, eliminates
+cross-file SAVE/LOAD pairs, and reuses output IDs after their final use,
+with fresh deletion commands. Exports remain live until their final SAVE,
+including uses through imported aliases. It preserves the two consecutive
+results of a Candle type definition. Input IDs must not be reused, even
+after deletion. Sparse and nonmonotonic input IDs are supported. Because
+merged outputs reuse IDs, they cannot be used as inputs to another merge.
+An output that aliases an input is rejected before opening
+it.
+
+The reader inspects each immutable input's header and footer once, then
+reuses that information across passes. Footer lookup reads bounded chunks
+and decodes one final window of at most 65,537 bytes. Reachability processes
+one input graph at a time in reverse dependency order, then emission rebuilds
+one graph at a time in forward order. File-local type and term emission
+tables are released at EOF. Theorem mappings remain for later LOAD aliases
+and final SAVEs. Emission tables use bounded dense storage plus sparse maps
+so large input ID gaps do not determine their allocation.
+
 ## Limits
 
 The raw parser follows the current producer's kernel identifier and proof
@@ -102,3 +142,6 @@ Run them with an exporter-capable tracing HOL:
 ```sh
 src/postkernel/prooftrace/tests/run.sh all /path/to/tracing/bin/hol /scratch/pft
 ```
+
+The merger regressions in `merge-selftest.exe` check the missing implicit
+conjunction declaration and output aliases that previously truncated inputs.

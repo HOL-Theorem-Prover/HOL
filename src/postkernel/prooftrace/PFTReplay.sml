@@ -66,11 +66,10 @@ fun replay (db: trDB) file = let
   val db_ref = ref (#theorems db)
   val axioms = ref (#axioms db)
   val (thyname, binary) = parse_filename file
-  val {ruleset, ...} = PFTReader.read_header {file=file, binary=binary}
+  val input = PFTReader.inspect {file=file, binary=binary}
+  val {ruleset, n_ty, n_tm, n_th, ...} = PFTReader.input_info input
   val () = if ruleset = "hol4" then () else
     raise Fail ("PFTReplay: expected hol4 ruleset, got " ^ ruleset)
-  val {n_ty, n_tm, n_th} =
-    PFTReader.read_limits {file = file, binary = binary}
 
   val tys : hol_type option array = Array.array(n_ty, NONE)
   val tms : term option array     = Array.array(n_tm, NONE)
@@ -366,9 +365,8 @@ fun replay (db: trDB) file = let
     in set_th (id, f thms t) end
   }
 
-  val _ = PFTReader.read {
-    file = file,
-    binary = binary,
+  val _ = PFTReader.read_input {
+    input = input,
     format_handler = format_handler,
     ruleset_handler = PFTReader.HOL4.make_handler hol4_handler
   }

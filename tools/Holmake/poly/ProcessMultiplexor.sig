@@ -17,7 +17,10 @@ sig
                  ignore_error : bool}
     (* update returns the new shared state plus the job_result, which
        ProcessMultiplexor forwards to the monitor as part of the
-       Terminated message. *)
+       Terminated message.  The `Time.time' it is given is the job's
+       CPU cost: user *and* system time, for the child and for any
+       descendants the child waited for itself.  Not wall clock -- a
+       job that merely waits costs almost nothing by this measure. *)
   type jobkey = Posix.ProcEnv.pid * {tag : string, dir : string}
   val jobkey_compare : jobkey * jobkey -> order
   val jobkey_toString : jobkey -> string
