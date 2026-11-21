@@ -3522,12 +3522,15 @@ fun test_hhEval root =
     (* A run header reads the HOL commit with git, which must start
        through hhProver's spawn as the provers do. *)
     val _ = hhProver.reset_spawn_count ()
-    val _ = hhEval.new_run_header
+    val {hol_commit, ...} = hhEval.new_run_header
       {expname = "fixture", corpus = [], added_from_dat = [],
        conditions = [], sample = 1}
     val _ = expect "run header commands spawn through hhProver"
       (not (OS.FileSys.access ("/usr/bin/git", [OS.FileSys.A_EXEC])) orelse
-       hhProver.spawn_count () = 1)
+       hhProver.spawn_count () = 1 andalso
+       (hol_commit = "unknown" orelse
+        (size hol_commit = 40 orelse size hol_commit = 64) andalso
+        CharVector.all Char.isHexDigit hol_commit))
     val _ = hhEval.write_run_header expdir header
     val _ = expect "sample one selects every goal"
       (hhEval.sample_goal 1 "list.nil")

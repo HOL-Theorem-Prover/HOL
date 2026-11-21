@@ -705,15 +705,20 @@ fun read_command path arguments =
   end
   handle OS.SysErr _ => NONE
 
-fun first_word text =
-  case String.tokens Char.isSpace text of [] => NONE | word :: _ => SOME word
+(* The command's stderr shares its output pipe and may come first (a
+   warning, or GIT_TRACE), so take the first word that is a SHA-1 or
+   SHA-256 digest in hex. *)
+fun hex_digest text =
+  List.find (fn word => (size word = 40 orelse size word = 64) andalso
+                        CharVector.all Char.isHexDigit word)
+    (String.tokens Char.isSpace text)
 
 fun sha256 path =
   let
     fun digest executable arguments =
       case read_command executable arguments of
           NONE => NONE
-        | SOME output => first_word output
+        | SOME output => hex_digest output
   in
     if OS.FileSys.access (path, [OS.FileSys.A_READ]) then
       case digest "/usr/bin/sha256sum" [path] of
@@ -749,7 +754,7 @@ fun host_name () =
 fun hol_commit () =
   case read_command "/usr/bin/git" ["rev-parse", "HEAD"] of
       SOME output =>
-        (case first_word output of SOME hash => hash | NONE => "unknown")
+        (case hex_digest output of SOME hash => hash | NONE => "unknown")
     | NONE => "unknown"
 
 fun loaded_corpus_entry thy =
