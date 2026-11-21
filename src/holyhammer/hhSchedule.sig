@@ -187,19 +187,18 @@ sig
      deadline).
 
      Stops.  MaxProofs, an interrupt of the caller (also during the
-     launch) and a failed export stop the run: the provers are killed (a
-     replay is interrupted at once by the interrupt and the failed export,
-     but not by MaxProofs, which a replay itself triggers) and the
-     producer interrupted, and run_in returns only when every thread it
-     forked has exited.  The hard deadline kills the provers and stops the
-     producer only, and past the soft deadline a verified proof, one
-     verified before it included, ends the run without a reason of its
-     own (see the clock).  The producer takes
-     an interrupt where it waits (for a worker that finishes a problem)
-     and between two problems, never inside the preparation of one
-     (copy_file reads a whole file through BinIO.inputAll and so may take
-     an interrupt, which is safe: the copy is written atomically): the
-     response is bounded by one preparation.
+     launch) and a failed export stop the run: the provers are killed (a replay
+     is interrupted at once by the interrupt and the failed export, but not by
+     MaxProofs, which a replay itself triggers) and the producer interrupted,
+     and run_in returns only when every thread it forked has exited.  The hard
+     deadline kills the provers and stops the producer only, and past the soft
+     deadline a verified proof, one verified before it included, ends the run
+     without a reason of its own (see the clock).  The producer takes an
+     interrupt where it waits (for a worker that finishes a problem) and
+     between two problems, never inside the preparation of one (copy_file reads
+     a whole file through BinIO.inputAll and so may take an interrupt, which is
+     safe: the copy is written atomically): the response is bounded by one
+     preparation.
 
      The error race.  The first fatal export error to be reported (the
      order in which the export surfaces the errors, after the problems

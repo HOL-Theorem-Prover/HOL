@@ -175,9 +175,10 @@ How to read the verbose output:
     replay took.  It is repeated in the last message (`Replace `hh`
     with:`), after every slice has reported: **that is the tactic to
     copy into your script.**
-  * Once `max_proofs` proofs are verified, or one is once the timeout
-    has passed, the remaining slices are stopped.  The last
-    few `Timeout` lines are those slices being shut down.
+  * Once `max_proofs` proofs are verified, or, once the timeout has
+    passed, as soon as one is (one verified earlier included), the
+    remaining slices are stopped.  The last few `Timeout` lines are those
+    slices being shut down.
 
 On failure, `hh` and `holyhammer` raise `HOL_ERR`, with one of two
 messages:

@@ -2446,7 +2446,7 @@ fun test_hhSlice () =
         first_slice))
     val budget_options = slice_options [Eprover] 999 32 30 "knn" NONE
     val _ = expect "budget arithmetic uses ceiling batches"
-      (let fun b n opts = hhSlice.slice_budget n opts
+      (let val b = hhSlice.slice_budget
       in real_close 15.0 (b 33 budget_options first_slice) andalso
          real_close 15.0 (b 64 budget_options first_slice) andalso
          real_close 10.0 (b 65 budget_options first_slice) andalso
@@ -8433,9 +8433,6 @@ fun test_hhMePo_live_context_constructor () =
 
 val _ = test_hhMePo_live_context_constructor ()
 
-fun learn_real_close expected actual =
-  Real.abs (expected - actual) < 0.000000001
-
 fun test_hhLearn_constants_idf_and_dependencies () =
   let
     val constants = hhLearn.default_constants
@@ -8452,10 +8449,10 @@ fun test_hhLearn_constants_idf_and_dependencies () =
       (facts @ [("FixtureTheory.a", [9])])
   in
     expect "hhLearn centralizes the verbatim sparse-NB constants"
-      (learn_real_close 30.0 (#init_val constants) andalso
-       learn_real_close 5.0 (#pos_weight constants) andalso
-       learn_real_close ~18.0 (#def_val constants) andalso
-       learn_real_close 0.2 (#tau constants) andalso
+      (real_close 30.0 (#init_val constants) andalso
+       real_close 5.0 (#pos_weight constants) andalso
+       real_close ~18.0 (#def_val constants) andalso
+       real_close 0.2 (#tau constants) andalso
        #def_prior_weight constants = 1000 andalso
        #max_dependencies constants = 20);
     expect "hhLearn computes plain IDF in one fact-list fold"
@@ -8466,9 +8463,9 @@ fun test_hhLearn_constants_idf_and_dependencies () =
        case (hhLearn.idf_of idf 1, hhLearn.idf_of idf 2,
              hhLearn.idf_of idf 3) of
            (SOME one, SOME two, SOME three) =>
-             learn_real_close (Math.ln 3.0) one andalso
-             learn_real_close 0.0 two andalso
-             learn_real_close (Math.ln 3.0) three
+             real_close (Math.ln 3.0) one andalso
+             real_close 0.0 two andalso
+             real_close (Math.ln 3.0) three
          | _ => false);
     expect "hhLearn builds each dependency-table entry once"
       (length (!calls) = 3 andalso
@@ -8519,17 +8516,17 @@ fun test_hhLearn_nb_counts_and_scores () =
        hhLearn.nb_sfreq model "A" 2 = SOME 1001 andalso
        hhLearn.nb_sfreq model "A" 3 = SOME 1);
     expect "hhLearn NB score has exact prior and positive terms"
-      (learn_real_close expected_prior (#prior parts) andalso
-       learn_real_close expected_positive (#positive parts));
+      (real_close expected_prior (#prior parts) andalso
+       real_close expected_positive (#positive parts));
     expect "hhLearn NB score has exact absent and negative terms"
-      (learn_real_close expected_absent (#absent parts) andalso
-       learn_real_close expected_negative (#negative parts) andalso
-       learn_real_close
+      (real_close expected_absent (#absent parts) andalso
+       real_close expected_negative (#negative parts) andalso
+       real_close
          (expected_prior + expected_positive + expected_absent +
           expected_negative) (#total parts));
     expect "hhLearn drops model-unknown goal features and scores pool only"
       (length scores = 1 andalso #1 (hd scores) = "A" andalso
-       learn_real_close (#total parts) (#2 (hd scores)) andalso
+       real_close (#total parts) (#2 (hd scores)) andalso
        hhLearn.nb_rank model
          {pool = ["not-in-model", "A"], goal_features = goal_features,
           n = 2} = ["A"])
@@ -8711,9 +8708,9 @@ fun test_hhLearn_curves_and_mesh () =
          (0.5, (hhLearn.weight_facts_steeply raw_mash, []))])
   in
     expect "hhLearn ports the steep and smooth rank curves exactly"
-      (learn_real_close 1.0 (hhLearn.steep_weight 0) andalso
-       learn_real_close (0.62 * 0.62) (hhLearn.steep_weight 3) andalso
-       learn_real_close (Math.pow (1.3, 15.5) + 15.0)
+      (real_close 1.0 (hhLearn.steep_weight 0) andalso
+       real_close (0.62 * 0.62) (hhLearn.steep_weight 3) andalso
+       real_close (Math.pow (1.3, 15.5) + 15.0)
          (hhLearn.smooth_weight 0));
     expect "hhLearn mesh normalizes every channel by its top-N mean"
       (normalized = ["b", "a"]);
