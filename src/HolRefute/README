@@ -64,9 +64,8 @@ Verdicts and trust
   free): its models are Potential, and only a replay that certifies one
   makes it Genuine.  `max_potential` bounds models of the unsound liberal
   problem and those uncertified circular-constant models.  Of the other
-  models of a sound problem, a Genuine one spends a `max_genuine` slot;
-  QuasiGenuine ones, and Potential ones whose certification got stuck, are
-  reported without spending either budget.  3948a7bed, 2db19131b and
+  models of a sound problem, a Genuine one spends a `max_genuine` slot and
+  a QuasiGenuine one is reported without spending either budget.  3948a7bed, 2db19131b and
   92c24de7e required a certificate and were reverted.
 * A polymorphic goal never earns `NoCounterexample` on any engine; a
   counterexample found at a monomorphic proxy stands.  Refuting an

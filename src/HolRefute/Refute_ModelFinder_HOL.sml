@@ -2145,8 +2145,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      unfolds for it: an inductive predicate's cases theorem, an equational
      constant's simps (or psimps), a choice specification, or else the one
      definition [def_of_const] picks (the unfold table before the
-     fallback).  Only a constant with none of these counts everything in
-     [sent_definitions].  Constants are compared with their types, since
+     fallback).  A constant with none of these is sent no definition, only
+     user axioms, which are not definitions, so it has no successors.  Constants are compared with their types, since
      the tables give each instance of a polymorphic constant its own
      equations.  Each constant's successors are found once per run, in
      [definition_successors]. *)
@@ -2166,7 +2166,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         else
           case def_of_const context c of
               SOME definition => [boolSyntax.mk_eq (c, definition)]
-            | NONE => sent_definitions context c
+            | NONE => []
       fun successors c =
         case Redblackmap.peek (!definition_successors, c) of
             SOME found => found
