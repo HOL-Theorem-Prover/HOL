@@ -3179,6 +3179,8 @@ val mf_unreplayed = mf_short |> upd_certify false
 val _ = mf_test "only sent equations close a definition cycle" (fn () =>
   cex_where (circular_reason "zoo_self")
     (refute mf_unreplayed ``!b. zoo_self b``) andalso
+  not (isSome (first_cex (refute (mf_unreplayed |> upd_max_potential 0)
+    ``!b. zoo_self b``))) andalso
   (case refute mf_unreplayed ``!n. zoo_cyc_alias n`` of
        Counterexample cexs =>
          not (List.exists (circular_reason "zoo_cyc_alias") cexs)
