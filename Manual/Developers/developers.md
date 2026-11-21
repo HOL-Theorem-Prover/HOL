@@ -298,7 +298,7 @@ Unless otherwise noted, they are built by the configuration process.
     They are *not* what the parallel scheduler reads; see `build-times` below.
 
 `build-times` (at a project root) and `.hol/build-logs/target-times`
-:   Cost data for Holmake's parallel scheduler, in child CPU seconds: `<key> <secs>` per line, `#` comments allowed.
+:   Cost data for Holmake's parallel scheduler, in child CPU seconds — user plus system time: `<key> <secs>` per line, `#` comments allowed.
     `Holmake` picks the ready job with the largest sum-of-costs-to-a-sink, so without these it falls back to the order jobs happened to be added to the graph.
 
     `.hol/build-logs/target-times` is the per-project cache, rewritten by every parallel `Holmake` run out of the child-CPU time it already measures for each job.

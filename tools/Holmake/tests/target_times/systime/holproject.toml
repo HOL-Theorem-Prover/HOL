@@ -1,0 +1,4 @@
+name = "target_times_systime"
+
+# A project root of its own, so the cache this test writes is
+# systime/.hol/build-logs/target-times and not HOLDIR's.

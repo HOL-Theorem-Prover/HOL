@@ -8,4 +8,5 @@ selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = target_times-selftest.log selftest.exe tmp-seed tmp-root \
-               multiline/.hol
+               multiline/.hol systime/.hol systime/self-measured \
+               systime/raw-times concurrent/.hol

@@ -1,0 +1,17 @@
+# A job's cost is its user time *and* its system time.  `syswork'
+# spends about three quarters of its cost in the kernel, and reports
+# what it cost from inside the recipe, so the test can hold Holmake's
+# recorded figure against the shell's own.  Recording only `cutime'
+# puts the recorded value at roughly a quarter of the true one.
+#
+# No SML here, so there is no heap to depend on.
+
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+all: syswork
+.PHONY: all syswork
+
+syswork:
+	./work.sh 3000000
