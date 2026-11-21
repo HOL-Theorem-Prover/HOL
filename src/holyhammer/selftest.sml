@@ -855,6 +855,30 @@ fun test_hhLamTrans () =
        List.all (fn (name, _) =>
          has_name (name ^ ".combs") both_defs) lift_defs andalso
        List.all (not o formula_abs o #2) both_defs)
+    val capturing_lam = Term.mk_abs (x,
+      Term.list_mk_comb (f, [Term.mk_comb (g, x), y]))
+    val capturing_consumer = Term.mk_var ("CC", Type.mk_type
+      ("fun", [unary, Type.bool]))
+    val (_, capturing_defs) =
+      hhLamTrans.translate hhLamTrans.CombsAndLifting
+        [Term.mk_comb (capturing_consumer, capturing_lam)]
+    val _ = expect "combs_and_lifting abstracts only the bound variables"
+      (case capturing_defs of
+           [(_, lifted), (combs_name, combs)] =>
+             let
+               val (captured, equation) = strip_forall combs
+               val (replacement, combinators) = dest_eq equation
+             in
+               combs_name = "lam.0.combs" andalso
+               ListPair.allEq (Lib.uncurry Term.aconv)
+                 (captured, [f, g, y]) andalso
+               Term.aconv replacement
+                 (rator (lhs (#2 (strip_forall lifted)))) andalso
+               not (term_abs combinators) andalso
+               Term.aconv (normalise (Term.mk_comb (combinators, x)))
+                 (Term.list_mk_comb (f, [Term.mk_comb (g, x), y]))
+             end
+         | _ => false)
     val _ = expect "keep_lams only eta-contracts"
       (null kept_defs andalso List.exists formula_abs kept andalso
        length kept = length fixtures)
