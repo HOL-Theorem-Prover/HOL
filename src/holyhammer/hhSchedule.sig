@@ -183,7 +183,8 @@ sig
      verified proofs reach max_proofs; otherwise with Exhausted if the
      search had finished (every slice run, the export done) before the soft
      deadline, and with Timeout if not, whether or not the reconstruction
-     finds a proof (also when a proof past the soft deadline ended the run).
+     finds a proof (also when a verified proof ended the run past the soft
+     deadline).
 
      Stops.  MaxProofs, an interrupt of the caller (also during the
      launch) and a failed export stop the run: the provers are killed (a
@@ -191,8 +192,9 @@ sig
      but not by MaxProofs, which a replay itself triggers) and the
      producer interrupted, and run_in returns only when every thread it
      forked has exited.  The hard deadline kills the provers and stops the
-     producer only, and a proof verified past the soft deadline ends the
-     run without a reason of its own (see the clock).  The producer takes
+     producer only, and past the soft deadline a verified proof, one
+     verified before it included, ends the run without a reason of its
+     own (see the clock).  The producer takes
      an interrupt where it waits (for a worker that finishes a problem)
      and between two problems, never inside the preparation of one
      (copy_file reads a whole file through BinIO.inputAll and so may take

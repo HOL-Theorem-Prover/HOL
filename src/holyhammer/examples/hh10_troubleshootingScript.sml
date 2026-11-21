@@ -64,7 +64,7 @@ QED
    Failure 3: "ATPs found proofs, but reconstruction failed for: ..."
 
    A prover found a proof, but Metis could not replay it within
-   preplay_timeout (1 s by default).  The message lists the facts each
+   preplay_timeout (2.5 s by default).  The message lists the facts each
    prover used:
 
      ATPs found proofs, but reconstruction failed for:
@@ -120,8 +120,8 @@ QED
    Vampire found a proof in 0.4 seconds, using 37 facts about complex
    numbers, sin and cos.  Replaying the proof in Metis and minimising
    the list took most of the call's time: every attempt to drop a fact
-   is a Metis replay (bounded by twice the last successful replay time,
-   and by minimize_timeout).  Long lists like this one are
+   is a Metis replay (bounded by twice the fastest replay so far plus
+   0.2 s, and by minimize_timeout).  Long lists like this one are
    typical of proofs that unfold definitions (complex_of_real,
    complex_mul, RE, IM).  If a call is slow, look at the slice
    timings: when the prover answered early, more time will not change

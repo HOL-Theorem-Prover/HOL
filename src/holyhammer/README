@@ -82,8 +82,9 @@ observable.  The problems of an overlapped run that stops early are partly
 exported: a root that the caller owns (`hhSchedule.run_in`) holds only the
 files published until then.  The files that are published equal the
 blocking export's files for the same counter start, because the export
-draws its fresh names from a supply of its own, so that a replay of a proof,
-which draws fresh names too, cannot change them, and what the export prints while a replay runs goes to the file
+draws its fresh names from a supply of its own, so that a replay of a
+proof, which draws fresh names too, cannot change them, and what the
+export prints while a replay runs goes to the file
 that hides the replay's output.
 
 `export_workers` is the number of threads that finish the

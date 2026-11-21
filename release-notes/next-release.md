@@ -287,23 +287,20 @@ New tools
 
 -   HOLyHammer now runs exclusively through its parallel slice scheduler and
     returns once `max_proofs` (default 4) reconstruction-verified suggestions
-    are found, or, past the timeout, once one is.  Its default
-    timeout is now 30 seconds.  Runtime options are set with
+    are found, or, past the timeout, once one is (also one verified earlier).
+    Its default timeout is now 30 seconds.  Runtime options are set with
     `hhConfig.hh_set`; `hhConfig.hh_params` reports all effective values and
     their provenance.  `holyHammer.set_timeout` remains as a deprecated alias
-    for `hhConfig.hh_set ("timeout", ...)`.  The timeout counts from the
-    launch of the provers.  The export of their problem files is finished
-    first and not charged to it, except where the measured policy overlaps
-    the export with the search (the conditions are stated by `export_mode`
-    in `hhSchedule.sml`): there the export counts against
-    the timeout.  The timeout bounds the proof search: the provers are
-    stopped at it (after a short grace period), and minimisation stops at
-    it, but every proof the provers found is reconstructed until
-    `max_proofs` verify (the run ends whenever that many have), and past the
-    timeout until one has (also one that verified earlier), so a call can
-    return after the timeout.  The replay limit
-    (`preplay_timeout`, `hhReconstruct.reconstruction_timeout`) is now 2.5
-    seconds, up from 1.0.
+    for `hhConfig.hh_set ("timeout", ...)`.  The timeout counts from the launch
+    of the provers.  The export of their problem files is finished first and not
+    charged to it, except where the measured policy overlaps the export with the
+    search (the conditions are stated by `export_mode` in `hhSchedule.sml`):
+    there the export counts against the timeout.  The timeout bounds the proof
+    search: the provers are stopped at it (after a short grace period), and
+    minimisation stops at it, but every proof the provers found is reconstructed
+    until the run ends as above, so a call can return after the timeout.  The
+    replay limit (`preplay_timeout`, `hhReconstruct.reconstruction_timeout`) is
+    now 2.5 seconds, up from 1.0.
 
 -   HOLyHammer schedules TPTP formats, type encodings, and lambda
     translations per prover slice.  Besides FOF, it now proves goals

@@ -175,7 +175,8 @@ How to read the verbose output:
     replay took.  It is repeated in the last message (`Replace `hh`
     with:`), after every slice has reported: **that is the tactic to
     copy into your script.**
-  * Once a proof is verified, the remaining slices are stopped.  The last
+  * Once `max_proofs` proofs are verified, or one is once the timeout
+    has passed, the remaining slices are stopped.  The last
     few `Timeout` lines are those slices being shut down.
 
 On failure, `hh` and `holyhammer` raise `HOL_ERR`, with one of two
@@ -313,7 +314,7 @@ want:
 | `cores`           | `0` (all)                   | parallel prover processes |
 | `minimize`        | `true`                      | minimise the `metis_tac`  |
 |                   |                             | lemma list                |
-| `preplay_timeout` | `1.0`                       | seconds Metis gets to     |
+| `preplay_timeout` | `2.5`                       | seconds Metis gets to     |
 |                   |                             | replay a proof            |
 | `cache`           | `false`                     | reuse earlier prover runs |
 | `debug_dir`       | (empty)                     | keep prover output here   |

@@ -2271,6 +2271,9 @@ fun schedule_summary
            (slice : hhProver.slice)) =>
     (#name config, #nfacts slice, #filter slice, #extra_opts slice)) schedule
 
+(* Float equality up to rounding, for the tests below. *)
+fun real_close expected actual = Real.abs (expected - actual) < 1E~9
+
 fun test_hhSlice () =
   let
     fun expected_filter prover format type_enc lam_trans filter nfacts =
@@ -2370,13 +2373,14 @@ fun test_hhSlice () =
       expected_gate (map (slice_summary o #2) gate30_schedule)
     val _ = expect_equal "S30 and S10 use the same frozen schedule"
       (schedule_summary gate30_schedule) (schedule_summary gate10_schedule)
-    fun close expected actual = Real.abs (expected - actual) < 0.000001
     val _ = expect "eight-core gate gives every S30 slice 30 seconds"
       (List.all (fn (_, slice) =>
-         close 30.0 (hhSlice.slice_budget 8 gate30 slice)) gate30_schedule)
+         real_close 30.0 (hhSlice.slice_budget 8 gate30 slice))
+         gate30_schedule)
     val _ = expect "eight-core gate gives every S10 slice 10 seconds"
       (List.all (fn (_, slice) =>
-         close 10.0 (hhSlice.slice_budget 8 gate10 slice)) gate10_schedule)
+         real_close 10.0 (hhSlice.slice_budget 8 gate10 slice))
+         gate10_schedule)
     val anchors = gate30_schedule
     fun anchor_command_equal (config, slice) =
       let
@@ -2438,15 +2442,17 @@ fun test_hhSlice () =
        nfacts = #nfacts first_slice, filter = #filter first_slice,
        extra_opts = #extra_opts first_slice, slice_size = 3}
     val _ = expect "budget uses full timeout when slices fit on cores"
-      (close 30.0 (hhSlice.slice_budget (length default_schedule) defaults
+      (real_close 30.0 (hhSlice.slice_budget (length default_schedule) defaults
         first_slice))
     val budget_options = slice_options [Eprover] 999 32 30 "knn" NONE
     val _ = expect "budget arithmetic uses ceiling batches"
-      (close 15.0 (hhSlice.slice_budget 33 budget_options first_slice) andalso
-       close 15.0 (hhSlice.slice_budget 64 budget_options first_slice) andalso
-       close 10.0 (hhSlice.slice_budget 65 budget_options first_slice) andalso
-       close 30.0 (hhSlice.slice_budget 65 budget_options large_slice) andalso
-       close 0.0 (hhSlice.slice_budget 0 budget_options first_slice))
+      (let fun b n opts = hhSlice.slice_budget n opts
+      in real_close 15.0 (b 33 budget_options first_slice) andalso
+         real_close 15.0 (b 64 budget_options first_slice) andalso
+         real_close 10.0 (b 65 budget_options first_slice) andalso
+         real_close 30.0 (b 65 budget_options large_slice) andalso
+         real_close 0.0 (b 0 budget_options first_slice)
+      end)
     fun slice_of format type_enc lam_trans : hhProver.slice =
       {prover = Eprover, format = format, type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none", extra_opts = [],
@@ -3875,12 +3881,17 @@ fun test_hhReconstruct () =
        1.1 s, a marginal success: neither the last success (the limit
        would rise to 2.4) nor the start (the limit would stay 1.2 after
        dropping "b" replays in 0.2 s) gives the limits below. *)
-    fun near (x, y) = Real.abs (x - y) < 1E~9
+    fun time_of candidate =
+      if candidate = ["b", "c", "d"] then SOME 1.1
+      else if candidate = ["c", "d"] then SOME 0.2
+      else NONE
     fun fake limits limit candidate =
       (limits := limit :: !limits;
-       if candidate = ["b", "c", "d"] then SOME ("tactic", 1.1)
-       else if candidate = ["c", "d"] then SOME ("tactic", 0.2)
-       else NONE)
+       case time_of candidate of
+           SOME t => if t <= limit then SOME ("tactic", t) else NONE
+         | NONE => NONE)
+    fun limits_are (actual, expected) =
+      ListPair.allEq (fn (x, y) => real_close x y) (actual, expected)
     fun run cap =
       let
         val limits = ref ([] : real list)
@@ -3892,11 +3903,12 @@ fun test_hhReconstruct () =
       end
     val (limits, kept, best_time) = run 10.0
     val _ = expect "attempt limits follow the fastest replay so far"
-      (ListPair.allEq near (limits, [1.2, 1.2, 0.6, 0.6]) andalso
+      (limits_are (limits, [1.2, 1.2, 0.6, 0.6]) andalso
        kept = ["c", "d"] andalso Real.== (best_time, 0.2))
-    val (limits, _, _) = run 0.9
+    val (limits, kept, _) = run 1.15
     val _ = expect "the minimize_timeout caps the attempt limits"
-      (ListPair.allEq near (limits, [0.9, 0.9, 0.6, 0.6]))
+      (limits_are (limits, [1.15, 1.15, 0.6, 0.6]) andalso
+       kept = ["c", "d"])
   in
     ()
   end
@@ -8220,9 +8232,6 @@ fun test_hhMePo_frequency () =
 
 val _ = test_hhMePo_frequency ()
 
-fun mepo_real_close expected actual =
-  Real.abs (expected - actual) < 0.000000001
-
 val mepo_plain_stature : hhStature.stature =
   {simp = false, local_ = false, def = false, induction = false}
 
@@ -8260,24 +8269,24 @@ fun test_hhMePo_weight_arithmetic () =
     val before_purge = [("low", 0.0009), ("boundary", 0.001)]
   in
     expect "hhMePo relevant rarity weight is verbatim"
-      (mepo_real_close (1.0 + 2.0 / Math.ln 2.0)
+      (real_close (1.0 + 2.0 / Math.ln 2.0)
         (hhMePo.rel_weight_for 7 1));
     expect "hhMePo irrelevant frequency and order curve is verbatim"
-      (mepo_real_close (Math.ln 2.0 / Math.ln 100.0 / 1.05)
+      (real_close (Math.ln 2.0 / Math.ln 100.0 / 1.05)
         (hhMePo.irrel_weight_for fudge 0 1));
     expect "hhMePo applies free and chained multipliers in fact_weight"
-      (mepo_real_close (rel / (rel + irrel)) score);
+      (real_close (rel / (rel + irrel)) score);
     expect "hhMePo uses fixed abstraction and theory weights"
-      (mepo_real_close 0.5
+      (real_close 0.5
          (hhMePo.rel_pconst_weight fudge frequency ("%abs", (3, [])))
        andalso
-       mepo_real_close 0.25
+       real_close 0.25
          (hhMePo.irrel_pconst_weight fudge frequency chained_table
            ("%thy%Fixture", (0, []))));
     expect "hhMePo simp status shadows the local stature bonus"
-      (mepo_real_close 0.15
+      (real_close 0.15
         (hhMePo.stature_bonus fudge simp_local) andalso
-       mepo_real_close 0.55
+       real_close 0.55
         (hhMePo.stature_bonus fudge mepo_local_stature));
     expect "hhMePo accepts all perfect and at most twelve imperfect facts"
       (length accepted = 14 andalso length left = 8 andalso
@@ -8287,7 +8296,7 @@ fun test_hhMePo_weight_arithmetic () =
          ["low", "boundary"] andalso
        case hhMePo.purge_hopeless fudge 5 before_purge of
            [(name, weight)] =>
-             name = "boundary" andalso mepo_real_close 0.001 weight
+             name = "boundary" andalso real_close 0.001 weight
          | _ => false)
   end
 

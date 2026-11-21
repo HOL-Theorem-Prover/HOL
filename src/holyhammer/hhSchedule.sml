@@ -1261,15 +1261,20 @@ fun run_in root {options, goal, rankings, progress} =
        held). *)
     fun finished_locked () = search_finished_locked () andalso !recon_done
 
+    (* Now is past the soft deadline and a proof has verified: such a
+       run is ended at the deadline (the mutex is held). *)
+    fun past_soft_with_proof_locked now =
+      not (null (!suggestions)) andalso not (time_before now deadline)
+
     fun take_success () =
       let
         (* Past the soft deadline a verified proof ends the run: nothing
-           more is taken. *)
+           more is taken.  This covers the moment between the deadline
+           and await's end_run: a reconstruction failing in that window
+           would otherwise start the next queued list, costing seconds. *)
         fun wait () =
           if !stopping then NONE
-          else if not (null (!suggestions))
-                  andalso not (time_before (Time.now ()) deadline)
-          then NONE
+          else if past_soft_with_proof_locked (Time.now ()) then NONE
           else
             case (!recon, !retries) of
                 (item :: rest, _) => (recon := rest; SOME (Fresh item))
@@ -1341,7 +1346,7 @@ fun run_in root {options, goal, rankings, progress} =
                  Option.app (fn parent => recovered := parent :: !recovered)
                    origin;
                  (length (!suggestions) >= #max_proofs options,
-                  not (time_before (Time.now ()) deadline))))
+                  past_soft_with_proof_locked (Time.now ()))))
               val _ = emit (Verified suggestion)
             in
               if reached then kill_all MaxProofs
@@ -1368,11 +1373,11 @@ fun run_in root {options, goal, rankings, progress} =
 
     fun completed () = with_mutex state_mutex finished_locked
 
-    (* A proof has verified and the run has not been ended (the caller
-       checks the soft deadline). *)
-    fun verified_pending_end () =
+    (* A proof has verified, now is past the soft deadline and the run has
+       not been ended. *)
+    fun verified_pending_end now =
       with_mutex state_mutex (fn () =>
-        not (!stopping) andalso not (null (!suggestions)))
+        not (!stopping) andalso past_soft_with_proof_locked now)
 
     (* Waits for the run to finish.  The soft deadline cancels the export,
        the hard deadline kills the provers that are left and stops the
@@ -1390,8 +1395,7 @@ fun run_in root {options, goal, rankings, progress} =
           val hard = time_before now hard_deadline
           val _ = if soft then () else cancel_exports ()
           val _ = if hard then () else stop_search NONE
-          val _ = if soft orelse not (verified_pending_end ()) then ()
-                  else end_run ()
+          val _ = if verified_pending_end now then end_run () else ()
           val wake = Time.+ (now, Time.fromMilliseconds 100)
           val wake = if soft then time_min deadline wake
                      else if hard then time_min hard_deadline wake
