@@ -124,8 +124,14 @@ fun is_clash e =
   Feedback.top_structure_of e = "cv_typeLib" andalso
   Feedback.top_function_of e = "from_to_for"
 
-(* the types whose inherited translations from_to_for is comparing *)
-val checking = ref ([] : hol_type list)
+(* the types from_to_for is looking up: an entry whose premise needs one
+   of them does not apply *)
+val looking_up = ref ([] : hol_type list)
+
+(* the types from_to_thm_for could not define: an entry whose premise
+   needs one of them does not apply *)
+val undefinable = ref ([] : hol_type list)
+exception Undefinable of hol_type
 
 fun from_to_for_tyvar tyvar = let
   val name = dest_vartype tyvar
@@ -189,7 +195,8 @@ fun from_to_for tyvars_alist ty =
          translation *)
       fun try th = SOME (match_from_to_thm th)
                    handle HOL_ERR e =>
-                     if is_clash e then raise HOL_ERR e else NONE
+                            if is_clash e then raise HOL_ERR e else NONE
+                        | Undefinable _ => NONE
       fun find_first [] = NONE
         | find_first ((name, th)::es) =
             case try th of
@@ -214,13 +221,9 @@ fun from_to_for tyvars_alist ty =
          entries that apply must give the winner's translation.  As when
          it is tried first, an entry whose premise needs a missing
          translation raises Missing_from_to, so that one is defined and
-         the lookup retried.  An entry whose premise needs the type being
-         compared does not apply. *)
+         the lookup retried. *)
       fun check (name, res, es) =
-        if is_own name then res else
-        if mem ty (!checking) then
-          raise ERR "check" (type_to_string ty ^ " is being checked")
-        else let
+        if is_own name then res else let
           fun go _ [] = res
             | go kept ((n, th)::es) =
                 if exists (mem (thy_of n)) kept then go kept es else
@@ -237,22 +240,28 @@ fun from_to_for tyvars_alist ty =
                          "the other with cv_transLib.cv_from_to_delete " ^
                          Lib.quote n)
           val matching =
-              filter (fn (_, th) => can (match_type (entry_ty th)) ty) es
+              filter (can (fn (_, th) => match_type (entry_ty th) ty)) es
         in
           if null matching then res
-          else with_flag (checking, ty :: !checking)
-                 (go [theory_and_ancestors name]) matching
+          else go [theory_and_ancestors name] matching
         end
+      fun lookup () =
+        case find_first (own @ inherited) of
+          SOME found => check found
+        | NONE =>
+           if can dom_rng ty then (
+             cv_print Silent ("cv translator encountered a function type: " ^
+                              type_to_string ty ^ "\n");
+             failwith  "cv translator does not support function types")
+           else if mem ty (!undefinable) then
+             raise Undefinable ty
+           else
+             raise Missing_from_to ty
     in
-      case find_first (own @ inherited) of
-        SOME found => check found
-      | NONE =>
-         if can dom_rng ty then (
-           cv_print Silent ("cv translator encountered a function type: " ^
-                            type_to_string ty ^ "\n");
-           failwith  "cv translator does not support function types")
-         else
-           raise Missing_from_to ty
+      if mem ty (!looking_up) then
+        raise ERR "lookup" (type_to_string ty ^ " is being looked up")
+      else
+        with_flag (looking_up, ty :: !looking_up) lookup ()
     end
 
 fun from_for tyvars_alist ty =
@@ -982,7 +991,9 @@ fun rec_define_from_to ty = let
  * --------------------------------------------------- *)
 
 (* Defining what the type needed is meant to make the next ask succeed,
-   so an ask that comes back is one that defining cannot answer. *)
+   so an ask that comes back is one that defining cannot answer.  When
+   defining fails, the entries that needed the type no longer apply; if
+   then nothing does, the failure to define it is the error. *)
 fun from_to_thm_for ty = let
   fun go asked ty =
     from_to_for [] ty
@@ -991,7 +1002,19 @@ fun from_to_thm_for ty = let
       raise ERR "from_to_thm_for"
             ("defining " ^ type_to_string needs_ty ^
              " did not give it a representation")
-    else (rec_define_from_to needs_ty; go (needs_ty :: asked) ty)
+    else let
+      val define_error =
+          (rec_define_from_to needs_ty; NONE)
+          handle HOL_ERR e => if is_clash e then raise HOL_ERR e else SOME e
+    in
+      case define_error of
+        NONE => go (needs_ty :: asked) ty
+      | SOME e =>
+          with_flag (undefinable, needs_ty :: !undefinable)
+            (go (needs_ty :: asked)) ty
+          handle Undefinable t =>
+            if t = needs_ty then raise HOL_ERR e else raise Undefinable t
+    end
   in go [] ty end
 
 fun from_term_for ty = from_to_thm_for ty |> concl |> rator |> rand;

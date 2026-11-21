@@ -5,7 +5,8 @@ Libs
   cv_transLib
 
 (* cvftloop's translation of colour needs one of colour, so it does not
-   apply while cvftleft's, which comes first, is compared with it *)
+   apply.  cvftleft is loaded after cv_memLib, so its entry comes first;
+   cvftloopuse2 tests the other order. *)
 
 val _ = load "cvftleftTheory"
 

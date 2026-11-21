@@ -7,10 +7,12 @@ all: $(DEFAULT_TARGETS)
 # depending on its .uo directly would link it in before the script runs.
 .hol/runtime-loads.stamp: cvftleftTheory.uo cvftrightTheory.uo \
                           cvftrightdupTheory.uo cvftpickrightTheory.uo \
-                          cvftneedyTheory.uo
+                          cvftneedyTheory.uo cvftloopTheory.uo \
+                          cvftbrokenTheory.uo
 	touch $@
 cvftuse1Theory.sml cvftuse2Theory.sml cvftprec1Theory.sml \
 cvftprec2Theory.sml cvftneedy1Theory.sml cvftneedy2Theory.sml \
-cvftloopuseTheory.sml: .hol/runtime-loads.stamp
+cvftloopuseTheory.sml cvftloopuse2Theory.sml cvftbroken1Theory.sml \
+cvftbroken2Theory.sml: .hol/runtime-loads.stamp
 
 EXTRA_CLEANS = .hol/runtime-loads.stamp
