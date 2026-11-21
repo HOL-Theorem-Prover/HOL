@@ -124,6 +124,9 @@ fun is_clash e =
   Feedback.top_structure_of e = "cv_typeLib" andalso
   Feedback.top_function_of e = "from_to_for"
 
+(* the types whose inherited translations from_to_for is comparing *)
+val checking = ref ([] : hol_type list)
+
 fun from_to_for_tyvar tyvar = let
   val name = dest_vartype tyvar
   val name = if String.isPrefix "'" name
@@ -208,13 +211,20 @@ fun from_to_for tyvars_alist ty =
          before its ancestors'; between unrelated theories that order is
          load order.  An entry from the theory of an applying entry, or
          from one of that theory's ancestors, gives way to it; the other
-         entries that apply must give the winner's translation. *)
+         entries that apply must give the winner's translation.  As when
+         it is tried first, an entry whose premise needs a missing
+         translation raises Missing_from_to, so that one is defined and
+         the lookup retried.  An entry whose premise needs the type being
+         compared does not apply. *)
       fun check (name, res, es) =
-        if is_own name then res else let
+        if is_own name then res else
+        if mem ty (!checking) then
+          raise ERR "check" (type_to_string ty ^ " is being checked")
+        else let
           fun go _ [] = res
             | go kept ((n, th)::es) =
                 if exists (mem (thy_of n)) kept then go kept es else
-                case (try th handle Missing_from_to _ => NONE) of
+                case try th of
                   NONE => go kept es
                 | SOME res' =>
                     if aconv (concl res') (concl res) then
@@ -230,7 +240,8 @@ fun from_to_for tyvars_alist ty =
               filter (fn (_, th) => can (match_type (entry_ty th)) ty) es
         in
           if null matching then res
-          else go [theory_and_ancestors name] matching
+          else with_flag (checking, ty :: !checking)
+                 (go [theory_and_ancestors name]) matching
         end
     in
       case find_first (own @ inherited) of
