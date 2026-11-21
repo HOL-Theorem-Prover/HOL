@@ -63,4 +63,44 @@ in
   ()
 end
 
+(* The splitter's datatype splits, and ExclX's case names, are those of the
+   context the tactic runs in, whatever the live context has. *)
+val _ = new_theory "split_datatypes"
+val _ = let
+  val earlier = Context.snapshot ()
+  val _ = Feedback.quiet_messages Datatype.Datatype
+            [QUOTE "nx_split_ctxt = NXA | NXB"]
+  val declared = Context.snapshot ()
+  val ty = mk_thy_type {Thy = current_theory (), Tyop = "nx_split_ctxt",
+                        Args = []}
+  val case_term =
+    list_mk_icomb (TypeBase.case_const_of ty,
+                   [mk_var ("x", ty), mk_var ("a", bool), mk_var ("b", bool)])
+  val goal = ([], mk_comb (mk_var ("P", bool --> bool), case_term))
+  fun splits ctxt tac =
+    case Tactical.VALID tac goal ctxt of
+        ([([], result)], _) =>
+          not (can (find_term (aconv (#1 (strip_comb case_term)))) result)
+      | _ => false
+  val plain = SIMP_TAC (bool_ss ++ split_ss) []
+  val excluded = SIMP_TAC (bool_ss ++ split_ss) [ExclX "case:nx_split_ctxt"]
+  fun check label ok = (tprint label; if ok then OK () else die label)
+  fun unmatched ctxt =
+    case Exn.capture (Tactical.VALID excluded goal) ctxt of
+        Exn.Exn (HOL_ERR e) =>
+          Feedback.message_of e = "ExclX did not match case:nx_split_ctxt"
+      | _ => false
+in
+  Context.restore earlier;
+  check "split_ss splits a datatype of the tactic's context"
+    (splits declared plain);
+  check "ExclX names a datatype case of the tactic's context"
+    (not (splits declared excluded));
+  Context.restore declared;
+  check "split_ss ignores a datatype only the live context has"
+    (not (splits earlier plain));
+  check "ExclX does not name a datatype case only the live context has"
+    (unmatched earlier)
+end
+
 end (* struct *)

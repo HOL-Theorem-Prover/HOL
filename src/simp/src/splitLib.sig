@@ -35,6 +35,10 @@ sig
   val goal_split_rule_groups : term list -> (hol_type * thm list) list
   val goal_split_rules : term list -> thm list
 
+  (* The groups by the TypeBase of the given context *)
+  val goal_split_rule_groups_of :
+      Context.t -> term list -> (hol_type * thm list) list
+
   (* Enables the persistent [split] theorem attribute; see its help entry
      for use in theory scripts.  Fails if another split attribute is
      registered.  Repeating the call has no effect, but it must be called

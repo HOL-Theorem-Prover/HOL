@@ -177,17 +177,23 @@ fun type_key tyinfo =
   in KernelSig.name_toString {Thy=thy, Name=tyop}
   end
 
-fun type_splits_of ty =
+(* The rules of the type's TypeBase entry in the given context.  The
+   conclusion rule is TypeBase.case_pred_imp_of's, derived from that
+   entry. *)
+fun type_splits_in ctxt ty =
   let
     val tyinfo =
-      case TypeBase.fetch ty of
+      case TypeBase.fetch_of ctxt ty of
           SOME tyinfo => tyinfo
         | NONE =>
             raise ERR "type_splits_of" "type has no TypeBase information"
     val key = type_key tyinfo
     fun derive () =
       let
-        val split = TypeBase.case_pred_imp_of ty
+        val split =
+          Prim_rec.prove_case_ho_imp_thm
+            {case_def = TypeBasePure.case_def_of tyinfo,
+             nchotomy = TypeBasePure.nchotomy_of tyinfo}
         val asm_split = TypeBasePure.case_elim_of tyinfo
         val splits =
           {split=split, asm_split=asm_split,
@@ -205,6 +211,8 @@ fun type_splits_of ty =
           else derive ()
       | NONE => derive ()
   end
+
+fun type_splits_of ty = type_splits_in (Context.snapshot ()) ty
 
 fun type_split_of ty = #split (type_splits_of ty)
 fun type_asm_split_of ty = #asm_split (type_splits_of ty)
@@ -245,9 +253,9 @@ fun build_case_const_index typebase =
     #2 (List.foldl add (0,Symtab.empty) (TypeBasePure.listItems typebase))
   end
 
-fun case_const_index_of () =
+fun case_const_index_of ctxt =
   let
-    val typebase = TypeBase.theTypeBase ()
+    val typebase = TypeBase.theTypeBase_of ctxt
     fun rebuild () =
       let val index = build_case_const_index typebase
       in
@@ -267,9 +275,9 @@ fun case_const_index_of () =
    registered case constant. Count arguments along each application spine
    and collect matching types in their TypeBase order. The looper can do
    this on each simplification round without recording unrelated constants. *)
-fun goal_split_rule_groups terms =
+fun goal_split_rule_groups_of ctxt terms =
   let
-    val index = case_const_index_of ()
+    val index = case_const_index_of ctxt
     fun collect arity ({order,ty,arity=min_arity} : case_const, found) =
       if arity < min_arity orelse Option.isSome (Binarymap.peek (found,order))
       then found
@@ -286,11 +294,14 @@ fun goal_split_rule_groups terms =
     val matched = List.foldl (fn (tm,found) => visit tm 0 found)
                     (Binarymap.mkDict Int.compare) terms
     fun group (_,ty,result) =
-      (ty, type_split_rules ty) :: result
+      (ty, #rules (type_splits_in ctxt ty)) :: result
       handle HOL_ERR _ => result
   in
     Binarymap.foldl group [] matched
   end
+
+fun goal_split_rule_groups terms =
+  goal_split_rule_groups_of (Context.snapshot ()) terms
 
 fun goal_split_rules terms =
   List.concat (map #2 (goal_split_rule_groups terms))

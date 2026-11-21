@@ -1099,7 +1099,35 @@ fun del_split name ss =
     List.foldl (fn (id,result) => del_looper_id_quiet id result) ss ids
   end
 
-(* The [split] rules are those of the context the tactic runs in. *)
+(* A tactic solver runs a tactic, which needs a context, but is called from
+   conversions, which have none.  The simplifier tactics below record the
+   context they are given, on their thread, for the length of the call.
+   Outside one, a tactic solver proves against the ambient context. *)
+local
+  val current : Context.t option ThreadLocal.t = ThreadLocal.new ()
+  fun get () = Option.join (ThreadLocal.get current)
+in
+  fun tactic_context () = get ()
+  fun with_tactic_context (tac : tactic) : tactic = fn g => fn ctxt =>
+    let
+      val old = get ()
+      fun reset () = ThreadLocal.set (current, old)
+      val () = ThreadLocal.set (current, SOME ctxt)
+      val result = tac g ctxt handle e => (reset (); raise e)
+    in
+      reset (); result
+    end
+end
+
+(* The context a split or case name is resolved in: the tactic's, else, in
+   a conversion, which has none, the ambient one. *)
+fun split_context () =
+  case tactic_context () of
+      SOME ctxt => ctxt
+    | NONE => Context.snapshot ()
+
+(* The [split] rules and datatypes are those of the context the tactic runs
+   in. *)
 fun splitter_looper ss (asms, goal) ctxt =
   let
     val excluded = #excl_loopers (strategy_of ss)
@@ -1117,7 +1145,7 @@ fun splitter_looper ss (asms, goal) ctxt =
         enabled ("split.case " ^ full) andalso
         enabled ("split.case " ^ Tyop)
       end
-    val groups = splitLib.goal_split_rule_groups (goal :: asms)
+    val groups = splitLib.goal_split_rule_groups_of ctxt (goal :: asms)
     val datatype_rules =
       List.concat (map #2
         (if unfiltered then groups else List.filter (type_enabled o #1) groups))
@@ -1160,7 +1188,7 @@ fun split_display_exists ss display =
     fun is_persistent (name,th) = split_looper_display name th = display
   in
     List.exists is_local (#loopers (strategy_of ss)) orelse
-    List.exists is_persistent (splitLib.named_split_thms ())
+    List.exists is_persistent (splitLib.named_split_thms_of (split_context ()))
   end
 
 val case_prefix = "split.case "
@@ -1176,7 +1204,7 @@ fun case_display_exists display =
         wanted = KernelSig.name_toString {Thy=thy,Name=tyop}
       end
   in
-    List.exists names (TypeBase.elts ())
+    List.exists names (TypeBase.elts_of (split_context ()))
   end
 
 (* Only ExclX resolves targets. Bare names first use simpLib's rule
@@ -1318,26 +1346,6 @@ fun apply_exclusions ss requests =
   in
     flush (List.foldl step (ss,[]) requests)
   end
-
-(* A tactic solver runs a tactic, which needs a context, but is called from
-   conversions, which have none.  The simplifier tactics below record the
-   context they are given, on their thread, for the length of the call.
-   Outside one, a tactic solver proves against the ambient context. *)
-local
-  val current : Context.t option ThreadLocal.t = ThreadLocal.new ()
-  fun get () = Option.join (ThreadLocal.get current)
-in
-  fun tactic_context () = get ()
-  fun with_tactic_context (tac : tactic) : tactic = fn g => fn ctxt =>
-    let
-      val old = get ()
-      fun reset () = ThreadLocal.set (current, old)
-      val () = ThreadLocal.set (current, SOME ctxt)
-      val result = tac g ctxt handle e => (reset (); raise e)
-    in
-      reset (); result
-    end
-end
 
 fun mk_tactic_solver (name,tac) =
   let
