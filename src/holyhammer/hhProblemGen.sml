@@ -684,6 +684,7 @@ struct
      variable keeps its direct, uncached path. *)
   type symbols =
     {head : term -> string, value : term -> string,
+     type_args : term -> hhTptpProblem.tptp_type list,
      app : hol_type * hol_type * hol_type -> string}
 
   fun memoise compare f =
@@ -703,20 +704,25 @@ struct
     let
       val head = memoise Term.compare (encoded_symbol encoding)
       val value = memoise Term.compare (value_symbol encoding)
+      val type_args =
+        case encoding of
+            hhTypeEnc.Native {poly = true, ...} =>
+              let val args = memoise Term.compare
+                  (map native_type o type_args_of_head)
+              in fn tm => if is_bound_var tm then [] else args tm end
+          | _ => fn _ => []
       fun unless_bound memo tm =
         if is_bound_var tm then encoded_symbol encoding tm else memo tm
     in
       {head = unless_bound head, value = unless_bound value,
+       type_args = type_args,
        app = memoise signature_compare (app_symbol encoding)}
     end
 
   fun encode_term (symbols : symbols) encoding (FOHead (head, args)) =
         hhTptpProblem.Tm (((if is_var head andalso raw_symbol head = "$ite"
           andalso length args = 3 then "$ite" else #head symbols head),
-          (case encoding of
-             hhTypeEnc.Native {poly = true, ...} =>
-               map native_type (type_args_of_head head)
-           | _ => [])), map (encode_term symbols encoding) args)
+          #type_args symbols head), map (encode_term symbols encoding) args)
     | encode_term symbols _ (FOValue head) =
         hhTptpProblem.Tm ((#value symbols head, []), [])
     | encode_term symbols encoding (FOApp {left, right, function_type,

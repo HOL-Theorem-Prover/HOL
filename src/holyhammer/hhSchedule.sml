@@ -236,20 +236,25 @@ fun ranking_for rankings filter =
         ("HolyHammer: missing premise ranking for filter '" ^
          filter ^ "'")
 
-(* The named selection of a slice (filter and actual prefix length): the
-   conjecture and the legacy printer are fixed, so slices with the same
-   selection share one legacy problem. *)
-fun selection options rankings filter nfacts =
+(* Count each used ranking once, stopping at its largest requested prefix. *)
+fun selection_sizes (options : hhConfig.hh_options) rankings problems =
   let
-    val premises = ranking_for rankings filter
-    val wanted =
-      if filter = "none" then
-        (case #max_facts options of
-             NONE => length premises
-           | SOME maximum => maximum)
-      else nfacts
+    fun prefix_size 0 _ count = count
+      | prefix_size _ [] count = count
+      | prefix_size remaining (_ :: rest) count =
+          prefix_size (remaining - 1) rest (count + 1)
+    fun size (filter, maximum) =
+      let
+        val premises = ranking_for rankings filter
+        val bound = if filter = "none" then #max_facts options
+                    else SOME maximum
+      in
+        (filter, case bound of
+                     NONE => length premises
+                   | SOME n => prefix_size (Int.max (0, n)) premises 0)
+      end
   in
-    (filter, Int.max (0, Int.min (wanted, length premises)))
+    map size (hhSlice.filter_maxima problems)
   end
 
 datatype kind =
@@ -268,11 +273,17 @@ type work =
 fun ordered_work root options rankings schedule =
   let
     val problems = distinct_problems schedule
-    val _ = List.app (ignore o ranking_for rankings o #filter o #2) problems
+    val sizes = selection_sizes options rankings problems
     fun item index (config, slice) firsts =
       let
         val path = problem_path root slice
-        val key = selection options rankings (#filter slice) (#nfacts slice)
+        val filter = #filter slice
+        val size = ranking_for sizes filter
+        (* The conjecture and the legacy printer are fixed, so slices
+           with the same selection share one legacy problem. *)
+        val count = if filter = "none" then size
+                    else Int.max (0, Int.min (#nfacts slice, size))
+        val key = (filter, count)
         fun work kind =
           {index = index, config = config, slice = slice, path = path,
            key = key, kind = kind}

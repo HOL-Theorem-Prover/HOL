@@ -427,46 +427,68 @@ fun stature_bonus ({simp_bonus, local_bonus, ...} : fudge)
       ({simp, local_, ...} : hhStature.stature) =
   if simp then simp_bonus else if local_ then local_bonus else 0.0
 
-fun pconst_mem match pconsts (name, ptype) =
+fun pconst_mem pconst_of match pconsts (name, ptype) =
   List.exists
-    (fn (other_name, other_ptype) =>
-      name = other_name andalso match (ptype, other_ptype))
+    (fn entry =>
+      let val (other_name, other_ptype) = pconst_of entry in
+        name = other_name andalso match (ptype, other_ptype)
+      end)
     pconsts
 
 fun odd_const_name name =
   name = pseudo_abs_name orelse String.isPrefix "%thy%" name
 
-fun fact_weight fudge stature frequency_table rel_table chained_table
+fun score_fact fudge pconst_of rel_weight_of irrel_weight_of stature rel_table
       fact_pconsts =
   let
     val (relevant, rest) =
-      List.partition (pconst_hyper_mem match_ptype rel_table) fact_pconsts
+      List.partition (pconst_hyper_mem match_ptype rel_table o pconst_of)
+        fact_pconsts
     val irrelevant =
       if null relevant then []
-      else List.filter (not o pconst_hyper_mem swapped_match rel_table) rest
+      else
+        List.filter (not o pconst_hyper_mem swapped_match rel_table o pconst_of)
+          rest
+    fun odd entry = odd_const_name (#1 (pconst_of entry))
   in
     if null relevant orelse
-       (List.all (odd_const_name o fst) relevant andalso
-        List.all (odd_const_name o fst) irrelevant) then 0.0
+       (List.all odd relevant andalso List.all odd irrelevant) then 0.0
     else
       let
         val irrelevant' =
-          List.filter (not o pconst_mem swapped_match relevant) irrelevant
+          List.filter (not o pconst_mem pconst_of swapped_match relevant o
+            pconst_of) irrelevant
         val rel_weight =
           foldl
             (fn (pconst, total) =>
-              total + rel_pconst_weight fudge frequency_table pconst)
+              total + rel_weight_of pconst)
             0.0 relevant
         val irrel_weight =
           foldl
             (fn (pconst, total) =>
-              total + irrel_pconst_weight fudge frequency_table
-                chained_table pconst)
+              total + irrel_weight_of pconst)
             (~ (stature_bonus fudge stature)) irrelevant'
         val result = rel_weight / (rel_weight + irrel_weight)
       in
         if Real.isFinite result then result else 0.0
       end
+  end
+
+fun fact_weight fudge stature frequency_table rel_table chained_table =
+  score_fact fudge I (rel_pconst_weight fudge frequency_table)
+    (irrel_pconst_weight fudge frequency_table chained_table) stature
+    rel_table
+
+fun memo_weight count weight_of =
+  let val cache = Array.array (count, NONE) in
+    fn (pconst, index) =>
+      case Array.sub (cache, index) of
+          SOME weight => weight
+        | NONE =>
+            let val weight = weight_of pconst in
+              Array.update (cache, index, SOME weight);
+              weight
+            end
   end
 
 val split_at = part_n
@@ -505,19 +527,21 @@ fun purge_hopeless (fudge : fudge) iteration weighted =
   else weighted
 
 (* counts is the fact's own contribution to the frequency table, so that
-   restricted contexts can adjust a table instead of re-walking terms. *)
+   restricted contexts can adjust a table instead of re-walking terms.
+   The pconst indices belong to the context. Each ranking computes its own
+   weights because frequencies and chained assumptions can differ. *)
 type cached_fact =
   {thmid : string, theory : string, concl : term,
-   pconsts : pconst list, counts : (pconst * int) list,
+   pconsts : (pconst * int) list, counts : (pconst * int) list,
    stature : hhStature.stature}
 
 type context =
   {current_theory : string, facts : cached_fact list,
-   frequency_table : frequency_table}
+   frequency_table : frequency_table, pconst_count : int}
 
-fun cache_fact {thmid, theory, concl, stature} =
+fun cache_fact index_pconst {thmid, theory, concl, stature} =
   {thmid = thmid, theory = theory, concl = concl,
-   pconsts = pconsts_in_term theory concl,
+   pconsts = map index_pconst (pconsts_in_term theory concl),
    counts = frequency_entries (count_fact_consts [(theory, concl)]),
    stature = stature}
 
@@ -549,9 +573,25 @@ fun frequency_of_facts facts =
   adjust_by_facts 1 facts (empty_frequency_table ())
 
 fun make_context {current_theory, facts} =
-  let val cached = map cache_fact facts in
+  let
+    fun compare ((name, ptype), (name', ptype')) =
+      case String.compare (name, name') of
+          EQUAL => ptype_compare (ptype, ptype')
+        | order => order
+    val indices = ref (dempty compare)
+    fun index_pconst pconst =
+      case Redblackmap.peek (!indices, pconst) of
+          SOME entry => entry
+        | NONE =>
+            let val entry = (pconst, dlength (!indices)) in
+              indices := dadd pconst entry (!indices);
+              entry
+            end
+    val cached = map (cache_fact index_pconst) facts
+  in
     {current_theory = current_theory, facts = cached,
-     frequency_table = frequency_of_facts cached}
+     frequency_table = frequency_of_facts cached,
+     pconst_count = dlength (!indices)}
   end
 
 fun theory_of_thmid thmid =
@@ -580,7 +620,8 @@ fun create_context thmdata statures =
 
 fun context_thmids ({facts, ...} : context) = map #thmid facts
 
-fun restrict_context ({current_theory, facts, frequency_table} : context)
+fun restrict_context
+    ({current_theory, facts, frequency_table, pconst_count} : context)
     thmids =
   let
     val wanted =
@@ -590,6 +631,7 @@ fun restrict_context ({current_theory, facts, frequency_table} : context)
       List.partition (fn fact => dmem (#thmid fact) wanted) facts
   in
     {current_theory = current_theory, facts = restricted,
+     pconst_count = pconst_count,
      frequency_table =
        if length excluded < length restricted then
          adjust_by_facts ~1 excluded frequency_table
@@ -597,7 +639,7 @@ fun restrict_context ({current_theory, facts, frequency_table} : context)
   end
 
 fun add_fact_pconsts fact table =
-  foldl (fn (pconst, result) => add_pconst_to_table pconst result)
+  foldl (fn ((pconst, _), result) => add_pconst_to_table pconst result)
     table (#pconsts fact)
 
 fun table_name_changed old_table new_table name =
@@ -704,7 +746,7 @@ fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
   end
 
 fun mepo_rank_with_fudge (fudge : fudge)
-      ({current_theory, facts, frequency_table} : context)
+      ({current_theory, facts, frequency_table, pconst_count} : context)
       (assumptions, conclusion) max_facts =
   if max_facts <= 0 orelse null facts then []
   else
@@ -716,6 +758,11 @@ fun mepo_rank_with_fudge (fudge : fudge)
           (empty_pconst_table ()) assumptions
       val goal_table0 =
         add_pconsts_in_term current_theory conclusion chained_table
+      val score =
+        score_fact fudge fst
+          (memo_weight pconst_count (rel_pconst_weight fudge frequency_table))
+          (memo_weight pconst_count (irrel_pconst_weight fudge frequency_table
+            chained_table))
       val goal_table =
         if not (Redblackmap.existsi
           (fn (name, _) => not (odd_const_name name)) goal_table0) then
@@ -771,13 +818,14 @@ fun mepo_rank_with_fudge (fudge : fudge)
                         val changed = List.filter
                           (table_name_changed rel_table rel_table')
                           (mk_fast_set String.compare
-                            (map #1 (List.concat (map #pconsts accepted))))
+                            (map (fst o fst)
+                              (List.concat (map #pconsts accepted))))
                         val changed_set = Redblackset.addList
                           (Redblackset.empty String.compare, changed)
                         fun dirty fact =
                           not (null changed) andalso
                           List.exists
-                            (fn (name, _) =>
+                            (fn ((name, _), _) =>
                               Redblackset.member (changed_set, name))
                             (#pconsts fact)
                         fun reconsider ((fact, weight), (hope, lost)) =
@@ -803,9 +851,7 @@ fun mepo_rank_with_fudge (fudge : fudge)
                   val weight =
                     case cached of
                         SOME value => value
-                      | NONE => fact_weight fudge (#stature fact)
-                          frequency_table rel_table chained_table
-                          (#pconsts fact)
+                      | NONE => score (#stature fact) rel_table (#pconsts fact)
                 in
                   if weight >= threshold then
                     scan (((fact, #pconsts fact), weight) :: candidates)

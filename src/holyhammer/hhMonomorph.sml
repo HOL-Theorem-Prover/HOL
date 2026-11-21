@@ -436,6 +436,9 @@ struct
 
       fun rounds round known new =
         if round > Int.max (0, max_iters) orelse !remaining <= 0 then ()
+        (* From round 3 on, every fact requires a match from new. *)
+        else if round > 2 andalso not (Redblackmap.exists (not o null) new)
+        then ()
         else
           let
             (* Known and new are immutable during the round: merge once,

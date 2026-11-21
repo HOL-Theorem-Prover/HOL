@@ -277,13 +277,14 @@ fun dependencies_of (table : dep_table) thmid =
 
 fun pure_logic_concl conclusion =
   let
-    fun pure_constant constant =
-      let val {Thy, ...} = dest_thy_const constant in
-        Thy = "min" orelse Thy = "bool"
-      end
+    fun nonlogical_constant (_, term) =
+      if is_const term then
+        let val {Thy, ...} = dest_thy_const term in
+          if Thy = "min" orelse Thy = "bool" then NONE else SOME ()
+        end
+      else NONE
   in
-    List.all pure_constant
-      (mk_term_set (find_terms is_const conclusion))
+    not (Option.isSome (gen_find_term nonlogical_constant conclusion))
   end
 
 type fact_info =
@@ -849,24 +850,26 @@ type mash_result =
    learner : mlThmData.thmid list,
    max_suggestions : int}
 
+fun suggestion_limit max_facts =
+  #max_suggestions_factor default_constants * max_facts +
+  #max_suggestions_extra default_constants
+
+fun nb_predict model pool features n =
+  nb_rank model {pool = pool, n = n, goal_features =
+    map (fn feature => (feature, #unit_weight default_constants)) (features ())}
+
+fun knn_predict thmdata features n =
+  mlNearestNeighbor.thmknn thmdata n (features ())
+
 fun mash_leg ({model, dependencies, fact_key, ...} : context)
-      restricted pool goal max_facts =
+      (_, facts) pool {nb, knn} max_facts =
   if max_facts <= 0 then
     {ranking = [], unknown = [], learner = [], max_suggestions = 0}
   else
     let
-      val (weights, facts) = restricted
-      val features = mlFeature.fea_of_goal true goal
-      val goal_features = map
-        (fn feature => (feature, #unit_weight default_constants))
-        features
-      val max_suggestions =
-        #max_suggestions_factor default_constants * max_facts +
-        #max_suggestions_extra default_constants
-      val nb = nb_rank model
-        {pool = pool, goal_features = goal_features, n = max_suggestions}
-      val knn = mlNearestNeighbor.thmknn (weights, facts) max_suggestions
-        features
+      val max_suggestions = suggestion_limit max_facts
+      val nb = nb max_suggestions
+      val knn = knn max_suggestions
       val learner = mesh_facts max_suggestions
         [(#nb_mesh_weight default_constants,
           (weight_facts_steeply nb, [])),
@@ -884,16 +887,27 @@ fun mash_leg ({model, dependencies, fact_key, ...} : context)
 fun restricted_names context NONE _ = context_thmids context
   | restricted_names _ (SOME _) facts = map (fn (thmid, _) => thmid) facts
 
-fun mash_details context {pool, goal, max_facts} =
-  let val restricted as (_, facts) = restrict_thmdata context pool in
-    mash_leg context restricted (restricted_names context pool facts)
-      goal max_facts
+fun direct_predictions ({model, ...} : context) goal =
+  let
+    val suspended = Susp.delay (fn () => mlFeature.fea_of_goal true goal)
+    fun features () = Susp.force suspended
+  in
+    {nb = fn names => nb_predict model names features,
+     knn = fn thmdata => knn_predict thmdata features}
   end
 
-fun rank_knn_with resolve_dependencies thmdata n goal =
+fun mash_details context {pool, goal, max_facts} =
   let
-    val predictions = mlNearestNeighbor.thmknn thmdata n
-      (mlFeature.fea_of_goal true goal)
+    val restricted as (_, facts) = restrict_thmdata context pool
+    val names = restricted_names context pool facts
+    val {nb, knn} = direct_predictions context goal
+  in
+    mash_leg context restricted names {nb = nb names, knn = knn restricted}
+      max_facts
+  end
+
+fun expand_knn resolve_dependencies n predictions =
+  let
     fun with_dependencies thmid =
       let val (theory, name) = split_string "Theory." thmid in
         thmid ::
@@ -904,6 +918,10 @@ fun rank_knn_with resolve_dependencies thmdata n goal =
   in
     take n (distinct (List.concat (map with_dependencies predictions)))
   end
+
+fun rank_knn_with resolve_dependencies thmdata n goal =
+  expand_knn resolve_dependencies n
+    (knn_predict thmdata (fn () => mlFeature.fea_of_goal true goal) n)
 
 fun rank_knn thmdata n goal =
   rank_knn_with (dependency_resolver ()) thmdata n goal
@@ -926,8 +944,8 @@ fun make_dependency_lookup () =
 fun is_induction statures thmid =
   #induction (hhStature.stature_of statures thmid)
 
-fun rank (context as {statures, mepo, fact_key, ...} : context)
-      {filter, pool, goal, n} =
+fun rank_with_predictions (context as {statures, mepo, fact_key, ...} : context)
+      {nb, knn} {filter, pool, goal, n} =
   let
     val restricted as (_, facts) = restrict_thmdata context pool
     fun pool_names () = restricted_names context pool facts
@@ -938,13 +956,16 @@ fun rank (context as {statures, mepo, fact_key, ...} : context)
              NONE => mepo
            | SOME _ => hhMePo.restrict_context mepo names)
         goal generous
-    fun mash names = mash_leg context restricted names goal generous
+    fun mash names =
+      mash_leg context restricted names {nb = nb names, knn = knn restricted}
+        generous
     fun finish ranking =
       first_test_n (not o is_induction statures) n ranking
   in
     case filter of
         "none" => pool_names ()
-      | "knn" => rank_knn restricted n goal
+      | "knn" =>
+          expand_knn (dependency_resolver ()) n (knn restricted n)
       | "mepo" => finish (mepo_leg (pool_names ()))
       | "mash" => finish (#ranking (mash (pool_names ())))
       | "mesh" =>
@@ -969,6 +990,19 @@ fun rank (context as {statures, mepo, fact_key, ...} : context)
       | _ => raise ERR "rank" ("unknown premise filter " ^ filter)
   end
 
+fun rank context (query as {goal, ...}) =
+  rank_with_predictions context (direct_predictions context goal) query
+
+(* Both learners order the entire pool independently of the requested depth.
+   Their raw prefixes can be reused before merging and dependency expansion. *)
+fun shared_prefix limit predict =
+  let val largest = Susp.delay (fn () => predict limit) in
+    fn n =>
+      if n = limit then Susp.force largest
+      else if n < 0 orelse n > limit then predict n
+      else take n (Susp.force largest)
+  end
+
 fun rank_filters thmdata goal filters =
   if List.all (fn (filter, _) => filter = "knn" orelse filter = "none")
        filters then
@@ -991,8 +1025,21 @@ fun rank_filters thmdata goal filters =
   else
     let
       val context = create_context thmdata
+      val {knn, nb} = direct_predictions context goal
+      fun limits ((filter, n), (knn_max, nb_max)) =
+        if filter = "knn" then (Int.max (knn_max, n), nb_max)
+        else if (filter = "mash" orelse filter = "mesh") andalso n > 0 then
+          let val depth = suggestion_limit (over_request n) in
+            (Int.max (knn_max, depth), Int.max (nb_max, depth))
+          end handle Overflow => (knn_max, nb_max)
+        else (knn_max, nb_max)
+      val (knn_max, nb_max) = foldl limits (0, 0) filters
+      val shared_knn = shared_prefix knn_max
+        (knn (restrict_thmdata context NONE))
+      val shared_nb = shared_prefix nb_max (nb (context_thmids context))
       fun one (filter, n) =
-        (filter, rank context
+        (filter, rank_with_predictions context
+          {knn = fn _ => shared_knn, nb = fn _ => shared_nb}
           {filter = filter, pool = NONE, goal = goal, n = n})
     in
       map one filters

@@ -8999,6 +8999,29 @@ fun test_hhLearn_dependency_lookup () =
 
 val _ = test_hhLearn_dependency_lookup ()
 
+fun test_hhLearn_shared_predictions () =
+  let
+    val entries = aiLib.first_n 40 (DB.theorems "list")
+    val goal = Thm.dest_thm (#2 (hd entries))
+    val features = mlFeature.fea_of_goal true goal
+    (* Equal feature vectors force kNN to break ties at both cutoffs. *)
+    val rows = map (fn (name, _) => ("listTheory." ^ name, features)) entries
+    val data = (mlFeature.learn_tfidf rows, rows)
+    val context = hhLearn.create_context data
+    val filters = [("knn", 3), ("mash", 2), ("mesh", 14), ("knn", 11),
+                   ("mash", 7), ("mepo", 5), ("mesh", 4), ("none", 0)]
+    fun separate (filter, n) =
+      (filter, hhLearn.rank context
+        {filter = filter, pool = NONE, goal = goal, n = n})
+    fun agrees requests =
+      hhLearn.rank_filters data goal requests = map separate requests
+  in
+    expect "shared learner rankings preserve ties, cutoffs and filter order"
+      (agrees filters andalso agrees (rev filters))
+  end
+
+val _ = test_hhLearn_shared_predictions ()
+
 (* A theorem with hypotheses is no premise.  Exported by its bare
    conclusion, [F] |- F hands the provers a false axiom (ContradictoryAxioms,
    bogus proofs Metis then rejects); discharged, it is unusable by replay. *)

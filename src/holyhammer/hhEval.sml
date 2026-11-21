@@ -147,7 +147,7 @@ fun selector_of_string "deps" = Deps
 (* This deliberately examines only the normalized goal, never a translation.
    Quantifier abstractions are consumed by their binder representation;
    every other abstraction has survived in term position. *)
-fun is_higher_order_goal tm =
+fun higher_order_normalized tm =
   let
     fun is_fun_type ty =
       (ignore (dom_rng ty); true) handle HOL_ERR _ => false
@@ -207,15 +207,30 @@ fun is_higher_order_goal tm =
         end
       else false
   in
-    scan [] true (hhProblemGen.beta_eta_contract false tm)
+    scan [] true tm
   end
+
+val normalize_goal = hhProblemGen.beta_eta_contract false
+
+fun is_higher_order_goal tm = higher_order_normalized (normalize_goal tm)
+
+fun fresh_normalized thy tm =
+  isSome (gen_find_term (fn (_, subterm) =>
+    if is_const subterm andalso #Thy (dest_thy_const subterm) = thy
+    then SOME () else NONE) tm)
 
 (* [thy] is explicit so this classifier is pure and usable on a recorded
    theorem independently of Theory.current_theory().  Contracting first
    matches the normalized statement inspected by the other goal classifier. *)
-fun is_fresh_goal thy tm =
-  List.exists (fn constant => #Thy (dest_thy_const constant) = thy)
-    (find_terms is_const (hhProblemGen.beta_eta_contract false tm))
+fun is_fresh_goal thy tm = fresh_normalized thy (normalize_goal tm)
+
+(* Keep classification at journal entry construction, and share the result
+   across every condition evaluated for this theorem. *)
+fun goal_tags thy thm =
+  Susp.delay (fn () =>
+    let val tm = normalize_goal (list_mk_imp (dest_thm thm)) in
+      (higher_order_normalized tm, fresh_normalized thy tm)
+    end)
 
 fun validate_condition (condition : condition) =
   case (#selector condition, #engine condition, #reconstruct condition) of
@@ -1564,7 +1579,7 @@ fun version_of_prover prover =
       NONE => NONE
     | SOME {version, ...} => version
 
-fun schedule_cell_entry expdir thy data (name, thm) facts condition
+fun schedule_cell_entry expdir thy data (name, thm, tags) facts condition
       parameters =
   let
     val goal = dest_thm thm
@@ -1599,21 +1614,22 @@ fun schedule_cell_entry expdir thy data (name, thm) facts condition
         same_slice slice wanted) (#slices_run result)
     fun finish winner prover nfacts szs t_prover axioms recon_ok
         recon_method t_recon stac error =
-      {run = run_name expdir, thy = thy, thm = name,
-       goal_id = goal_id thy name, cond = #cond_id condition,
-       regime = #regime condition, selector = #selector condition,
-       engine = SOME (#engine condition),
-       ho = is_higher_order_goal (list_mk_imp goal),
-       fresh = is_fresh_goal thy (list_mk_imp goal),
-       prover = prover,
-       prover_version = Option.mapPartial version_of_prover prover,
-       nfacts = nfacts,
-       timeout = #timeout condition, szs = szs, t_prover = t_prover,
-       axioms_used = axioms, recon_ok = recon_ok,
-       recon_method = recon_method, t_recon = t_recon, stac = stac,
-       error = error, stop = SOME (schedule_stop_name (#stopped result)),
-       t_total = SOME (#t_total result), winner = winner,
-       slices = slices} : journal_entry
+      let val (ho, fresh) = Susp.force tags in
+        {run = run_name expdir, thy = thy, thm = name,
+         goal_id = goal_id thy name, cond = #cond_id condition,
+         regime = #regime condition, selector = #selector condition,
+         engine = SOME (#engine condition),
+         ho = ho, fresh = fresh,
+         prover = prover,
+         prover_version = Option.mapPartial version_of_prover prover,
+         nfacts = nfacts,
+         timeout = #timeout condition, szs = szs, t_prover = t_prover,
+         axioms_used = axioms, recon_ok = recon_ok,
+         recon_method = recon_method, t_recon = t_recon, stac = stac,
+         error = error, stop = SOME (schedule_stop_name (#stopped result)),
+         t_total = SOME (#t_total result), winner = winner,
+         slices = slices} : journal_entry
+      end
   in
     case #suggestions result of
         suggestion :: _ =>
@@ -1648,7 +1664,7 @@ fun schedule_cell_entry expdir thy data (name, thm) facts condition
                         (SOME "schedule contained no runnable slices")))
   end
 
-fun prover_cell_entry expdir thy data (name, thm) facts condition prover =
+fun prover_cell_entry expdir thy data (name, thm, tags) facts condition prover =
   let
     val goal = dest_thm thm
     val premises = selected_premises_at data condition facts goal NONE
@@ -1675,15 +1691,21 @@ fun prover_cell_entry expdir thy data (name, thm) facts condition prover =
        error = case recon_error of
                    SOME message => SOME message
                  | NONE => run_failure_error (#szs result)}
+    val (ho, fresh) = Susp.force tags
   in
-    base_entry expdir thy name condition
-      (is_higher_order_goal (list_mk_imp goal))
-      (is_fresh_goal thy (list_mk_imp goal)) nfacts
+    base_entry expdir thy name condition ho fresh nfacts
       (Szs (#szs result)) (#time result)
       (#used_axioms result) (#version result) outcome
   end
 
-fun run_cell expdir thy data theorem facts condition =
+fun evaluation_error_cell expdir thy name tags condition message =
+  let val (ho, fresh) = Susp.force tags in
+    append_journal (journal_path expdir thy)
+      (base_entry expdir thy name condition ho fresh 0 EvalError 0.0
+         NONE NONE (failed message))
+  end
+
+fun run_cell expdir thy data (theorem as (name, _, tags)) facts condition =
   let
     val entry =
       case #engine condition of
@@ -1697,23 +1719,15 @@ fun run_cell expdir thy data theorem facts condition =
   end
   handle Interrupt => raise Interrupt
        | error =>
-           append_journal (journal_path expdir thy)
-             (base_entry expdir thy (#1 theorem) condition
-                (is_higher_order_goal (list_mk_imp (dest_thm (#2 theorem))))
-                (is_fresh_goal thy (list_mk_imp (dest_thm (#2 theorem))))
-                0 EvalError 0.0 NONE NONE (failed (General.exnMessage error)))
+           evaluation_error_cell expdir thy name tags condition
+             (General.exnMessage error)
 
-fun broken_deps_cell expdir thy name goal condition =
-  append_journal (journal_path expdir thy)
-    (base_entry expdir thy name condition (is_higher_order_goal goal)
-       (is_fresh_goal thy goal) 0 BrokenDeps 0.0 NONE NONE
-       no_outcome)
-
-fun evaluation_error_cell expdir thy name goal condition message =
-  append_journal (journal_path expdir thy)
-    (base_entry expdir thy name condition (is_higher_order_goal goal)
-       (is_fresh_goal thy goal) 0 EvalError 0.0 NONE NONE
-       (failed message))
+fun broken_deps_cell expdir thy name tags condition =
+  let val (ho, fresh) = Susp.force tags in
+    append_journal (journal_path expdir thy)
+      (base_entry expdir thy name condition ho fresh 0 BrokenDeps 0.0
+         NONE NONE no_outcome)
+  end
 
 fun eval_loaded_theory expdir thy =
   let
@@ -1740,6 +1754,8 @@ fun eval_loaded_theory expdir thy =
           let
             val (dependencies_ok, intact_deps) =
               #intact data thm
+            val tags = goal_tags thy thm
+            val theorem = (name, thm, tags)
             fun evaluate_cells facts_for =
               let
                 val {pool, permits} = facts_for name
@@ -1756,13 +1772,12 @@ fun eval_loaded_theory expdir thy =
                   case #regime condition of
                       Bushy =>
                         if dependencies_ok then
-                          run_cell expdir thy data (name, thm)
+                          run_cell expdir thy data theorem
                             {pool = intact_deps, dependencies = intact_deps}
                             condition
-                        else broken_deps_cell expdir thy name
-                          (list_mk_imp (dest_thm thm)) condition
+                        else broken_deps_cell expdir thy name tags condition
                     | Chainy =>
-                        run_cell expdir thy data (name, thm)
+                        run_cell expdir thy data theorem
                           {pool = chainy_pool,
                            dependencies = chainy_dependencies}
                           condition
@@ -1772,8 +1787,7 @@ fun eval_loaded_theory expdir thy =
           in
             case chainy_data of
                 NONE => app (fn condition =>
-                  evaluation_error_cell expdir thy name
-                  (list_mk_imp (dest_thm thm)) condition
+                  evaluation_error_cell expdir thy name tags condition
                   "could not construct the chainy premise pool") pending
               | SOME facts_for => evaluate_cells facts_for
           end
@@ -2225,12 +2239,12 @@ fun run_smoke {expdir, timeout} =
           val (dependencies_ok, dependencies) =
             mlThmData.intactdep_of_thm thm
           val condition = smoke_condition timeout kind
+          val tags = goal_tags thy thm
         in
           if dependencies_ok then
-            run_cell expdir thy (selection_data thy) (name, thm)
+            run_cell expdir thy (selection_data thy) (name, thm, tags)
               {pool = dependencies, dependencies = dependencies} condition
-          else broken_deps_cell expdir thy name
-            (list_mk_imp (dest_thm thm)) condition
+          else broken_deps_cell expdir thy name tags condition
         end
       val _ = app run_one smoke_goals
       val (sched_thy, sched_name, _) =
@@ -2238,6 +2252,7 @@ fun run_smoke {expdir, timeout} =
             SOME item => item
           | NONE => raise Fail "smoke suite has no schedule cell"
       val sched_thm = DB.fetch sched_thy sched_name
+      val sched_goal = (sched_name, sched_thm, goal_tags sched_thy sched_thm)
       val (_, sched_dependencies) = mlThmData.intactdep_of_thm sched_thm
       val sched_facts = {pool = sched_dependencies,
                          dependencies = sched_dependencies}
@@ -2251,7 +2266,7 @@ fun run_smoke {expdir, timeout} =
          an unreachable proof limit before testing a process-free replay. *)
       val primed =
         schedule_cell_entry expdir sched_thy (selection_data sched_thy)
-        (sched_name, sched_thm) sched_facts sched_condition
+        sched_goal sched_facts sched_condition
         {provers = #provers sched_parameters,
          slices = #slices sched_parameters, cores = #cores sched_parameters,
          max_proofs = #slices sched_parameters + 1,
@@ -2263,7 +2278,7 @@ fun run_smoke {expdir, timeout} =
       val _ = hhProver.reset_spawn_count ()
       val repeated =
         schedule_cell_entry expdir sched_thy (selection_data sched_thy)
-        (sched_name, sched_thm) sched_facts sched_condition
+        sched_goal sched_facts sched_condition
         sched_parameters
       val repeat_spawns = hhProver.spawn_count ()
       val _ =
