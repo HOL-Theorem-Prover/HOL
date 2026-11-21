@@ -46,6 +46,30 @@ struct
   fun is_fool (hhTptpProblem.TFF {fool = hhTptpProblem.Fool _, ...}) = true
     | is_fool _ = false
 
+  (* Whether [var] occurs free in [tm] at most once. *)
+  fun occurs_at_most_once var tm =
+    let
+      fun count tm seen =
+        if seen > 1 then seen
+        else if is_var tm then if aconv tm var then seen + 1 else seen
+        else if is_comb tm then count (rand tm) (count (rator tm) seen)
+        else if is_abs tm then
+          let val (bound, body) = dest_abs tm in
+            if aconv bound var then seen else count body seen
+          end
+        else seen
+    in
+      count tm 0 <= 1
+    end
+
+  (* Unfolding LET (\v. body) arg copies arg into each occurrence of v, so
+     a chain of lets that use their variable twice grows exponentially.
+     Only a LET that copies nothing is unfolded; the others stay, and the
+     LET_THM helper defines them. *)
+  fun unfolds_without_copy func arg =
+    is_var arg orelse is_const arg orelse
+    uncurry occurs_at_most_once (dest_abs func)
+
   (* This is deliberately a term operation rather than a simplifier: the
      generator must retain non-$ite COND for the helper facts. *)
   fun beta_eta_contract unfold_let tm =
@@ -61,9 +85,20 @@ struct
               recurse (rator matrix')
             else mk_abs (var, matrix')
           end
-        else if unfold_let andalso is_let body then
-          let val (func, arg) = dest_let body in
-            recurse (mk_comb (func, arg))
+        else if unfold_let andalso is_let body andalso
+                is_abs (fst (dest_let body)) then
+          (* Judged after contraction: contracting the function can make
+             its variable occur more often
+             (let x = a in let y = x in g y y). *)
+          let
+            val (func, arg) = dest_let body
+            val func' = recurse func
+            val arg' = recurse arg
+          in
+            if not (is_abs func') then mk_comb (func', arg')
+            else if unfolds_without_copy func' arg' then
+              recurse (beta_conv (mk_comb (func', arg')))
+            else mk_comb (mk_comb (rator (rator body), func'), arg')
           end
         else if is_comb body then
           let
@@ -78,10 +113,12 @@ struct
       recurse tm
     end
 
-  fun presimp format ({conjecture, facts} : named_terms) =
+  fun presimp _ ({conjecture, facts} : named_terms) =
     let
-      val {with_let, ...} = syntax_of format
-      val simplify = beta_eta_contract (not with_let)
+      (* LET is unfolded even for formats with $let: the generator does not
+         emit $let, so a kept LET reaches the prover as a constant, which
+         hol_helpers defines with LET_THM. *)
+      val simplify = beta_eta_contract true
     in
       {conjecture = simplify conjecture,
        facts = map (fn (name, tm) => (name, simplify tm)) facts}
@@ -960,6 +997,9 @@ struct
       val combinators =
         comb "I" "I_THM" @ comb "K" "K_THM" @ comb "S" "S_THM" @
         comb "C" "C_THM" @ comb "o" "o_THM"
+      val lets =
+        if has "c.bool.LET" then [("help.bool.LET", fetched "bool" "LET_THM")]
+        else []
       val {with_ite, ...} = syntax_of format
       (* COND_CLAUSE1/2 are implementation theorems rather than exported
          boolTheory bindings.  Construct their closed proposition shapes;
@@ -991,7 +1031,7 @@ struct
         end
         else []
     in
-      combinators @ conds
+      combinators @ lets @ conds
     end
 
   fun app_signatures_term (FOHead (_, args), result) =
