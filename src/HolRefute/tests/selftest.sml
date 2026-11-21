@@ -30,8 +30,8 @@ val lookup_term_postprocessor =
 
 local
   open sortingTheory realTheory ratTheory lbtreeTheory pathTheory
-       llistTheory finite_mapTheory alistTheory finite_setTheory refuteHarvestTypeTheory
-       refuteHarvestAbsTheory wordsLib stringLib
+       llistTheory finite_mapTheory alistTheory finite_setTheory
+       refuteHarvestTypeTheory refuteHarvestAbsTheory wordsLib stringLib
 in end
 
 (* [hol run] starts with no current theory; [no_theory] keeps that
@@ -3160,7 +3160,8 @@ val _ = mf_test "circular presentations are not definitions" (fn () =>
          | _ => false) andalso
   (* Such a model may be spurious, so it spends the potential budget. *)
   not (isSome (first_cex (refute (mf_short |> upd_max_potential 0)
-    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==> zoo_circ_lt x z``))) andalso
+    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==>
+              zoo_circ_lt x z``))) andalso
   genuine_certified (refute mf ``!x y. zoo_circ_lt x y``))
 
 (* Only what the model finder sends closes a cycle: zoo_cyc_ind is sent as
@@ -3188,12 +3189,14 @@ val _ = mf_test "pair patterns in definitions cover unboxed tuples" (fn () =>
                (TAKE k (REPLICATE m (x, 0n, 0n, F)))) = 0``,
      ``EVERY (\kv : 'a # num # num. 1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l /\
        MEM x l ==> 1 <= FST (SND x)``,
-     ``EVERY (\kv : 'a # num # num. 1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l ==>
+     ``EVERY (\kv : 'a # num # num.
+               1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l ==>
        1 <= FST (case ALOOKUP l k of NONE => (1, 1) | SOME p => p)``] andalso
   List.all (genuine_certified o refute mf)
     [``MAP (\p : 'a # num # num. SND (SND p)) (REPLICATE m (x, 0, 1)) =
        REPLICATE m 0``,
-     ``!l : ('a # 'b # num) list. LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [0]``,
+     ``!l : ('a # 'b # num) list.
+          LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [0]``,
      ``EVERY (\kv : 'a # num # num. 1 <= SND (SND kv)) l ==>
        1 <= FST (case ALOOKUP l k of NONE => (1, 1) | SOME p => p)``])
 

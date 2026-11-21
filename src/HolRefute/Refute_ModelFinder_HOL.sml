@@ -2146,9 +2146,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      constant's simps (or psimps), a choice specification, or else the one
      definition [def_of_const] picks (the unfold table before the
      fallback).  A constant with none of these is sent no definition, only
-     user axioms, which are not definitions, so it has no successors.  Constants are compared with their types, since
-     the tables give each instance of a polymorphic constant its own
-     equations.  Each constant's successors are found once per run, in
+     user axioms, which are not definitions, so it has no successors.
+     Constants are compared with their types, since the tables give each
+     instance of a polymorphic constant its own equations.  Each
+     constant's successors are found once per run, in
      [definition_successors]. *)
   fun on_definition_cycle
         (context as {definition_successors, simp_table, psimp_table, ...}
