@@ -1053,8 +1053,9 @@ fun test_hhProblemGen () =
       (Term.aconv beta_result y)
     val _ = expect "hhProblemGen presimp eta-contracts"
       (Term.aconv eta_result f)
-    val _ = expect "hhProblemGen presimp gates LET on $let"
-      (Term.aconv let_fof (Term.mk_comb (f, y)) andalso is_let let_tx0)
+    val _ = expect "hhProblemGen presimp unfolds LET in every format"
+      (Term.aconv let_fof (Term.mk_comb (f, y)) andalso
+       Term.aconv let_tx0 (Term.mk_comb (f, y)))
     val _ = expect "hhProblemGen presimp retains COND for helper routing"
       (is_cond cond_tf0 andalso is_cond cond_tx0)
     val _ = expect "hhProblemGen downgrades keep_lams outside THF"
@@ -1345,6 +1346,66 @@ fun test_hhProblemGen () =
   end
 
 val _ = test_hhProblemGen ()
+
+(* let x1 = g x0 x0 in let x2 = g x1 x1 in ... x12: unfolding every LET
+   copies each argument twice, 2^12 leaves.  The aliased chain puts
+   let y = x in front of each use, which only unfolding the alias first
+   shows to copy x.  TX0 has $let syntax, but the generator does not emit
+   $let, so a kept LET must be defined there as well. *)
+fun test_hhProblemGen_let_chain () =
+  let
+    open boolSyntax hhTptpProblem
+    val depth = 12
+    val num = numSyntax.num
+    val g = Term.mk_var ("g", Type.--> (num, Type.--> (num, num)))
+    val h = Term.mk_var ("h", Type.--> (num, num))
+    fun var i = Term.mk_var ("x" ^ Int.toString i, num)
+    fun alias i = Term.mk_var ("y" ^ Int.toString i, num)
+    fun double tm = Term.list_mk_comb (g, [tm, tm])
+    fun chain i =
+      if i = depth then var i
+      else mk_let (Term.mk_abs (var (i + 1), chain (i + 1)), double (var i))
+    fun aliased i =
+      if i = depth then var i
+      else mk_let
+        (Term.mk_abs (alias i,
+           mk_let (Term.mk_abs (var (i + 1), aliased (i + 1)),
+             double (alias i))),
+         var i)
+    val p = Term.mk_var ("p", Type.--> (num, Type.bool))
+    fun problem (format, encoding) tm =
+      string_of_problem format "let chain"
+        (hhProblemGen.generate_problem
+          {format = format, type_enc = hhTypeEnc.of_string encoding,
+           lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+           mono_instances = 100}
+          {conjecture = Term.mk_comb (p, tm), facts = []})
+    (* Unfolded, either chain prints g 2^12 times. *)
+    fun translates setting tm =
+      let val text = problem setting tm in
+        String.size text < 50000 andalso
+        String.isSubstring "help_2Ebool_2ELET" text
+      end
+    val tf0 = (TFF {poly = false, fool = NoFool}, "mono_native")
+    val tx0 = (hhTypeEnc.format_of_string "tx0", "mono_native_fool")
+    val let_thm = Thm.concl boolTheory.LET_THM
+    val single = mk_let (Term.mk_abs (var 0, Term.mk_comb (h, var 0)),
+      double (var 1))
+  in
+    expect "hhProblemGen keeps and defines a chain of copying lets in TF0"
+      (translates tf0 (chain 0));
+    expect "hhProblemGen keeps and defines a chain of copying lets in TX0"
+      (translates tx0 (chain 0));
+    expect "hhProblemGen keeps and defines a chain of aliased copying lets"
+      (translates tf0 (aliased 0));
+    expect "hhProblemGen presimp keeps LET_THM's LET f x"
+      (Term.aconv (hhProblemGen.beta_eta_contract true let_thm) let_thm);
+    expect "hhProblemGen presimp unfolds a single-use let of a compound value"
+      (Term.aconv (hhProblemGen.beta_eta_contract true single)
+         (Term.mk_comb (h, double (var 1))))
+  end
+
+val _ = test_hhProblemGen_let_chain ()
 
 (* A sort checker for monomorphic TFF problems (TF0 and TX0): every
    symbol has a single declaration and every application, equation, and
