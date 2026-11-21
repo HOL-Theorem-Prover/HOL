@@ -30,7 +30,7 @@ val lookup_term_postprocessor =
 
 local
   open sortingTheory realTheory ratTheory lbtreeTheory pathTheory
-       llistTheory finite_mapTheory finite_setTheory refuteHarvestTypeTheory
+       llistTheory finite_mapTheory alistTheory finite_setTheory refuteHarvestTypeTheory
        refuteHarvestAbsTheory wordsLib stringLib
 in end
 
@@ -3150,8 +3150,14 @@ fun never_genuine (Counterexample cexs) = not (List.exists is_genuine cexs)
 val mf_short = mf |> upd_timeout 10.0
 
 val _ = mf_test "circular presentations are not definitions" (fn () =>
-  never_genuine (refute mf_short
-    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==> zoo_circ_lt x z``) andalso
+  refute mf_short
+    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==> zoo_circ_lt x z``
+  |> cex_where (fn c =>
+       case #certainty c of
+           Potential reasons =>
+             List.exists (String.isSubstring
+               "zoo_circ_lt are circular, not a definition") reasons
+         | _ => false) andalso
   genuine_certified (refute mf ``!x y. zoo_circ_lt x y``))
 
 (* A definition's own pattern variable over a pair type stays unboxed: boxed,
@@ -3165,11 +3171,15 @@ val _ = mf_test "pair patterns in definitions cover unboxed tuples" (fn () =>
      ``SUM (MAP (\(a : 'a, b : num, n : num, c : bool). n)
                (TAKE k (REPLICATE m (x, 0n, 0n, F)))) = 0``,
      ``EVERY (\kv : 'a # num # num. 1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l /\
-       MEM x l ==> 1 <= FST (SND x)``] andalso
+       MEM x l ==> 1 <= FST (SND x)``,
+     ``EVERY (\kv : 'a # num # num. 1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l ==>
+       1 <= FST (case ALOOKUP l k of NONE => (1, 1) | SOME p => p)``] andalso
   List.all (genuine_certified o refute mf)
     [``MAP (\p : 'a # num # num. SND (SND p)) (REPLICATE m (x, 0, 1)) =
        REPLICATE m 0``,
-     ``!l : ('a # 'b # num) list. LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [0]``])
+     ``!l : ('a # 'b # num) list. LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [0]``,
+     ``EVERY (\kv : 'a # num # num. 1 <= SND (SND kv)) l ==>
+       1 <= FST (case ALOOKUP l k of NONE => (1, 1) | SOME p => p)``])
 
 val _ = mf_test "unregistered typedefs are reported before solving" (fn () =>
   List.all (fn goal =>

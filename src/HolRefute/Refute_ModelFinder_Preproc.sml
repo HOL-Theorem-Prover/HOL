@@ -2426,19 +2426,30 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
           List.foldl (fn (term, table) =>
             add_to_uncurry_table context term table) [] uncurry_terms
         else []
-      val shared_variables = List.concat (map Term.free_vars nondefinitions)
-      fun do_middle definitional term =
+      fun before_box term =
         let
           val binarized =
             if binarize then binarize_nat_and_int_in_term term else term
         in
-          if box then
-            binarized
-            |> uncurry_term uncurry_table
-            |> box_fun_and_pair_in_term context definitional
-                 shared_variables
-          else binarized
+          if box then uncurry_term uncurry_table binarized else binarized
         end
+      (* Binarization and uncurrying retype variables, and
+         [box_fun_and_pair_in_term] tells a shared variable by its type, so
+         the shared ones are read off the nondefinitions as it receives
+         them. *)
+      val shared_variables =
+        if box then
+          List.concat (map (Term.free_vars o before_box)
+            (nondefinitions @
+             (case needs of
+                  SOME terms => map (MFH.unfold_defs_in_term context) terms
+                | NONE => [])))
+        else []
+      fun do_middle definitional term =
+        if box then
+          box_fun_and_pair_in_term context definitional shared_variables
+            (before_box term)
+        else before_box term
       val need_ts =
         case needs of
             SOME terms => map (fn term =>

@@ -886,7 +886,8 @@ fun run_instance deadline started (config : Refute_Core.config)
         val weakened = !(#whack_weakening context)
         val unproved = unproved_conditions context
         val reasons = if #unsound extension then
-            ["model comes from the liberal, unsound-by-design problem"]
+            "model comes from the liberal, unsound-by-design problem" ::
+            underdetermined
           else
             authenticity_reasons mf got_all_mono_user_axioms
               no_poly_user_axioms (#codatatypes_ok reconstructed) @
