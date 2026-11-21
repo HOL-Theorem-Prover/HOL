@@ -1867,6 +1867,42 @@ fun test_hhProblemGen_mono_extensionality () =
 
 val _ = test_hhProblemGen_mono_extensionality ()
 
+(* A mangled name spells out a whole type.  Nested types must not make
+   symbols arbitrarily long, and distinct types must keep distinct
+   symbols. *)
+fun test_hhProblemGen_bounded_names () =
+  let
+    open hhTptpProblem
+    val num = Term.type_of ``0 : num``
+    fun nest 0 = num
+      | nest n = listSyntax.mk_list_type (nest (n - 1))
+    val goal = boolSyntax.mk_eq
+      (listSyntax.mk_length (Term.mk_var ("x", nest 12)),
+       listSyntax.mk_length (Term.mk_var ("y", nest 13)))
+    fun check (format, encoding) =
+      let
+        val problem = hhProblemGen.generate_problem
+          {format = hhTypeEnc.format_of_string format,
+           type_enc = hhTypeEnc.of_string encoding,
+           lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+           mono_instances = 100} {conjecture = goal, facts = []}
+        val symbols = List.mapPartial
+          (fn TypeDecl (_, symbol, _) => SOME symbol
+            | SymDecl (_, symbol, _) => SOME symbol
+            | _ => NONE) (List.concat (map #2 problem))
+      in
+        expect ("hhProblemGen bounds mangled names in " ^ format)
+          (length symbols > 4 andalso
+           List.all (fn symbol => size symbol <= 80) symbols andalso
+           length (Lib.mk_set symbols) = length symbols andalso
+           null (mono_tff_errors problem))
+      end
+  in
+    List.app check [("tf0", "mono_native"), ("tx0", "mono_native_fool")]
+  end
+
+val _ = test_hhProblemGen_bounded_names ()
+
 (* Generated problems draw schematic and combinator type variables from
    the global Type.gen_tyvar counter.  Their names, compared as strings,
    order differently once the counter gains a digit (99 > 100), and under

@@ -532,7 +532,18 @@ struct
         (if null Args then "" else "(" ^
           String.concatWith "," (map raw_mangle_type Args) ^ ")")
       end
-  fun mangle_type ty = aiLib.escape ("ty." ^ raw_mangle_type ty)
+
+  (* A mangled name spells out whole types, so nested types make it
+     arbitrarily long, and it is printed at every use.  A name over 80
+     characters keeps a readable prefix and ends in a hash of the whole
+     name, as app_symbol does. *)
+  fun bounded_name name =
+    if size name <= 80 then name
+    else String.substring (name, 0, 48) ^ "_" ^
+      String.substring (aiLib.sha1_string name, 0, 16)
+
+  fun mangle_type ty =
+    bounded_name (aiLib.escape ("ty." ^ raw_mangle_type ty))
 
   fun native_type ty =
     if is_vartype ty then
@@ -652,8 +663,8 @@ struct
                          else raw_symbol head
             in
               if null args then aiLib.escape base
-              else aiLib.escape (base ^ "." ^
-                String.concatWith "." (map raw_mangle_type args))
+              else bounded_name (aiLib.escape (base ^ "." ^
+                String.concatWith "." (map raw_mangle_type args)))
             end
 
   fun app_symbol (hhTypeEnc.Native {poly = false, ...})
