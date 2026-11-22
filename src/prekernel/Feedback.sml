@@ -21,12 +21,16 @@ fun mk_origin s1 s2 loc =
    source_location = loc}
 
 fun origins_of (HOL_ERROR {origins,...}) = origins
-fun message_of (HOL_ERROR {message,...}) = message
+fun rich_message_of (HOL_ERROR {message,...}) = message
+fun message_of (HOL_ERROR {message,...}) = HOLmessage.toString message
 
-fun mk_hol_error s1 s2 loc mesg =
+fun mk_hol_errorm s1 s2 loc mesg =
   HOL_ERROR
     {origins = [mk_origin s1 s2 loc],
      message = mesg}
+
+fun mk_hol_error s1 s2 loc mesg =
+  mk_hol_errorm s1 s2 loc (HOLmessage.txt mesg)
 
 fun wrap_hol_error s f l (HOL_ERROR {origins,message}) =
   HOL_ERROR
@@ -35,12 +39,20 @@ fun wrap_hol_error s f l (HOL_ERROR {origins,message}) =
 
 val empty_hol_error =
   HOL_ERROR
-    {origins = [], message = ""}
+    {origins = [], message = HOLmessage.empty}
+
+(* `hol_error' holds a message, which holds suspensions, so it is no
+   longer an equality type and `err = empty_hol_error' no longer
+   compiles.  This is that test, and it agrees with it on every value
+   the old one could see. *)
+fun is_empty_hol_error (HOL_ERROR {origins = [], message}) =
+      HOLmessage.isEmpty message
+  | is_empty_hol_error _ = false
 
 fun empty_origins_error sfn =
   HOL_ERROR
    {origins = [mk_origin "Feedback" sfn locn.Loc_Unknown],
-    message = "no origin"}
+    message = HOLmessage.txt "no origin"}
 
 val pp_hol_error =
   let open HOLPP
@@ -55,14 +67,14 @@ val pp_hol_error =
                      add_string (locn.toString source_location ^":")]))
   in
   fn (err as HOL_ERROR{origins,message}) =>
-    if err = empty_hol_error then
+    if is_empty_hol_error err then
         add_string "<empty-hol-error>"
      else
         block INCONSISTENT 0
           (pr_list pp_origin [NL] origins @
-           (if message = "" then
+           (if HOLmessage.isEmpty message then
                []
-            else [add_break(1,2), add_string message]))
+            else [add_break(1,2), HOLmessage.toPretty message]))
   end
 
 fun format_hol_error holerr =
@@ -93,6 +105,11 @@ fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
 
 fun mk_HOL_ERR s1 s2 s3 = HOL_ERR (mk_hol_error s1 s2 locn.Loc_Unknown s3)
 
+fun mk_HOL_ERRlocm s1 s2 locn m = HOL_ERR (mk_hol_errorm s1 s2 locn m)
+
+fun mk_HOL_ERRm s1 s2 m =
+  HOL_ERR (mk_hol_errorm s1 s2 locn.Loc_Unknown m)
+
 fun set_top_function fnm (HOL_ERROR {origins,message}) =
   case origins
    of [] => raise HOL_ERR (empty_origins_error "set_top_function")
@@ -102,8 +119,10 @@ fun set_top_function fnm (HOL_ERROR {origins,message}) =
                   origin_function = fnm} :: t,
        message = message}
 
-fun set_message msg (HOL_ERROR {origins,message}) =
+fun set_rich_message msg (HOL_ERROR {origins,message}) =
     HOL_ERROR {origins = origins, message = msg}
+
+fun set_message msg e = set_rich_message (HOLmessage.txt msg) e
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
@@ -212,6 +231,12 @@ fun wrap_exn s f = wrap_exn_loc s f locn.Loc_Unknown
 fun HOL_MESG s =
   if !emit_MESG then !MESG_outstream (!MESG_to_string s) else ()
 
+(* The `m' variants of the four channels take a message rather than a
+   string.  They flatten it for the outstreams, which is all a terminal
+   wants; a consumer that can do more with the values the message holds
+   gets at them through the listener below rather than through here. *)
+fun HOL_MESGm m = HOL_MESG (HOLmessage.toString m)
+
 fun HOL_PROGRESS_MESG (start, finish) f x =
   if !emit_MESG then
     let in
@@ -227,11 +252,15 @@ fun HOL_WARNING s1 s2 s3 =
       !WARNING_outstream (!WARNING_to_string s1 s2 s3)
     else ()
 
+fun HOL_WARNINGm s1 s2 m = HOL_WARNING s1 s2 (HOLmessage.toString m)
+
 fun HOL_WARNINGloc s1 s2 locn s3 =
    HOL_WARNING s1 s2 (locn.toString locn ^ " :\n" ^ s3)
 
 fun HOL_INFO s =
     if !emit_INFO then !INFO_outstream (!INFO_to_string s) else ()
+
+fun HOL_INFOm m = HOL_INFO (HOLmessage.toString m)
 
 (* Route Portable.pprint through HOL_INFO so its output participates
    in the INFO channel rather than escaping straight to OS stdout.

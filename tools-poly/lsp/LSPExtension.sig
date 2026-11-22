@@ -438,8 +438,18 @@ val theorySealed: (string -> bool) ref
    which is the answer for everything that is not a located `HOL_ERR'.
    `message = NONE' asks the caller to keep whatever rendering it
    already had.  The default says both, so a server whose init files
-   did not load behaves exactly as it did before this hook existed. *)
-val exnReport: (exn -> {range: rangeLC option, message: string option}) ref
+   did not load behaves exactly as it did before this hook existed.
+
+   `segments' is the same message again, rendered through the back end
+   that says in data what a terminal says in colour: which spans of it
+   are constants and which are free variables, and their types.  A
+   diagnostic's `message' is a plain string and the protocol gives no
+   way to put anything else there, so this is how the types of the
+   terms an error talks about reach a client -- see `$/hol/message'
+   and the hover in `server.ML'.  Empty when the message holds no HOL
+   values, which is the common case and costs nothing to notice. *)
+val exnReport: (exn -> {range: rangeLC option, message: string option,
+                        segments: pp_segment list}) ref
 
 (* ----------------------------------------------------------------------
    Deferred proofs — Phase A of the LSP's proof replay.

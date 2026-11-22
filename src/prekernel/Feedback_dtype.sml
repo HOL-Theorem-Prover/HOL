@@ -8,6 +8,6 @@ type origin =
 
 datatype hol_error = HOL_ERROR of
         {origins : origin list,
-         message : string}
+         message : HOLmessage.message}
 
 end

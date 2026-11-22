@@ -7,21 +7,30 @@ sig
 
     val pp_hol_error      : hol_error -> HOLPP.pretty
     val mk_hol_error      : string -> string -> locn.locn -> string -> hol_error
+    val mk_hol_errorm     : string -> string -> locn.locn ->
+                            HOLmessage.message -> hol_error
     val wrap_hol_error    : string -> string -> locn.locn -> hol_error ->
                             hol_error
     val empty_hol_error   : hol_error
+    (* `hol_error' is not an equality type: see Feedback.sml *)
+    val is_empty_hol_error : hol_error -> bool
     val top_structure_of  : hol_error -> string
     val top_function_of   : hol_error -> string
     val top_location_of   : hol_error -> locn.locn
     val origins_of        : hol_error -> origin list
     val message_of        : hol_error -> string
+    val rich_message_of   : hol_error -> HOLmessage.message
     val set_message       : string -> hol_error -> hol_error
+    val set_rich_message  : HOLmessage.message -> hol_error -> hol_error
     val set_top_function  : string -> hol_error -> hol_error
 
     exception HOL_ERR of hol_error
 
     val mk_HOL_ERR        : string -> string -> string -> exn
     val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
+    val mk_HOL_ERRm       : string -> string -> HOLmessage.message -> exn
+    val mk_HOL_ERRlocm    : string -> string -> locn.locn ->
+                            HOLmessage.message -> exn
 
     val render_exn        : exn -> 'a
     val wrap_exn          : string -> string -> exn -> exn
@@ -60,9 +69,12 @@ sig
     val fail              : unit -> 'a
     val failwith          : string -> 'a
     val HOL_MESG          : string -> unit
+    val HOL_MESGm         : HOLmessage.message -> unit
     val HOL_PROGRESS_MESG : string * string -> ('a -> 'b) -> 'a -> 'b
     val HOL_WARNING       : string -> string -> string -> unit
+    val HOL_WARNINGm      : string -> string -> HOLmessage.message -> unit
     val HOL_WARNINGloc    : string -> string -> locn.locn -> string -> unit
     val HOL_INFO          : string -> unit
+    val HOL_INFOm         : HOLmessage.message -> unit
 
 end

@@ -15,17 +15,7 @@ Identity and oracle also check selected exact sequents after merged HOL
 replay; declarations unused by those targets may be pruned.
 Identity fixtures need a producer rebuilt with export/import hooks.
 
-Use a Candle checkout containing [Candle PR #25] for the PFT 0.1.0
-reader and check script.
+Candle replays the `candle` ruleset outputs, including `compute-binder`'s,
+and checks their exact sequents with the [Candle recipe].
 
-[Candle PR #25]: https://github.com/CakeML/candle/pull/25
-
-Candle checks the exact sequents of the `candle` ruleset outputs, including
-`compute-binder`'s, by replaying them. First [build the driver](../pft-cli.md)
-in this checkout to produce `PFTCLI.uo`. Candle's `candle/pft/check.sh` converts
-their prerequisites with this checkout and the tracing HOL, then replays:
-
-```sh
-/path/to/Candle/candle/pft/check.sh /path/to/HOL /path/to/tracing \
-  /scratch/prooftrace
-```
+[Candle recipe]: https://github.com/dnezam/candle-self-verification/blob/0ef20dad16efd20f999c8840ba225636cad2154b/hol-regressions/README.md

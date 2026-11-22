@@ -80,7 +80,7 @@ fun with_blame l (m : 'a in_env) : 'a in_env = fn e =>
       Error err => Error err
     | Some (e', v) => Some (Env.set_blame (Env.blame_of e) e', v)
 
-fun fail s = error (Misc s, locn.Loc_Unknown)
+fun fail s = error (misc s, locn.Loc_Unknown)
 
 (* Of the unification variables a failing `unify' was chased through,
    the position of the one bound *latest*: inference runs left to right
@@ -104,7 +104,7 @@ in
 end
 
 fun failAt (c1, c2) s : 'a in_env =
-    fn e => Error (Misc s, bestBlame e [c1, c2])
+    fn e => Error (misc s, bestBlame e [c1, c2])
 
 fun boundcase i (n:'a in_env) (sf : pretype -> 'a in_env) : 'a in_env = fn e =>
   case Env.lookup e i of

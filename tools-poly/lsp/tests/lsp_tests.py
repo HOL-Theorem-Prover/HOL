@@ -7568,6 +7568,96 @@ def test_term_error_points_inside_a_definition():
                    "the squiggle covers the `T' inside the definition")
 
 
+def _rich_message_src(name):
+    """A definition whose body is a type error naming two constants --
+    `SUC' from `num' and `T' from `bool' -- so the message HOL writes
+    mentions terms whose types a reader might want."""
+    return (f"Theory {name}\n"
+            "Ancestors arithmetic\n"
+            "\n"
+            "Definition bad_def:\n"
+            "  bad_def n = SUC T\n"
+            "End\n")
+
+
+def _at_first_diag(src, name, method, timeout=60):
+    """Open SRC as /tmp/<name>.sml, let it compile, then send METHOD at
+    the start of the first diagnostic.  Returns (diagnostics, result)."""
+    uri = f"file:///tmp/{name}.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", timeout),
+                    f"{name}: compileCompleted")
+        diags = _diag_count(c, uri)
+        assert_true(diags, f"{name}: something was squiggled")
+        c.send({"jsonrpc": "2.0", "id": 9001, "method": method,
+                "params": {"textDocument": {"uri": uri},
+                           "position": diags[0]["range"]["start"]}})
+
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 9001:
+                        return m
+            return None
+        reply = c.wait_until(got, 15)
+        assert_true(reply is not None, f"{name}: {method} replied")
+        return diags, reply.get("result")
+
+
+    finally:
+        c.close()
+
+
+def test_hover_at_a_type_error_names_the_terms_it_mentions():
+    """A `Diagnostic.message' is a plain string in every version of the
+    protocol, and nothing in it lets a tooltip carry tooltips -- so the
+    types of the terms an error talks about cannot ride along with the
+    squiggle.  They arrive instead through the hover at the same
+    position, which both VS Code and eglot consult and show beside the
+    diagnostic.
+
+    This is the end of the chain that starts at `Msg.tm' in
+    `Preterm's message: suspended there, carried through `HOL_ERR'
+    unrendered, and turned into annotated spans by `error_locn_init'."""
+    diags, result = _at_first_diag(_rich_message_src("richmsgh"),
+                                   "richmsgh", "textDocument/hover")
+    assert_true(any("Type error" in d.get("message", "") for d in diags),
+                f"the squiggle is the type error ({diags!r})")
+    assert_true(result is not None, "hover answered at the squiggle")
+    md = result["contents"]["value"]
+    assert_contains(md, "num$SUC", "hover names SUC by theory")
+    assert_contains(md, "num -> num", "hover gives SUC's type")
+    assert_contains(md, "bool$T", "hover names T by theory")
+
+
+def test_hol_message_returns_the_message_as_annotated_segments():
+    """`$/hol/message' hands a client the message *and* the spans of it
+    that are constants, free variables and type operators, so it can
+    render one its reader can point into.
+
+    The contract that makes that cheap: concatenating the segments'
+    `text' reproduces `message' exactly, so a client lays the text
+    down once and decorates by arithmetic rather than by searching
+    it.  `PPBackEnd.lsp_terminal' emits its markers at zero width to
+    make that true, and this holds it to it."""
+    diags, result = _at_first_diag(_rich_message_src("richmsgm"),
+                                   "richmsgm", "$/hol/message")
+    assert_true(result is not None, "$/hol/message answered")
+    segs = result["segments"]
+    assert_eq("".join(s["text"] for s in segs), result["message"],
+              "the segments rejoin to the message")
+    consts = {s.get("name"): s.get("ty") for s in segs
+              if s.get("kind") == "const"}
+    assert_true("num$SUC" in consts,
+                f"SUC is marked as a constant ({segs!r})")
+    assert_eq(consts["num$SUC"], "num -> num", "SUC carries its type")
+    assert_true("bool$T" in consts,
+                f"T is marked as a constant ({segs!r})")
+
+
 def test_cross_clause_type_error_points_at_the_operator():
     """A `Definition' whose clauses disagree about the type of the
     function being defined.
@@ -13313,6 +13403,10 @@ TESTS = [
                              test_term_error_points_inside_a_theorem_goal),
     ("term_error_points_inside_a_definition",
                                test_term_error_points_inside_a_definition),
+    ("hover_at_a_type_error_names_the_terms_it_mentions",
+     test_hover_at_a_type_error_names_the_terms_it_mentions),
+    ("hol_message_returns_the_message_as_annotated_segments",
+     test_hol_message_returns_the_message_as_annotated_segments),
     ("cross_clause_type_error_points_at_the_operator",
                      test_cross_clause_type_error_points_at_the_operator),
     ("term_error_points_at_the_inductive_rule_that_is_wrong",
