@@ -408,7 +408,8 @@ fun eligible () = kernel_uses_modules andalso TheoryReader.default_loader ()
 
 (* What load_signature found for a theory, for its structure's load:
    the module whose signature it installed, if any; whether a module
-   was there but refused; and the .sml header and .dat digest. *)
+   was there but couldn't be read, so that a write replaces it; and the
+   .sml header and .dat digest. *)
 type found = {module : module option, refused : bool,
               header : string * string, dat_digest : string}
 val found : (string * found) list ref = ref []
@@ -513,9 +514,12 @@ fun cold_load directory base_id use file (f : found option) =
   end
 
 (* Drops a refused module from the loaded modules, so that a saved state
-   doesn't record it; its installed signature stays valid.  A Poly/ML
-   that refuses because a loaded saved state uses the module keeps it. *)
-fun release (m : module) = Save.releaseModule (#id m) handle Fail _ => ()
+   doesn't record it; its installed signature stays valid.  A module
+   Poly/ML won't release (one a loaded saved state uses) stays loaded. *)
+fun release (m : module) =
+  Save.releaseModule (#id m)
+  handle e as Interrupt => PolyML.Exception.reraise e
+       | _ => ()
 
 fun load_structure directory base_id use file =
   case take_found (OS.Path.base file) of
@@ -525,8 +529,9 @@ fun load_structure directory base_id use file =
       if usable m then warm_load file hash m
       else (report_refused (#1 (#header f));
             release m;
+            (* the module stays for processes it fits *)
             cold_load directory base_id use file
-                     (SOME {module = NONE, refused = true,
+                     (SOME {module = NONE, refused = false,
                             header = #header f, dat_digest = #dat_digest f}))
     | f => cold_load directory base_id use file f
 

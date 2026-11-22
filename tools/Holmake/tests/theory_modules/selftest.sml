@@ -201,6 +201,9 @@ val _ = if not supported then () else
                Listsort.sort String.compare written = ["moduleA", "moduleD"]
             then OK ()
             else die ("writer wrote " ^ String.concatWith " " written)
+    val _ = tprint "the loader leaves modules it can't use"
+    val _ = probe ["abcd"]
+    val _ = expect "refused, writable" [1, 4, 2]
   in
     ()
   end;

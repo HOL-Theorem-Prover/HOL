@@ -116,7 +116,8 @@ never sees a partial one. The `.dat` digest fixes the theory's own data
 and its parents' hashes; the module's recorded references cover what
 it takes from other theories. A missing module, or one that fails a
 check (corrupt, another state, other references), is loaded from
-source, and the loader replaces a failed one. Once registration has
+source. The loader replaces a module it can't read, and leaves one that
+reads but doesn't fit this process's ancestors. Once registration has
 started, errors propagate without retrying from source.
 
 Modules are runtime-specific local files, separate from the portable
