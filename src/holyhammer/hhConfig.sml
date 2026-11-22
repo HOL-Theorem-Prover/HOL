@@ -308,10 +308,12 @@ val valid_provers = Option.isSome o parse_provers
 
 val default_export_workers = 2
 
-(* The default of the preplay_timeout option, in seconds. *)
+(* The default of the preplay_timeout option, in CPU seconds of the
+   replay's thread. *)
 val default_preplay_timeout = 2.5
 
-(* The default of the minimize_timeout option, in seconds. *)
+(* The default of the minimize_timeout option, in CPU seconds of the
+   attempt's thread. *)
 val default_minimize_timeout = 1.0
 
 val option_specs : option_spec list =
@@ -381,12 +383,14 @@ val option_specs : option_spec list =
    {name = "preplay_timeout",
     default = fn () => Real.toString default_preplay_timeout,
     expected = "a positive real number",
-    doc = "time limit for each replay of a proof, in seconds",
+    doc = "time limit for each replay of a proof, in CPU seconds of " ^
+          "the replay's thread",
     valid = positive_real},
    {name = "minimize_timeout",
     default = fn () => Real.toString default_minimize_timeout,
     expected = "a positive real number",
-    doc = "time limit for each minimization attempt, in seconds",
+    doc = "time limit for each minimization attempt, in CPU seconds " ^
+          "of the attempt's thread",
     valid = positive_real},
    {name = "preplay_drop_one", default = fn () => "true",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",

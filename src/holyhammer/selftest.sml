@@ -3913,10 +3913,99 @@ fun test_hhReconstruct () =
     ()
   end
 
+(* A replay is limited by the CPU time of the thread running it, not by
+   wall time: the provers keep running while a proof is replayed, so a
+   replay can get little of a CPU.  A tactic that waits without
+   computing, as one starved of CPU does, runs past its limit, up to a
+   wall-clock backstop of 20 times it; one that computes is stopped at
+   the limit; and another thread computing beside a call does not count
+   against it. *)
+fun test_replay_timeout () =
+  let
+    val wait = Time.fromReal 0.6
+    fun idle () = (OS.Process.sleep wait; true)
+    fun spin n = spin (n + 1) : bool
+    fun process_seconds process =
+      let val {usr, sys} = Timer.checkCPUTimer process in
+        Time.toReal usr + Time.toReal sys
+      end
+    (* f start, with a thread that spins from when f calls start () until
+       f returns *)
+    fun beside_spinner f =
+      let
+        val go = ref false
+        val stop = ref false
+        fun spin_until_stopped () =
+          if !stop then () else spin_until_stopped ()
+        fun spinner () =
+          if !stop then ()
+          else if !go then spin_until_stopped ()
+          else (OS.Process.sleep (Time.fromReal 0.01); spinner ())
+        val _ = Thread.fork (spinner, [])
+      in
+        (f (fn () => go := true) before stop := true)
+        handle e => (stop := true; raise e)
+      end
+    val slow_truth : Abbrev.tactic = fn g =>
+      (OS.Process.sleep wait; Tactic.ACCEPT_TAC boolTheory.TRUTH g)
+  in
+    expect "a replay that waits past its limit still proves the goal"
+      (case hhReconstruct.timeout_tactic 0.2 slow_truth ([], boolSyntax.T) of
+           SOME ([], used) => used < 0.2
+         | _ => false);
+    expect "thread_timeout lets a call that waits run past its limit"
+      (#1 (smlTimeout.thread_timeout 0.2 idle ()));
+    expect "timeout stops the same call at its wall-clock limit"
+      ((smlTimeout.timeout 0.2 idle (); false)
+       handle smlTimeout.FunctionTimeout => true);
+    expect "thread_timeout stops a call that waits at 20 times its limit"
+      ((smlTimeout.thread_timeout 0.01 idle (); false)
+       handle smlTimeout.FunctionTimeout => true);
+    expect "thread_timeout stops a call that computes at its limit"
+      (let val started = Time.now () in
+         (smlTimeout.thread_timeout 0.2 spin 0; false)
+         handle smlTimeout.FunctionTimeout =>
+           Time.toReal (Time.- (Time.now (), started)) < 2.0
+       end);
+    (* the call counts down without allocating, so neither the garbage
+       collector nor another thread changes its work *)
+    expect "thread_timeout reports the CPU time a call used"
+      (let
+         val process = Timer.startCPUTimer ()
+         fun count 0 = () | count (n : int) = count (n - 1)
+         val ((), used) = smlTimeout.thread_timeout 10.0 count 500000000
+       in
+         used > 0.05 andalso used <= process_seconds process + 0.02
+       end);
+    (* The call starts the spinner and waits until the process's CPU time
+       has passed twice the limit, which only the spinner can make it do.
+       Only Linux reports a thread's CPU time. *)
+    if not (OS.FileSys.access ("/proc/thread-self", [])) then ()
+    else
+      expect "thread_timeout charges a call only its own thread's CPU time"
+        (let
+           fun until_spun start =
+             let
+               val process = Timer.startCPUTimer ()
+               fun loop () =
+                 if process_seconds process > 0.4 then true
+                 else (OS.Process.sleep (Time.fromReal 0.02); loop ())
+             in
+               start (); loop ()
+             end
+         in
+           case beside_spinner (fn start =>
+                  smlTimeout.thread_timeout 0.2 until_spun start
+                  handle smlTimeout.FunctionTimeout => (false, 0.0)) of
+               (true, used) => used < 0.1
+             | _ => false
+         end)
+  end
+
 (* Once, like test_hhSchedule: not in the hermetic children. *)
 val _ =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-      NONE => test_hhReconstruct ()
+      NONE => (test_replay_timeout (); test_hhReconstruct ())
     | SOME _ => ()
 
 val _ = test_szs_status_words ()

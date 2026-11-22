@@ -10,7 +10,8 @@ sig
     | ScheduleDone of stop_reason
   and stop_reason = MaxProofs | Timeout | Exhausted | Interrupted
   (* t_recon is the whole reconstruction time, minimisation included;
-     t_replay is the time the replay of stac took. *)
+     t_replay is the CPU time the replay of stac took, on the thread
+     running it. *)
   withtype suggestion =
     {stac : string, tac : tactic, lemmas : string list,
      prover : hhProver.prover, slice : hhProver.slice,

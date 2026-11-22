@@ -28,10 +28,18 @@ val reconstruction_timeout = ref hhConfig.default_preplay_timeout
 
 val TC_OFF = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
 (* the trace setting, the timeout and the handler all have to span the
-   context application, which is when the tactic does its work *)
+   context application, which is when the tactic does its work.  The
+   limit is on the CPU time of the thread running the tactic, not on wall
+   time: the provers keep running while a proof is replayed, and under a
+   wall-clock limit a replay on a loaded machine gets a small share of a
+   CPU, so that whether a list replays depends on the load.  The result
+   is the goals left and the CPU seconds the tactic used. *)
 fun timeout_tactic t tac g =
-  let val ctxt = Context.snapshot() in
-    SOME (fst (timeout t (TC_OFF (Lib.C tac ctxt)) g))
+  let
+    val ctxt = Context.snapshot()
+    val ((goals, _), time) = thread_timeout t (TC_OFF (Lib.C tac ctxt)) g
+  in
+    SOME (goals, time)
   end
   handle Interrupt => raise Interrupt | _ => NONE
 
@@ -41,15 +49,13 @@ type settings =
 
 type reconstruction = {stac : string, tac : tactic, t_replay : real}
 
-(* Compiles stac and runs it on g with the time limit t.  Returns the
-   tactic and the replay time when it proves g. *)
+(* Compiles stac and runs it on g with the limit t.  Returns the tactic
+   and the replay time, both in CPU seconds of the replay's thread, when
+   it proves g. *)
 fun replay t stac g =
-  let
-    val tac = tactic_of_sml 1.0 stac
-    val (result, time) = add_time (timeout_tactic t tac) g
-  in
-    case result of
-        SOME [] => SOME (tac, time)
+  let val tac = tactic_of_sml 1.0 stac in
+    case timeout_tactic t tac g of
+        SOME ([], time) => SOME (tac, time)
       | _ => NONE
   end
   handle Interrupt => raise Interrupt | _ => NONE
