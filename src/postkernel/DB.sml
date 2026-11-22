@@ -291,8 +291,9 @@ fun CT() = lemmas()
 fun store_local private s th =
     upd_db (fn db =>
               db |> updlocalmap (Symtab.update(s,(th,private)))
-                 |> updrevmap (rev_add (current_theory())
-                                       (Termtab.cons_list (concl th, Local s))))
+                 |> updrevmap
+                      (rev_add (current_theory())
+                               (Termtab.cons_list (concl th, Local s))))
 fun local_thm s = case Symtab.lookup (localmap (lemmas())) s of
                       NONE => NONE
                     | SOME (th,{private,...}:thminfo) =>
