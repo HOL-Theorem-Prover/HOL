@@ -211,12 +211,18 @@ struct
            join_into ", " (bound_var_into format)
              ((if all then "![" else "?[") :: "(" :: acc) vars)
           body
+    (* A TFF formula binds its type variables with the ordinary
+       quantifiers; !> and ?> are for THF formulas and for symbol types. *)
     | formula_into format acc (TyQuant (all, vars, body)) =
         if is_poly format then
           ")" :: formula_into format
             ("]: " ::
              join_into ", " (fn acc => fn name => " : $tType" :: name :: acc)
-               ((if all then "!>[" else "?>[") :: "(" :: acc) vars)
+               ((case (is_higher format, all) of
+                     (true, true) => "!>["
+                   | (true, false) => "?>["
+                   | (false, true) => "!["
+                   | (false, false) => "?[") :: "(" :: acc) vars)
             body
         else fail "type quantifier in a monomorphic format"
     | formula_into format acc

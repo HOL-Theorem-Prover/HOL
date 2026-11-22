@@ -15,41 +15,41 @@ tff(sy_2Ec_2Earithmetic_2EZERO, type,
 tff(sy_2Ec_2Earithmetic_2EBIT2, type,
     c_2Earithmetic_2EBIT2 : ty_2Enum_2Enum > ty_2Enum_2Enum).
 tff(sy_2Epxy_2Etrue, type,
-    pxy_2Etrue : $o).
+    pxy_2Etrue : ty_2Emin_2Ebool).
 tff(sy_2Epxy_2Efalse, type,
-    pxy_2Efalse : $o).
+    pxy_2Efalse : ty_2Emin_2Ebool).
 tff(sy_2Eapp, type,
-    app_2E : ($i * $i) > $i).
+    app_2E : !>[A : $tType, B : $tType]: ((ty_2Emin_2Efun(A,B) * A) > B)).
 tff(sy_2Epp, type,
-    pp_2E : $o > $o).
+    pp_2E : ty_2Emin_2Ebool > $o).
 % Helpers (6)
 tff(help_2Eh, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EZERO)))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EZERO)))))))).
 tff(help_2Eh_2E2, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
 tff(help_2Eh_2E3, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
 tff(help_2Eeq__ext, axiom,
-    ((!>[A_27a : $tType, A_27b : $tType]: (![V_f : A_27a > A_27b]: (![V_g : A_27a > A_27b]: ((![V_x : A_27a]: (app_2E(V_f,V_x) = app_2E(V_g,V_x))) => (V_f = V_g))))))).
+    ((![A_27a : $tType, A_27b : $tType]: (![V_f : ty_2Emin_2Efun(A_27a,A_27b)]: (![V_g : ty_2Emin_2Efun(A_27a,A_27b)]: ((![V_x : A_27a]: (app_2E(A_27a,A_27b,V_f,V_x) = app_2E(A_27a,A_27b,V_g,V_x))) => (V_f = V_g))))))).
 tff(help_2Epp_2Etrue, axiom,
     (pp_2E(pxy_2Etrue))).
 tff(help_2Epp_2Efalse, axiom,
     ((~ pp_2E(pxy_2Efalse)))).
 % Facts (7)
 tff(thm_2Ea, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))).
 tff(thm_2Eb, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EZERO))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EZERO))))))).
 tff(thm2_2Ea, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))))))).
 tff(thm3_2Ea, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))))))).
 tff(lam_2E1, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EZERO)))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EZERO)))))))).
 tff(lam_2E1, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
 tff(thm2_2Eb, axiom,
-    ((![P : ty_2Enum_2Enum > $o]: pp_2E(app_2E(P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
+    ((![P : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Emin_2Ebool)]: pp_2E(app_2E(ty_2Enum_2Enum,ty_2Emin_2Ebool,P,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EBIT2(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))))))))).
 % Conjecture (1)
 tff(conjecture, conjecture,
     ((![V_x : ty_2Enum_2Enum]: (V_x = V_x)))).

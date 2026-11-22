@@ -9,49 +9,49 @@ tff(ty_2Ety_2Enum_2Enum, type,
 tff(ty_2Ety_2Elist_2Elist, type,
     ty_2Elist_2Elist : $tType > $tType).
 tff(sy_2Ec_2Ebool_2ECOND, type,
-    c_2Ebool_2ECOND : !>[A_27a : $tType]: (($o * A_27a * A_27a) > A_27a)).
+    c_2Ebool_2ECOND : !>[A_27a : $tType]: ((ty_2Emin_2Ebool * A_27a * A_27a) > A_27a)).
 tff(sy_2Elam_2E0, type,
-    lam_2E0 : ty_2Enum_2Enum > ty_2Enum_2Enum).
+    lam_2E0 : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Enum_2Enum)).
 tff(sy_2Elam_2E1, type,
-    lam_2E1 : ty_2Enum_2Enum > ty_2Enum_2Enum).
+    lam_2E1 : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Enum_2Enum)).
 tff(sy_2Epxy_2Enot, type,
-    pxy_2Enot : $o > $o).
+    pxy_2Enot : ty_2Emin_2Efun(ty_2Emin_2Ebool,ty_2Emin_2Ebool)).
 tff(sy_2Ec_2Elist_2ENIL, type,
     c_2Elist_2ENIL : !>[A_27a : $tType]: ty_2Elist_2Elist(A_27a)).
 tff(sy_2Epxy_2Etrue, type,
-    pxy_2Etrue : $o).
+    pxy_2Etrue : ty_2Emin_2Ebool).
 tff(sy_2Epxy_2Efalse, type,
-    pxy_2Efalse : $o).
+    pxy_2Efalse : ty_2Emin_2Ebool).
 tff(sy_2Eapp, type,
-    app_2E : ($i * $i) > $i).
+    app_2E : !>[A : $tType, B : $tType]: ((ty_2Emin_2Efun(A,B) * A) > B)).
 tff(sy_2Epp, type,
-    pp_2E : $o > $o).
+    pp_2E : ty_2Emin_2Ebool > $o).
 % Helpers (9)
 tff(help_2Eif__True, axiom,
-    ((!>[A_27a : $tType]: (![HX : A_27a]: (![HY : A_27a]: (c_2Ebool_2ECOND(A_27a,pxy_2Etrue,HX,HY) = HX)))))).
+    ((![A_27a : $tType]: (![HX : A_27a]: (![HY : A_27a]: (c_2Ebool_2ECOND(A_27a,pxy_2Etrue,HX,HY) = HX)))))).
 tff(help_2Eif__False, axiom,
-    ((!>[A_27a : $tType]: (![HX : A_27a]: (![HY : A_27a]: (c_2Ebool_2ECOND(A_27a,pxy_2Efalse,HX,HY) = HY)))))).
+    ((![A_27a : $tType]: (![HX : A_27a]: (![HY : A_27a]: (c_2Ebool_2ECOND(A_27a,pxy_2Efalse,HX,HY) = HY)))))).
 tff(help_2Ebool__cases, axiom,
-    ((![HB : $o]: ((HB = pxy_2Etrue) | (HB = pxy_2Efalse))))).
+    ((![HB : ty_2Emin_2Ebool]: ((HB = pxy_2Etrue) | (HB = pxy_2Efalse))))).
 tff(help_2Epxy_2Etrue, axiom,
     ((pp_2E(pxy_2Etrue) <=> pp_2E(pxy_2Etrue)))).
 tff(help_2Epxy_2Efalse, axiom,
     ((pp_2E(pxy_2Efalse) <=> pp_2E(pxy_2Efalse)))).
 tff(help_2Epxy_2Enot, axiom,
-    ((![HP : $o]: (pp_2E(app_2E(pxy_2Enot,HP)) <=> (~ pp_2E(HP)))))).
+    ((![HP : ty_2Emin_2Ebool]: (pp_2E(app_2E(ty_2Emin_2Ebool,ty_2Emin_2Ebool,pxy_2Enot,HP)) <=> (~ pp_2E(HP)))))).
 tff(help_2Eeq__ext, axiom,
-    ((!>[A_27a : $tType, A_27b : $tType]: (![V_f : A_27a > A_27b]: (![V_g : A_27a > A_27b]: ((![V_x : A_27a]: (app_2E(V_f,V_x) = app_2E(V_g,V_x))) => (V_f = V_g))))))).
+    ((![A_27a : $tType, A_27b : $tType]: (![V_f : ty_2Emin_2Efun(A_27a,A_27b)]: (![V_g : ty_2Emin_2Efun(A_27a,A_27b)]: ((![V_x : A_27a]: (app_2E(A_27a,A_27b,V_f,V_x) = app_2E(A_27a,A_27b,V_g,V_x))) => (V_f = V_g))))))).
 tff(help_2Epp_2Etrue, axiom,
     (pp_2E(pxy_2Etrue))).
 tff(help_2Epp_2Efalse, axiom,
     ((~ pp_2E(pxy_2Efalse)))).
 % Facts (3)
 tff(thm_2Epoly, axiom,
-    ((!>[A_27a : $tType]: ((c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a)) = c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a))) <=> (c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a)) = c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a))))))).
+    ((![A_27a : $tType]: ((c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a)) = c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a))) <=> (c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a)) = c_2Elist_2ENIL(ty_2Elist_2Elist(A_27a))))))).
 tff(lam_2E0, axiom,
-    ((![X : ty_2Enum_2Enum]: (app_2E(lam_2E0,X) = X)))).
+    ((![X : ty_2Enum_2Enum]: (app_2E(ty_2Enum_2Enum,ty_2Enum_2Enum,lam_2E0,X) = X)))).
 tff(lam_2E1, axiom,
-    ((![X : ty_2Enum_2Enum]: (app_2E(lam_2E1,X) = X)))).
+    ((![X : ty_2Enum_2Enum]: (app_2E(ty_2Enum_2Enum,ty_2Enum_2Enum,lam_2E1,X) = X)))).
 % Conjecture (1)
 tff(conjecture, conjecture,
-    ((![P : $o]: (![X : ty_2Enum_2Enum]: (![Y : ty_2Enum_2Enum]: (![V_use__bool : $o > $o]: ((c_2Ebool_2ECOND(ty_2Enum_2Enum,P,X,Y) = X) & ((lam_2E0 = lam_2E1) & (pp_2E(app_2E(V_use__bool,app_2E(pxy_2Enot,P))) & (X = X)))))))))).
+    ((![P : ty_2Emin_2Ebool]: (![X : ty_2Enum_2Enum]: (![Y : ty_2Enum_2Enum]: (![V_use__bool : ty_2Emin_2Efun(ty_2Emin_2Ebool,ty_2Emin_2Ebool)]: ((c_2Ebool_2ECOND(ty_2Enum_2Enum,P,X,Y) = X) & ((lam_2E0 = lam_2E1) & (pp_2E(app_2E(ty_2Emin_2Ebool,ty_2Emin_2Ebool,V_use__bool,app_2E(ty_2Emin_2Ebool,ty_2Emin_2Ebool,pxy_2Enot,P))) & (X = X)))))))))).

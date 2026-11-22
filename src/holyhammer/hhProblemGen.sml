@@ -313,16 +313,16 @@ struct
   (* Lists of first occurrences, in occurrence order. *)
   fun distinct_heads heads = aiLib.mk_sameorder_set Term.compare heads
 
+  (* Tables of the smallest number of arguments each head occurs with. *)
+  fun add_head_arity head arity table =
+    case Redblackmap.peek (table, head) of
+        SOME old =>
+          if arity < old then Redblackmap.insert (table, head, arity)
+          else table
+      | NONE => Redblackmap.insert (table, head, arity)
+
   fun add_head head arity table =
-    if not (is_symbol head) then table
-    else
-      case Redblackmap.peek (table, head) of
-          SOME (min, max) =>
-            if arity < min then Redblackmap.insert (table, head, (arity, max))
-            else if arity > max then
-              Redblackmap.insert (table, head, (min, arity))
-            else table
-        | NONE => Redblackmap.insert (table, head, (arity, arity))
+    if is_symbol head then add_head_arity head arity table else table
 
   fun heads_of_term tm table =
     let val (head, args) = strip_comb tm in
@@ -343,7 +343,7 @@ struct
         List.foldl (fn (body, acc) => vars_of_formula body acc) result bodies
     | vars_of_formula (HAtom _) result = result
 
-  fun min_arity var_types (head, (ordinary, _)) =
+  fun min_arity var_types (head, ordinary) =
     let
       fun lower count best ty =
         if count >= ordinary then best
@@ -358,23 +358,78 @@ struct
       lower 0 ordinary (type_of head)
     end
 
+  fun raw_symbol head =
+    if is_const head then
+      let val {Thy, Name, ...} = dest_thy_const head in
+        "c." ^ Thy ^ "." ^ Name
+      end
+    else if is_var head then fst (dest_var head)
+    else fail "term head is neither a constant nor a variable"
+
+  fun generic_proxy_type head =
+    let
+      val alpha = Type.alpha
+      val predicate = alpha --> Type.bool
+    in
+      case raw_symbol head of
+          "pxy.eq" => alpha --> alpha --> Type.bool
+        | "pxy.all" => predicate --> Type.bool
+        | "pxy.ex" => predicate --> Type.bool
+        | "$ite" => Type.bool --> alpha --> alpha --> alpha
+        | _ =>
+            if is_const head then
+              let val {Thy, Name, ...} = dest_thy_const head in
+                type_of (prim_mk_const {Thy = Thy, Name = Name})
+              end
+            else type_of head
+    end
+
+  (* TF1 declares a polymorphic symbol once for all its instances, so it
+     has one arity: the smallest of its instances', and at most the arrows
+     of its generic type.  Every occurrence then has at least that many
+     arguments, and none is a partial application of the symbol. *)
+  fun poly_arities arities =
+    let
+      fun generic_arity head =
+        length (#1 (strip_fun (generic_proxy_type head)))
+      val by_name = Redblackmap.foldl (fn (head, arity, result) =>
+        let
+          val name = raw_symbol head
+          val arity' = Int.min (arity, generic_arity head)
+        in
+          Redblackmap.insert (result, name,
+            case Redblackmap.peek (result, name) of
+                SOME old => Int.min (old, arity')
+              | NONE => arity')
+        end) (Redblackmap.mkDict String.compare) arities
+    in
+      Redblackmap.map (fn (head, _) =>
+        Redblackmap.find (by_name, raw_symbol head)) arities
+    end
+
   (* Pass 6.  Sufficient_App_Op retains direct applications unless a
      function-typed variable can consume a partial result.  Isabelle's
      45-fact poly-native cut-over uses Min_App_Op: direct symbols then keep
-     their largest observed spine, trading a few partial applications for a
-     smaller declaration/application vocabulary. *)
+     the smallest spine they occur with, trading a few more app
+     applications for a smaller application vocabulary. *)
   fun app_arities encoding nfacts variables table =
-    if (case encoding of
-            hhTypeEnc.Native {poly = true, ...} => nfacts >= 45
-          | _ => false) then
-      Redblackmap.map (fn (_, (_, max)) => max) table
-    else
-      let
-        val var_types = Redblackset.addList
-          (Redblackset.empty Type.compare, map type_of (variables ()))
-      in
-        Redblackmap.map (min_arity var_types) table
-      end
+    let
+      val poly =
+        case encoding of
+            hhTypeEnc.Native {poly = true, ...} => true
+          | _ => false
+      val arities =
+        if poly andalso nfacts >= 45 then table
+        else
+          let
+            val var_types = Redblackset.addList
+              (Redblackset.empty Type.compare, map type_of (variables ()))
+          in
+            Redblackmap.map (min_arity var_types) table
+          end
+    in
+      if poly then poly_arities arities else arities
+    end
 
   fun arity_for head arities =
     case Redblackmap.peek (arities, head) of SOME arity => arity | NONE => 0
@@ -561,22 +616,27 @@ struct
   fun mangle_type ty =
     bounded_name (aiLib.escape ("ty." ^ raw_mangle_type ty))
 
-  fun native_type ty =
+  (* Only a [higher] format has an arrow sort, and only a [higher] or
+     [fool] one has $o as a term sort.  Otherwise both are ordinary type
+     operators, as a first-order sort cannot be either. *)
+  fun native_type (flags as {higher, fool}) ty =
     if is_vartype ty then
       hhTptpProblem.TyVar ("A" ^ aiLib.escape (dest_vartype ty))
     else
       let
         val {Thy, Tyop, Args} = Type.dest_thy_type ty
       in
-        if Thy = "min" andalso Tyop = "fun" then
+        if higher andalso Thy = "min" andalso Tyop = "fun" then
           (case Args of
-             [domain, range] => hhTptpProblem.TyFun (native_type domain,
-               native_type range)
+             [domain, range] => hhTptpProblem.TyFun
+               (native_type flags domain, native_type flags range)
            | _ => fail "malformed function type")
-        else if Thy = "min" andalso Tyop = "bool" then
+        else if (higher orelse fool) andalso Thy = "min" andalso
+                Tyop = "bool" then
           hhTptpProblem.TyCon ("$o", [])
         else hhTptpProblem.TyCon
-          (aiLib.escape ("ty." ^ Thy ^ "." ^ Tyop), map native_type Args)
+          (aiLib.escape ("ty." ^ Thy ^ "." ^ Tyop),
+           map (native_type flags) Args)
       end
 
   fun mono_higher_type ty =
@@ -593,7 +653,8 @@ struct
         else hhTptpProblem.TyCon (mangle_type ty, [])
       end
 
-  fun type_for (hhTypeEnc.Native {poly = true, ...}) = native_type
+  fun type_for (hhTypeEnc.Native {poly = true, higher, fool}) =
+        native_type {higher = higher, fool = fool}
     | type_for (hhTypeEnc.Native {higher = true, ...}) = mono_higher_type
     | type_for (hhTypeEnc.Native {fool = true, ...}) = (fn ty =>
         if ty = Type.bool then hhTptpProblem.TyCon ("$o", [])
@@ -614,14 +675,6 @@ struct
       in
         map image (Type.type_vars generic)
       end
-
-  fun raw_symbol head =
-    if is_const head then
-      let val {Thy, Name, ...} = dest_thy_const head in
-        "c." ^ Thy ^ "." ^ Name
-      end
-    else if is_var head then fst (dest_var head)
-    else fail "term head is neither a constant nor a variable"
 
   fun variable_name name =
     if size name > 0 andalso Char.isUpper (String.sub (name, 0)) then
@@ -654,6 +707,12 @@ struct
 
   fun is_lambda_var head =
     is_var head andalso String.isPrefix "lam." (fst (dest_var head))
+
+  (* A polymorphic symbol's type arguments.  A lifted lambda is declared
+     over the type variables of its own type. *)
+  fun poly_type_args head =
+    if is_lambda_var head then Type.type_vars (type_of head)
+    else type_args_of_head head
 
   (* Lambda lifting runs before monomorphization, so a lifted lam.<n> can
      be polymorphic and reach the mono printer at several ground types.
@@ -738,7 +797,7 @@ struct
         case encoding of
             hhTypeEnc.Native {poly = true, ...} =>
               let val args = memoise Term.compare
-                  (map native_type o type_args_of_head)
+                  (map (type_for encoding) o poly_type_args)
               in fn tm => if is_bound_var tm then [] else args tm end
           | _ => fn _ => []
       fun unless_bound memo tm =
@@ -754,11 +813,16 @@ struct
           andalso length args = 3 then "$ite" else #head symbols head),
           #type_args symbols head), map (encode_term symbols encoding) args)
     | encode_term symbols _ (FOValue head) =
-        hhTptpProblem.Tm ((#value symbols head, []), [])
+        hhTptpProblem.Tm ((#value symbols head, #type_args symbols head), [])
     | encode_term symbols encoding (FOApp {left, right, function_type,
                                            argument_type, result_type}) =
         hhTptpProblem.Tm ((#app symbols
-          (function_type, argument_type, result_type), []),
+          (function_type, argument_type, result_type),
+          case encoding of
+              hhTypeEnc.Native {poly = true, ...} =>
+                [type_for encoding argument_type,
+                 type_for encoding result_type]
+            | _ => []),
           [encode_term symbols encoding left,
            encode_term symbols encoding right])
     | encode_term symbols encoding (FOPred body) =
@@ -781,8 +845,10 @@ struct
               (collect_ty (type_of head) result) args
         | collect_term (FOValue head) result =
             collect_ty (type_of head) result
-        | collect_term (FOApp {left, right, ...}) result =
-            collect_term right (collect_term left result)
+        | collect_term (FOApp {left, right, argument_type, result_type,
+                               ...}) result =
+            collect_term right (collect_term left
+              (collect_ty result_type (collect_ty argument_type result)))
         | collect_term (FOPred body) result = collect_term body result
         | collect_term (FOAbs (var, body)) result =
             collect_term body (collect_ty (type_of var) result)
@@ -877,24 +943,6 @@ struct
         List.foldl heads_of_fo_formula heads bodies
     | heads_of_fo_formula (FOAtom tm, heads) = heads_of_fo_term (tm, heads)
 
-  fun generic_proxy_type head =
-    let
-      val alpha = Type.alpha
-      val predicate = alpha --> Type.bool
-    in
-      case raw_symbol head of
-          "pxy.eq" => alpha --> alpha --> Type.bool
-        | "pxy.all" => predicate --> Type.bool
-        | "pxy.ex" => predicate --> Type.bool
-        | "$ite" => Type.bool --> alpha --> alpha --> alpha
-        | _ =>
-            if is_const head then
-              let val {Thy, Name, ...} = dest_thy_const head in
-                type_of (prim_mk_const {Thy = Thy, Name = Name})
-              end
-            else type_of head
-    end
-
   fun declaration_type encoding arity head =
     let
       val full_type =
@@ -909,7 +957,7 @@ struct
                | NONE => fail "symbol arity exceeds its HOL function type")
       val (domains, result) =
         case encoding of
-            hhTypeEnc.Native {higher = false, poly = false, ...} =>
+            hhTypeEnc.Native {higher = false, ...} =>
               consume arity full_type []
           | _ => strip_fun full_type
       val ty =
@@ -1199,13 +1247,6 @@ struct
         (Redblackset.empty Type.compare, []) formulas))
     end
 
-  fun add_head_arity head arity table =
-    case Redblackmap.peek (table, head) of
-        SOME old =>
-          if arity < old then Redblackmap.insert (table, head, arity)
-          else table
-      | NONE => Redblackmap.insert (table, head, arity)
-
   fun head_arities_term (FOHead (head, args), result) =
         List.foldl head_arities_term
           (if is_symbol head then add_head_arity head (length args) result
@@ -1243,9 +1284,15 @@ struct
     | value_heads_formula (FOAtom tm, result) =
         value_heads_term (tm, result)
 
-  fun generated_problem format encoding needs
+  fun generated_problem format encoding0 needs
       ({conjecture, facts, used_app, used_pp} : fo_ir) direct_helpers =
     let
+      (* THF has its own arrow and $o, whatever the encoding's name says. *)
+      val encoding =
+        case (format, encoding0) of
+            (hhTptpProblem.THF _, hhTypeEnc.Native {poly = true, fool, ...}) =>
+              hhTypeEnc.Native {poly = true, higher = true, fool = fool}
+          | _ => encoding0
       val all_formulas = conjecture :: map #2 facts
       val symbols = symbol_table encoding
       val typed = format <> hhTptpProblem.FOF
@@ -1309,6 +1356,18 @@ struct
                       end) (aiLib.mk_sameorder_set signature_compare
                         (rev (List.foldl (fold_apps_formula add_app_signature)
                           [] all_formulas)))
+                | hhTypeEnc.Native {higher = false, ...} =>
+                    if used_app then
+                      let
+                        val a = hhTptpProblem.TyVar "A"
+                        val b = hhTptpProblem.TyVar "B"
+                      in
+                        [hhTptpProblem.SymDecl ("sy_2Eapp", "app_2E",
+                          hhTptpProblem.TyPi (["A", "B"], hhTptpProblem.TyFun
+                            (hhTptpProblem.TyCon ("ty_2Emin_2Efun", [a, b]),
+                             hhTptpProblem.TyFun (a, b))))]
+                      end
+                    else []
                 | _ => if used_app then [hhTptpProblem.SymDecl
                     ("sy_2Eapp", "app_2E", hhTptpProblem.TyFun
                       (hhTptpProblem.TyCon ("$i", []),

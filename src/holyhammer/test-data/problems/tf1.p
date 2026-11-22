@@ -8,7 +8,7 @@ tff(sy.p, type,
     p : $i > $o).
 % Facts (1)
 tff(fact, axiom,
-    ((!>[A : $tType]: (![X : A]: p(A,X))))).
+    ((![A : $tType]: (![X : A]: p(A,X))))).
 % Conjecture (1)
 tff(conjecture, conjecture,
     (p(a))).
