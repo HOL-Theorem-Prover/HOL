@@ -614,21 +614,37 @@ fun abandoned_mono_verdict report exn =
 
 (* The statement's values are the model's own,
    before display formatting: the bindings and the Skolem values by the
-   names they stand for (Refute_Core's [link_candidate]). *)
-fun with_raw_values ({bindings, skolems, ...} : MFM.reconstruction)
+   names they stand for (Refute_Core's [link_candidate]).  A Skolem stands
+   for a binder only when its provenance names one place in the goal's
+   quantifier prefix (the first [prefix_length] origins): a binder that
+   shares its name and type with another in the goal has no such place,
+   and its value is left out and marked. *)
+fun with_raw_values prefix_length (replay_hints : MFM.replay_hint list)
+      ({bindings, skolems, ...} : MFM.reconstruction)
       (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
   let
+    fun traced ({provenance = SOME {origin = SOME index, ...}, ...}
+                  : MFM.replay_hint) = index < prefix_length
+      | traced _ = false
+    val traces =
+      if length replay_hints = length skolems then map traced replay_hints
+      else map (fn _ => false) skolems
+    val (kept, untraced) =
+      List.partition #2 (ListPair.zip (skolems, traces))
     val values =
       List.filter (Term.is_var o #1) bindings @
-      map (fn (name, value) => (Term.mk_var (name, Term.type_of value), value))
-        skolems
+      map (fn ((name, value), _) =>
+             (Term.mk_var (name, Term.type_of value), value)) kept
     val {types, values = given, partial} = #statement cex
+    val untraced_reasons = Lib.mk_set (map (fn ((name, _), _) =>
+      "value of " ^ name ^ " is not traced to one binder") untraced)
   in
     {backend = #backend cex, substrate = #substrate cex,
      certainty = #certainty cex, bindings = #bindings cex,
      evals = #evals cex, cert = #cert cex, scope = #scope cex,
      model = #model cex, stats = #stats cex,
-     statement = {types = types, values = given @ values, partial = partial}}
+     statement = {types = types, values = given @ values,
+                  partial = partial @ untraced_reasons}}
   end
 
 fun run_instance deadline started (config : Refute_Core.config)
@@ -648,8 +664,9 @@ fun run_instance deadline started (config : Refute_Core.config)
       else original
     val (_, closure, _) = Refute_Cert.closure_of original
     val (_, _, pnf) = Refute_Cert.normalize_to_pnf Conv.QCONV closure
-    val prefix_origins = Refute_Skolem.mark_source_ambiguities original
-      (Refute_Skolem.prefix_binders pnf)
+    val prefix = Refute_Skolem.prefix_binders pnf
+    val prefix_origins =
+      Refute_Skolem.mark_source_ambiguities original prefix
     val context = MFH.make_context context_mf eval_terms
     val _ = #prefix_origins context := prefix_origins
     val fixpoint_refusal = MFH.first_fixpoint_refusal context original
@@ -935,7 +952,7 @@ fun run_instance deadline started (config : Refute_Core.config)
             MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =
-                with_raw_values reconstructed
+                with_raw_values (length prefix) replay_hints reconstructed
                   (MFM.display_counterexample postprocessors displayed
                      semantic_cex)
               in

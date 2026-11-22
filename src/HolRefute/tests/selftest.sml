@@ -1301,9 +1301,12 @@ local
                   |> only (map RegisteredBackend names)) ``F``))
   val run = run_with I
 in
+  (* in turn, so the fast one has finished before the slow one's
+     certified Genuine ends the search *)
   val _ = test "a slower candidate with a kernel theorem comes first"
     (fn () =>
-      case run ["selftest-fast-uncounted", "selftest-slow-certified"] of
+      case run_with (upd_sequential true)
+             ["selftest-fast-uncounted", "selftest-slow-certified"] of
           Counterexample [first, second] =>
             #backend first = "selftest-slow-certified" andalso
             Option.isSome (#cert first) andalso is_genuine first andalso
@@ -1588,6 +1591,62 @@ val _ = mf_test "a caller's codatatype constructor is refused where used"
       (refute (mf |> upd_card [(NONE, [2, 3])])
          ``!(a : num) b s. zoo_scons a s = zoo_scons b s``)
   end)
+
+(* A datatype's case constant is given case
+   semantics, and its constructors are encoded as free and covering the
+   type, on the theorems of its TypeBase entry: an entry whose case or
+   injectivity theorem is cheated caps what the model finder says of a
+   problem that uses them.  The type's own entry is restored. *)
+local
+  val _ = Datatype.Datatype `rf_chk_box = RFBox num | RFEmpty`
+  val _ = Datatype.Datatype `rf_chk_pick = RFPick bool | RFNone`
+  fun read tyop = valOf (TypeBase.read {Thy = current_theory (), Tyop = tyop})
+  val box_info = read "rf_chk_box"
+  val pick_info = read "rf_chk_pick"
+  fun cheated thm = Tactical.prove (Thm.concl thm, cheat)
+  fun rewritten case_def one_one info =
+    TypeBasePure.mk_datatype_info_no_simpls
+      {ax = TypeBasePure.axiom_of0 info,
+       induction = TypeBasePure.induction_of0 info,
+       case_def = case_def (TypeBasePure.case_def_of info),
+       case_cong = TypeBasePure.case_cong_of info,
+       case_eq = TypeBasePure.case_eq_of info,
+       case_elim = TypeBasePure.case_elim_of info,
+       nchotomy = TypeBasePure.nchotomy_of info,
+       size = NONE, encode = NONE, lift = NONE,
+       one_one = Option.map one_one (TypeBasePure.one_one_of info),
+       distinct = TypeBasePure.distinct_of info,
+       fields = [], accessors = [], updates = [], destructors = [],
+       recognizers = []}
+  fun with_entry info original body =
+    (TypeBase.write [info];
+     Portable.finally (fn () => TypeBase.write [original]) body ())
+in
+  val _ = mf_test "a case constant on a cheated case theorem is capped"
+    (fn () =>
+       with_entry (rewritten cheated I box_info) box_info (fn () =>
+         refute mf ``!b. rf_chk_box_CASE b (\n. n) 0 = 0``)
+       |> refused_registration "refused fact")
+  val _ = mf_test "constructors on a cheated injectivity theorem settle nothing"
+    (fn () =>
+       with_entry (rewritten I cheated pick_info) pick_info (fn () =>
+         refute mf
+           ``!f. (!b. f b = RFPick b) ==> f T <> f F``)
+       |> unknown_with "refused fact")
+end
+
+(* A Skolem value is the value of the binder it
+   comes from: an inner binder sharing an outer one's name and type gives
+   the outer one no value, and the statement says so. *)
+val _ = mf_test "an inner binder's value is not an outer binder's"
+  (fn () =>
+     case first_cex (refute mf ``!x:num. P ==> !x:num. x < 2``) of
+         SOME c =>
+           not (List.exists (fn (binder, _) => #1 (Term.dest_var binder) = "x")
+                  (#values (#statement c))) andalso
+           List.exists (String.isSubstring "value of x")
+             (#partial (#statement c))
+       | NONE => false)
 
 (* A caller's frac registration that fails
    validation leaves no mark: the library's rat and its [rat_add] row stay

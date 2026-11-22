@@ -66,7 +66,9 @@ signature Refute_ModelFinder_HOL = sig
      needs : term list option,
      tac_timeout : Time.time,
      evals : term list,
-     case_names : (kname * (int * int)) list,
+     (* Each case constant with its constructor count, its scrutinee's
+        position and the theorems its case semantics rests on *)
+     case_names : (kname * (int * int * thm list)) list,
      (* The case constants of codatatypes the
         caller described, refused where a problem applies one *)
      caller_cases : kname list,

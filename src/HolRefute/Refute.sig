@@ -76,10 +76,11 @@ signature Refute = sig
      what [run] can return: a search stops once a result reaches the best
      ceiling among the selected backends.  A nested Refute call from
      [run] raises, so the backend yields [Unknown].  It is a back end the
-     library did not make: its candidates count only with a trusted kernel
-     certificate (they are [Potential] otherwise, with the reason), and its
-     answer that none exists settles nothing.  Its counterexamples carry
-     [unlinked] as their [statement]; Refute fills that in. *)
+     library did not make: its candidates never count (they are
+     [Potential], with the reason, and a certificate it gives is dropped,
+     being its own claim too), and its answer that none exists settles
+     nothing.  Its counterexamples carry [unlinked] as their
+     [statement]; Refute fills that in. *)
   val register_backend : backend -> unit
   val unlinked : statement_instance
   val register_generator : hol_type -> custom_gen -> unit

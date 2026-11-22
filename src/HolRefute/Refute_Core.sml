@@ -1647,15 +1647,20 @@ structure Refute_Core :> Refute_Core = struct
         #1 (boolSyntax.strip_forall (goal_of assumption_count statement)) @
         Term.free_vars_lr statement
       fun name_of variable = #1 (Term.dest_var variable)
-      val skolems =
-        case #model cex of
-            SOME {skolems, ...} => skolems
-          | NONE => []
       (* A back end may give its binders' values in [statement] itself,
          as tested, before display formatting: they stand for their names
-         over the displayed bindings and Skolems. *)
+         over the displayed bindings, and the displayed Skolems are then
+         not read (a Skolem it left out is one it could not trace). *)
       val given = List.filter (Term.is_var o #1) (#values (#statement cex))
       val given_names = map (name_of o #1) given
+      (* a back end's own type instance and reasons come first *)
+      val given_partial = List.filter
+        (fn reason => not (Lib.mem reason (#partial unlinked)))
+        (#partial (#statement cex))
+      val skolems =
+        case (#model cex, null given andalso null given_partial) of
+            (SOME {skolems, ...}, true) => skolems
+          | _ => []
       (* the same value shown twice (a binding and a Skolem) is one, and
          values of different types are told apart by their types *)
       fun same (name, value) (other, other_value) =
@@ -1737,10 +1742,6 @@ structure Refute_Core :> Refute_Core = struct
                partial @ ["value of " ^ name ^
                           " belongs to no binder of the statement"])
         end
-      (* a back end's own type instance and reasons come first *)
-      val given_partial = List.filter
-        (fn reason => not (Lib.mem reason (#partial unlinked)))
-        (#partial (#statement cex))
       val (paired, theta, partial) =
         List.foldl pair ([], #types (#statement cex), given_partial) shown
       val unvalued = List.filter (fn binder =>
@@ -2033,8 +2034,8 @@ structure Refute_Core :> Refute_Core = struct
         (List.filter (fn (name, _) => name <> #name backend) registry))
 
   (* A back end the library did not register is a registration the finder
-     did not make: its candidates count only with a trusted kernel
-     certificate (Refute_Facts).  Trust goes only to the back ends the
+     did not make: its candidates never count, and their certificates are
+     dropped ([best_result]).  Trust goes only to the back ends the
      library defines, at their first registration; any later registration
      under one of their names is the caller's. *)
   val library_backend_names =
@@ -2375,8 +2376,10 @@ structure Refute_Core :> Refute_Core = struct
         | order => order) (Lib.enumerate 0 cexs))
 
   (* Every candidate of every job whose result
-     has the shape [select] accepts, the lighter backend first among
-     equals, each linked to the statement. *)
+     has the shape [select] accepts, the lighter backend first, each linked
+     to the statement.  They are ranked once the call's refusals are known
+     ([without_refused]), so a refusal that caps two of them leaves the
+     lighter first. *)
   fun best_result select make link jobs =
     let
       val by_weight = Listsort.sort (fn ((left : backend, _), (right, _)) =>
@@ -2395,7 +2398,7 @@ structure Refute_Core :> Refute_Core = struct
     in
       case List.concat (map found by_weight) of
           [] => NONE
-        | cexs => SOME (make (rank_candidates cexs))
+        | cexs => SOME (make cexs)
     end
 
   fun best_counterexample_result link =

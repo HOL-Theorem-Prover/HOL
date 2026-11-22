@@ -272,7 +272,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      needs : term list option,
      tac_timeout : Time.time,
      evals : term list,
-     case_names : (kname * (int * int)) list,
+     (* Each case constant with its constructor count, its scrutinee's
+        position and the theorems its case semantics rests on *)
+     case_names : (kname * (int * int * thm list)) list,
      (* The case constants of codatatypes the
         caller described, refused where a problem applies one *)
      caller_cases : kname list,
@@ -5573,7 +5575,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      [mk_cart] takes a function into [:'a finite_image], whose defining
      predicate mentions [FINITE UNIV] and [ARB] (fcpScript.sml) and has no
      faithful interpretation here.  Word types are the interpreted case
-     above; everything else under [cart] refuses by name. *)
+     above; everything else under [cart] refuses by name.  A datatype's
+     constructors are encoded as free and covering the type, which its
+     TypeBase entry's theorems state (Refute_Facts). *)
   fun uncached_data_type_constrs ty =
     if is_interpreted_type ty then []
     else if Option.isSome (cart_type_parts ty) then
@@ -5591,8 +5595,16 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           constructors as _ :: _ => constructors
         | [] =>
             (case Refute_TypeBase.fetch ty of
-                 SOME info => map (TypeBasePure.cinst ty)
-                   (TypeBasePure.constructors_of info)
+                 SOME info =>
+                   (case TypeBasePure.constructors_of info of
+                        [] => []
+                      | constructors =>
+                          (List.app Refute_Facts.check
+                             (TypeBasePure.nchotomy_of info ::
+                              List.mapPartial I
+                                [TypeBasePure.one_one_of info,
+                                 TypeBasePure.distinct_of info]);
+                           map (TypeBasePure.cinst ty) constructors))
                | NONE => [])
 
   fun data_type_constrs
@@ -6054,7 +6066,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
              is_interpreted_type ty orelse
              not (Option.isSome class orelse is_raw_free_datatype ty)
           then NONE
-          else SOME (const_key case_const, (length constructors, 0))
+          else SOME (const_key case_const,
+                     (length constructors, 0,
+                      [TypeBasePure.case_def_of info]))
         end handle HOL_ERR _ => NONE
       val raw = List.mapPartial entry (Refute_TypeBase.elts ())
       (* Revalidation, not a formality: a registration that passed at
@@ -6065,7 +6079,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         let val (_, scrutinee_index) = validate_codatatype_shape info
         in
           SOME (const_key case_const,
-                (length constructors, scrutinee_index))
+                (length constructors, scrutinee_index, []))
         end
         handle HOL_ERR _ =>
           (Refute_Core.Private.warn "Refute_ModelFinder_HOL" "case_names"
@@ -7253,9 +7267,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             else
               case List.find (fn (other, _) => same_key key other)
                      case_names of
-                  SOME (_, (constructor_count, scrutinee_index)) =>
+                  SOME (_, (constructor_count, scrutinee_index, facts)) =>
                     let
                       val needed = constructor_count + 1
+                      val () = List.app Refute_Facts.check facts
                       val () =
                         if List.exists (same_key key) caller_cases
                         then Refute_Facts.foreign ("case constant " ^
@@ -7612,7 +7627,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      finder did not make (Refute_Facts), marked so before it is
      installed, so no call sees it without its mark; one that fails
      validation withdraws its own marks, one occurrence each, and no
-     other. *)
+     other.  Any other exception (an interrupt, which can come after the
+     type is installed) keeps them. *)
   fun register_caller_frac_type (registration as {tyop, ersatz} : frac_info) =
     let
       fun drop_one same item [] = []
@@ -7626,7 +7642,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       note_foreign_frac_type tyop;
       note_foreign_ersatz ersatz;
       register_library_frac_type registration
-      handle error =>
+      handle error as HOL_ERR _ =>
         (Refute_Session.publish foreign_frac_types
            (drop_one same_type_operator tyop);
          Refute_Session.publish foreign_ersatz (fn marked =>

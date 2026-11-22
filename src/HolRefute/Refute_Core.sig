@@ -176,7 +176,7 @@ signature Refute_Core = sig
   val show_config : unit -> unit
   val register_run_release : string -> (unit -> unit) -> unit
   (* [register_backend] is a registration the finder did not make: its
-     candidates count only with a trusted kernel certificate.  The
+     candidates never count, and their certificates are dropped.  The
      library registers its own with [register_library_backend], which
      trusts only the names the library defines, at their first
      registration.  [register_test_backend] trusts any back end: for test
