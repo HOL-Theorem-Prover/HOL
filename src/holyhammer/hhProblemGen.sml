@@ -119,11 +119,15 @@ struct
           end
         else if is_comb body then
           let
-            val left = recurse (rator body)
-            val right = recurse (rand body)
-            val combined = mk_comb (left, right)
+            val old_left = rator body
+            val old_right = rand body
+            val left = recurse old_left
+            val right = recurse old_right
           in
-            if is_abs left then recurse (beta_conv combined) else combined
+            if is_abs left then recurse (beta_conv (mk_comb (left, right)))
+            else if Portable.pointer_eq (old_left, left) andalso
+                    Portable.pointer_eq (old_right, right) then body
+            else mk_comb (left, right)
           end
         else body
     in
@@ -238,12 +242,16 @@ struct
       else
         case logical_info head of
             NONE =>
-              if is_abs tm then
-                let val (var, body) = dest_abs tm in
-                  mk_abs (var, transform_term format record body)
-                end
-              else if null args then head
-              else rebuild (transform_term format record head) args'
+              let
+                val head' =
+                  if is_abs head then
+                    let val (var, body) = dest_abs head in
+                      mk_abs (var, transform_term format record body)
+                    end
+                  else head
+              in
+                if null args then head' else rebuild head' args'
+              end
           | SOME (name, card, builtin) =>
               if (name = "true" orelse name = "false") andalso
                  (is_full_ho format orelse is_fool format) then
@@ -873,7 +881,7 @@ struct
   fun guarded_type
       (hhTypeEnc.Guards {level = hhTypeEnc.AllTypes, ...}) _ _ = true
     | guarded_type (hhTypeEnc.Guards {level = hhTypeEnc.NonmonoNonUniform, ...})
-        needs ty = List.exists (fn other => other = ty) needs
+        needs ty = Redblackset.member (needs, ty)
     | guarded_type _ _ _ = false
 
   (* Pass 8 soundness argument.  Mangled native symbols interpret every
@@ -1580,7 +1588,11 @@ struct
       fn () =>
         let
           val final_fo = final_firstorder ()
-          val needs = hhTypeEnc.types_needing_encoding needs_terms
+          val needs =
+            case needs_terms of
+                [] => Redblackset.empty Type.compare
+              | _ => Redblackset.fromList Type.compare
+                  (hhTypeEnc.types_needing_encoding needs_terms)
         in
           generated_problem format type_enc needs final_fo
             (pp_helpers (#used_pp final_fo))

@@ -398,7 +398,10 @@ fun dat_theories_under root =
     end) (dat_paths_under root))
 
 fun coverage_check {srcfiles, dat_theories} =
-  List.filter (fn theory => not (mem theory srcfiles)) dat_theories
+  let val sources = Redblackset.fromList String.compare srcfiles in
+    List.filter (fn theory => not (Redblackset.member (sources, theory)))
+      dat_theories
+  end
 
 fun holdir () =
   case OS.Process.getEnv "HOLDIR" of
@@ -1505,16 +1508,6 @@ fun selection_data thy : selection_data =
     {thmdata = thmdata, context = context, intact = intact, knn = knn}
   end
 
-fun selection_facts ({thmdata, ...} : selection_data) names dependencies =
-  let
-    val restricted = Susp.delay (fn () =>
-      let val (weights, features) = Susp.force thmdata in
-        (weights, restrict_features_to_pool names features)
-      end)
-  in
-    {pool = {names = names, thmdata = restricted}, dependencies = dependencies}
-  end
-
 fun select_knn ({knn, ...} : selection_data)
     ({thmdata, ...} : premise_pool) count goal =
   knn (Susp.force thmdata) count goal
@@ -1527,14 +1520,56 @@ fun select_filter (data as {context, ...} : selection_data)
     | _ => hhLearn.rank (Susp.force context)
         {filter = filter, pool = SOME (#names pool), goal = goal, n = count}
 
-fun selected_premises_at data condition {pool, dependencies} goal knn_count =
+fun selection_facts (data as {thmdata, ...} : selection_data)
+    goal names dependencies =
+  let
+    val restricted = Susp.delay (fn () =>
+      let val (weights, features) = Susp.force thmdata in
+        (weights, restrict_features_to_pool names features)
+      end)
+    val pool = {names = names, thmdata = restricted}
+    (* Conditions for this goal and regime share successful selections.
+       The filter and requested depth can both change the ranking. *)
+    val rankings = ref []
+    fun lookup key =
+      Option.map #2 (List.find (fn (other, _) => other = key) (!rankings))
+    fun select (filter, count) = select_filter data filter pool count goal
+    fun memoize calculate key =
+      case lookup key of
+          SOME premises => premises
+        | NONE =>
+            let val premises = calculate key in
+              rankings := (key, premises) :: !rankings;
+              premises
+            end
+    fun rank filter count = memoize select (filter, count)
+    fun rank_many queries =
+      let
+        fun context_filter (filter, _) =
+          filter <> "none" andalso filter <> "knn"
+        val missing = List.filter (fn query =>
+          context_filter query andalso not (isSome (lookup query))) queries
+        val shared = Susp.delay (fn () =>
+          hhLearn.rank_for_filters (Susp.force (#context data))
+            {pool = SOME names, goal = goal} missing)
+        fun calculate query =
+          if context_filter query then (Susp.force shared) query
+          else select query
+      in
+        map (fn (query as (filter, _)) =>
+          (filter, memoize calculate query)) queries
+      end
+  in
+    {rank = rank, rank_many = rank_many, dependencies = dependencies}
+  end
+
+fun selected_premises_at condition {rank, dependencies, ...} knn_count =
   case #selector condition of
       Deps => dependencies
-    | Knn count => select_knn data pool
-        (case knn_count of NONE => count | SOME maximum => maximum) goal
-    | Mepo count => select_filter data "mepo" pool count goal
-    | Mash count => select_filter data "mash" pool count goal
-    | Mesh count => select_filter data "mesh" pool count goal
+    | Knn count => rank "knn" (Option.getOpt (knn_count, count))
+    | Mepo count => rank "mepo" count
+    | Mash count => rank "mash" count
+    | Mesh count => rank "mesh" count
     | PerSlice => raise Fail
         "invalid hhEval premise selection: perslice requires Sched"
 
@@ -1590,20 +1625,12 @@ fun max_schedule_facts schedule =
 fun rankings_for_schedule schedule premises =
   map (fn (filter, _) => (filter, premises)) (hhSlice.filter_maxima schedule)
 
-fun per_slice_rankings data schedule pool goal =
-  let
-    fun rank (filter, maximum) =
-      (filter, select_filter data filter pool maximum goal)
-  in
-    map rank (hhSlice.filter_maxima schedule)
-  end
-
 fun version_of_prover prover =
   case hhProver.probe (hhProver.config_of prover) of
       NONE => NONE
     | SOME {version, ...} => version
 
-fun schedule_cell_entry expdir thy data (name, thm, tags) facts condition
+fun schedule_cell_entry expdir thy (name, thm, tags) facts condition
       parameters =
   let
     val goal = dest_thm thm
@@ -1612,13 +1639,13 @@ fun schedule_cell_entry expdir thy data (name, thm, tags) facts condition
     val maximum = max_schedule_facts schedule
     val rankings =
       case #selector condition of
-          PerSlice => per_slice_rankings data schedule (#pool facts) goal
+          PerSlice => #rank_many facts (hhSlice.filter_maxima schedule)
         | _ =>
             let
               (* Legacy schedule selectors share one longest-first ranking.
                  In particular, chainy kNN uses the schedule maximum. *)
-              val premises = selected_premises_at data condition facts
-                goal (SOME maximum)
+              val premises = selected_premises_at condition facts
+                (SOME maximum)
             in
               rankings_for_schedule schedule premises
             end
@@ -1688,10 +1715,10 @@ fun schedule_cell_entry expdir thy data (name, thm, tags) facts condition
                         (SOME "schedule contained no runnable slices")))
   end
 
-fun prover_cell_entry expdir thy data (name, thm, tags) facts condition prover =
+fun prover_cell_entry expdir thy (name, thm, tags) facts condition prover =
   let
     val goal = dest_thm thm
-    val premises = selected_premises_at data condition facts goal NONE
+    val premises = selected_premises_at condition facts NONE
     val named_premises = mlThmData.thml_of_namel premises
     val nfacts = length named_premises
     val directory = join (join (join expdir "pb") (safe_component thy))
@@ -1729,15 +1756,15 @@ fun evaluation_error_cell expdir thy name tags condition message =
          NONE NONE (failed message))
   end
 
-fun run_cell expdir thy data (theorem as (name, _, tags)) facts condition =
+fun run_cell expdir thy (theorem as (name, _, tags)) facts condition =
   let
     val entry =
       case #engine condition of
           Sched parameters =>
-            schedule_cell_entry expdir thy data theorem facts condition
+            schedule_cell_entry expdir thy theorem facts condition
               parameters
         | Prover prover =>
-            prover_cell_entry expdir thy data theorem facts condition prover
+            prover_cell_entry expdir thy theorem facts condition prover
   in
     append_journal (journal_path expdir thy) entry
   end
@@ -1792,17 +1819,19 @@ fun eval_loaded_theory expdir thy =
                   if List.exists (fn condition => #selector condition = Deps)
                        chainy then List.filter permits intact_deps
                   else []
-                val bushy_facts = selection_facts data intact_deps intact_deps
+                val goal = dest_thm thm
+                val bushy_facts =
+                  selection_facts data goal intact_deps intact_deps
                 val chainy_facts =
-                  selection_facts data chainy_pool chainy_dependencies
+                  selection_facts data goal chainy_pool chainy_dependencies
                 fun one condition =
                   case #regime condition of
                       Bushy =>
                         if dependencies_ok then
-                          run_cell expdir thy data theorem bushy_facts condition
+                          run_cell expdir thy theorem bushy_facts condition
                         else broken_deps_cell expdir thy name tags condition
                     | Chainy =>
-                        run_cell expdir thy data theorem chainy_facts condition
+                        run_cell expdir thy theorem chainy_facts condition
               in
                 app one pending
               end
@@ -1848,9 +1877,14 @@ val source_script_directories = Susp.delay (fn () =>
       end
     val root = holdir ()
     val srcfiles = read_lines (join (join root "sigobj") "SRCFILES")
-    val sources = List.mapPartial source_entry srcfiles
+    (* Preserve the first reported directory for duplicate theory names. *)
+    fun index entries =
+      List.foldr (fn ((thy, directory), locations) =>
+        Redblackmap.insert (locations, thy, directory))
+        (Redblackmap.mkDict String.compare) entries
+    val sources = index (List.mapPartial source_entry srcfiles)
     val fallback = Susp.delay (fn () =>
-      List.mapPartial dat_entry (dat_paths_under (join root "src")))
+      index (List.mapPartial dat_entry (dat_paths_under (join root "src"))))
   in
     (sources, fallback)
   end)
@@ -1858,13 +1892,13 @@ val source_script_directories = Susp.delay (fn () =>
 fun source_script_directory thy =
   let
     val (sources, fallback) = Susp.force source_script_directories
-    fun find directories = List.find (fn (name, _) => name = thy) directories
+    fun find directories = Redblackmap.peek (directories, thy)
   in
     case find sources of
-        SOME (_, directory) => directory
+        SOME directory => directory
       | NONE =>
           case find (Susp.force fallback) of
-              SOME (_, directory) => directory
+              SOME directory => directory
             | NONE => raise Fail ("no source directory for theory " ^ thy)
   end
 
@@ -1949,8 +1983,10 @@ fun run_eval {expname, ncore, thyl, conditions} =
       val _ = ensure_dir (join expdir "out")
       val _ = ensure_dir (join expdir "pb")
       val {added_from_dat, ...} = stdlib_coverage ()
-      val included_from_dat = List.filter (fn name =>
-        List.exists (fn thy => thy = name) thyl) added_from_dat
+      val requested = Redblackset.fromList String.compare thyl
+      val included_from_dat =
+        List.filter (fn name => Redblackset.member (requested, name))
+          added_from_dat
       fun corpus_entry thy =
         ((load_theory thy; loaded_corpus_entry thy)
          handle Interrupt => raise Interrupt
@@ -2265,8 +2301,9 @@ fun run_smoke {expdir, timeout} =
         in
           if dependencies_ok then
             let val data = selection_data thy in
-              run_cell expdir thy data (name, thm, tags)
-                (selection_facts data dependencies dependencies) condition
+              run_cell expdir thy (name, thm, tags)
+                (selection_facts data (dest_thm thm) dependencies dependencies)
+                condition
             end
           else broken_deps_cell expdir thy name tags condition
         end
@@ -2280,7 +2317,8 @@ fun run_smoke {expdir, timeout} =
       val (_, sched_dependencies) = mlThmData.intactdep_of_thm sched_thm
       val sched_data = selection_data sched_thy
       val sched_facts =
-        selection_facts sched_data sched_dependencies sched_dependencies
+        selection_facts sched_data (dest_thm sched_thm)
+          sched_dependencies sched_dependencies
       val sched_condition = smoke_condition timeout SmokeSched
       val sched_parameters =
         case #engine sched_condition of
@@ -2290,8 +2328,8 @@ fun run_smoke {expdir, timeout} =
          results must not enter the cache.  Prime the entire schedule with
          an unreachable proof limit before testing a process-free replay. *)
       val primed =
-        schedule_cell_entry expdir sched_thy sched_data
-        sched_goal sched_facts sched_condition
+        schedule_cell_entry expdir sched_thy sched_goal
+          sched_facts sched_condition
         {provers = #provers sched_parameters,
          slices = #slices sched_parameters, cores = #cores sched_parameters,
          max_proofs = #slices sched_parameters + 1,
@@ -2302,8 +2340,8 @@ fun run_smoke {expdir, timeout} =
         else raise Fail "HolyHammer schedule cache priming did not finish"
       val _ = hhProver.reset_spawn_count ()
       val repeated =
-        schedule_cell_entry expdir sched_thy sched_data
-        sched_goal sched_facts sched_condition
+        schedule_cell_entry expdir sched_thy sched_goal
+          sched_facts sched_condition
         sched_parameters
       val repeat_spawns = hhProver.spawn_count ()
       val _ =

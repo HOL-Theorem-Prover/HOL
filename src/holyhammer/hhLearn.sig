@@ -144,6 +144,12 @@ sig
   val rank : context ->
     {filter : string, pool : mlThmData.thmid list option,
      goal : Abbrev.goal, n : int} -> mlThmData.thmid list
+  (* The list gives the expected (filter, depth) queries for one goal and pool.
+     It bounds the reusable prediction prefixes. The returned function can
+     also answer queries beyond those depths. *)
+  val rank_for_filters : context ->
+    {pool : mlThmData.thmid list option, goal : Abbrev.goal} ->
+    (string * int) list -> (string * int -> mlThmData.thmid list)
   val rank_filters : mlThmData.thmdata -> Abbrev.goal ->
     (string * int) list -> (string * mlThmData.thmid list) list
 end

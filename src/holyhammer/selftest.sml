@@ -729,6 +729,15 @@ fun test_hhTypeEnc () =
     val _ = expect "monotonicity calculus finds fequal variables"
       (same_types [Type.bool, one_ty]
         (types_needing_encoding [fequal_formula]))
+    fun naked_at ty =
+      let val var = Term.mk_var ("Y", ty) in
+        boolSyntax.mk_forall (var, boolSyntax.mk_eq (var, var))
+      end
+    val _ = expect "monotonicity calculus orders distinct types by occurrence"
+      (same_types [Type.bool, enum_ty, one_ty, bool_fun_ty]
+        (types_needing_encoding
+          [naked_at enum_ty, naked, fequal_formula, naked_at bool_fun_ty,
+           naked_at enum_ty]))
   in
     ()
   end
@@ -1275,6 +1284,11 @@ fun test_hhProblemGen () =
       (Term.aconv beta_result y)
     val _ = expect "hhProblemGen presimp eta-contracts"
       (Term.aconv eta_result f)
+    val clashing_free = Term.mk_var (#1 (Term.dest_var x), Type.bool)
+    val clashing_abs = Term.mk_abs (x, clashing_free)
+    val normalized_abs = Term.mk_abs (Term.dest_abs clashing_abs)
+    val _ = expect "hhProblemGen presimp normalizes a clashing binder name"
+      (Term.identical (beta_eta_contract true clashing_abs) normalized_abs)
     val _ = expect "hhProblemGen presimp unfolds LET in every format"
       (Term.aconv let_fof (Term.mk_comb (f, y)) andalso
        Term.aconv let_tx0 (Term.mk_comb (f, y)))
@@ -1309,6 +1323,12 @@ fun test_hhProblemGen () =
       (head_name (rand (proxied_atom tx0 applied_not)) = "pxy.not" andalso
        head_name (rand (proxied_atom tx0 applied_eq)) = "pxy.eq" andalso
        head_name (rand (proxied_atom th0 logical_argument)) = "pxy.not")
+    val applied_abs = Term.mk_comb (Term.mk_abs (x, mk_neg p), y)
+    val (proxy_abs, proxy_arg) = Term.dest_comb (proxied_atom th0 applied_abs)
+    val (proxy_var, proxy_body) = Term.dest_abs proxy_abs
+    val _ = expect "hhProblemGen rewrites the body of an applied abstraction"
+      (Term.identical proxy_var x andalso Term.identical proxy_arg y andalso
+       head_name proxy_body = "pxy.not")
     val _ = expect "hhProblemGen gates $ite on the format syntax"
       (head_name (rand (proxied_atom tx0 ite_atom)) = "$ite" andalso
        is_cond (rand (proxied_atom tf0 ite_atom)))
@@ -8629,8 +8649,10 @@ fun test_hhMePo_loop_thresholds_and_goal_context () =
       Term.mk_var ("mepo_noise_" ^ Int.toString index, Type.bool))
     val threshold_fact = boolSyntax.list_mk_conj (p :: noise)
     val threshold_context = mepo_context "Fixture"
-      [mepo_fixture "FixtureTheory.threshold_halved" "Fixture"
-        threshold_fact mepo_plain_stature]
+      [mepo_fixture "FixtureTheory.threshold_tie" "Fixture"
+         threshold_fact mepo_plain_stature,
+       mepo_fixture "FixtureTheory.threshold_halved" "Fixture"
+         threshold_fact mepo_plain_stature]
     val fallback_context = mepo_context "Fixture"
       [mepo_fixture "FixtureTheory.local_fallback" "Fixture" p
          mepo_local_stature,
@@ -8668,7 +8690,7 @@ fun test_hhMePo_loop_thresholds_and_goal_context () =
     val restricted = hhMePo.restrict_context fallback_context
       ["OtherTheory.not_local"]
   in
-    expect "hhMePo retries an empty first iteration at half threshold"
+    expect "hhMePo preserves tied candidate order when lowering the threshold"
       (hhMePo.mepo_rank threshold_context ([], p) 1 =
        ["FixtureTheory.threshold_halved"]);
     expect "hhMePo falls back from a constant-free goal to local facts"
@@ -9330,6 +9352,18 @@ fun test_hhLearn_shared_predictions () =
         {filter = filter, pool = NONE, goal = goal, n = n})
     fun agrees requests =
       hhLearn.rank_filters data goal requests = map separate requests
+    val pool = SOME ("missingTheory.missing" :: #1 (List.last rows) ::
+      map #1 (aiLib.first_n 24 (rev rows)))
+    fun restricted_agrees requests =
+      let
+        val shared = hhLearn.rank_for_filters context {pool = pool, goal = goal}
+          requests
+        fun independent (filter, n) =
+          hhLearn.rank context
+            {filter = filter, pool = pool, goal = goal, n = n}
+      in
+        map shared requests = map independent requests
+      end
     val lightweight = [("knn", 3), ("knn", 0), ("none", 0), ("knn", 11),
                        ("knn", 3), ("knn", ~1)]
     fun independent ("knn", n) =
@@ -9341,6 +9375,8 @@ fun test_hhLearn_shared_predictions () =
   in
     expect "shared learner rankings preserve ties, cutoffs and filter order"
       (agrees filters andalso agrees (rev filters));
+    expect "shared learner rankings preserve restricted pool order"
+      (restricted_agrees filters andalso restricted_agrees (rev filters));
     expect "lightweight kNN preserves tied rankings across repeated depths"
       (lightweight_agrees lightweight andalso
        lightweight_agrees (rev lightweight))

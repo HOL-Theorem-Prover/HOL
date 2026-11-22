@@ -790,9 +790,13 @@ fun mepo_rank_with_fudge (fudge : fudge)
                   if iteration = 0 andalso
                      threshold >= #ridiculous_threshold fudge
                   then
+                    (* The relevance table is unchanged. Restore scan order
+                       from the reversed rejects and keep their scores. *)
                     iter 0 max_facts
                       (threshold / #threshold_divisor fudge)
-                      rel_table hopeless' hopeful
+                      rel_table hopeless'
+                      (foldl (fn ((fact, weight), items) =>
+                        (fact, SOME weight) :: items) [] rejects)
                   else []
                 else
                   let

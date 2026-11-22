@@ -152,8 +152,6 @@ struct
       infinite [] ty
     end
 
-  fun insert_type ty tys = if mem ty tys then tys else tys @ [ty]
-
   fun is_fequal_head head =
     let
       val name =
@@ -166,6 +164,10 @@ struct
 
   fun types_needing_encoding formulas =
     let
+      fun insert_type ty (state as (seen, types)) =
+        if Redblackset.member (seen, ty) then state
+        else (Redblackset.add (seen, ty), ty :: types)
+
       fun is_universal tm vars =
         is_var tm andalso List.exists (fn var => aconv tm var) vars
 
@@ -220,11 +222,12 @@ struct
       fun scan_one tm types =
         scan_formula (free_vars_lr tm) true tm types
 
-      val maybe_nonmono =
+      val (_, maybe_nonmono) =
         List.foldl (fn (formula, types) => scan_one formula types)
-          [Type.bool] formulas
+          (insert_type Type.bool (Redblackset.empty Type.compare, []))
+          formulas
     in
-      List.filter (not o surely_infinite) maybe_nonmono
+      List.filter (not o surely_infinite) (rev maybe_nonmono)
     end
 
 end

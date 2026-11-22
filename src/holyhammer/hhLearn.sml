@@ -201,7 +201,7 @@ val raw_dependencies = Dep.depidl_of o Tag.dep_of o Thm.tag
 (* Resolve the same entries as mlThmData, building each theory's index
    once. A theory with an unsaved theorem keeps the original scan, which
    raises if it reaches that theorem before finding the dependency. *)
-fun dependency_resolver () =
+fun dependency_lookup () =
   let
     val indices = ref (dempty String.compare)
     fun build theory =
@@ -239,12 +239,25 @@ fun dependency_resolver () =
           | NONE => NONE
       end
   in
-    List.mapPartial thmid_of_depid
+    thmid_of_depid
   end
+
+fun dependency_resolver () = List.mapPartial (dependency_lookup ())
 
 fun create_dep_table (_, facts) =
   let
-    val resolve_dependencies = dependency_resolver ()
+    val lookup = dependency_lookup ()
+    (* Freshness is constant during this build, but checking it repeatedly
+       traverses the same shared dependency theorems. *)
+    val resolved = ref (dempty Dep.depid_compare)
+    fun resolve depid =
+      case Redblackmap.peek (!resolved, depid) of
+          SOME result => result
+        | NONE =>
+            let val result = lookup depid in
+              resolved := dadd depid result (!resolved);
+              result
+            end
     fun dependency_info thmid =
       case total mlThmData.thm_of_name thmid of
           SOME (SOME (_, theorem)) =>
@@ -254,7 +267,7 @@ fun create_dep_table (_, facts) =
               else
                 let
                   val raw = raw_dependencies theorem
-                  val fetchable = resolve_dependencies raw
+                  val fetchable = List.mapPartial resolve raw
                   val count = length raw
                 in
                   SOME {fetchable = fetchable,
@@ -951,30 +964,35 @@ fun make_dependency_lookup () =
 fun is_induction statures thmid =
   #induction (hhStature.stature_of statures thmid)
 
-fun rank_with_predictions (context as {statures, mepo, fact_key, ...} : context)
-      {nb, knn} {filter, pool, goal, n} =
+fun rank_inputs context pool =
   let
     val wanted = Option.map name_set pool
     val restricted as (_, facts) = restrict_thmdata context wanted
-    fun pool_names () = restricted_names context pool facts
+    val names = Susp.delay (fn () => restricted_names context pool facts)
+    val mepo = Susp.delay (fn () =>
+      case pool of
+          NONE => #mepo context
+        | SOME _ => hhMePo.restrict_context (#mepo context) (Susp.force names))
+  in
+    {wanted = wanted, restricted = restricted, names = names, mepo = mepo}
+  end
+
+fun rank_with_predictions (context as {statures, fact_key, ...} : context)
+      {wanted, names, mepo, restricted = _} {nb, knn} goal (filter, n) =
+  let
+    fun pool_names () = Susp.force names
     val generous = over_request n
-    fun mepo_leg names =
-      hhMePo.mepo_rank
-        (case pool of
-             NONE => mepo
-           | SOME _ => hhMePo.restrict_context mepo names)
-        goal generous
-    fun mash names =
-      mash_leg context wanted names {nb = nb names, knn = knn restricted}
-        generous
+    fun mepo_leg () = hhMePo.mepo_rank (Susp.force mepo) goal generous
+    fun mash names = mash_leg context wanted names {nb = nb, knn = knn}
+      generous
     fun finish ranking =
       first_test_n (not o is_induction statures) n ranking
   in
     case filter of
         "none" => pool_names ()
       | "knn" =>
-          expand_knn (dependency_resolver ()) n (knn restricted n)
-      | "mepo" => finish (mepo_leg (pool_names ()))
+          expand_knn (dependency_resolver ()) n (knn n)
+      | "mepo" => finish (mepo_leg ())
       | "mash" => finish (#ranking (mash (pool_names ())))
       | "mesh" =>
           let
@@ -984,7 +1002,7 @@ fun rank_with_predictions (context as {statures, mepo, fact_key, ...} : context)
                excluding only afterwards changes both normalization and the
                candidate cutoff. *)
             val names = pool_names ()
-            val mepo_ranking = finish (mepo_leg names)
+            val mepo_ranking = finish (mepo_leg ())
             val mash_result = mash names
             val mash_ranking = finish (#ranking mash_result)
             val unknown = #unknown mash_result
@@ -998,9 +1016,6 @@ fun rank_with_predictions (context as {statures, mepo, fact_key, ...} : context)
       | _ => raise ERR "rank" ("unknown premise filter " ^ filter)
   end
 
-fun rank context (query as {goal, ...}) =
-  rank_with_predictions context (direct_predictions context goal) query
-
 (* Both learners order the entire pool independently of the requested depth.
    Their raw prefixes can be reused before merging and dependency expansion. *)
 fun shared_prefix limit predict =
@@ -1009,6 +1024,37 @@ fun shared_prefix limit predict =
       if n = limit then Susp.force largest
       else if n < 0 orelse n > limit then predict n
       else take n (Susp.force largest)
+  end
+
+(* The prediction inputs are fixed by this goal and pool. Defer each
+   learner until a filter asks for it. *)
+fun rank_for_filters context {pool, goal} filters =
+  let
+    val {knn, nb} = direct_predictions context goal
+    fun limits ((filter, n), (knn_max, nb_max)) =
+      if filter = "knn" then (Int.max (knn_max, n), nb_max)
+      else if (filter = "mash" orelse filter = "mesh") andalso n > 0 then
+        let val depth = suggestion_limit (over_request n) in
+          (Int.max (knn_max, depth), Int.max (nb_max, depth))
+        end handle Overflow => (knn_max, nb_max)
+      else (knn_max, nb_max)
+    val (knn_max, nb_max) = foldl limits (0, 0) filters
+    val inputs as {restricted, names, ...} = rank_inputs context pool
+    val predictions =
+      {knn = shared_prefix knn_max (knn restricted),
+       nb = shared_prefix nb_max (fn n => nb (Susp.force names) n)}
+  in
+    rank_with_predictions context inputs predictions goal
+  end
+
+fun rank context {filter, pool, goal, n} =
+  let
+    val inputs as {restricted, names, ...} = rank_inputs context pool
+    val {knn, nb} = direct_predictions context goal
+  in
+    rank_with_predictions context inputs
+      {knn = knn restricted, nb = fn n => nb (Susp.force names) n}
+      goal (filter, n)
   end
 
 fun rank_filters thmdata goal filters =
@@ -1039,25 +1085,11 @@ fun rank_filters thmdata goal filters =
     end
   else
     let
-      val context = create_context thmdata
-      val {knn, nb} = direct_predictions context goal
-      fun limits ((filter, n), (knn_max, nb_max)) =
-        if filter = "knn" then (Int.max (knn_max, n), nb_max)
-        else if (filter = "mash" orelse filter = "mesh") andalso n > 0 then
-          let val depth = suggestion_limit (over_request n) in
-            (Int.max (knn_max, depth), Int.max (nb_max, depth))
-          end handle Overflow => (knn_max, nb_max)
-        else (knn_max, nb_max)
-      val (knn_max, nb_max) = foldl limits (0, 0) filters
-      val shared_knn = shared_prefix knn_max
-        (knn (restrict_thmdata context NONE))
-      val shared_nb = shared_prefix nb_max (nb (context_thmids context))
-      fun one (filter, n) =
-        (filter, rank_with_predictions context
-          {knn = fn _ => shared_knn, nb = fn _ => shared_nb}
-          {filter = filter, pool = NONE, goal = goal, n = n})
+      val rank_one =
+        rank_for_filters (create_context thmdata) {pool = NONE, goal = goal}
+          filters
     in
-      map one filters
+      map (fn (query as (filter, _)) => (filter, rank_one query)) filters
     end
 
 end
