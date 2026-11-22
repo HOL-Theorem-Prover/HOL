@@ -100,9 +100,11 @@ fun timeout t f x =
 (* -------------------------------------------------------------------------
    Timeout on the CPU time of the thread running the call.  Linux reports
    a thread's CPU time in /proc/<pid>/task/<tid>/stat, fields 14 and 15
-   (utime and stime), in ticks of 1/100 s (USER_HZ, 100 on every
-   architecture); a thread finds its own file through the
-   /proc/thread-self link.
+   (utime and stime), in ticks of USER_HZ, which is 100 on most ports
+   (Alpha's is 1024); a thread finds its own file through the
+   /proc/thread-self link.  A thread cannot use more CPU time than the
+   wall time that passes, so a reading ahead of the wall clock shows
+   another tick rate, and the call then takes the process clock.
    ------------------------------------------------------------------------- *)
 
 fun thread_stat_file () =
@@ -186,7 +188,14 @@ fun thread_timeout t f x =
           Starting => 0.0
         (* ticks subtracted, then divided, so that a whole number of them
            is the nearest real to its decimal: 50 ticks are 0.5 *)
-        | ThreadClock (file, start) => real (stat_ticks file - start) / 100.0
+        | ThreadClock (file, start) =>
+            let
+              val reading = real (stat_ticks file - start) / 100.0
+            in
+              if reading > Time.toReal (Time.now () - started) + tick
+              then (source := ProcessClock; process_seconds ())
+              else reading
+            end
         | ProcessClock => process_seconds ()
     fun timed x =
       let

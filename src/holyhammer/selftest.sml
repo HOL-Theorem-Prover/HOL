@@ -4098,9 +4098,21 @@ fun test_replay_timeout () =
     expect "thread_timeout stops a call that waits at 20 times its limit"
       ((smlTimeout.thread_timeout 0.01 idle (); false)
        handle smlTimeout.FunctionTimeout => true);
-    expect "thread_timeout stops a call that computes without end"
-      ((smlTimeout.thread_timeout 0.2 spin 0; false)
-       handle smlTimeout.FunctionTimeout => true);
+    (* Stopped at its limit, the call ends well before the wall-clock
+       backstop (4 s).  A stop at the backstop is a failure when the
+       process had the CPU to reach the limit, and else means the host
+       was too loaded to tell, and the test is skipped. *)
+    expect "thread_timeout stops a call that computes at its limit"
+      (let
+         val started = Time.now ()
+         val process = Timer.startCPUTimer ()
+       in
+         (smlTimeout.thread_timeout 0.2 spin 0; false)
+         handle smlTimeout.FunctionTimeout =>
+           Time.toReal (Time.- (Time.now (), started)) < 4.0 orelse
+           (process_seconds process < 0.3 andalso
+            (print "(skipped: the call got too little CPU) "; true))
+       end);
     (* the call counts down without allocating, so neither the garbage
        collector nor another thread changes its work *)
     expect "thread_timeout reports the CPU time a call used"
