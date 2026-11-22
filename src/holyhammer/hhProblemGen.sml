@@ -313,15 +313,16 @@ struct
   (* Lists of first occurrences, in occurrence order. *)
   fun distinct_heads heads = aiLib.mk_sameorder_set Term.compare heads
 
-  (* The smallest number of arguments each symbol occurs with. *)
+  (* Tables of the smallest number of arguments each head occurs with. *)
+  fun add_head_arity head arity table =
+    case Redblackmap.peek (table, head) of
+        SOME old =>
+          if arity < old then Redblackmap.insert (table, head, arity)
+          else table
+      | NONE => Redblackmap.insert (table, head, arity)
+
   fun add_head head arity table =
-    if not (is_symbol head) then table
-    else
-      case Redblackmap.peek (table, head) of
-          SOME min =>
-            if arity < min then Redblackmap.insert (table, head, arity)
-            else table
-        | NONE => Redblackmap.insert (table, head, arity)
+    if is_symbol head then add_head_arity head arity table else table
 
   fun heads_of_term tm table =
     let val (head, args) = strip_comb tm in
@@ -1245,13 +1246,6 @@ struct
       rev (#2 (List.foldl (fold_apps_formula add)
         (Redblackset.empty Type.compare, []) formulas))
     end
-
-  fun add_head_arity head arity table =
-    case Redblackmap.peek (table, head) of
-        SOME old =>
-          if arity < old then Redblackmap.insert (table, head, arity)
-          else table
-      | NONE => Redblackmap.insert (table, head, arity)
 
   fun head_arities_term (FOHead (head, args), result) =
         List.foldl head_arities_term

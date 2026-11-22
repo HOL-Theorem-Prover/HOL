@@ -346,9 +346,10 @@ val portfolio =
    mk_slice Zipperposition ("th1", "mono_native_higher_fool", "keep_lams")
      "knn" 128,
    mk_slice Eprover ("th0", "mono_native_higher", "keep_lams") "knn" 512,
-   (* Substitution: Vampire 5.0.1 rejects TF1 rank-1 type quantifiers (!>)
-      as higher-order types.  TH0 is its next tested table candidate; this
-      is a parser-equivalence correction, not a tuning change.  The pinned
+   (* Substitution: chosen when the generated TF1 (it bound formula type
+      variables with !>) was rejected by Vampire 5.0.1.  TH0 is its next
+      tested table candidate; this is a parser-equivalence correction, not
+      a tuning change.  The pinned
       build runs its generic FOF schedule on THF and superposes into
       lambda bodies with loose bound variables, refuting consistent
       axioms, so its TH0 problems are lambda-lifted. *)

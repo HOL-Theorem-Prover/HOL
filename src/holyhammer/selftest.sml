@@ -1381,13 +1381,16 @@ fun test_hhProblemGen () =
     val one_all = problem fof "mono_guards" (input one_only)
     val one_query = problem fof "mono_guards??" (input one_only)
     (* The conjecture's H : num -> num can take pxy.f X, so below the
-       cut-over Sufficient_App_Op applies pxy.f to one argument only. *)
+       cut-over Sufficient_App_Op applies pxy.f to one argument only.  The
+       lower side has 40 facts, not 44: the app helper that one-argument
+       application brings would itself be the 45th fact, a crossing the
+       helper test below covers. *)
     val full_fact = mk_forall (function_var, full_formula)
     fun poly_facts count fact = problem tf1 "poly_native"
       {conjecture = full_fact,
        facts = List.tabulate (count, fn index =>
          ("f" ^ Int.toString index, fact))}
-    val forty_four = poly_facts 40 full_formula
+    val forty_facts = poly_facts 40 full_formula
     val forty_five = poly_facts 45 full_formula
     val partial_forty_five = poly_facts 45
       (Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x)))
@@ -1396,7 +1399,7 @@ fun test_hhProblemGen () =
        not (String.isSubstring "app_2E(pxy_2Ef" no_function_variable) andalso
        String.isSubstring "app_2E(pxy_2Ef" with_function_variable)
     val _ = expect "hhProblemGen switches to Min_App_Op at forty-five facts"
-      (occurrences "pxy_2Ef(X,Y)" forty_four = 0 andalso
+      (occurrences "pxy_2Ef(X,Y)" forty_facts = 0 andalso
        occurrences "pxy_2Ef(X,Y)" forty_five = 46)
     (* pxy.f occurs with one and with two arguments.  TF1 declares it once,
        so it takes the smaller arity and is never partially applied. *)
@@ -1459,6 +1462,30 @@ fun test_hhProblemGen () =
        not (String.isSubstring "(!>[" poly_native) andalso
        String.isSubstring "tff(ty_" poly_native andalso
        String.isSubstring "tff(sy_" poly_native)
+    fun combin name ty =
+      Term.mk_thy_const {Thy = "combin", Name = name, Ty = ty}
+    val bool_to_num = Type.mk_type ("fun", [Type.bool, num])
+    val k_instances = problem tf1 "poly_native" (input (mk_conj
+      (Term.mk_comb (number_pred, Term.list_mk_comb
+         (combin "K" (Type.mk_type ("fun", [num, unary_num])), [x, y])),
+       Term.mk_comb (Term.mk_var ("BPred", Type.mk_type ("fun",
+           [bool_to_num, Type.bool])),
+         Term.mk_comb (combin "K" (Type.mk_type ("fun", [num, bool_to_num])),
+           x)))))
+    val _ = expect "TF1 gives all instances of a constant its smallest arity"
+      (String.isSubstring ("c_2Ecombin_2EK : !>[A_27b : $tType, " ^
+         "A_27a : $tType]: (A_27a > ty_2Emin_2Efun(A_27b,A_27a))")
+         k_instances andalso
+       String.isSubstring
+         "c_2Ecombin_2EK(ty_2Enum_2Enum,ty_2Enum_2Enum,X),Y)" k_instances)
+    val i_over_applied = problem tf1 "poly_native" (input (mk_forall
+      (function_var, mk_eq (Term.list_mk_comb
+         (combin "I" (Type.mk_type ("fun", [unary_num, unary_num])),
+          [function_var, x]), Term.mk_comb (function_var, x)))))
+    val _ = expect "TF1 arities stay within the generic type's arrows"
+      (String.isSubstring ("app_2E(ty_2Enum_2Enum,ty_2Enum_2Enum," ^
+         "c_2Ecombin_2EI(ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Enum_2Enum),H),X)")
+         i_over_applied)
     val x_alpha = Term.mk_var ("x", alpha)
     val combin_I = Term.prim_mk_const {Thy = "combin", Name = "I"}
     val poly_values = problem tf1 "poly_native"
