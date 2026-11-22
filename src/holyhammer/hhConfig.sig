@@ -68,10 +68,12 @@ sig
   (* The built-in default of the export_workers option. *)
   val default_export_workers : int
 
-  (* The built-in default of the preplay_timeout option, in seconds. *)
+  (* The built-in default of the preplay_timeout option, in CPU seconds
+     of the replay's thread (smlTimeout.thread_timeout's clock). *)
   val default_preplay_timeout : real
 
-  (* The built-in default of the minimize_timeout option, in seconds. *)
+  (* The built-in default of the minimize_timeout option, in CPU seconds
+     of the attempt's thread (smlTimeout.thread_timeout's clock). *)
   val default_minimize_timeout : real
 
   val get : string -> string option

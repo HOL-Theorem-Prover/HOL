@@ -5,7 +5,9 @@ sig
 
   (* Settings.  reconstruction_timeout, the replay limit of
      hh_reconstruct, starts at hhConfig.default_preplay_timeout, and
-     minimization_timeout at hhConfig.default_minimize_timeout. *)
+     minimization_timeout at hhConfig.default_minimize_timeout.  Every
+     replay limit and time is in CPU seconds of the thread running the
+     replay (smlTimeout.thread_timeout). *)
   val reconstruct_flag : bool ref
   val minimization_timeout : real ref
   val reconstruction_timeout : real ref
@@ -17,7 +19,7 @@ sig
      0.2 s (initially the verified replay the minimisation starts from:
      the full list, or the list without its permutative equations), and
      no attempt starts after minimize_deadline.  stac is the verified
-     tactic and t_replay the time its replay took. *)
+     tactic and t_replay the CPU time its replay took. *)
   type settings =
     {minimize : bool, preplay_timeout : real, minimize_timeout : real,
      minimize_deadline : Time.time option}
@@ -30,6 +32,10 @@ sig
   val drop_one_minimize :
     (real -> string list -> ('a * real) option) -> real -> Time.time option ->
     string list -> 'a * real -> string list * ('a * real)
+  (* timeout_tactic t tac g: the goals tac leaves on g and the CPU
+     seconds it used, NONE when it fails or uses more than t CPU
+     seconds; the limit every replay runs under, for tests. *)
+  val timeout_tactic : real -> tactic -> goal -> (goal list * real) option
   type reconstruction = {stac : string, tac : tactic, t_replay : real}
   val hh_reconstruct_with :
     settings -> string list -> goal -> reconstruction

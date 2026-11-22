@@ -63,12 +63,14 @@ have verified; past the soft deadline the first verified proof also ends it (a
 proof verified before the deadline included), kills the provers still running
 and drops the lists still queued.  Until one has verified, the lists are
 reconstructed until one does or all fail.  Each replay takes about
-`preplay_timeout` at most, with its compilation; a list costs about two, its
-minimisation, which stops at the soft deadline and keeps the shortest verified
-list, and a final replay.  An interrupt and a failed export stop everything at
-once, `max_proofs` stops the provers and the export (a replay is not cut); the
-provers are killed, the exports cancelled and every thread has exited before
-the call returns (an export is cut at the end of the problem it is preparing).
+`preplay_timeout` of CPU time at most (see below), after its compilation,
+which the limit does not count; a list costs about two, its
+minimisation, which stops at the soft deadline and keeps the shortest
+verified list, and a final replay.  An interrupt and a
+failed export stop everything at once, `max_proofs` stops the provers and the
+export (a replay is not cut); the provers are killed, the exports cancelled
+and every thread has exited before the call returns (an export is cut at the
+end of the problem it is preparing).
 
 An export error wins over everything but a stop.  The first one to be
 reported (after the problems admitted before it have settled) is raised on
@@ -101,6 +103,16 @@ fails to replay is tried again once without each of its lemmas in turn.
 These retries run only while no new list waits for reconstruction, and stop
 at the timeout (they are not proofs the provers found, and each can cost
 two `preplay_timeout`s).  `preplay_timeout` is 2.5 seconds by default.
+
+`preplay_timeout` and `minimize_timeout` limit the CPU time of the thread
+that runs the replay, not wall time: the provers keep running while a proof
+is replayed, so a replay on a busy machine can get a small share of a CPU,
+and under a wall-clock limit whether a list replays would depend on the
+load.  The replay times reported (`t_replay`, "replays in ... s") are CPU
+seconds on the same clock.  A replay that does not compute (one blocked on
+a lock, say) is still stopped after 20 times its limit in wall time.
+Outside Linux, which reports a thread's CPU time, the clock is the lesser
+of the wall time and the process's CPU time.
 
 The `filter` values are:
 
