@@ -107,6 +107,9 @@ val _ = if not supported then () else
     val _ = tprint "a rebound structure forces source loads"
     val _ = probe ["abcd", "shadow"]
     val _ = expect "shadowed" [0, 5, 0]
+    val _ = tprint "refused modules don't stay loaded"
+    val _ = if read "loaded-modules" = "0" then OK ()
+            else die (read "loaded-modules" ^ " modules still loaded")
     val _ = tprint "a custom theorem source bypasses modules"
     val _ = probe ["abcd", "customloader"]
     val _ = expect "custom loader" [0, 0, 0]
@@ -158,11 +161,51 @@ val _ = if not supported then () else
     val _ = expect "cold, no libcrypto SHA-1" [0, 5, 5]
     val _ = if names_ok () then OK ()
             else die "a module name has another digest"
+    val _ = tprint "the writer leaves modules it can't use"
+    (* moduleA gets a constant named like its type but keeps its hash, as
+       a build tool hashing theories its own way may: moduleB and moduleC
+       keep their .dat files and modules, which no longer fit the kernel *)
+    val a_sml = ".hol/objs/moduleATheory.sml"
+    fun hash_of text =
+      let
+        val (_, rest) = Substring.position "hash = \"" (Substring.full text)
+      in
+        Substring.string
+          (Substring.takel (fn c => c <> #"\"") (Substring.triml 8 rest))
+      end
+    fun read_sml () =
+      let val input = TextIO.openIn a_sml
+      in TextIO.inputAll input before TextIO.closeIn input end
+    val old_hash = hash_of (read_sml ())
+    val _ = app (fn ext => remove (".hol/objs/moduleATheory." ^ ext))
+                ["sml", "sig", "dat", "uo", "ui"]
+    val _ = command ["/usr/bin/env", "MODULE_A_CONSTANT=1", holmake,
+                     "--no-cache", "moduleATheory.uo"]
+    val text = read_sml ()
+    val new_hash = hash_of text
+    val (prefix, rest) = Substring.position new_hash (Substring.full text)
+    val output = TextIO.openOut a_sml
+    val _ = TextIO.output (output, Substring.string prefix ^ old_hash ^
+                                   Substring.string
+                                     (Substring.triml (size new_hash) rest))
+            before TextIO.closeOut output
+    fun theory_of m = List.nth (String.fields (fn c => c = #"-") m, 1)
+    val _ = app (fn m => if theory_of m = "moduleD"
+                         then remove (OS.Path.concat ("modules", m)) else ())
+                (modules ())
+    val _ = writer 2
+    val written =
+        map theory_of (List.filter (String.isSuffix ".pmo")
+                                   (children "written"))
+    val _ = if read "module-stats" = "2" andalso
+               Listsort.sort String.compare written = ["moduleA", "moduleD"]
+            then OK ()
+            else die ("writer wrote " ^ String.concatWith " " written)
   in
     ()
   end;
 val _ = clear "modules";
 val _ = clear "written";
-val _ = app remove ["module-stats", "fingerprint", "probe-fingerprint",
-                    "nosha1.cnf"];
+val _ = app remove ["module-stats", "loaded-modules", "fingerprint",
+                    "probe-fingerprint", "nosha1.cnf"];
 val _ = command [holmake, "--no-cache", "cleanAll"];

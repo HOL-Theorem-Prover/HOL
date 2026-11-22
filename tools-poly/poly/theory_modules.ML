@@ -512,14 +512,19 @@ fun cold_load directory base_id use file (f : found option) =
       | _ => ()
   end
 
+(* Drops a refused module from the loaded modules, so that a saved state
+   doesn't record it; its installed signature stays valid.  A Poly/ML
+   that refuses because a loaded saved state uses the module keeps it. *)
+fun release (m : module) = Save.releaseModule (#id m) handle Fail _ => ()
+
 fun load_structure directory base_id use file =
   case take_found (OS.Path.base file) of
       SOME (f as {module = SOME m, header = (_, hash), ...}) =>
       (* Checks before any registration; past them nothing is retried
-         from source, since load hooks may already have run.  A module
-         whose signature is installed stays loaded either way. *)
+         from source, since load hooks may already have run. *)
       if usable m then warm_load file hash m
       else (report_refused (#1 (#header f));
+            release m;
             cold_load directory base_id use file
                      (SOME {module = NONE, refused = true,
                             header = #header f, dat_digest = #dat_digest f}))
@@ -584,7 +589,9 @@ type entry = {base : string, thy : string, hash : string,
    module in [directory] is registered in the kernel from its module or
    decoded from its .dat file, with no theorem bindings, theory data,
    hooks or project code; up to [limit] modules of decoded theories are
-   saved to [output].  When every theory has a module, nothing is loaded. *)
+   saved to [output].  A module this process can't use is left as it is,
+   since processes sharing [directory] may load other ancestors.  When
+   every theory has a module, nothing is loaded. *)
 fun write_modules {theories, directory, base_state, output, limit} =
   case (eligible () andalso unchanged_bindings (),
         base_id_of base_state handle OS.SysErr _ => NONE) of
@@ -639,7 +646,12 @@ fun write_modules {theories, directory, base_state, output, limit} =
                 if usable m then
                   (TheoryReader.register_kernel (#hash e) (#data m);
                    written)
-                else (Save.releaseModule (#id m); decode (e, name, written))
+                else
+                  (release m;
+                   ignore (TheoryReader.decode_thydata
+                             {thyname = #thy e, path = #base e ^ ".dat",
+                              hash = #hash e});
+                   written)
               | NONE => decode (e, name, written)
           end
           handle e as Interrupt => PolyML.Exception.reraise e

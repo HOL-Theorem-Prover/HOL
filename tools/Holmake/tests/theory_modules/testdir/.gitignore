@@ -1,4 +1,5 @@
 module-stats
+loaded-modules
 modules/
 written/
 fingerprint
