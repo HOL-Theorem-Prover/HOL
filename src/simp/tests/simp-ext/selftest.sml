@@ -38,6 +38,26 @@ fun uses rules th =
 val _ = check "BOOL recipe keeps PURE/BOOL/NOT/CONG/UNWIND order"
   (map S.frag_name (List.rev (S.ssfrags_of ext_bool_ss)) =
    map SOME ["PURE","BOOL","NOT","CONG","UNWIND"])
+
+(* Leaving a fragment out of a lift drops its additions and nothing else:
+   the fragments after it are still lifted, in their order. *)
+val _ = let
+  val (a,b,c) = (``lsw_a:bool``,``lsw_b:bool``,``lsw_c:bool``)
+  val ordinary =
+    simpLib.++
+      (simpLib.++ (boolSimps.bool_ss,
+                   simpLib.named_rewrites "lsw-left-out"
+                     [ASSUME (mk_eq (a,b))]),
+       simpLib.named_rewrites "lsw-kept" [ASSUME (mk_eq (b,c))])
+  val without = S.lift_simpset_without ["lsw-left-out"] ordinary
+  fun result ss tm = rhs (concl (total (S.SIMP_CONV ss []) tm))
+in
+  check "lift_simpset_without leaves out only the named fragment"
+    (map S.frag_name (List.rev (S.ssfrags_of without)) =
+     map SOME ["PURE","BOOL","NOT","CONG","UNWIND","lsw-kept"] andalso
+     aconv (result without a) a andalso aconv (result without b) c andalso
+     aconv (result (S.lift_simpset ordinary) a) c)
+end
 val _ = converted "tracked BOOL beta and boolean rewriting"
   (S.SIMP_CONV ext_bool_ss [])
   ``(\x:bool. x /\ T) p`` ``p:bool``

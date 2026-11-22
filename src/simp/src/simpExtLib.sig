@@ -95,6 +95,9 @@ sig
      to see the additions. *)
   val lift_ssfrag : simpLib.ssfrag -> ssfrag
   val lift_simpset : simpLib.simpset -> simpset
+  (* As lift_simpset, leaving out the additions of the named fragments;
+     the deletions, exclusions and limit are kept. *)
+  val lift_simpset_without : string list -> simpLib.simpset -> simpset
 
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssfrag objects                        *)

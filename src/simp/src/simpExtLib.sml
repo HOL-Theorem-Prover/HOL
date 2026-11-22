@@ -1938,10 +1938,12 @@ fun force_add (ss as SS sset) f =
       setexcluded excluded' ss ++ f
     end
 
-fun lift_simpset ordinary =
+(* [keep] says which fragment additions of the history are replayed. *)
+fun lift_history keep ordinary =
     let
       val {history, limit = lim, excluded} = simpLib.dest_simpset ordinary
-      fun replay (simpLib.ADDFRAG f, ss) = ss ++ lift_ssfrag f
+      fun replay (simpLib.ADDFRAG f, ss) =
+            if keep f then ss ++ lift_ssfrag f else ss
         | replay (simpLib.DELETE_EVENT names, ss) = ss -* names
         | replay (simpLib.ADDWEAKENER (rels,thms,r), ss) =
             add_weakener (rels, thms, TraverseExt.lift r) ss
@@ -1950,6 +1952,14 @@ fun lift_simpset ordinary =
         |> fupdlimit (fn _ => lim)
         |> setexcluded (Binaryset.addList (empty_excluded, excluded))
     end
+
+fun lift_simpset ordinary = lift_history (K true) ordinary
+
+fun lift_simpset_without names =
+    lift_history
+      (fn f => case simpLib.frag_name f of
+                   SOME name => not (Lib.mem name names)
+                 | NONE => true)
 
 fun clear_rules (SS s) =
   let

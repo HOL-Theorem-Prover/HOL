@@ -5,6 +5,8 @@
 ``` hol4
 simpExtLib.lift_ssfrag : simpLib.ssfrag -> simpExtLib.ssfrag
 simpExtLib.lift_simpset : simpLib.simpset -> simpExtLib.simpset
+simpExtLib.lift_simpset_without :
+  string list -> simpLib.simpset -> simpExtLib.simpset
 ```
 
 ------------------------------------------------------------------------
@@ -20,6 +22,11 @@ again gives the same result.
 fragments are lifted and added in the same order, and its deletions,
 exclusions and limit are kept. A simpset that is extended over time, such
 as `bossLib.srw_ss()`, must be lifted again to see the additions.
+
+`lift_simpset_without names ss` is `lift_simpset ss` with the additions
+of the fragments named in `names` left out; the deletions, exclusions and
+limit of `ss` are kept, and a named fragment added to the result later is
+not excluded.
 
 There is no conversion in the other direction.
 
