@@ -312,6 +312,9 @@ New tools
     provers found is reconstructed until the run ends as above, so a call can
     return after the timeout.  The replay limit (`preplay_timeout`,
     `hhReconstruct.reconstruction_timeout`) is now 2.5 seconds, up from 1.0.
+    It and `minimize_timeout` limit the CPU time of the thread running the
+    replay, not wall time, so that a replay beside busy provers is not cut
+    short; the replay times reported (`t_replay`) are CPU seconds too.
 
 -   HOLyHammer schedules TPTP formats, type encodings, and lambda
     translations per prover slice.  Besides FOF, it now proves goals

@@ -88,9 +88,12 @@ fun timeLimit wait f x =
     release result
   end
 
+(* the deadline counts from after the worker is forked, so that setting
+   it up is not charged to the call *)
 fun timeout t f x =
-  let val deadline = Time.now () + Time.fromReal t in
-    timeLimit (fn (c, m) => fn _ => ConditionVar.waitUntil (c, m, deadline))
+  let val t = Time.fromReal t in
+    timeLimit (fn (c, m) => fn _ =>
+                 ConditionVar.waitUntil (c, m, Time.now () + t))
       f x
   end
 
