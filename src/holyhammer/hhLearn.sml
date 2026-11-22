@@ -242,22 +242,29 @@ fun dependency_lookup () =
     thmid_of_depid
   end
 
-fun dependency_resolver () = List.mapPartial (dependency_lookup ())
+(* Keep only completed lookups, so failures still reach the caller. *)
+fun memoize compare compute =
+  let
+    val table = ref (dempty compare)
+  in
+    fn key =>
+      case Redblackmap.peek (!table, key) of
+          SOME result => result
+        | NONE =>
+            let val result = compute key in
+              table := dadd key result (!table);
+              result
+            end
+  end
+
+fun dependency_resolver () =
+  List.mapPartial (memoize Dep.depid_compare (dependency_lookup ()))
 
 fun create_dep_table (_, facts) =
   let
-    val lookup = dependency_lookup ()
     (* Freshness is constant during this build, but checking it repeatedly
        traverses the same shared dependency theorems. *)
-    val resolved = ref (dempty Dep.depid_compare)
-    fun resolve depid =
-      case Redblackmap.peek (!resolved, depid) of
-          SOME result => result
-        | NONE =>
-            let val result = lookup depid in
-              resolved := dadd depid result (!resolved);
-              result
-            end
+    val resolve = dependency_resolver ()
     fun dependency_info thmid =
       case total mlThmData.thm_of_name thmid of
           SOME (SOME (_, theorem)) =>
@@ -267,7 +274,7 @@ fun create_dep_table (_, facts) =
               else
                 let
                   val raw = raw_dependencies theorem
-                  val fetchable = List.mapPartial resolve raw
+                  val fetchable = resolve raw
                   val count = length raw
                 in
                   SOME {fetchable = fetchable,
@@ -331,23 +338,28 @@ fun add_index ((fact : fact_info), (index, table)) =
     else (index + 1, dadd thmid index table)
   end
 
+fun index_facts facts = #2 (foldl add_index (0, dempty String.compare) facts)
+
 fun add_weight amount key table =
   case Redblackmap.peek (table, key) of
       SOME count => dadd key (count + amount) table
     | NONE => dadd key amount table
 
-fun train_nb constants idf dependencies facts =
+fun validate_training idf (facts : fact_info list) =
   let
-    val number = length facts
     val _ =
-      if idf_nfacts idf = number then ()
+      if idf_nfacts idf = length facts then ()
       else raise ERR "train_nb" "IDF and fact-table sizes differ"
     fun require_feature feature =
       if Option.isSome (idf_of idf feature) then ()
       else raise ERR "train_nb" "fact feature is absent from IDF table"
-    val _ = List.app
-      (fn (fact : fact_info) => List.app require_feature (#features fact))
-      facts
+  in
+    List.app (List.app require_feature o #features) facts
+  end
+
+fun train_nb_indexed constants idf dependencies facts indices =
+  let
+    val number = length facts
     val information = Vector.fromList facts
     val names = Vector.map #thmid information
     val pure_logic = Vector.map
@@ -356,8 +368,6 @@ fun train_nb constants idf dependencies facts =
             SOME conclusion => pure_logic_concl conclusion
           | NONE => false)
       information
-    val (_, indices) =
-      foldl add_index (0, dempty String.compare) facts
     val tfreq = Array.array (number, 0)
     val sfreq = Array.tabulate (number, fn _ => dempty Int.compare)
 
@@ -423,6 +433,10 @@ fun train_nb constants idf dependencies facts =
      sfreq = Vector.tabulate (number, fact_features)}
   end
 
+fun train_nb constants idf dependencies facts =
+  (validate_training idf facts;
+   train_nb_indexed constants idf dependencies facts (index_facts facts))
+
 fun conclusion_of thmid =
   case total mlThmData.thm_of_name thmid of
       SOME (SOME (_, theorem)) => SOME (Thm.concl theorem)
@@ -436,15 +450,13 @@ fun has_hypotheses thmid =
       SOME (SOME (_, theorem)) => not (null (hyp theorem))
     | _ => false
 
+fun fact_info statures (thmid, features) : fact_info =
+  {thmid = thmid, features = features,
+   def = #def (hhStature.stature_of statures thmid),
+   concl = conclusion_of thmid}
+
 fun train_nb_from_thmdata constants idf dependencies statures (_, facts) =
-  let
-    fun fact_info (thmid, features) : fact_info =
-      {thmid = thmid, features = features,
-       def = #def (hhStature.stature_of statures thmid),
-       concl = conclusion_of thmid}
-  in
-    train_nb constants idf dependencies (map fact_info facts)
-  end
+  train_nb constants idf dependencies (map (fact_info statures) facts)
 
 fun model_index ({indices, ...} : nb_model) thmid =
   Redblackmap.peek (indices, thmid)
@@ -721,19 +733,18 @@ fun exclude_and_take excluded n facts =
 
 type context =
   {thmdata : mlThmData.thmdata,
-   idf : idf_table,
-   model : nb_model,
+   model : nb_model Susp.susp,
    statures : hhStature.statures,
    mepo : hhMePo.context,
    dependencies : dep_table,
-   fact_key : mlThmData.thmid -> mlThmData.thmid,
+   fact_key : (mlThmData.thmid -> mlThmData.thmid) Susp.susp,
    unknown : mlThmData.thmid list,
    pool_order : mlThmData.thmid list}
 
 type cache_key = string * (mlThmData.thmid * mlFeature.fea) list
 datatype cached_context =
     Lightweight of mlThmData.thmdata
-  | Full of context
+  | Prepared of context
 val context_cache = ref (NONE : (cache_key * cached_context) option)
 
 fun clean_context_cache () =
@@ -755,10 +766,10 @@ fun cached_context key =
    proposition; each such class is represented by its first fact.  Other
    names, including those without a fetchable theorem, represent
    themselves. *)
-fun proposition_key facts =
+fun proposition_key conclusions =
   let
-    fun add ((thmid, _), (keys, representatives)) =
-      case conclusion_of thmid of
+    fun add ((thmid, concl), (keys, representatives)) =
+      case concl of
           SOME conclusion =>
             (case Redblackmap.peek (representatives, conclusion) of
                  SOME representative =>
@@ -767,7 +778,7 @@ fun proposition_key facts =
                | NONE => (keys, dadd conclusion thmid representatives))
         | NONE => (keys, representatives)
     val (keys, _) = foldl add
-      (dempty String.compare, dempty Term.compare) facts
+      (dempty String.compare, dempty Term.compare) conclusions
   in
     fn thmid => Option.getOpt (Redblackmap.peek (keys, thmid), thmid)
   end
@@ -775,29 +786,44 @@ fun proposition_key facts =
 (* Without a separate training corpus, every candidate belongs to the model. *)
 fun make_context_for current (thmdata as (_, facts)) training dependencies =
   let
-    val model_thmdata as (_, model_facts) = Option.getOpt (training, thmdata)
-    val idf = create_idf_table model_facts
+    val (_, model_facts) = Option.getOpt (training, thmdata)
     val statures = hhStature.create_statures_for current
-    val model = train_nb_from_thmdata default_constants idf dependencies
-      statures model_thmdata
-    val fact_key = proposition_key facts
+    (* Resolve the model's facts before deferring its training. *)
+    val training_facts = map (fact_info statures) model_facts
+    val indices = index_facts training_facts
+    val model = Susp.delay (fn () =>
+      train_nb_indexed default_constants (create_idf_table model_facts)
+        dependencies training_facts indices)
+    val conclusions =
+      case training of
+          NONE => map (fn fact => (#thmid fact, #concl fact)) training_facts
+        | SOME _ => map (fn (thmid, _) => (thmid, conclusion_of thmid)) facts
+    val fact_key = Susp.delay (fn () => proposition_key conclusions)
     val unknown =
       case training of
           NONE => []
-        | SOME _ => List.mapPartial (fn (thmid, _) =>
-            if Option.isSome (model_index model thmid) then NONE
-            else SOME thmid) facts
+        | SOME _ =>
+            let val trained = Susp.force model in
+              List.mapPartial (fn (thmid, _) =>
+                if Option.isSome (model_index trained thmid) then NONE
+                else SOME thmid) facts
+            end
   in
-    {thmdata = thmdata, idf = idf, model = model,
+    {thmdata = thmdata, model = model,
      statures = statures,
      mepo = hhMePo.create_context_for current thmdata statures,
      dependencies = dependencies, fact_key = fact_key, unknown = unknown,
      pool_order = map #1 facts}
   end
 
+fun force_context (context : context) =
+  (ignore (Susp.force (#model context));
+   ignore (Susp.force (#fact_key context));
+   context)
+
 fun make_context {thmdata, model_thmdata, dependencies} =
-  make_context_for (Theory.current_theory ()) thmdata (SOME model_thmdata)
-    dependencies
+  force_context (make_context_for (Theory.current_theory ()) thmdata
+    (SOME model_thmdata) dependencies)
 
 (* Externally built thmdata (mlThmData.create_thmdata, as holyhammer and
    TacticToe pass it) may hold top-level theorems with hypotheses. *)
@@ -807,20 +833,23 @@ fun without_hypotheses (weights, facts) =
 fun build_context_for current thmdata =
   make_context_for current thmdata NONE (create_dep_table thmdata)
 
-fun create_context_for current thmdata =
+fun cached_or_build_context prepare current thmdata =
   let
     val key = context_key_for current thmdata
     fun build data =
-      let val context = build_context_for current data in
-        context_cache := SOME (key, Full context);
+      let val context = prepare (build_context_for current data) in
+        context_cache := SOME (key, Prepared context);
         context
       end
   in
     case cached_context key of
-        SOME (Full context) => context
+        SOME (Prepared context) => prepare context
       | SOME (Lightweight data) => build data
       | NONE => build (without_hypotheses thmdata)
   end
+
+fun create_context_for current thmdata =
+  cached_or_build_context force_context current thmdata
 
 fun create_context thmdata =
   create_context_for (Theory.current_theory ()) thmdata
@@ -893,7 +922,8 @@ fun mash_leg (context as {dependencies, fact_key, ...} : context)
           (weight_facts_steeply nb, [])),
          (#knn_mesh_weight default_constants,
           (weight_facts_steeply knn, []))]
-      val (merged, remaining_unknown) = merge_mash_channels_by fact_key
+      val (merged, remaining_unknown) =
+        merge_mash_channels_by (Susp.force fact_key)
         {max_facts = max_suggestions, suggestions = learner,
          facts = names, chained = [],
          unknown = restrict_unknown context wanted}
@@ -911,7 +941,7 @@ fun direct_predictions ({model, ...} : context) goal =
     val suspended = Susp.delay (fn () => mlFeature.fea_of_goal true goal)
     fun features () = Susp.force suspended
   in
-    {nb = fn names => nb_predict model names features,
+    {nb = fn names => nb_predict (Susp.force model) names features,
      knn = fn thmdata => knn_predict thmdata features}
   end
 
@@ -926,21 +956,18 @@ fun mash_details context {pool, goal, max_facts} =
       max_facts
   end
 
-fun expand_knn resolve_dependencies n predictions =
-  let
-    fun with_dependencies thmid =
-      let val (theory, name) = split_string "Theory." thmid in
-        thmid ::
-          (if theory = mlThmData.namespace_tag then []
-           else resolve_dependencies
-             (raw_dependencies (DB.fetch theory name)))
-      end
-  in
-    take n (distinct (List.concat (map with_dependencies predictions)))
+fun knn_expander resolve_dependencies thmid =
+  let val (theory, name) = split_string "Theory." thmid in
+    thmid ::
+      (if theory = mlThmData.namespace_tag then []
+       else resolve_dependencies (raw_dependencies (DB.fetch theory name)))
   end
 
+fun expand_knn with_dependencies n predictions =
+  take n (distinct (List.concat (map with_dependencies predictions)))
+
 fun rank_knn_with resolve_dependencies thmdata n goal =
-  expand_knn resolve_dependencies n
+  expand_knn (knn_expander resolve_dependencies) n
     (knn_predict thmdata (fn () => mlFeature.fea_of_goal true goal) n)
 
 fun rank_knn thmdata n goal =
@@ -978,42 +1005,53 @@ fun rank_inputs context pool =
   end
 
 fun rank_with_predictions (context as {statures, fact_key, ...} : context)
-      {wanted, names, mepo, restricted = _} {nb, knn} goal (filter, n) =
+      {wanted, names, mepo, restricted = _} {nb, knn} goal shared_depths =
   let
     fun pool_names () = Susp.force names
-    val generous = over_request n
-    fun mepo_leg () = hhMePo.mepo_rank (Susp.force mepo) goal generous
-    fun mash names = mash_leg context wanted names {nb = nb, knn = knn}
-      generous
-    fun finish ranking =
-      first_test_n (not o is_induction statures) n ranking
+    fun share calculate =
+      case shared_depths of
+          _ :: _ :: _ =>
+            let val cached = memoize Int.compare calculate in
+              fn depth =>
+                if List.exists (fn shared => depth = shared) shared_depths
+                then cached depth else calculate depth
+            end
+        | _ => calculate
+    val mepo_leg = share
+      (fn depth => hhMePo.mepo_rank (Susp.force mepo) goal depth)
+    val mash = share (fn depth =>
+      mash_leg context wanted (pool_names ()) {nb = nb, knn = knn} depth)
+    fun rank_one (filter, n) =
+      let
+        val generous = over_request n
+        fun finish ranking =
+          first_test_n (not o is_induction statures) n ranking
+      in
+        case filter of
+            "none" => pool_names ()
+          | "knn" =>
+              expand_knn (knn_expander (dependency_resolver ())) n (knn n)
+          | "mepo" => finish (mepo_leg generous)
+          | "mash" => finish (#ranking (mash generous))
+          | "mesh" =>
+              let
+                (* Apply the induction filter and caller's bound before
+                   meshing, to preserve normalization and the cutoff. *)
+                val mepo_ranking = finish (mepo_leg generous)
+                val mash_result = mash generous
+                val mash_ranking = finish (#ranking mash_result)
+                val unknown = #unknown mash_result
+              in
+                mesh_facts_by (Susp.force fact_key) n
+                  [(#final_mepo_weight default_constants,
+                    (weight_facts_steeply mepo_ranking, [])),
+                   (#final_mash_weight default_constants,
+                    (weight_facts_steeply mash_ranking, unknown))]
+              end
+          | _ => raise ERR "rank" ("unknown premise filter " ^ filter)
+      end
   in
-    case filter of
-        "none" => pool_names ()
-      | "knn" =>
-          expand_knn (dependency_resolver ()) n (knn n)
-      | "mepo" => finish (mepo_leg ())
-      | "mash" => finish (#ranking (mash (pool_names ())))
-      | "mesh" =>
-          let
-            (* Each component is a complete standalone leg before MeSh sees
-               it: over-request, exclude induction facts, and refill to the
-               caller's bound.  Meshing the raw over-requested lists and
-               excluding only afterwards changes both normalization and the
-               candidate cutoff. *)
-            val names = pool_names ()
-            val mepo_ranking = finish (mepo_leg ())
-            val mash_result = mash names
-            val mash_ranking = finish (#ranking mash_result)
-            val unknown = #unknown mash_result
-          in
-            mesh_facts_by fact_key n
-              [(#final_mepo_weight default_constants,
-                (weight_facts_steeply mepo_ranking, [])),
-               (#final_mash_weight default_constants,
-                (weight_facts_steeply mash_ranking, unknown))]
-          end
-      | _ => raise ERR "rank" ("unknown premise filter " ^ filter)
+    rank_one
   end
 
 (* Both learners order the entire pool independently of the requested depth.
@@ -1043,8 +1081,13 @@ fun rank_for_filters context {pool, goal} filters =
     val predictions =
       {knn = shared_prefix knn_max (knn restricted),
        nb = shared_prefix nb_max (fn n => nb (Susp.force names) n)}
+    fun component_depth (filter, n) =
+      if filter = "mepo" orelse filter = "mash" orelse filter = "mesh" then
+        SOME (over_request n) handle Overflow => NONE
+      else NONE
+    val shared_depths = List.mapPartial component_depth filters
   in
-    rank_with_predictions context inputs predictions goal
+    rank_with_predictions context inputs predictions goal shared_depths
   end
 
 fun rank context {filter, pool, goal, n} =
@@ -1054,7 +1097,7 @@ fun rank context {filter, pool, goal, n} =
   in
     rank_with_predictions context inputs
       {knn = knn restricted, nb = fn n => nb (Susp.force names) n}
-      goal (filter, n)
+      goal [] (filter, n)
   end
 
 fun rank_filters thmdata goal filters =
@@ -1064,7 +1107,7 @@ fun rank_filters thmdata goal filters =
       val key = context_key_for (Theory.current_theory ()) thmdata
       val data as (_, facts) =
         case cached_context key of
-            SOME (Full {thmdata, ...}) => thmdata
+            SOME (Prepared {thmdata, ...}) => thmdata
           | SOME (Lightweight data) => data
           | NONE =>
               let val data = without_hypotheses thmdata in
@@ -1077,8 +1120,12 @@ fun rank_filters thmdata goal filters =
         | maximum (_, largest) = largest
       val predict = shared_prefix (foldl maximum 0 filters)
         (knn_predict data (fn () => Susp.force goal_features))
-      val resolve = dependency_resolver ()
-      fun one ("knn", n) = ("knn", expand_knn resolve n (predict n))
+      val fetch = knn_expander (dependency_resolver ())
+      val expand =
+        case List.filter (fn (filter, _) => filter = "knn") filters of
+            _ :: _ :: _ => memoize String.compare fetch
+          | _ => fetch
+      fun one ("knn", n) = ("knn", expand_knn expand n (predict n))
         | one (filter, _) = (filter, Susp.force names)
     in
       map one filters
@@ -1086,8 +1133,9 @@ fun rank_filters thmdata goal filters =
   else
     let
       val rank_one =
-        rank_for_filters (create_context thmdata) {pool = NONE, goal = goal}
-          filters
+        rank_for_filters
+          (cached_or_build_context I (Theory.current_theory ()) thmdata)
+          {pool = NONE, goal = goal} filters
     in
       map (fn (query as (filter, _)) => (filter, rank_one query)) filters
     end

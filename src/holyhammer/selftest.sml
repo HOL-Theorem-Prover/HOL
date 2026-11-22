@@ -9346,12 +9346,15 @@ fun test_hhLearn_shared_predictions () =
     val data = (mlFeature.learn_tfidf rows, rows)
     val context = hhLearn.create_context data
     val filters = [("knn", 3), ("mash", 2), ("mesh", 14), ("knn", 11),
-                   ("mash", 7), ("mepo", 5), ("mesh", 4), ("none", 0)]
+                   ("mash", 14), ("mepo", 14), ("mesh", 4), ("none", 0)]
     fun separate (filter, n) =
       (filter, hhLearn.rank context
         {filter = filter, pool = NONE, goal = goal, n = n})
     fun agrees requests =
       hhLearn.rank_filters data goal requests = map separate requests
+    fun cold_mepo_then_mixed () =
+      (hhLearn.clean_context_cache ();
+       agrees [("mepo", 14)] andalso agrees filters)
     val pool = SOME ("missingTheory.missing" :: #1 (List.last rows) ::
       map #1 (aiLib.first_n 24 (rev rows)))
     fun restricted_agrees requests =
@@ -9361,8 +9364,9 @@ fun test_hhLearn_shared_predictions () =
         fun independent (filter, n) =
           hhLearn.rank context
             {filter = filter, pool = pool, goal = goal, n = n}
+        val queries = requests @ [("mesh", 17), ("mepo", 17), ("mash", 17)]
       in
-        map shared requests = map independent requests
+        map shared queries = map independent queries
       end
     val lightweight = [("knn", 3), ("knn", 0), ("none", 0), ("knn", 11),
                        ("knn", 3), ("knn", ~1)]
@@ -9375,6 +9379,8 @@ fun test_hhLearn_shared_predictions () =
   in
     expect "shared learner rankings preserve ties, cutoffs and filter order"
       (agrees filters andalso agrees (rev filters));
+    expect "cold MePo and subsequent mixed rankings match standalone queries"
+      (cold_mepo_then_mixed ());
     expect "shared learner rankings preserve restricted pool order"
       (restricted_agrees filters andalso restricted_agrees (rev filters));
     expect "lightweight kNN preserves tied rankings across repeated depths"

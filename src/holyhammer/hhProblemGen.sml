@@ -245,12 +245,19 @@ struct
               let
                 val head' =
                   if is_abs head then
-                    let val (var, body) = dest_abs head in
-                      mk_abs (var, transform_term format record body)
+                    let
+                      val (var, body) = dest_abs head
+                      val body' = transform_term format record body
+                    in
+                      if Portable.pointer_eq (body, body') then head
+                      else mk_abs (var, body')
                     end
                   else head
               in
-                if null args then head' else rebuild head' args'
+                if null args then head'
+                else if Portable.pointer_eq (head, head') andalso
+                        ListPair.allEq Portable.pointer_eq (args, args') then tm
+                else rebuild head' args'
               end
           | SOME (name, card, builtin) =>
               if (name = "true" orelse name = "false") andalso
@@ -1094,10 +1101,10 @@ struct
       fun helpers head =
         let
           val name = raw_symbol head
-          val args = domains (type_of head)
+          fun args () = domains (type_of head)
           fun var stem ty = mk_var (stem, ty)
           fun binary make =
-            case args of
+            case args () of
                 [ty, _] =>
                   let
                     val x = var "HX" ty
@@ -1109,7 +1116,7 @@ struct
                   end
               | _ => []
           fun proposition make =
-            case args of
+            case args () of
                 [_, _] =>
                   let
                     val p = var "HP" Type.bool
@@ -1125,7 +1132,7 @@ struct
           case name of
               "pxy.eq" => binary (fn tm => ("help.pxy.eq", tm))
             | "pxy.not" =>
-                (case args of
+                (case args () of
                     [_] => let val p = var "HP" Type.bool in
                       [("help.pxy.not", all [p]
                         (mk_eq (app head [p], mk_neg p)))]
@@ -1135,7 +1142,7 @@ struct
             | "pxy.disj" => proposition (fn tm => ("help.pxy.disj", tm))
             | "pxy.imp" => proposition (fn tm => ("help.pxy.imp", tm))
             | "pxy.all" =>
-                (case args of
+                (case args () of
                     [pty] =>
                       (case dom_rng pty of
                           SOME (xty, _) =>
@@ -1146,7 +1153,7 @@ struct
                         | NONE => [])
                   | _ => [])
             | "pxy.ex" =>
-                (case args of
+                (case args () of
                     [pty] =>
                       (case dom_rng pty of
                           SOME (xty, _) =>
@@ -1343,8 +1350,12 @@ struct
         if not typed then []
         else
           let
-            val head_arities = List.foldl head_arities_formula
-              (Redblackmap.mkDict Term.compare) all_formulas
+            val head_arities =
+              case encoding of
+                  hhTypeEnc.Native {higher = false, ...} =>
+                    List.foldl head_arities_formula
+                      (Redblackmap.mkDict Term.compare) all_formulas
+                | _ => Redblackmap.mkDict Term.compare
             fun head_arity head =
               Option.getOpt (Redblackmap.peek (head_arities, head), 0)
             val sym_decls = map (fn head => hhTptpProblem.SymDecl

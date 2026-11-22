@@ -180,12 +180,12 @@ fun irrelevant_const name =
 
 fun set_const name = name = "bool$IN" orelse name = "pred_set$GSPEC"
 
-fun add_pconsts_in_term thy tm initial =
+fun add_pconsts_with read_const thy tm initial =
   let
     fun add pconst table = add_pconst_to_table pconst table
 
     fun do_const bound head arguments table =
-      let val pconst as (name, _) = const_ptype head in
+      let val pconst as (name, _) = read_const head in
         if set_const name then foldl (do_term bound) table arguments
         else
           foldl (do_term bound)
@@ -285,6 +285,8 @@ fun add_pconsts_in_term thy tm initial =
     do_formula [] tm with_theory
   end
 
+val add_pconsts_in_term = add_pconsts_with const_ptype
+
 fun pconsts_of_table table =
   dfoldl
     (fn (name, ptypes, result) =>
@@ -316,32 +318,33 @@ fun increment_frequency (name, ptype) table =
     dadd name (dadd ptype (count + 1) counts) table
   end
 
-fun count_term_consts bound (tm, table) =
+fun count_term_consts read_const bound (tm, table) =
   let val (head, arguments) = strip_comb tm in
     if is_const head then
-      foldl (count_term_consts bound)
-        (increment_frequency (const_ptype head) table) arguments
+      foldl (count_term_consts read_const bound)
+        (increment_frequency (read_const head) table) arguments
     else if is_var head then
-      foldl (count_term_consts bound)
+      foldl (count_term_consts read_const bound)
         (if List.exists (fn variable => aconv variable head) bound then table
          else increment_frequency (free_ptype head) table)
         arguments
     else if is_abs head then
       let
         val (variable, body) = dest_abs head
-        val table' = count_term_consts (variable :: bound) (body, table)
+        val table' = count_term_consts read_const (variable :: bound)
+          (body, table)
       in
-        foldl (count_term_consts bound) table' arguments
+        foldl (count_term_consts read_const bound) table' arguments
       end
-    else foldl (count_term_consts bound) table arguments
+    else foldl (count_term_consts read_const bound) table arguments
   end
 
-fun count_fact ((thy, term), table) =
-  count_term_consts []
+fun count_fact read_const ((thy, term), table) =
+  count_term_consts read_const []
     (term, increment_frequency (pseudo_theory_name thy, (0, [])) table)
 
 fun count_fact_consts facts =
-  foldl count_fact (empty_frequency_table ()) facts
+  foldl (count_fact const_ptype) (empty_frequency_table ()) facts
 
 fun pconst_freq match table (name, ptype) =
   case Redblackmap.peek (table, name) of
@@ -539,10 +542,12 @@ type context =
   {current_theory : string, facts : cached_fact list,
    frequency_table : frequency_table, pconst_count : int}
 
-fun cache_fact index_pconst {thmid, theory, concl, stature} =
+fun cache_fact read_const index_pconst {thmid, theory, concl, stature} =
   {thmid = thmid, theory = theory, concl = concl,
-   pconsts = map index_pconst (pconsts_in_term theory concl),
-   counts = frequency_entries (count_fact_consts [(theory, concl)]),
+   pconsts = map index_pconst (pconsts_of_table
+     (add_pconsts_with read_const theory concl (empty_pconst_table ()))),
+   counts = frequency_entries
+     (count_fact read_const ((theory, concl), empty_frequency_table ())),
    stature = stature}
 
 (* Entries never hold zero counts or empty count tables, whichever way the
@@ -579,6 +584,15 @@ fun make_context {current_theory, facts} =
           EQUAL => ptype_compare (ptype, ptype')
         | order => order
     val indices = ref (dempty compare)
+    val const_types = ref (dempty Term.compare)
+    fun read_const term =
+      case Redblackmap.peek (!const_types, term) of
+          SOME pconst => pconst
+        | NONE =>
+            let val pconst = const_ptype term in
+              const_types := dadd term pconst (!const_types);
+              pconst
+            end
     fun index_pconst pconst =
       case Redblackmap.peek (!indices, pconst) of
           SOME entry => entry
@@ -587,7 +601,7 @@ fun make_context {current_theory, facts} =
               indices := dadd pconst entry (!indices);
               entry
             end
-    val cached = map (cache_fact index_pconst) facts
+    val cached = map (cache_fact read_const index_pconst) facts
   in
     {current_theory = current_theory, facts = cached,
      frequency_table = frequency_of_facts cached,

@@ -26,12 +26,13 @@ struct
 
   val sort = Listsort.sort
 
-  fun insert_type ty [] = [ty]
-    | insert_type ty (old :: rest) =
+  (* Return NONE if the type was already present. *)
+  fun insert_type ty [] = SOME [ty]
+    | insert_type ty (types as old :: rest) =
         case Type.compare (ty, old) of
-            LESS => ty :: old :: rest
-          | EQUAL => old :: rest
-          | GREATER => old :: insert_type ty rest
+            LESS => SOME (ty :: types)
+          | EQUAL => NONE
+          | GREATER => Option.map (fn tail => old :: tail) (insert_type ty rest)
 
   fun lookup name table =
     Option.getOpt (Redblackmap.peek (table, name), [])
@@ -126,9 +127,14 @@ struct
       List.foldl add (Redblackmap.mkDict String.compare) infos
     end
 
+  fun insert_ground table name ty types =
+    case insert_type ty types of
+        SOME updated => Redblackmap.insert (table, name, updated)
+      | NONE => table
+
   fun add_ground (name, ty) table =
     case Redblackmap.peek (table, name) of
-        SOME tys => Redblackmap.insert (table, name, insert_type ty tys)
+        SOME tys => insert_ground table name ty tys
       | NONE => table
 
   fun is_ground rigid ty =
@@ -377,8 +383,7 @@ struct
                index : (string, hol_type list) Redblackmap.dict susp}
 
   fun index_add ((name, ty), dict) =
-    Redblackmap.insert (dict, name, insert_type ty
-      (Option.getOpt (Redblackmap.peek (dict, name), [])))
+    insert_ground dict name ty (lookup name dict)
 
   fun index_of rigid goal =
     fold_ground_consts rigid index_add goal

@@ -197,10 +197,9 @@ sig
      deadline a verified proof, one verified before it included, ends the run
      without a reason of its own (see the clock).  The producer takes an
      interrupt where it waits (for a worker that finishes a problem) and
-     between two problems, never inside the preparation of one (copy_file reads
-     a whole file through BinIO.inputAll and so may take an interrupt, which is
-     safe: the copy is written atomically): the response is bounded by one
-     preparation.
+     between two problems.  Preparation may also take an interrupt while
+     streaming a legacy copy, whose partial output is removed.  The
+     response is bounded by one preparation.
 
      The error race.  The first fatal export error to be reported (the
      order in which the export surfaces the errors, after the problems
@@ -220,6 +219,8 @@ sig
     {options : hhConfig.hh_options, goal : goal,
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> result
+  (* The temporary problems of a non-debug run are private to the
+     scheduler, which shares cache digests across byte copies. *)
   val run :
     {options : hhConfig.hh_options, goal : goal,
      rankings : (string * string list) list,

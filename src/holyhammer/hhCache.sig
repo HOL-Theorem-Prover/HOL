@@ -4,8 +4,9 @@ sig
     {prover : string, version : string option, argv : string list,
      problem : string}
 
-  (* lookup and store take the key that key_of computes, so that the
-     problem is hashed once per run. *)
+  (* Use key_of_digest to share the SHA-1 of an immutable problem file
+     across requests with different arguments. *)
+  val key_of_digest : string -> key_parts -> string
   val key_of : key_parts -> string
   val lookup : hhConfig.hh_options -> string -> hhProver.run_result option
   val store : hhConfig.hh_options -> string -> hhProver.run_result -> unit

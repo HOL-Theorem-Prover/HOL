@@ -177,17 +177,18 @@ fun problem_dir root (slice : hhProver.slice) =
 
 fun problem_path root slice = join (problem_dir root slice) "atp_in"
 
+fun schedule_paths root schedule =
+  map (fn entry as (_, slice) => (entry, problem_path root slice)) schedule
+
 (* The schedule's entries with distinct problems, each with its config.
    Slices with the same problem key share one problem file. *)
 fun distinct_problems schedule =
   let
     fun collect _ [] = []
-      | collect seen ((entry as (_, slice)) :: rest) =
-          let val key = problem_key slice in
-            if List.exists (fn other => other = key) seen
-            then collect seen rest
-            else entry :: collect (key :: seen) rest
-          end
+      | collect seen ((entry as (_, path)) :: rest) =
+          if List.exists (fn other => other = path) seen
+          then collect seen rest
+          else entry :: collect (path :: seen) rest
   in
     collect [] schedule
   end
@@ -210,17 +211,23 @@ fun mono_instances options config (slice : hhProver.slice) =
    Hard links are not an option: opening an old path for writing would
    truncate every other path linked to it. *)
 fun copy_file source destination =
-  let
-    val input = BinIO.openIn source
-    val bytes = BinIO.inputAll input
-      handle error => (BinIO.closeIn input; raise error)
-    val _ = BinIO.closeIn input
-  in
-    hhConfig.write_atomically
-      {open_out = BinIO.openOut, close_out = BinIO.closeOut} destination
-      (fn output => BinIO.output (output, bytes));
-    Word8Vector.length bytes
-  end
+  hhConfig.write_atomically
+    {open_out = BinIO.openOut, close_out = BinIO.closeOut} destination
+    (fn output =>
+      Portable.bracket (fn () => BinIO.openIn source) BinIO.closeIn
+        (fn input =>
+          let
+            fun copy total =
+              let
+                val bytes = BinIO.inputN (input, 65536)
+                val size = Word8Vector.length bytes
+              in
+                if size = 0 then total
+                else (BinIO.output (output, bytes); copy (total + size))
+              end
+          in
+            copy 0
+          end))
 
 type export_observer =
   {generated : hhProver.slice -> unit,
@@ -270,13 +277,12 @@ type work =
    distinct_problems order.  The first legacy item of a selection is
    exported, the later ones copy its published file.  Every ranking is
    checked before the caller creates a directory or problem file. *)
-fun ordered_work root options rankings schedule =
+fun ordered_work_for options rankings scheduled_paths =
   let
-    val problems = distinct_problems schedule
-    val sizes = selection_sizes options rankings problems
-    fun item index (config, slice) firsts =
+    val problems = distinct_problems scheduled_paths
+    val sizes = selection_sizes options rankings (map #1 problems)
+    fun item index ((config, slice), path) firsts =
       let
-        val path = problem_path root slice
         val filter = #filter slice
         val size = ranking_for sizes filter
         (* The conjecture and the legacy printer are fixed, so slices
@@ -308,6 +314,9 @@ fun ordered_work root options rankings schedule =
   in
     build 0 [] problems
   end
+
+fun ordered_work root options rankings schedule =
+  ordered_work_for options rankings (schedule_paths root schedule)
 
 (* The staged pipeline over ordered work.  Per item:
      prepare w         on the caller, in order; may touch HOL state and draw
@@ -604,19 +613,15 @@ fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
    lists bypass premise selection. *)
 fun premises_of named = List.filter (null o hyp o #2) named
 
-(* The theorems of a selection, fetched lazily the first time a key is
-   used. *)
-fun lazy_named rankings =
+fun memo_named select =
   let
     val named_memo = ref []
-    fun named_for (key as (filter, count)) =
+    fun named_for (key : string * int) =
       case List.find (fn (old, _) => old = key) (!named_memo) of
           SOME (_, named) => named
         | NONE =>
             let
-              val selected = first_n count (ranking_for rankings filter)
-              val named = premises_of
-                (smlRedirect.hidef mlThmData.thml_of_namel selected)
+              val named = select key
             in
               named_memo := (key, named) :: !named_memo;
               named
@@ -624,6 +629,16 @@ fun lazy_named rankings =
   in
     named_for
   end
+
+(* The theorems of a selection, fetched lazily the first time a key is
+   used. *)
+fun lazy_named rankings =
+  memo_named (fn (filter, count) =>
+    let
+      val selected = first_n count (ranking_for rankings filter)
+    in
+      premises_of (smlRedirect.hidef mlThmData.thml_of_namel selected)
+    end)
 
 (* The same theorems, fetched at once before anything is exported: one
    fetch per filter, at the largest count any exported item of the filter
@@ -659,7 +674,7 @@ fun hoisted_named rankings (works : work list) =
         (List.concat (first_n count (valOf
            (Option.map #2 (List.find (fn (old, _) => old = filter) fetched)))))
   in
-    named_for
+    memo_named named_for
   end
 
 (* How the staged export publishes.  Ordered: items are published in
@@ -720,12 +735,13 @@ fun export_works publication names pinned (observer : export_observer)
            (submit_pooled pool early before_finish after_submit))
   end
 
-fun export_problems_observed
-    (observer : export_observer) root options goal rankings schedule =
-  let val works = ordered_work root options rankings schedule in
-    export_works Ordered hhNames.global (Context.is_pinned ()) observer
-      options goal (lazy_named rankings) works
-  end
+fun export_ordered pinned observer options goal rankings works =
+  export_works Ordered hhNames.global pinned observer
+    options goal (lazy_named rankings) works
+
+fun export_problems_observed observer root options goal rankings schedule =
+  export_ordered (Context.is_pinned ()) observer options goal rankings
+    (ordered_work root options rankings schedule)
 
 val export_problems = export_problems_observed silent_observer
 
@@ -754,7 +770,7 @@ fun warn what error =
   TextIO.output (TextIO.stdErr,
     "HolyHammer " ^ what ^ " failed: " ^ General.exnMessage error ^ "\n")
 
-fun run_in root {options, goal, rankings, progress} =
+fun run_with_root share_digests root {options, goal, rankings, progress} =
   let
     val started = Time.now ()
     val schedule = hhSlice.mk_schedule options
@@ -766,20 +782,54 @@ fun run_in root {options, goal, rankings, progress} =
        handle Interrupt => () | error => warn "progress callback" error)
     (* Decided once, on the calling thread (a forked producer is never
        pinned, so the answer about the caller is asked here). *)
+    val pinned = Context.is_pinned ()
     val pipelined = export_mode
-      {pinned = Context.is_pinned (), options = options,
+      {pinned = pinned, options = options,
        schedule_length = schedule_length} = Pipelined
     (* Everything that must stay on the calling thread comes first: the
        validation of the rankings and, when pipelined, the named fetches
        (they use process-global state that the reconstruction thread uses
        as well).  The blocking export runs entirely before the search. *)
+    val scheduled_paths = schedule_paths root schedule
+    val works = ordered_work_for options rankings scheduled_paths
     val plan =
       if pipelined then
-        let val works = ordered_work root options rankings schedule in
-          SOME (works, hoisted_named rankings works)
-        end
-      else (export_problems root options goal rankings schedule; NONE)
+        SOME (works, hoisted_named rankings works)
+      else
+        (export_ordered pinned silent_observer options goal rankings works;
+         NONE)
     val _ = hhCache.prune options
+    (* In a private root, a byte copy and its source share a digest.
+       Each group has its own lock so unrelated hashes can overlap. *)
+    val problem_digests =
+      let
+        val empty = Redblackmap.mkDict String.compare
+        fun add ({path, kind, ...} : work, digests) =
+          let
+            val cell =
+              case kind of
+                  CopyLegacy source => Redblackmap.find (digests, source)
+                | _ => (Mutex.mutex (), ref NONE)
+          in
+            Redblackmap.insert (digests, path, cell)
+          end
+      in
+        if #cache options andalso share_digests then
+          List.foldl add empty works
+        else empty
+      end
+    fun problem_digest path =
+      case Redblackmap.peek (problem_digests, path) of
+          NONE => SHA1.sha1_file {filename = path}
+        | SOME (mutex, saved) =>
+            with_mutex mutex (fn () =>
+              case !saved of
+                  SOME digest => digest
+                | NONE =>
+                    let val digest = SHA1.sha1_file {filename = path} in
+                      saved := SOME digest;
+                      digest
+                    end)
     (* Probe once on the calling thread.  Besides keeping version probes out
        of the worker pool, this avoids concurrent access to hhProver's probe
        memo table and makes cache hits process-free after the first run. *)
@@ -857,11 +907,11 @@ fun run_in root {options, goal, rankings, progress} =
     val export_by_path = List.foldl
       (fn ((path, status), dict) => Redblackmap.insert (dict, path, status))
       (Redblackmap.mkDict String.compare) exports
-    fun attach_status (entry as (_, slice)) =
+    fun attach_status (entry as (_, path)) =
       (entry, if pipelined then
-         SOME (Redblackmap.find (export_by_path, problem_path root slice))
+         SOME (Redblackmap.find (export_by_path, path))
        else NONE)
-    val work = ref (map attach_status schedule)
+    val work = ref (map attach_status scheduled_paths)
     val producer_active = ref false
     (* The first fatal export error.  It and reason are the two outcomes of
        a stop that win by being first: once one is set (or the soft
@@ -1174,7 +1224,7 @@ fun run_in root {options, goal, rankings, progress} =
             let
               val (_, argv) = #mk_command config path request
             in
-              SOME (hhCache.key_of
+              SOME (hhCache.key_of_digest (problem_digest (#problem request))
                 {prover = #name config, version = version, argv = argv,
                  problem = #problem request})
               handle Interrupt => raise Interrupt | _ => NONE
@@ -1200,7 +1250,7 @@ fun run_in root {options, goal, rankings, progress} =
                   signal ())))
       end
 
-    fun run_slice (config, slice) =
+    fun run_slice ((config, slice), path) =
       let
         val now = Time.now ()
         val remaining = Time.toReal (Time.- (hard_deadline, now))
@@ -1208,7 +1258,7 @@ fun run_in root {options, goal, rankings, progress} =
         val budget = Real.max (0.001, Real.min (wanted, remaining))
         val request : hhProver.run_request =
           {timeout = Real.ceil budget,
-           problem = problem_path root slice, extra = #extra_opts slice,
+           problem = path, extra = #extra_opts slice,
            debug_dir = #debug_dir options}
         val _ = emit (SliceStarted slice)
         val key = if #cache options then cache_key config request else NONE
@@ -1533,8 +1583,15 @@ fun run_in root {options, goal, rankings, progress} =
       end
   end
 
+(* A caller with access to the root can edit published problems from
+   its progress callback.  Those runs hash the file for each request. *)
+val run_in = run_with_root false
+
 fun run request =
-  with_problem_dir (join (hhConfig.state_dir ()) "problems")
-    (#options request) (fn root => run_in root request)
+  let val options = #options request in
+    with_problem_dir (join (hhConfig.state_dir ()) "problems") options
+      (fn root =>
+        run_with_root (not (isSome (#debug_dir options))) root request)
+  end
 
 end

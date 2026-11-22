@@ -1438,8 +1438,8 @@ fun append_theory_error path expdir thy message =
 fun journal_theory_error expdir thy message =
   append_theory_error (journal_path expdir thy) expdir thy message
 
-(* Share the inventories across goals. Dependency selection only needs
-   membership, while ranking the pool needs its names. *)
+(* Share the inventories across goals. Dependency, kNN and none filters use
+   membership. Context-based rankers use the ordered names. *)
 fun chainy_for thy theorems =
   let
     val order = hhExportLib.sorted_ancestry [thy]
@@ -1483,11 +1483,15 @@ fun chainy_for thy theorems =
     facts
   end
 
-fun restrict_features_to_pool pool features =
-  let val permitted = Redblackset.fromList String.compare pool in
-    List.filter (fn (name, _) => Redblackset.member (permitted, name))
-      features
+fun pool_membership names =
+  let val permitted = Redblackset.fromList String.compare names in
+    fn name => Redblackset.member (permitted, name)
   end
+
+fun restrict_features permits = List.filter (fn (name, _) => permits name)
+
+fun restrict_features_to_pool pool features =
+  restrict_features (pool_membership pool) features
 
 type selection_data =
   {thmdata : mlThmData.thmdata Susp.susp,
@@ -1496,7 +1500,8 @@ type selection_data =
    knn : mlThmData.thmdata -> int -> goal -> mlThmData.thmid list}
 
 type premise_pool =
-  {names : mlThmData.thmid list, thmdata : mlThmData.thmdata Susp.susp}
+  {names : mlThmData.thmid list Susp.susp,
+   thmdata : mlThmData.thmdata Susp.susp}
 
 fun selection_data thy : selection_data =
   let
@@ -1518,14 +1523,16 @@ fun select_filter (data as {context, ...} : selection_data)
       "none" => map #1 (#2 (Susp.force (#thmdata pool)))
     | "knn" => select_knn data pool count goal
     | _ => hhLearn.rank (Susp.force context)
-        {filter = filter, pool = SOME (#names pool), goal = goal, n = count}
+        {filter = filter, pool = SOME (Susp.force (#names pool)),
+         goal = goal, n = count}
 
 fun selection_facts (data as {thmdata, ...} : selection_data)
-    goal names dependencies =
+    goal {pool, permits} dependencies =
   let
+    val names = Susp.delay pool
     val restricted = Susp.delay (fn () =>
       let val (weights, features) = Susp.force thmdata in
-        (weights, restrict_features_to_pool names features)
+        (weights, restrict_features (permits ()) features)
       end)
     val pool = {names = names, thmdata = restricted}
     (* Conditions for this goal and regime share successful selections.
@@ -1551,7 +1558,7 @@ fun selection_facts (data as {thmdata, ...} : selection_data)
           context_filter query andalso not (isSome (lookup query))) queries
         val shared = Susp.delay (fn () =>
           hhLearn.rank_for_filters (Susp.force (#context data))
-            {pool = SOME names, goal = goal} missing)
+            {pool = SOME (Susp.force names), goal = goal} missing)
         fun calculate query =
           if context_filter query then (Susp.force shared) query
           else select query
@@ -1562,6 +1569,11 @@ fun selection_facts (data as {thmdata, ...} : selection_data)
   in
     {rank = rank, rank_many = rank_many, dependencies = dependencies}
   end
+
+fun bushy_selection_facts data goal dependencies =
+  selection_facts data goal
+    {pool = fn () => dependencies,
+     permits = fn () => pool_membership dependencies} dependencies
 
 fun selected_premises_at condition {rank, dependencies, ...} knn_count =
   case #selector condition of
@@ -1812,18 +1824,16 @@ fun eval_loaded_theory expdir thy =
                 val {pool, permits} = facts_for name
                 val chainy = List.filter
                   (fn condition => #regime condition = Chainy) pending
-                val chainy_pool =
-                  if List.exists (fn condition => #selector condition <> Deps)
-                       chainy then pool () else []
                 val chainy_dependencies =
                   if List.exists (fn condition => #selector condition = Deps)
                        chainy then List.filter permits intact_deps
                   else []
                 val goal = dest_thm thm
                 val bushy_facts =
-                  selection_facts data goal intact_deps intact_deps
+                  bushy_selection_facts data goal intact_deps
                 val chainy_facts =
-                  selection_facts data goal chainy_pool chainy_dependencies
+                  selection_facts data goal {pool = pool,
+                    permits = fn () => permits} chainy_dependencies
                 fun one condition =
                   case #regime condition of
                       Bushy =>
@@ -2302,7 +2312,7 @@ fun run_smoke {expdir, timeout} =
           if dependencies_ok then
             let val data = selection_data thy in
               run_cell expdir thy (name, thm, tags)
-                (selection_facts data (dest_thm thm) dependencies dependencies)
+                (bushy_selection_facts data (dest_thm thm) dependencies)
                 condition
             end
           else broken_deps_cell expdir thy name tags condition
@@ -2317,8 +2327,8 @@ fun run_smoke {expdir, timeout} =
       val (_, sched_dependencies) = mlThmData.intactdep_of_thm sched_thm
       val sched_data = selection_data sched_thy
       val sched_facts =
-        selection_facts sched_data (dest_thm sched_thm)
-          sched_dependencies sched_dependencies
+        bushy_selection_facts sched_data (dest_thm sched_thm)
+          sched_dependencies
       val sched_condition = smoke_condition timeout SmokeSched
       val sched_parameters =
         case #engine sched_condition of

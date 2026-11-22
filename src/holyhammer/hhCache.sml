@@ -26,9 +26,8 @@ fun normalized_argument problem content_hash argument =
       else argument
     end
 
-fun key_of ({prover, version, argv, problem} : key_parts) =
+fun key_of_digest content_hash ({prover, version, argv, problem} : key_parts) =
   let
-    val content_hash = SHA1.sha1_file {filename = problem}
     val normalized = map (normalized_argument problem content_hash) argv
     val version_string = case version of NONE => "" | SOME text => text
     val material =
@@ -39,6 +38,9 @@ fun key_of ({prover, version, argv, problem} : key_parts) =
   in
     aiLib.sha1_string material
   end
+
+fun key_of (parts : key_parts) =
+  key_of_digest (SHA1.sha1_file {filename = #problem parts}) parts
 
 fun json_string_option NONE = JSON.NULL
   | json_string_option (SOME text) = JSON.STRING text

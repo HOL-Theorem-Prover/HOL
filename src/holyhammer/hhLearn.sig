@@ -137,16 +137,17 @@ sig
      max_facts : int} -> mash_result
   val rank_knn : mlThmData.thmdata -> int -> Abbrev.goal ->
     mlThmData.thmid list
-  (* The lookup reuses dependency indices for a fixed loaded corpus. *)
+  (* The lookup reuses dependency indices and resolutions for a fixed
+     loaded corpus. *)
   val make_dependency_lookup : unit ->
     {intact : Thm.thm -> bool * mlThmData.thmid list,
      knn : mlThmData.thmdata -> int -> Abbrev.goal -> mlThmData.thmid list}
   val rank : context ->
     {filter : string, pool : mlThmData.thmid list option,
      goal : Abbrev.goal, n : int} -> mlThmData.thmid list
-  (* The list gives the expected (filter, depth) queries for one goal and pool.
-     It bounds the reusable prediction prefixes. The returned function can
-     also answer queries beyond those depths. *)
+  (* The expected (filter, depth) queries for one goal and pool bound the
+     reusable prediction prefixes and cached component rankings. The returned
+     function also answers queries beyond those depths. *)
   val rank_for_filters : context ->
     {pool : mlThmData.thmid list option, goal : Abbrev.goal} ->
     (string * int) list -> (string * int -> mlThmData.thmid list)
