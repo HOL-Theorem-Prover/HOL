@@ -14,7 +14,9 @@ fun first_colour_entry () =
 
 val _ = assert (String.isPrefix "cvftleft." o first_colour_entry) ()
 
-fun from_thy ty =
-  cv_typeLib.from_term_for ty |> strip_comb |> fst |> dest_thy_const |> #Thy
+fun fails_with_clash ty =
+  (cv_typeLib.from_term_for ty; false)
+  handle HOL_ERR e =>
+    String.isSubstring "cv_from_to_delete" (Feedback.message_of e)
 
-val _ = assert (equal "cvftleft" o from_thy) “:colour”
+val _ = assert fails_with_clash “:colour”

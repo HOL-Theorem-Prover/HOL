@@ -124,14 +124,7 @@ fun is_clash e =
   Feedback.top_structure_of e = "cv_typeLib" andalso
   Feedback.top_function_of e = "from_to_for"
 
-(* the types from_to_for is looking up: an entry whose premise needs one
-   of them does not apply *)
-val looking_up = ref ([] : hol_type list)
-
-(* the types from_to_thm_for could not define: an entry whose premise
-   needs one of them does not apply *)
-val undefinable = ref ([] : hol_type list)
-exception Undefinable of hol_type
+val from_to_tm = from_to_def |> SPEC_ALL |> concl |> lhs |> strip_comb |> fst
 
 fun from_to_for_tyvar tyvar = let
   val name = dest_vartype tyvar
@@ -172,8 +165,12 @@ fun from_to_for tyvars_alist ty =
       SOME tyvar_assum => ASSUME tyvar_assum
     | NONE => if is_vartype ty then from_to_for_tyvar ty else
     let
-      fun entry_ty th =
-        th |> UNDISCH_ALL |> concl |> rand |> type_of |> dest_fun_type |> snd
+      (* the type a cv_from_to theorem translates *)
+      fun entry_ty th = let
+        val tm = th |> UNDISCH_ALL |> concl
+        val _ = same_const (fst (strip_comb tm)) from_to_tm orelse
+                raise ERR "entry_ty" "not a from_to theorem"
+        in tm |> rand |> type_of |> dest_fun_type |> snd end
       fun match_from_to_thm th =
         let
           val i = match_type (entry_ty th) ty
@@ -190,20 +187,14 @@ fun from_to_for tyvars_alist ty =
               val th4 = LIST_CONJ (map prove_from_to_thm tms)
             in MATCH_MP th3 th4 end
         end
-      (* a clash found for an argument type is not a failure of this
-         entry, so that it is reported rather than taken as a missing
-         translation *)
-      fun try th = SOME (match_from_to_thm th)
-                   handle HOL_ERR e =>
-                            if is_clash e then raise HOL_ERR e else NONE
-                        | Undefinable _ => NONE
-      fun find_first [] = NONE
-        | find_first ((name, th)::es) =
-            case try th of
-              SOME res => SOME (name, res, es)
-            | NONE => find_first es
+      (* a clash found for an argument type is reported, not taken as a
+         failure of this entry *)
+      fun find_first f [] = NONE
+        | find_first f (x::xs) =
+            SOME (f x) handle HOL_ERR e =>
+              if is_clash e then raise HOL_ERR e else find_first f xs
       (* the current theory's entries and the session's (cv_from_to_add
-         gives them no name) take precedence over inherited ones *)
+         gives them no name) come first *)
       fun is_own name =
         name = "" orelse
         (case Thm.getCT () of
@@ -211,57 +202,60 @@ fun from_to_for tyvars_alist ty =
          | NONE => false)
       val (own, inherited) =
           List.partition (is_own o #1) (cv_from_to_entries ())
+      val matches = can (fn (_, th) => match_type (entry_ty th) ty)
       fun thy_of name = hd (String.fields (fn c => c = #".") name)
-      fun theory_and_ancestors name =
-        let val thy = thy_of name in thy :: Theory.ancestry thy end
-      (* Inherited entries come latest added first, so a descendant's
-         before its ancestors'; between unrelated theories that order is
-         load order.  An entry from the theory of an applying entry, or
-         from one of that theory's ancestors, gives way to it; the other
-         entries that apply must give the winner's translation.  As when
-         it is tried first, an entry whose premise needs a missing
-         translation raises Missing_from_to, so that one is defined and
-         the lookup retried. *)
-      fun check (name, res, es) =
-        if is_own name then res else let
-          fun go _ [] = res
-            | go kept ((n, th)::es) =
-                if exists (mem (thy_of n)) kept then go kept es else
-                case try th of
-                  NONE => go kept es
-                | SOME res' =>
-                    if aconv (concl res') (concl res) then
-                      go (theory_and_ancestors n :: kept) es
-                    else
-                      raise ERR "from_to_for"
-                        ("unrelated theories give different from/to " ^
-                         "translations of " ^ type_to_string ty ^ ": " ^
-                         name ^ " and " ^ n ^ "; choose one by removing " ^
-                         "the other with cv_transLib.cv_from_to_delete " ^
-                         Lib.quote n)
-          val matching =
-              filter (can (fn (_, th) => match_type (entry_ty th) ty)) es
+      (* Inherited entries that match ty must give the same translation,
+         except that a theory's entries give way to its descendants' and
+         entries of one theory are not compared.  Premises are not proved
+         here, since proving them can define from/to functions.  The check
+         does not depend on the entries' order.  find_first does: it relies
+         on a descendant's entries coming before its ancestors', which
+         holds since a theory's entries are added after its ancestors',
+         whether it is loaded after cv_memLib or replayed (in ancestry
+         order) when cv_memLib is loaded. *)
+      fun check () = let
+        fun inst (n, th) =
+          (n, thy_of n,
+           th |> INST_TYPE (match_type (entry_ty th) ty) |> UNDISCH_ALL
+              |> concl)
+        val cs = map inst (filter matches inherited)
+        fun differ (_, thy1, c1) (_, thy2, c2) =
+          thy1 <> thy2 andalso not (aconv c1 c2)
+        fun find_pair [] = NONE
+          | find_pair (x::xs) =
+              case List.find (differ x) xs of
+                SOME y => SOME (x, y)
+              | NONE => find_pair xs
+      in
+        if not (isSome (find_pair cs)) then () else let
+          val thys = mk_set (map #2 cs)
+          val ancestries = map Theory.ancestry thys
+          fun dominated (_, thy, _) = exists (mem thy) ancestries
+          val kept = Listsort.sort (fn ((n1, _, _), (n2, _, _)) =>
+                                      String.compare (n1, n2))
+                                   (filter (not o dominated) cs)
         in
-          if null matching then res
-          else go [theory_and_ancestors name] matching
+          case find_pair kept of
+            NONE => ()
+          | SOME ((n1, _, _), (n2, _, _)) =>
+              raise ERR "from_to_for"
+                ("unrelated theories give different from/to translations" ^
+                 " of " ^ type_to_string ty ^ ": " ^ n1 ^ " and " ^ n2 ^
+                 "; choose one by removing the other with " ^
+                 "cv_transLib.cv_from_to_delete " ^ Lib.quote n2)
         end
-      fun lookup () =
-        case find_first (own @ inherited) of
-          SOME found => check found
-        | NONE =>
-           if can dom_rng ty then (
-             cv_print Silent ("cv translator encountered a function type: " ^
-                              type_to_string ty ^ "\n");
-             failwith  "cv translator does not support function types")
-           else if mem ty (!undefinable) then
-             raise Undefinable ty
-           else
-             raise Missing_from_to ty
+      end
+      val _ = if exists matches own then () else check ()
     in
-      if mem ty (!looking_up) then
-        raise ERR "lookup" (type_to_string ty ^ " is being looked up")
-      else
-        with_flag (looking_up, ty :: !looking_up) lookup ()
+      case find_first match_from_to_thm (map #2 (own @ inherited)) of
+        SOME th => th
+      | NONE =>
+         if can dom_rng ty then (
+           cv_print Silent ("cv translator encountered a function type: " ^
+                            type_to_string ty ^ "\n");
+           failwith  "cv translator does not support function types")
+         else
+           raise Missing_from_to ty
     end
 
 fun from_for tyvars_alist ty =
@@ -991,9 +985,7 @@ fun rec_define_from_to ty = let
  * --------------------------------------------------- *)
 
 (* Defining what the type needed is meant to make the next ask succeed,
-   so an ask that comes back is one that defining cannot answer.  When
-   defining fails, the entries that needed the type no longer apply; if
-   then nothing does, the failure to define it is the error. *)
+   so an ask that comes back is one that defining cannot answer. *)
 fun from_to_thm_for ty = let
   fun go asked ty =
     from_to_for [] ty
@@ -1002,19 +994,7 @@ fun from_to_thm_for ty = let
       raise ERR "from_to_thm_for"
             ("defining " ^ type_to_string needs_ty ^
              " did not give it a representation")
-    else let
-      val define_error =
-          (rec_define_from_to needs_ty; NONE)
-          handle HOL_ERR e => if is_clash e then raise HOL_ERR e else SOME e
-    in
-      case define_error of
-        NONE => go (needs_ty :: asked) ty
-      | SOME e =>
-          with_flag (undefinable, needs_ty :: !undefinable)
-            (go (needs_ty :: asked)) ty
-          handle Undefinable t =>
-            if t = needs_ty then raise HOL_ERR e else raise Undefinable t
-    end
+    else (rec_define_from_to needs_ty; go (needs_ty :: asked) ty)
   in go [] ty end
 
 fun from_term_for ty = from_to_thm_for ty |> concl |> rator |> rand;

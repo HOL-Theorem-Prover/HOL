@@ -321,7 +321,7 @@ Incompatibilities
     The same theorem reached through several ancestors is not a conflict.
 
 -   The `cv_compute` translator no longer picks by load order between two from/to translations of a type (the `cv_from_to` theorems that `define_from_to` saves) that come from theories neither of which is an ancestor of the other.
-    When both apply to a type (their premises can be proved) and give different translations, using the type is now an error naming both theorems; keep one by removing the other with the new `cv_transLib.cv_from_to_delete "thy.name"`, which holds in descendant theories too.
+    When both match a type and give different translations (whether or not their premises could be proved for it), using the type is now an error naming both theorems; keep one by removing the other with the new `cv_transLib.cv_from_to_delete "thy.name"`, which holds in descendant theories too.
     A translation from a descendant of a theory still takes precedence over that theory's, as does one added in the current theory or session (`cv_memLib.cv_from_to_add`).
 
 -   AKS's `computeBasic` no longer defines numeric modular exponentiation;
