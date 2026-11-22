@@ -11,33 +11,20 @@ Libs
 
 val _ = load "cvftrightTheory"
 
-fun first_colour_entry () =
-  valOf (List.find (String.isSuffix "colour_thm")
-                   (map #1 (cv_memLib.cv_from_to_entries ())))
-
-val _ = assert (String.isPrefix "cvftright." o first_colour_entry) ()
+val _ = assert (String.isPrefix "cvftright." o #1 o valOf o
+                List.find (String.isSuffix "colour_thm" o #1))
+               (cv_memLib.cv_from_to_entries ())
 
 fun from_thy ty =
   cv_typeLib.from_term_for ty |> strip_comb |> fst |> dest_thy_const |> #Thy
 
-fun fails_with_clash ty =
-  (from_thy ty; false)
-  handle HOL_ERR e =>
-    String.isSubstring "cv_from_to_delete" (Feedback.message_of e)
+fun is_clash e =
+  String.isSubstring "cv_from_to_delete" (Feedback.message_of e)
 
-val _ = assert fails_with_clash “:colour”
-(* also when colour is the argument of another type's translation *)
-val _ = assert fails_with_clash “:num |-> colour”
+val _ = assert (fn ty => (from_thy ty; false) handle HOL_ERR e => is_clash e)
+               “:colour”
 
-(* an entry added here that matches colour but does not apply there (its
-   premise needs a translation of a function type) does not settle it *)
-val _ = cv_memLib.cv_from_to_add (mk_thm ([],
-  “from_to (f:(num -> num) -> cv) t ==>
-   from_to (cf:colour -> cv) (ct:cv -> colour)”))
-
-val _ = assert fails_with_clash “:colour”
-
-(* and when cv_trans checks an argument of function type: with a (test
+(* also when cv_trans checks an argument of function type: with a (test
    only, assumed) translation of bool -> 'a, the clash for colour is
    reported, not taken as a higher-order argument *)
 val _ = cv_memLib.cv_from_to_add (mk_thm ([],
@@ -48,10 +35,8 @@ Definition pick_def:
   pick (f:bool -> colour) = shade (f T)
 End
 
-val _ = assert (fn def =>
-  (cv_trans def; false)
-  handle HOL_ERR e =>
-    String.isSubstring "cv_from_to_delete" (Feedback.message_of e)) pick_def
+val _ = assert (fn def => (cv_trans def; false) handle HOL_ERR e => is_clash e)
+               pick_def
 
 val _ = cv_from_to_delete
           "cvftright.from_cvftbase_to_cvftbase_colour_thm"

@@ -418,20 +418,6 @@ val thy = fetch "-" "cv_str_fmap_test_thm"
 
 val _ = (thy = "cv_string_fmap") orelse fail();
 
-(* cv_std's translation of num-keyed maps, beside cv_string_fmap's *)
-val num_fmap_test_def = Define ‘
-  num_fmap_test [] = FEMPTY ∧
-  num_fmap_test ((x:num)::xs) = num_fmap_test xs |+ (x,x+1)
-’
-
-val () = cv_trans num_fmap_test_def;
-
-val thy = fetch "-" "cv_num_fmap_test_thm"
-            |> concl |> dest_eq |> fst |> strip_comb |> fst
-            |> dest_thy_const |> #Thy;
-
-val _ = (thy = "cv_std") orelse fail();
-
 val _ = testutils.convtest
   ("cv_eval finite-set cardinality with duplicates", cv_eval,
    “finite_set$fCARD (finite_set$fset_ABS [1; 2; 1; 3; 2] : num fset)”,

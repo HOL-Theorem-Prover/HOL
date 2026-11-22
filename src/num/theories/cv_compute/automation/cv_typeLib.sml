@@ -187,12 +187,16 @@ fun from_to_for tyvars_alist ty =
               val th4 = LIST_CONJ (map prove_from_to_thm tms)
             in MATCH_MP th3 th4 end
         end
-      (* a clash found for an argument type is reported, not taken as a
-         failure of this entry *)
-      fun find_first f [] = NONE
-        | find_first f (x::xs) =
-            SOME (f x) handle HOL_ERR e =>
-              if is_clash e then raise HOL_ERR e else find_first f xs
+      (* an entry whose premise meets a clash does not apply, but if no
+         entry applies, the clash is reported, not a missing translation *)
+      fun find_first f xs = let
+        fun go NONE [] = NONE
+          | go (SOME e) [] = raise HOL_ERR e
+          | go clash (x::xs) =
+              SOME (f x) handle HOL_ERR e =>
+                go (if isSome clash orelse not (is_clash e) then clash
+                    else SOME e) xs
+        in go NONE xs end
       val entries = cv_from_to_entries ()
       (* the current theory's entries and the session's (cv_from_to_add
          gives them no name), which count as from a descendant of every
@@ -222,8 +226,9 @@ fun from_to_for tyvars_alist ty =
               |> concl)
         val cs =
             entries
-            |> filter (fn (n, th) => not (is_own n) andalso
-                                     can (match_type (entry_ty th)) ty)
+            |> filter (fn (n, th) =>
+                         not (is_own n) andalso
+                         can (fn th => match_type (entry_ty th) ty) th)
             |> map inst
             |> Listsort.sort (fn ((n1, _, _), (n2, _, _)) =>
                                 String.compare (n1, n2))
