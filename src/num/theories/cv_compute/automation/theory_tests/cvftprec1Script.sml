@@ -4,8 +4,8 @@ Ancestors
 Libs
   cv_transLib
 
-(* cvftleft's translation of colour gives way to that of its descendant
-   cvftpickright, which is the one the unrelated cvftrightdup gives, so
+(* cvftpickright removed cvftleft's translation of colour and registers
+   cvftright's under another name, as the unrelated cvftrightdup does, so
    there is no clash.  cvftrightdup is loaded after cv_memLib, so its
    entry comes first; cvftprec2 tests the other order. *)
 

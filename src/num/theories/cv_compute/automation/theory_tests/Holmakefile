@@ -7,11 +7,13 @@ all: $(DEFAULT_TARGETS)
 # depending on its .uo directly would link it in before the script runs.
 .hol/runtime-loads.stamp: cvftleftTheory.uo cvftrightTheory.uo \
                           cvftrightdupTheory.uo cvftpickrightTheory.uo \
-                          cvftbrokenTheory.uo cvftbothTheory.uo
+                          cvftbrokenTheory.uo cvftbothTheory.uo \
+                          cvftpickdTheory.uo
 	touch $@
 cvftuse1Theory.sml cvftuse2Theory.sml cvftprec1Theory.sml \
 cvftprec2Theory.sml cvftbroken1Theory.sml cvftbroken2Theory.sml \
-cvftorderTheory.sml: .hol/runtime-loads.stamp
+cvftorderTheory.sml cvftpickd1Theory.sml \
+cvftpickd2Theory.sml: .hol/runtime-loads.stamp
 
 # cvftreplay reads it in, so Holmake does not see it
 cvftreplayTheory.sml cvftorderTheory.sml: cvftreplay.ML

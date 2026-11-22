@@ -26,6 +26,14 @@ val _ = assert fails_with_clash “:colour”
 (* also when colour is the argument of another type's translation *)
 val _ = assert fails_with_clash “:num |-> colour”
 
+(* an entry added here that matches colour but does not apply there (its
+   premise needs a translation of a function type) does not settle it *)
+val _ = cv_memLib.cv_from_to_add (mk_thm ([],
+  “from_to (f:(num -> num) -> cv) t ==>
+   from_to (cf:colour -> cv) (ct:cv -> colour)”))
+
+val _ = assert fails_with_clash “:colour”
+
 val _ = cv_from_to_delete
           "cvftleft.from_cvftbase_to_cvftbase_colour_thm"
 val _ = cv_rep_delete "cvftleft.cv_rep_cvftbase_cvftbase_colour_datatype"

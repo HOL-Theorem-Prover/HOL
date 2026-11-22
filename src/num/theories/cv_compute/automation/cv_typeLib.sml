@@ -193,61 +193,62 @@ fun from_to_for tyvars_alist ty =
         | find_first f (x::xs) =
             SOME (f x) handle HOL_ERR e =>
               if is_clash e then raise HOL_ERR e else find_first f xs
+      val entries = cv_from_to_entries ()
       (* the current theory's entries and the session's (cv_from_to_add
-         gives them no name) come first *)
+         gives them no name), which count as from a descendant of every
+         loaded theory *)
       fun is_own name =
         name = "" orelse
         (case Thm.getCT () of
            SOME thy => String.isPrefix (thy ^ ".") name
          | NONE => false)
-      val (own, inherited) =
-          List.partition (is_own o #1) (cv_from_to_entries ())
-      val matches = can (fn (_, th) => match_type (entry_ty th) ty)
       fun thy_of name = hd (String.fields (fn c => c = #".") name)
-      (* Inherited entries that match ty must give the same translation,
-         except that a theory's entries give way to its descendants' and
-         entries of one theory are not compared.  Premises are not proved
-         here, since proving them can define from/to functions.  The check
-         does not depend on the entries' order.  find_first does: it relies
-         on a descendant's entries coming before its ancestors', which
-         holds since a theory's entries are added after its ancestors',
-         whether it is loaded after cv_memLib or replayed (in ancestry
-         order) when cv_memLib is loaded. *)
+      (* Two inherited entries that match ty and come from theories neither
+         of which is an ancestor of the other must give the same
+         translation.  Premises are not proved here, since proving them
+         can define from/to functions.  Once this holds, two matching
+         entries that give different translations are from related
+         theories, and the descendant's comes first in every load order
+         (a theory's entries are added after its ancestors', whether it
+         is loaded after cv_memLib or replayed, in ancestry order, when
+         cv_memLib is loaded).  Load orders can then differ only in which
+         of two unrelated entries comes first, and those give the same
+         translation, so the first entry that applies gives a translation
+         that does not depend on load order. *)
       fun check () = let
         fun inst (n, th) =
           (n, thy_of n,
            th |> INST_TYPE (match_type (entry_ty th) ty) |> UNDISCH_ALL
               |> concl)
-        val cs = map inst (filter matches inherited)
-        fun differ (_, thy1, c1) (_, thy2, c2) =
-          thy1 <> thy2 andalso not (aconv c1 c2)
+        val cs =
+            entries
+            |> filter (fn (n, th) => not (is_own n) andalso
+                                     can (match_type (entry_ty th)) ty)
+            |> map inst
+            |> Listsort.sort (fn ((n1, _, _), (n2, _, _)) =>
+                                String.compare (n1, n2))
+        fun clash (_, thy1, c1) (_, thy2, c2) =
+          thy1 <> thy2 andalso not (aconv c1 c2) andalso
+          not (mem thy1 (Theory.ancestry thy2)) andalso
+          not (mem thy2 (Theory.ancestry thy1))
         fun find_pair [] = NONE
           | find_pair (x::xs) =
-              case List.find (differ x) xs of
+              case List.find (clash x) xs of
                 SOME y => SOME (x, y)
               | NONE => find_pair xs
       in
-        if not (isSome (find_pair cs)) then () else let
-          val thys = mk_set (map #2 cs)
-          val ancestries = map Theory.ancestry thys
-          fun dominated (_, thy, _) = exists (mem thy) ancestries
-          val kept = Listsort.sort (fn ((n1, _, _), (n2, _, _)) =>
-                                      String.compare (n1, n2))
-                                   (filter (not o dominated) cs)
-        in
-          case find_pair kept of
-            NONE => ()
-          | SOME ((n1, _, _), (n2, _, _)) =>
-              raise ERR "from_to_for"
-                ("unrelated theories give different from/to translations" ^
-                 " of " ^ type_to_string ty ^ ": " ^ n1 ^ " and " ^ n2 ^
-                 "; choose one by removing the other with " ^
-                 "cv_transLib.cv_from_to_delete " ^ Lib.quote n2)
-        end
+        case find_pair cs of
+          NONE => ()
+        | SOME ((n1, _, _), (n2, _, _)) =>
+            raise ERR "from_to_for"
+              ("unrelated theories give different from/to translations" ^
+               " of " ^ type_to_string ty ^ ": " ^ n1 ^ " and " ^ n2 ^
+               "; choose one by removing the other with " ^
+               "cv_transLib.cv_from_to_delete " ^ Lib.quote n2)
       end
-      val _ = if exists matches own then () else check ()
+      val _ = check ()
     in
-      case find_first match_from_to_thm (map #2 (own @ inherited)) of
+      case find_first match_from_to_thm (map #2 entries) of
         SOME th => th
       | NONE =>
          if can dom_rng ty then (
