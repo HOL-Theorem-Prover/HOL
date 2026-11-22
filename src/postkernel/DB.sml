@@ -61,11 +61,81 @@ fun updexisting key f m =
    case-sensitive *)
 type submap = data list Symtab.table
 val empty_sdata_map : submap = Symtab.empty
+(* The reverse map, from a conclusion to the locations binding it, newest
+   first.  Bindings made by theory [epoch] since it last became the binding
+   theory are in [recent]; everything bound before is in [old], which is
+   built only when a lookup needs it.  [seen] holds the theories with
+   bindings in [old]. *)
+type revtab = location list Termtab.table
+type revmap = {old : revtab Susp.susp, recent : revtab,
+               epoch : string option, seen : unit Symtab.table}
+
+fun prepend_rev recent old =
+    Termtab.fold (fn (c, ls) => fn A =>
+                     Termtab.update (c, ls @ Termtab.lookup_list A c) A)
+                 recent old
+
+fun rev_force ({old, recent, ...} : revmap) =
+    prepend_rev recent (Susp.force old)
+
+(* Make [thy] the binding theory, with bindings [tab] *)
+fun rev_start thy tab (rm as {old, recent, epoch, seen} : revmap) : revmap =
+    if Termtab.is_empty recent then
+      {old = old, recent = tab, epoch = SOME thy, seen = seen}
+    else
+      {old = Susp.delay (fn () => rev_force rm), recent = tab,
+       epoch = SOME thy,
+       seen = case epoch of
+                  SOME e => Symtab.update (e, ()) seen
+                | NONE => seen}
+
+fun rev_add thy f (rm as {old, recent, epoch, seen} : revmap) : revmap =
+    if epoch = SOME thy then
+      {old = old, recent = f recent, epoch = epoch, seen = seen}
+    else rev_start thy (f Termtab.empty) rm
+
+val empty_revmap : revmap =
+    {old = Susp.delay (fn () => Termtab.empty), recent = Termtab.empty,
+     epoch = NONE, seen = Symtab.empty}
+
+fun ty_mentions thy ty =
+    not (Type.is_vartype ty) andalso
+    let val {Thy, Args, ...} = Type.dest_thy_type ty
+    in Thy = thy orelse List.exists (ty_mentions thy) Args end
+
+fun tm_mentions thy t =
+    case Term.dest_term t of
+        VAR (_, ty) => ty_mentions thy ty
+      | CONST {Thy, Ty, ...} => Thy = thy orelse ty_mentions thy Ty
+      | COMB (f, x) => tm_mentions thy f orelse tm_mentions thy x
+      | LAMB (v, b) => tm_mentions thy v orelse tm_mentions thy b
+
+(* The newest location binding [c].  If [c] isn't in [recent] but mentions
+   a type or constant of [epoch], and [old] holds no binding of [epoch],
+   then nothing in [old] binds [c], so [old] isn't built. *)
+fun rev_head ({old, recent, epoch, seen} : revmap) c =
+    case Termtab.lookup_list recent c of
+        l :: _ => SOME l
+      | [] =>
+        let
+          val new_in_epoch =
+              case epoch of
+                  SOME thy => not (Symtab.defined seen thy) andalso
+                              tm_mentions thy c
+                | NONE => false
+        in
+          if new_in_epoch then NONE
+          else
+            case Termtab.lookup_list (Susp.force old) c of
+                l :: _ => SOME l
+              | [] => NONE
+        end
+
 (* the dbmap contains:
     - a map from theory-name to a submap (as above)
 *)
 datatype dbmap = DB of { namemap : submap Symtab.table,
-                         revmap : location list Termtab.table,
+                         revmap : revmap,
                          localmap : (thm * thminfo) Symtab.table
                        }
 
@@ -105,7 +175,7 @@ fun allnamemap cthy d =
     insert_localmap_into_namemap cthy (localmap d) (namemap d)
 
 val empty_dbmap = DB {namemap = Symtab.empty,
-                      localmap = Symtab.empty, revmap = Termtab.empty}
+                      localmap = Symtab.empty, revmap = empty_revmap}
 
 local val db_slot : dbmap Context.Data.slot =
           Context.Data.new {name = "postkernel.DB",
@@ -127,12 +197,13 @@ local val db_slot : dbmap Context.Data.slot =
           in
             Symtab.update (thy, submap') namemap
           end
-      fun functional_bindl_revmap thy blist revmap =
-          List.foldl
-            (fn ((n,th,i), A) =>
-                Termtab.cons_list(concl th,Stored {Thy = thy,Name = n}) A)
-            revmap
-            blist
+      fun functional_bindl_revmap thy blist =
+          rev_add thy (fn tab =>
+            List.foldl
+              (fn ((n,th,i), A) =>
+                  Termtab.cons_list(concl th,Stored {Thy = thy,Name = n}) A)
+              tab
+              blist)
       fun functional_bindl db thy blist =
           db |> updnamemap (functional_bindl_names thy blist)
              |> updrevmap (functional_bindl_revmap thy blist)
@@ -146,11 +217,17 @@ local val db_slot : dbmap Context.Data.slot =
                 in
                   Symtab.update (n, data') m
                 end
-            fun purge_stale ttab =
+            fun purge_stale_tab ttab =
                 Termtab.fold
                   (fn (t,d) => fn A =>
                       if uptodate_term t then Termtab.update (t,d) A else A)
                   ttab Termtab.empty
+            fun purge_stale (rm as {epoch, seen, ...} : revmap) : revmap =
+                {old = Susp.delay (fn () => purge_stale_tab (rev_force rm)),
+                 recent = Termtab.empty, epoch = NONE,
+                 seen = case epoch of
+                            SOME e => Symtab.update (e, ()) seen
+                          | NONE => seen}
           in
             upd_db (fn db =>
               db |> updnamemap
@@ -198,7 +275,13 @@ local val db_slot : dbmap Context.Data.slot =
       val _ = Theory.register_hook("DB", hook)
 in
 fun bindl thy blist = upd_db (fn db => functional_bindl db thy blist)
-fun revlookup th = Termtab.lookup_list (revmap (lemmas())) (concl th)
+fun revlookup th =
+    let val {old, recent, ...} = revmap (lemmas())
+        val c = concl th
+    in
+      Termtab.lookup_list recent c @ Termtab.lookup_list (Susp.force old) c
+    end
+fun revhead th = rev_head (revmap (lemmas())) (concl th)
 (*---------------------------------------------------------------------------
     To the database representing all ancestor theories, add the
     entries in the current theory segment.
@@ -208,7 +291,8 @@ fun CT() = lemmas()
 fun store_local private s th =
     upd_db (fn db =>
               db |> updlocalmap (Symtab.update(s,(th,private)))
-                 |> updrevmap (Termtab.cons_list(concl th, Local s)))
+                 |> updrevmap (rev_add (current_theory())
+                                       (Termtab.cons_list (concl th, Local s))))
 fun local_thm s = case Symtab.lookup (localmap (lemmas())) s of
                       NONE => NONE
                     | SOME (th,{private,...}:thminfo) =>

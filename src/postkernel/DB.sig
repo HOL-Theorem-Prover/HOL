@@ -41,6 +41,7 @@ sig
   val selectDB    : selector list -> public_data list
   val listDB      : unit -> data list
   val revlookup   : thm -> location list
+  val revhead     : thm -> location option
 
   val polarity_search : bool -> term -> public_data list
 

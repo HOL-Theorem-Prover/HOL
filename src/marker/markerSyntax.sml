@@ -135,9 +135,9 @@ fun mk_usingth th =
 
 fun MK_USING th =
     if null (hyp th) andalso not (null (type_vars_in_term (concl th))) then
-      case DB.revlookup th of
-          [] => raise ERR "mk_using" "Polymorphic theorem has no name in DB"
-        | l::_ => mk_usingl l
+      case DB.revhead th of
+          NONE => raise ERR "mk_using" "Polymorphic theorem has no name in DB"
+        | SOME l => mk_usingl l
     else
       mk_usingth th
 
