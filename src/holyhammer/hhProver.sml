@@ -747,9 +747,10 @@ fun start_process with_stderr path args limit : process_running =
           let
             val _ = await_reader ()
             val status = reap ()
+            val output = String.concat (List.rev (!chunks))
+            val _ = chunks := []
             val result =
-              {output = String.concat (List.rev (!chunks)),
-               exec_failed = false,
+              {output = output, exec_failed = false,
                killed = state (fn () => !was_killed),
                status = status, time = elapsed started}
             val _ = state (fn () => process_done := true)
@@ -892,14 +893,13 @@ fun run_async (config : prover_config) request =
           ((let
               val (path, args) =
                 #mk_command config executable request
-              val process = start_process true path args
+              val {kill, wait = await_process} = start_process true path args
                 (Real.fromInt (#timeout request + grace_seconds))
               val result_mutex = Mutex.mutex ()
-              val saved = ref (NONE : run_result option)
               fun collect () =
                 let
                   val {output, exec_failed, killed, status, time} =
-                    #wait process ()
+                    await_process ()
                   val (parsed, used_axioms) = #parse_output config
                     (String.fields (fn c => c = #"\n") output)
                   (* A status the prover already reported is authoritative
@@ -925,22 +925,16 @@ fun run_async (config : prover_config) request =
                   {szs = szs, used_axioms = used_axioms, time = time,
                    version = version, output_file = output_file}
                 end
+              (* Release the raw output held by await_process once it has
+                 been parsed. Repeated waits need only the parsed result. *)
+              val saved = Susp.delay (fn () =>
+                collect ()
+                handle OS.SysErr _ => could_not_execute version
+                     | IO.Io _ => could_not_execute version)
               fun wait () =
-                with_mutex result_mutex (fn () =>
-                  case !saved of
-                      SOME result => result
-                    | NONE =>
-                        let
-                          val result =
-                            collect ()
-                            handle OS.SysErr _ => could_not_execute version
-                                 | IO.Io _ => could_not_execute version
-                          val _ = saved := SOME result
-                        in
-                          result
-                        end)
+                with_mutex result_mutex (fn () => Susp.force saved)
             in
-              {kill = #kill process, wait = wait}
+              {kill = kill, wait = wait}
            end)
            handle OS.SysErr _ => completed (could_not_execute version)
                 | IO.Io _ => completed (could_not_execute version))

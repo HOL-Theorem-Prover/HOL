@@ -701,13 +701,13 @@ fun could_benefit_from_ext facts =
       | SOME _ => false
   end
 
-fun term_uses_const wanted term =
+fun term_uses_set_const term =
   let
     fun uses tm =
       let val (head, arguments) = strip_comb tm in
         (is_const head andalso
          let val {Thy, Name, ...} = dest_thy_const head in
-           Thy ^ "$" ^ Name = wanted
+           set_const (Thy ^ "$" ^ Name)
          end) orelse List.exists uses arguments orelse
         (is_abs head andalso uses (#2 (dest_abs head)))
       end
@@ -724,10 +724,8 @@ fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
       accepted =
   let
     val uses_set =
-      List.exists
-        (fn term => term_uses_const "bool$IN" term orelse
-                    term_uses_const "pred_set$GSPEC" term)
-        (goal_terms @ map #concl accepted)
+      List.exists term_uses_set_const goal_terms orelse
+      List.exists (term_uses_set_const o #concl) accepted
     val wanted =
       (if could_benefit_from_ext accepted then [ext_thmid] else []) @
       (if uses_set then special_set_thmids else [])

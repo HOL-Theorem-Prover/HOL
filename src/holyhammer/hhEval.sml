@@ -1486,7 +1486,16 @@ fun restrict_features_to_pool pool features =
       features
   end
 
-fun selection_data thy =
+type selection_data =
+  {thmdata : mlThmData.thmdata Susp.susp,
+   context : hhLearn.context Susp.susp,
+   intact : thm -> bool * mlThmData.thmid list,
+   knn : mlThmData.thmdata -> int -> goal -> mlThmData.thmid list}
+
+type premise_pool =
+  {names : mlThmData.thmid list, thmdata : mlThmData.thmdata Susp.susp}
+
+fun selection_data thy : selection_data =
   let
     val thmdata = Susp.delay (fn () => hhLearn.create_thmdata_for thy)
     val context = Susp.delay (fn () =>
@@ -1496,21 +1505,27 @@ fun selection_data thy =
     {thmdata = thmdata, context = context, intact = intact, knn = knn}
   end
 
-fun select_knn {thmdata, context, intact, knn} pool count goal =
+fun selection_facts ({thmdata, ...} : selection_data) names dependencies =
   let
-    val (weights, features) = Susp.force thmdata
-    val permitted = restrict_features_to_pool pool features
+    val restricted = Susp.delay (fn () =>
+      let val (weights, features) = Susp.force thmdata in
+        (weights, restrict_features_to_pool names features)
+      end)
   in
-    knn (weights, permitted) count goal
+    {pool = {names = names, thmdata = restricted}, dependencies = dependencies}
   end
 
-fun select_filter (data as {thmdata, context, ...}) filter pool count goal =
+fun select_knn ({knn, ...} : selection_data)
+    ({thmdata, ...} : premise_pool) count goal =
+  knn (Susp.force thmdata) count goal
+
+fun select_filter (data as {context, ...} : selection_data)
+    filter (pool : premise_pool) count goal =
   case filter of
-      "none" =>
-        map #1 (restrict_features_to_pool pool (#2 (Susp.force thmdata)))
+      "none" => map #1 (#2 (Susp.force (#thmdata pool)))
     | "knn" => select_knn data pool count goal
     | _ => hhLearn.rank (Susp.force context)
-        {filter = filter, pool = SOME pool, goal = goal, n = count}
+        {filter = filter, pool = SOME (#names pool), goal = goal, n = count}
 
 fun selected_premises_at data condition {pool, dependencies} goal knn_count =
   case #selector condition of
@@ -1777,19 +1792,17 @@ fun eval_loaded_theory expdir thy =
                   if List.exists (fn condition => #selector condition = Deps)
                        chainy then List.filter permits intact_deps
                   else []
+                val bushy_facts = selection_facts data intact_deps intact_deps
+                val chainy_facts =
+                  selection_facts data chainy_pool chainy_dependencies
                 fun one condition =
                   case #regime condition of
                       Bushy =>
                         if dependencies_ok then
-                          run_cell expdir thy data theorem
-                            {pool = intact_deps, dependencies = intact_deps}
-                            condition
+                          run_cell expdir thy data theorem bushy_facts condition
                         else broken_deps_cell expdir thy name tags condition
                     | Chainy =>
-                        run_cell expdir thy data theorem
-                          {pool = chainy_pool,
-                           dependencies = chainy_dependencies}
-                          condition
+                        run_cell expdir thy data theorem chainy_facts condition
               in
                 app one pending
               end
@@ -1814,9 +1827,7 @@ fun eval_thy expdir thy =
 fun condition_text condition =
   "hhEval.parse_condition " ^ Portable.mlquote (encode_condition condition)
 
-val source_script_directories = ref (NONE : (string * string) list option)
-
-fun source_script_directory thy =
+val source_script_directories = Susp.delay (fn () =>
   let
     fun source_entry line =
       let
@@ -1835,24 +1846,26 @@ fun source_script_directory thy =
                 OS.Path.dir (OS.Path.dir (OS.Path.dir path)))
         else NONE
       end
-    fun directories () =
-      case !source_script_directories of
-          SOME result => result
-        | NONE =>
-            let
-              val root = holdir ()
-              val srcfiles = read_lines
-                (join (join root "sigobj") "SRCFILES")
-              val result = List.mapPartial source_entry srcfiles @
-                List.mapPartial dat_entry (dat_paths_under (join root "src"))
-              val _ = source_script_directories := SOME result
-            in
-              result
-            end
+    val root = holdir ()
+    val srcfiles = read_lines (join (join root "sigobj") "SRCFILES")
+    val sources = List.mapPartial source_entry srcfiles
+    val fallback = Susp.delay (fn () =>
+      List.mapPartial dat_entry (dat_paths_under (join root "src")))
   in
-    case List.find (fn (name, _) => name = thy) (directories ()) of
+    (sources, fallback)
+  end)
+
+fun source_script_directory thy =
+  let
+    val (sources, fallback) = Susp.force source_script_directories
+    fun find directories = List.find (fn (name, _) => name = thy) directories
+  in
+    case find sources of
         SOME (_, directory) => directory
-      | NONE => raise Fail ("no source directory for theory " ^ thy)
+      | NONE =>
+          case find (Susp.force fallback) of
+              SOME (_, directory) => directory
+            | NONE => raise Fail ("no source directory for theory " ^ thy)
   end
 
 fun load_theory thy =
@@ -2251,8 +2264,10 @@ fun run_smoke {expdir, timeout} =
           val tags = goal_tags thy thm
         in
           if dependencies_ok then
-            run_cell expdir thy (selection_data thy) (name, thm, tags)
-              {pool = dependencies, dependencies = dependencies} condition
+            let val data = selection_data thy in
+              run_cell expdir thy data (name, thm, tags)
+                (selection_facts data dependencies dependencies) condition
+            end
           else broken_deps_cell expdir thy name tags condition
         end
       val _ = app run_one smoke_goals
@@ -2263,8 +2278,9 @@ fun run_smoke {expdir, timeout} =
       val sched_thm = DB.fetch sched_thy sched_name
       val sched_goal = (sched_name, sched_thm, goal_tags sched_thy sched_thm)
       val (_, sched_dependencies) = mlThmData.intactdep_of_thm sched_thm
-      val sched_facts = {pool = sched_dependencies,
-                         dependencies = sched_dependencies}
+      val sched_data = selection_data sched_thy
+      val sched_facts =
+        selection_facts sched_data sched_dependencies sched_dependencies
       val sched_condition = smoke_condition timeout SmokeSched
       val sched_parameters =
         case #engine sched_condition of
@@ -2274,7 +2290,7 @@ fun run_smoke {expdir, timeout} =
          results must not enter the cache.  Prime the entire schedule with
          an unreachable proof limit before testing a process-free replay. *)
       val primed =
-        schedule_cell_entry expdir sched_thy (selection_data sched_thy)
+        schedule_cell_entry expdir sched_thy sched_data
         sched_goal sched_facts sched_condition
         {provers = #provers sched_parameters,
          slices = #slices sched_parameters, cores = #cores sched_parameters,
@@ -2286,7 +2302,7 @@ fun run_smoke {expdir, timeout} =
         else raise Fail "HolyHammer schedule cache priming did not finish"
       val _ = hhProver.reset_spawn_count ()
       val repeated =
-        schedule_cell_entry expdir sched_thy (selection_data sched_thy)
+        schedule_cell_entry expdir sched_thy sched_data
         sched_goal sched_facts sched_condition
         sched_parameters
       val repeat_spawns = hhProver.spawn_count ()

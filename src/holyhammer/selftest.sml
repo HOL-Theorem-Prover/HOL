@@ -3630,6 +3630,8 @@ fun test_hhEval root =
     val _ = expect "worker script is beside its theory"
       (OS.Path.dir script = join src "one" andalso
        script = hhEval.evalscript_path expdir "list")
+    val _ = expect "worker script finds a theory absent from SRCFILES"
+      (OS.Path.dir (hhEval.evalscript_path expdir "missing") = join src "two")
     val _ = expect "worker script loads hhEval"
       (String.isSubstring "load \"hhEval\";" script_text)
     val _ = expect "worker script initializes the simp-data exporter"
@@ -9227,6 +9229,8 @@ fun test_hhLearn_production_exclusion_and_mash () =
            restricted_names)
          (#learner restricted) andalso
        #ranking restricted = [dep_head, dep_one]);
+    expect "hhLearn MaSh removes out-of-pool unknowns from its remainder"
+      (null (#unknown restricted));
     expect "hhLearn final mesh uses the partial-model unknown remainder"
       (partial_mesh = [List.last regular_names, dep_head]);
     expect "hhLearn rank rejects unknown filter names"
@@ -9326,9 +9330,20 @@ fun test_hhLearn_shared_predictions () =
         {filter = filter, pool = NONE, goal = goal, n = n})
     fun agrees requests =
       hhLearn.rank_filters data goal requests = map separate requests
+    val lightweight = [("knn", 3), ("knn", 0), ("none", 0), ("knn", 11),
+                       ("knn", 3), ("knn", ~1)]
+    fun independent ("knn", n) =
+          ("knn", mlNearestNeighbor.thmknn_wdep data n features)
+      | independent (filter, _) = (filter, map #1 rows)
+    fun lightweight_agrees requests =
+      (hhLearn.clean_context_cache ();
+       hhLearn.rank_filters data goal requests = map independent requests)
   in
     expect "shared learner rankings preserve ties, cutoffs and filter order"
-      (agrees filters andalso agrees (rev filters))
+      (agrees filters andalso agrees (rev filters));
+    expect "lightweight kNN preserves tied rankings across repeated depths"
+      (lightweight_agrees lightweight andalso
+       lightweight_agrees (rev lightweight))
   end
 
 val _ = test_hhLearn_shared_predictions ()

@@ -606,90 +606,93 @@ fun scaled_average [] = 0
       Real.ceil (#scaled_avg_factor default_constants *
         foldl op+ 0.0 values) div length values
 
+fun mesh_rank_by unknown_set key max_facts channels =
+  if max_facts <= 0 then []
+  else
+    let
+      (* A fact's score in a channel is that of the first entry with
+         its key. *)
+      fun first_scores scores =
+        foldl (fn ((fact, score), table) =>
+          let val fact_key = key fact in
+            if dmem fact_key table then table
+            else dadd fact_key score table
+          end) (dempty String.compare) scores
+      fun prepare (weight, (selected, unknown)) =
+        (weight,
+         first_scores (normalize_scores max_facts selected),
+         unknown_set unknown)
+      val prepared = map prepare channels
+      fun add_channel ((_, (selected, _)), (seen, candidates)) =
+        foldl (fn ((fact, _), (seen, result)) =>
+          let val fact_key = key fact in
+            if Redblackset.member (seen, fact_key) then (seen, result)
+            else (Redblackset.add (seen, fact_key), fact :: result)
+          end) (seen, candidates)
+          (take max_facts selected)
+      val (_, candidates) =
+        foldl add_channel (Redblackset.empty String.compare, [])
+          channels
+      fun contribution fact_key (weight, scores, unknown) =
+        case Redblackmap.peek (scores, fact_key) of
+            SOME score => SOME (weight * score)
+          | NONE =>
+              if Redblackset.member (unknown, fact_key) then NONE
+              else SOME 0.0
+      fun score index fact =
+        (scaled_average
+           (List.mapPartial (contribution (key fact)) prepared),
+         index, fact)
+      fun compare ((left, left_index, _),
+                   (right, right_index, _)) =
+        case Int.compare (right, left) of
+            EQUAL => Int.compare (left_index, right_index)
+          | order => order
+    in
+      Portable.mapi score candidates
+      |> Listsort.sort compare
+      |> take max_facts
+      |> map #3
+    end
+
 fun mesh_facts_by _ max_facts [] = []
   | mesh_facts_by key max_facts [(_, (selected, unknown))] =
       distinct_by key
         (map #1 (take max_facts selected) @
          take (max_facts - Int.min (max_facts, length selected)) unknown)
   | mesh_facts_by key max_facts channels =
-      if max_facts <= 0 then []
-      else
-        let
-          (* A fact's score in a channel is that of the first entry with
-             its key. *)
-          fun first_scores scores =
-            foldl (fn ((fact, score), table) =>
-              let val fact_key = key fact in
-                if dmem fact_key table then table
-                else dadd fact_key score table
-              end) (dempty String.compare) scores
-          fun prepare (weight, (selected, unknown)) =
-            (weight,
-             first_scores (normalize_scores max_facts selected),
-             key_set key unknown)
-          val prepared = map prepare channels
-          fun add_channel ((_, (selected, _)), (seen, candidates)) =
-            foldl (fn ((fact, _), (seen, result)) =>
-              let val fact_key = key fact in
-                if Redblackset.member (seen, fact_key) then (seen, result)
-                else (Redblackset.add (seen, fact_key), fact :: result)
-              end) (seen, candidates)
-              (take max_facts selected)
-          val (_, candidates) =
-            foldl add_channel (Redblackset.empty String.compare, [])
-              channels
-          fun contribution fact_key (weight, scores, unknown) =
-            case Redblackmap.peek (scores, fact_key) of
-                SOME score => SOME (weight * score)
-              | NONE =>
-                  if Redblackset.member (unknown, fact_key) then NONE
-                  else SOME 0.0
-          fun score index fact =
-            (scaled_average
-               (List.mapPartial (contribution (key fact)) prepared),
-             index, fact)
-          fun compare ((left, left_index, _),
-                       (right, right_index, _)) =
-            case Int.compare (right, left) of
-                EQUAL => Int.compare (left_index, right_index)
-              | order => order
-        in
-          Portable.mapi score candidates
-          |> Listsort.sort compare
-          |> take max_facts
-          |> map #3
-        end
+      mesh_rank_by (key_set key) key max_facts channels
 
 fun mesh_facts max_facts channels =
   mesh_facts_by I max_facts channels
 
-fun intersection_in_order_by key right left =
-  let val keys = key_set key right in
-    filter (fn fact => Redblackset.member (keys, key fact)) left
-  end
-
-fun subtract_by key removed items =
-  let val keys = key_set key removed in
-    filter (fn fact => not (Redblackset.member (keys, key fact))) items
-  end
+fun subtract_by _ [] items = items
+  | subtract_by key removed items =
+      let val keys = key_set key removed in
+        filter (fn fact => not (Redblackset.member (keys, key fact))) items
+      end
 
 fun merge_mash_channels_by key
       {max_facts, suggestions, facts, chained, unknown} =
   let
     val proximate = take (#max_proximity_facts default_constants) facts
-    val unknown_chained = intersection_in_order_by key unknown chained
-    val unknown_proximate = intersection_in_order_by key unknown proximate
+    val unknown_keys = key_set key unknown
+    fun unknown_in facts =
+      filter (fn fact => Redblackset.member (unknown_keys, key fact)) facts
+    val unknown_chained = unknown_in chained
+    val unknown_proximate = unknown_in proximate
+    val empty_keys = Redblackset.empty String.compare
     val used_unknown = unknown_chained @ unknown_proximate
     val channels =
       [(#chained_weight default_constants,
         (map (fn fact => (fact, #unit_weight default_constants))
-          unknown_chained, [])),
+          unknown_chained, empty_keys)),
        (#proximity_weight default_constants,
-        (weight_facts_smoothly unknown_proximate, [])),
+        (weight_facts_smoothly unknown_proximate, empty_keys)),
        (#learner_weight default_constants,
-        (weight_facts_steeply suggestions, unknown))]
+        (weight_facts_steeply suggestions, unknown_keys))]
   in
-    (mesh_facts_by key max_facts channels,
+    (mesh_rank_by I key max_facts channels,
      subtract_by key used_unknown unknown)
   end
 
@@ -711,6 +714,7 @@ type context =
    mepo : hhMePo.context,
    dependencies : dep_table,
    fact_key : mlThmData.thmid -> mlThmData.thmid,
+   unknown : mlThmData.thmid list,
    pool_order : mlThmData.thmid list}
 
 type cache_key = string * (mlThmData.thmid * mlFeature.fea) list
@@ -755,26 +759,32 @@ fun proposition_key facts =
     fn thmid => Option.getOpt (Redblackmap.peek (keys, thmid), thmid)
   end
 
-fun make_context_for current
-      {thmdata = thmdata as (_, facts),
-       model_thmdata = model_thmdata as (_, model_facts),
-       dependencies} =
+(* Without a separate training corpus, every candidate belongs to the model. *)
+fun make_context_for current (thmdata as (_, facts)) training dependencies =
   let
+    val model_thmdata as (_, model_facts) = Option.getOpt (training, thmdata)
     val idf = create_idf_table model_facts
     val statures = hhStature.create_statures_for current
     val model = train_nb_from_thmdata default_constants idf dependencies
       statures model_thmdata
     val fact_key = proposition_key facts
+    val unknown =
+      case training of
+          NONE => []
+        | SOME _ => List.mapPartial (fn (thmid, _) =>
+            if Option.isSome (model_index model thmid) then NONE
+            else SOME thmid) facts
   in
     {thmdata = thmdata, idf = idf, model = model,
      statures = statures,
      mepo = hhMePo.create_context_for current thmdata statures,
-     dependencies = dependencies, fact_key = fact_key,
+     dependencies = dependencies, fact_key = fact_key, unknown = unknown,
      pool_order = map #1 facts}
   end
 
-fun make_context parameters =
-  make_context_for (Theory.current_theory ()) parameters
+fun make_context {thmdata, model_thmdata, dependencies} =
+  make_context_for (Theory.current_theory ()) thmdata (SOME model_thmdata)
+    dependencies
 
 (* Externally built thmdata (mlThmData.create_thmdata, as holyhammer and
    TacticToe pass it) may hold top-level theorems with hypotheses. *)
@@ -782,9 +792,7 @@ fun without_hypotheses (weights, facts) =
   (weights, filter (not o has_hypotheses o #1) facts)
 
 fun build_context_for current thmdata =
-  make_context_for current
-    {thmdata = thmdata, model_thmdata = thmdata,
-     dependencies = create_dep_table thmdata}
+  make_context_for current thmdata NONE (create_dep_table thmdata)
 
 fun create_context_for current thmdata =
   let
@@ -809,16 +817,13 @@ fun context_thmids ({pool_order, ...} : context) = pool_order
 fun restrict_thmdata ({thmdata = (weights, facts), ...} : context) NONE =
       (weights, facts)
   | restrict_thmdata ({thmdata = (weights, facts), ...} : context)
-      (SOME requested) =
-      let val wanted = name_set requested in
-        (weights, filter (member_set wanted o #1) facts)
-      end
+      (SOME wanted) =
+      (weights, filter (member_set wanted o #1) facts)
 
-fun unknown_facts model facts =
-  List.mapPartial
-    (fn (thmid, _) =>
-      if Option.isSome (model_index model thmid) then NONE else SOME thmid)
-    facts
+fun restrict_unknown ({unknown = [], ...} : context) _ = []
+  | restrict_unknown {unknown, ...} NONE = unknown
+  | restrict_unknown {unknown, ...} (SOME wanted) =
+      filter (member_set wanted) unknown
 
 fun add_thmdep dependencies max_facts predictions =
   let
@@ -861,8 +866,8 @@ fun nb_predict model pool features n =
 fun knn_predict thmdata features n =
   mlNearestNeighbor.thmknn thmdata n (features ())
 
-fun mash_leg ({model, dependencies, fact_key, ...} : context)
-      (_, facts) pool {nb, knn} max_facts =
+fun mash_leg (context as {dependencies, fact_key, ...} : context)
+      wanted names {nb, knn} max_facts =
   if max_facts <= 0 then
     {ranking = [], unknown = [], learner = [], max_suggestions = 0}
   else
@@ -877,7 +882,8 @@ fun mash_leg ({model, dependencies, fact_key, ...} : context)
           (weight_facts_steeply knn, []))]
       val (merged, remaining_unknown) = merge_mash_channels_by fact_key
         {max_facts = max_suggestions, suggestions = learner,
-         facts = pool, chained = [], unknown = unknown_facts model facts}
+         facts = names, chained = [],
+         unknown = restrict_unknown context wanted}
     in
       {ranking = add_thmdep dependencies max_facts merged,
        unknown = remaining_unknown, learner = learner,
@@ -898,11 +904,12 @@ fun direct_predictions ({model, ...} : context) goal =
 
 fun mash_details context {pool, goal, max_facts} =
   let
-    val restricted as (_, facts) = restrict_thmdata context pool
+    val wanted = Option.map name_set pool
+    val restricted as (_, facts) = restrict_thmdata context wanted
     val names = restricted_names context pool facts
     val {nb, knn} = direct_predictions context goal
   in
-    mash_leg context restricted names {nb = nb names, knn = knn restricted}
+    mash_leg context wanted names {nb = nb names, knn = knn restricted}
       max_facts
   end
 
@@ -947,7 +954,8 @@ fun is_induction statures thmid =
 fun rank_with_predictions (context as {statures, mepo, fact_key, ...} : context)
       {nb, knn} {filter, pool, goal, n} =
   let
-    val restricted as (_, facts) = restrict_thmdata context pool
+    val wanted = Option.map name_set pool
+    val restricted as (_, facts) = restrict_thmdata context wanted
     fun pool_names () = restricted_names context pool facts
     val generous = over_request n
     fun mepo_leg names =
@@ -957,7 +965,7 @@ fun rank_with_predictions (context as {statures, mepo, fact_key, ...} : context)
            | SOME _ => hhMePo.restrict_context mepo names)
         goal generous
     fun mash names =
-      mash_leg context restricted names {nb = nb names, knn = knn restricted}
+      mash_leg context wanted names {nb = nb names, knn = knn restricted}
         generous
     fun finish ranking =
       first_test_n (not o is_induction statures) n ranking
@@ -1017,8 +1025,15 @@ fun rank_filters thmdata goal filters =
                 context_cache := SOME (key, Lightweight data);
                 data
               end
-      fun one ("knn", n) = ("knn", rank_knn data n goal)
-        | one (filter, _) = (filter, map #1 facts)
+      val goal_features = Susp.delay (fn () => mlFeature.fea_of_goal true goal)
+      val names = Susp.delay (fn () => map #1 facts)
+      fun maximum (("knn", n), largest) = Int.max (n, largest)
+        | maximum (_, largest) = largest
+      val predict = shared_prefix (foldl maximum 0 filters)
+        (knn_predict data (fn () => Susp.force goal_features))
+      val resolve = dependency_resolver ()
+      fun one ("knn", n) = ("knn", expand_knn resolve n (predict n))
+        | one (filter, _) = (filter, Susp.force names)
     in
       map one filters
     end

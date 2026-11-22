@@ -791,7 +791,6 @@ fun run_in root {options, goal, rankings, progress} =
       (deadline, Time.fromSeconds (Int.toLarge hhProver.grace_seconds))
     val state_mutex = Mutex.mutex ()
     val state_changed = ConditionVar.conditionVar ()
-    val work = ref schedule
     (* The slices claimed and not yet finished, and how many may be while
        the export is unfinished: the producer needs a core of its own and
        the pool workers one each, so that provers do not starve them (see
@@ -851,17 +850,18 @@ fun run_in root {options, goal, rankings, progress} =
        counter, starts as soon as a proof is found. *)
     datatype export_state = datatype hhSchedule_Test.export_state
     val exports =
-      let
-        val initial = if pipelined then Pending else Ready
-        fun add (slice, seen) =
-          let val path = problem_path root slice in
-            if List.exists (fn (other, _) => other = path) seen then seen
-            else (path, initial) :: seen
-          end
-      in
-        ref (List.rev (List.foldl (fn ((_, slice), seen) => add (slice, seen))
-                         [] schedule))
-      end
+      case plan of
+          NONE => []
+        | SOME (works, _) => map (fn ({path, ...} : work) =>
+            (path, ref Pending)) works
+    val export_by_path = List.foldl
+      (fn ((path, status), dict) => Redblackmap.insert (dict, path, status))
+      (Redblackmap.mkDict String.compare) exports
+    fun attach_status (entry as (_, slice)) =
+      (entry, if pipelined then
+         SOME (Redblackmap.find (export_by_path, problem_path root slice))
+       else NONE)
+    val work = ref (map attach_status schedule)
     val producer_active = ref false
     (* The first fatal export error.  It and reason are the two outcomes of
        a stop that win by being first: once one is set (or the soft
@@ -882,19 +882,14 @@ fun run_in root {options, goal, rankings, progress} =
         else search_ended := SOME (Time.now ()));
        ConditionVar.broadcast state_changed)
 
-    (* The export state of a problem path (the mutex is held). *)
-    fun export_state path =
-      case List.find (fn (other, _) => other = path) (!exports) of
-          SOME (_, state) => state
-        | NONE => Failed
-
     (* The Pending problems end in the given state when the producer is
        terminal (the mutex is held). *)
     fun end_exports state =
-      exports := map (fn (path, Pending) => (path, state) | other => other)
-                     (!exports)
+      List.app (fn (_, status) =>
+        if !status = Pending then status := state else ()) exports
 
-    fun entry_state (_, slice) = export_state (problem_path root slice)
+    fun entry_state (_, NONE) = Ready
+      | entry_state (_, SOME status) = !status
 
     fun is_ready entry = entry_state entry = Ready
 
@@ -919,8 +914,8 @@ fun run_in root {options, goal, rankings, progress} =
       if !stopping orelse not (time_before (Time.now ()) deadline) then NONE
       else
         case if has_room () then take_ready (!work) else NONE of
-            SOME (item, rest) => (work := rest; active := !active + 1;
-                                  SOME item)
+            SOME ((item, _), rest) => (work := rest; active := !active + 1;
+                                       SOME item)
           | NONE =>
               if null (!work) orelse
                  (has_room () andalso
@@ -959,12 +954,11 @@ fun run_in root {options, goal, rankings, progress} =
       with_mutex state_mutex (fn () => producer_active := true)
 
     fun mark_ready (work : work) =
-      with_mutex state_mutex (fn () =>
-        (exports := map (fn (path, Pending) =>
-                              (path, if path = #path work then Ready
-                                     else Pending)
-                          | other => other) (!exports);
-         signal ()))
+      let val status = Redblackmap.find (export_by_path, #path work) in
+        with_mutex state_mutex (fn () =>
+          (if !status = Pending then status := Ready else ();
+           signal ()))
+      end
 
     (* The one terminal step of the producer, whatever ended it: failed
        says that its unfinished problems ended in an error of the run
@@ -1517,7 +1511,8 @@ fun run_in root {options, goal, rankings, progress} =
         val _ = join_all ()
         val _ = close_exports ()
         val _ = if pipelined then hhSchedule_Test.export_states :=
-                  with_mutex state_mutex (fn () => !exports)
+                  with_mutex state_mutex (fn () =>
+                    map (fn (path, status) => (path, !status)) exports)
                 else ()
         val _ = case with_mutex state_mutex (fn () => !producer_error) of
                     SOME error => raise error

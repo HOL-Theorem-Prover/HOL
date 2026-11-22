@@ -768,11 +768,15 @@ struct
              | order => order)
       | order => order
 
-  (* Per-problem memo of the symbols above, shared by declarations, guard
+  fun guard_name ty = bounded_name (aiLib.escape ("gd." ^ mangle_type ty))
+
+  (* Per-problem memo of symbols and types, shared by declarations, guard
      axioms and formula encoding.  Entries are computed on demand; a bound
-     variable keeps its direct, uncached path. *)
+     variable's name keeps its direct, uncached path. *)
   type symbols =
     {head : term -> string, value : term -> string,
+     ty : hol_type -> hhTptpProblem.tptp_type,
+     guard : hol_type -> string,
      type_args : term -> hhTptpProblem.tptp_type list,
      app : hol_type * hol_type * hol_type -> string}
 
@@ -793,18 +797,20 @@ struct
     let
       val head = memoise Term.compare (encoded_symbol encoding)
       val value = memoise Term.compare (value_symbol encoding)
+      val ty = memoise Type.compare (type_for encoding)
       val type_args =
         case encoding of
             hhTypeEnc.Native {poly = true, ...} =>
               let val args = memoise Term.compare
-                  (map (type_for encoding) o poly_type_args)
+                  (map ty o poly_type_args)
               in fn tm => if is_bound_var tm then [] else args tm end
           | _ => fn _ => []
       fun unless_bound memo tm =
         if is_bound_var tm then encoded_symbol encoding tm else memo tm
     in
       {head = unless_bound head, value = unless_bound value,
-       type_args = type_args,
+       ty = ty, type_args = type_args,
+       guard = memoise Type.compare guard_name,
        app = memoise signature_compare (app_symbol encoding)}
     end
 
@@ -820,8 +826,7 @@ struct
           (function_type, argument_type, result_type),
           case encoding of
               hhTypeEnc.Native {poly = true, ...} =>
-                [type_for encoding argument_type,
-                 type_for encoding result_type]
+                [#ty symbols argument_type, #ty symbols result_type]
             | _ => []),
           [encode_term symbols encoding left,
            encode_term symbols encoding right])
@@ -830,7 +835,7 @@ struct
           [encode_term symbols encoding body])
     | encode_term symbols encoding (FOAbs (var, body)) =
         hhTptpProblem.TmAbs ((variable_name (fst (dest_var var)),
-          type_for encoding (type_of var)),
+          #ty symbols (type_of var)),
           encode_term symbols encoding body)
 
   fun type_vars_of_formula formula =
@@ -862,9 +867,8 @@ struct
       collect formula []
     end
 
-  fun guard_name ty = bounded_name (aiLib.escape ("gd." ^ mangle_type ty))
-  fun guard_atom ty tm =
-    hhTptpProblem.Atom (hhTptpProblem.Tm ((guard_name ty, []), [tm]))
+  fun guard_atom (symbols : symbols) ty tm =
+    hhTptpProblem.Atom (hhTptpProblem.Tm ((#guard symbols ty, []), [tm]))
 
   fun guarded_type
       (hhTypeEnc.Guards {level = hhTypeEnc.AllTypes, ...}) _ _ = true
@@ -886,14 +890,14 @@ struct
               let
                 val ty = type_of var
                 val var_name = variable_name (fst (dest_var var))
-                val bound = (var_name, SOME (type_for encoding ty))
+                val bound = (var_name, SOME (#ty symbols ty))
                 val result' =
                   if guarded_type encoding needs ty then
                     if all then hhTptpProblem.Conn (hhTptpProblem.Implies,
-                      [guard_atom ty
+                      [guard_atom symbols ty
                         (hhTptpProblem.Tm ((var_name, []), [])), result])
                     else hhTptpProblem.Conn (hhTptpProblem.And,
-                      [guard_atom ty
+                      [guard_atom symbols ty
                         (hhTptpProblem.Tm ((var_name, []), [])), result])
                   else result
               in
@@ -943,7 +947,7 @@ struct
         List.foldl heads_of_fo_formula heads bodies
     | heads_of_fo_formula (FOAtom tm, heads) = heads_of_fo_term (tm, heads)
 
-  fun declaration_type encoding arity head =
+  fun declaration_type (symbols : symbols) encoding arity head =
     let
       val full_type =
         case encoding of
@@ -962,8 +966,8 @@ struct
           | _ => strip_fun full_type
       val ty =
         List.foldr (fn (domain, range) =>
-          hhTptpProblem.TyFun (type_for encoding domain, range))
-          (type_for encoding result) domains
+          hhTptpProblem.TyFun (#ty symbols domain, range))
+          (#ty symbols result) domains
     in
       case encoding of
           hhTypeEnc.Native {poly = true, ...} =>
@@ -1013,12 +1017,12 @@ struct
           val variables = ListPair.zip
             (map (fn index => "G" ^ Int.toString index)
                (List.tabulate (length domains, fn index => index)),
-             map (type_for encoding) domains)
+             map (#ty symbols) domains)
           val application = hhTptpProblem.Tm
             ((#head symbols head, []),
              map (fn (name, _) =>
                hhTptpProblem.Tm ((name, []), [])) variables)
-          val body = guard_atom result application
+          val body = guard_atom symbols result application
           val formula = if null variables then body else hhTptpProblem.Quant
             (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
         in
@@ -1028,13 +1032,13 @@ struct
         end
     end
 
-  fun witness_line encoding ty =
+  fun witness_line symbols ty =
     let
       val witness = bounded_name (aiLib.escape ("wit." ^ mangle_type ty))
       val term = hhTptpProblem.Tm ((witness, []), [])
     in
       hhTptpProblem.FormLine (witness, hhTptpProblem.Axiom,
-        guard_atom ty term)
+        guard_atom symbols ty term)
     end
 
   fun is_helper_name name = String.isPrefix "help." name
@@ -1338,7 +1342,7 @@ struct
             val sym_decls = map (fn head => hhTptpProblem.SymDecl
               (aiLib.escape "sy." ^ #head symbols head,
                #head symbols head,
-               declaration_type encoding (head_arity head) head))
+               declaration_type symbols encoding (head_arity head) head))
               declaration_heads
             val app_decls =
               case encoding of
@@ -1349,10 +1353,10 @@ struct
                         hhTptpProblem.SymDecl
                           (aiLib.escape "sy." ^ symbol, symbol,
                            hhTptpProblem.TyFun
-                             (type_for encoding function_type,
+                             (#ty symbols function_type,
                               hhTptpProblem.TyFun
-                                (type_for encoding argument_type,
-                                 type_for encoding result_type)))
+                                (#ty symbols argument_type,
+                                 #ty symbols result_type)))
                       end) (aiLib.mk_sameorder_set signature_compare
                         (rev (List.foldl (fold_apps_formula add_app_signature)
                           [] all_formulas)))
@@ -1383,13 +1387,13 @@ struct
                     map (fn head => hhTptpProblem.SymDecl
                       (aiLib.escape "sy." ^ #value symbols head,
                        #value symbols head,
-                       type_for encoding (type_of head)))
+                       #ty symbols (type_of head)))
                       (distinct_heads
                         (rev (List.foldl value_heads_formula [] all_formulas)))
                 | _ => []
             val pp_decls = if used_pp then [hhTptpProblem.SymDecl
               ("sy_2Epp", "pp_2E", hhTptpProblem.TyFun
-                (type_for encoding Type.bool,
+                (#ty symbols Type.bool,
                  hhTptpProblem.TyCon ("$o", [])))]
               else []
           in
@@ -1401,7 +1405,7 @@ struct
         else []
       val guard_types =
         List.filter (guarded_type encoding needs) all_types
-      val witnesses = map (witness_line encoding) guard_types
+      val witnesses = map (witness_line symbols) guard_types
       val (helpers, ordinary) = List.partition (is_helper_name o #1) facts
       fun helper_lines facts =
         let

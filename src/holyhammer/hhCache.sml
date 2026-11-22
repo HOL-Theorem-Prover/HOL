@@ -139,9 +139,12 @@ fun over_limit directory maximum =
 fun cache_entries directory names =
   let
     fun entry name =
-      let val path = join directory name in
-        if hhConfig.is_dir path then NONE
-        else SOME (OS.FileSys.modTime path, name, path)
+      let
+        val path = join directory name
+        val stat = Posix.FileSys.stat path
+      in
+        if Posix.FileSys.ST.isDir stat then NONE
+        else SOME (Posix.FileSys.ST.mtime stat, name, path)
       end
       handle OS.SysErr _ => NONE
   in
