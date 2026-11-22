@@ -168,9 +168,6 @@ struct
         SOME tys => insert_ground table name ty tys
       | NONE => table
 
-  fun is_ground rigid ty =
-    List.all (fn tvar => mem tvar rigid) (Type.type_vars ty)
-
   fun fold_consts f tm acc =
     let
       fun walk current result =
@@ -182,11 +179,6 @@ struct
     in
       walk tm acc
     end
-
-  fun add_grounds rigid tm table =
-    fold_consts (fn (constant as (_, ty), result) =>
-      if is_ground rigid ty then add_ground constant result else result)
-      tm table
 
   (* Harvest ground types without copying long sorted-list prefixes. *)
   fun index_add ((name, ty), dict) =
@@ -382,11 +374,15 @@ struct
       loop candidates []
     end
 
-  fun grounds_from_instances rigid instances table =
+  (* Complete substitutions bind every schematic variable to a type from
+     the ground tables (or a part of one), so the instantiated constants
+     have only rigid type variables. *)
+  fun grounds_from_instances instances table =
     List.foldl (fn ((_, _, theorem), result) =>
-      add_grounds rigid theorem result) table instances
+      fold_consts (fn (constant, index) => add_ground constant index)
+        theorem result) table instances
 
-  fun process_fact rigid round merged known new has_fresh remaining fact
+  fun process_fact round merged known new has_fresh remaining harvest fact
       next_new =
     case fact of
         Schematic {theorem, tvars, schematics, covering, initial_round,
@@ -417,7 +413,7 @@ struct
               val _ = instances := !instances @ selected
               val _ = remaining := !remaining - length selected
             in
-              grounds_from_instances rigid selected next_new
+              harvest selected next_new
             end
       | _ => next_new
 
@@ -518,8 +514,9 @@ struct
       val rigid = #force (#rigid pool) ()
       val infos = Portable.mapi (classify (#fresh pool) rigid) premises
       val names = schema_names infos
+      val has_schemas = Redblackmap.numItems names <> 0
       val initial =
-        if Redblackmap.numItems names = 0 then names
+        if not has_schemas then names
         else
           let val index = #force (#index pool) () in
             add_premise_grounds infos
@@ -538,15 +535,22 @@ struct
                for the facts entering now and for the next round. *)
             val merged = merge_grounds known new
             val has_fresh = fresh_membership ()
+            (* No later round reads these types once either cap is met. *)
+            val last_round = round = max_iters
+            val harvest =
+              if last_round then fn _ => fn index => index
+              else fn selected => fn index =>
+                if !remaining <= 0 then index
+                else grounds_from_instances selected index
             val next = List.foldl
               (fn (fact, result) =>
-                process_fact rigid round merged known new has_fresh remaining
-                  fact result) names infos
+                process_fact round merged known new has_fresh remaining
+                  harvest fact result) names infos
           in
-            rounds (round + 1) merged next
+            if last_round then () else rounds (round + 1) merged next
           end
 
-      val _ = rounds 1 names initial
+      val _ = if has_schemas then rounds 1 names initial else ()
     in
       List.concat (map result_of infos)
     end

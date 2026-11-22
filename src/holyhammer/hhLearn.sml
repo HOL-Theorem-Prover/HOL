@@ -200,7 +200,7 @@ fun dep_table_of entries =
 fun build_dep_table dependencies facts =
   foldl
     (fn ((thmid, _), table) =>
-      if dmem thmid table then table
+      if Redblackmap.inDomain (table, thmid) then table
       else dadd thmid (intact_dependencies (dependencies thmid)) table)
     (dempty String.compare) facts
 
@@ -215,7 +215,8 @@ fun dependency_lookup () =
     fun build theory =
       SOME (foldl (fn ((name, theorem), table) =>
         let val number = mlThmData.depnumber_of_thm theorem in
-          if dmem number table then table else dadd number name table
+          Redblackmap.insertWith (fn (existing, _) => existing)
+            (table, number, name)
         end) (dempty Int.compare) (DB.thms theory))
       handle HOL_ERR _ => NONE
     fun index theory =
@@ -296,7 +297,7 @@ fun create_dep_table_with theorem_of (_, facts) =
             end
         | NONE => NONE
     fun add ((thmid, _), table) =
-      if dmem thmid table then table
+      if Redblackmap.inDomain (table, thmid) then table
       else
         case dependency_info thmid of
             SOME info => dadd thmid info table
@@ -343,12 +344,17 @@ type nb_model =
    idf : idf_table,
    indices : (mlThmData.thmid, int) Redblackmap.dict,
    tfreq : int vector,
+   priors : real vector,
    sfreq : fact_feature vector vector}
 
 fun add_index (thmid, (index, table)) =
-  if dmem thmid table then
-    raise ERR "train_nb" ("duplicate theorem identifier " ^ thmid)
-  else (index + 1, dadd thmid index table)
+  let
+    val indexed = Redblackmap.insertWithi (fn (duplicate, _, _) =>
+      raise ERR "train_nb" ("duplicate theorem identifier " ^ duplicate))
+      (table, thmid, index)
+  in
+    (index + 1, indexed)
+  end
 
 fun index_facts name_of facts =
   #2 (foldl (fn (fact, table) => add_index (name_of fact, table))
@@ -423,6 +429,8 @@ fun train_nb_indexed constants idf dependencies facts indices =
           learn (index + 1)
         end
     val _ = learn 0
+    val priors = Vector.tabulate (number, fn index =>
+      #init_val constants * Math.ln (Real.fromInt (Array.sub (tfreq, index))))
     fun fact_features index =
       let
         val total_frequency = Real.fromInt (Array.sub (tfreq, index))
@@ -435,7 +443,7 @@ fun train_nb_indexed constants idf dependencies facts indices =
       end
   in
     {constants = constants, idf = idf, indices = indices,
-     tfreq = Array.vector tfreq,
+     tfreq = Array.vector tfreq, priors = priors,
      sfreq = Vector.tabulate (number, fact_features)}
   end
 
@@ -480,9 +488,9 @@ fun nb_sfreq (model as {sfreq, ...} : nb_model) thmid feature =
              (Vector.sub (sfreq, index)))
     | NONE => NONE
 
-(* The goal's known features in increasing order, with summed weights
-   and their IDF. *)
-fun known_goal_features ({idf, ...} : nb_model) goal_features =
+(* The goal's known features in increasing order, with their weighted
+   IDF and their contribution when absent from a candidate. *)
+fun known_goal_features ({constants, idf, ...} : nb_model) goal_features =
   let
     fun add ((feature, weight), table) =
       if Option.isSome (idf_of idf feature) then
@@ -492,7 +500,9 @@ fun known_goal_features ({idf, ...} : nb_model) goal_features =
       else table
   in
     map (fn (feature, weight) =>
-      (feature, weight, valOf (idf_of idf feature)))
+      let val weighted_idf = weight * valOf (idf_of idf feature) in
+        (feature, weighted_idf, weighted_idf * #def_val constants)
+      end)
       (dlist (foldl add (dempty Int.compare) goal_features))
   end
 
@@ -500,7 +510,7 @@ fun known_goal_features ({idf, ...} : nb_model) goal_features =
    shared, goal-only and fact-only features.  Each sum accumulates in the
    same order as a goal-ordered fold followed by a fact-ordered fold. *)
 fun nb_score_parts_prepared (model as
-      {constants, tfreq, sfreq, ...} : nb_model)
+      {constants, tfreq, priors, sfreq, ...} : nb_model)
       prepared_goal_features thmid =
   case model_index model thmid of
       NONE => NONE
@@ -509,37 +519,35 @@ fun nb_score_parts_prepared (model as
           val total_frequency = Real.fromInt (Vector.sub (tfreq, index))
           val fact_features = Vector.sub (sfreq, index)
           val size = Vector.length fact_features
-          fun absent_term weight feature_idf =
-            weight * feature_idf * #def_val constants
           fun walk goal position (positive, absent, negative) =
             if position = size then
               (positive,
-               foldl (fn ((_, weight, feature_idf), sum) =>
-                 sum + absent_term weight feature_idf) absent goal,
+               foldl (fn ((_, _, contribution), sum) =>
+                 sum + contribution) absent goal,
                negative)
             else
               let val entry = Vector.sub (fact_features, position) in
                 case goal of
                     [] => walk goal (position + 1)
                       (positive, absent, negative + #negative entry)
-                  | (feature, weight, feature_idf) :: rest =>
+                  | (feature, weighted_idf, absent_contribution) :: rest =>
                       if feature < #feature entry then
                         walk rest position
                           (positive,
-                           absent + absent_term weight feature_idf,
+                           absent + absent_contribution,
                            negative)
                       else if feature > #feature entry then
                         walk goal (position + 1)
                           (positive, absent, negative + #negative entry)
                       else
                         walk rest (position + 1)
-                          (positive + weight * feature_idf *
+                          (positive + weighted_idf *
                              Math.ln (#pos_weight constants *
                                Real.fromInt (#frequency entry) /
                                total_frequency),
                            absent, negative)
               end
-          val prior = #init_val constants * Math.ln total_frequency
+          val prior = Vector.sub (priors, index)
           val (positive, absent, negative_sum) =
             walk prepared_goal_features 0 (0.0, 0.0, 0.0)
           val negative = #tau constants * negative_sum
@@ -643,10 +651,8 @@ fun mesh_rank_by unknown_set key max_facts channels =
          its key. *)
       fun first_scores scores =
         foldl (fn ((fact, score), table) =>
-          let val fact_key = key fact in
-            if dmem fact_key table then table
-            else dadd fact_key score table
-          end) (dempty String.compare) scores
+          Redblackmap.insertWith (fn (existing, _) => existing)
+            (table, key fact, score)) (dempty String.compare) scores
       fun prepare (weight, (selected, unknown)) =
         (weight,
          first_scores (normalize_scores max_facts selected),

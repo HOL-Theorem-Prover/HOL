@@ -90,6 +90,12 @@ sig
   val restrict_features_to_pool :
     string list -> (string * 'a) list -> (string * 'a) list
 
+  (* Query the union of ancestor facts and local facts whose oldest age is
+     strictly before the given goal age. Reuse the query within one worker. *)
+  val chainy_pool_by_age :
+    (string, unit) Redblackmap.dict -> (string, int) Redblackmap.dict ->
+    int -> (string, unit) Redblackmap.dict
+
   val loaded_corpus_entry : string -> corpus_entry
   val new_run_header :
     {expname : string, corpus : corpus_entry list,

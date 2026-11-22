@@ -1479,8 +1479,70 @@ fun append_theory_error path expdir thy message =
 fun journal_theory_error expdir thy message =
   append_theory_error (journal_path expdir thy) expdir thy message
 
-(* Share the ancestor membership across goals. Add age-eligible local
-   facts only when a ranking needs the complete pool. *)
+(* Share ancestor membership across goals. When a ranking needs a complete
+   pool, build only the local checkpoints reached by its age lookup. The
+   persistent maps share unchanged branches. *)
+fun chainy_pool_by_age ancestors oldest_facts =
+  let
+    val block = 128
+    val size = Redblackmap.numItems oldest_facts
+    fun scan age = Redblackmap.foldl
+      (fn (name, fact_age, pool) =>
+        if fact_age < age then dadd name () pool else pool)
+      ancestors oldest_facts
+    val indexed = Susp.delay (fn () =>
+      let
+        val facts = Vector.fromList (Listsort.sort
+          (fn ((_, left), (_, right)) => Int.compare (left, right))
+          (Redblackmap.listItems oldest_facts))
+        val checkpoints = Array.array (size div block + 1, ancestors)
+        val built = ref 0
+        fun prefix age start stop =
+          if start = stop then start
+          else
+            let val middle = start + (stop - start) div 2 in
+              if #2 (Vector.sub (facts, middle)) < age then
+                prefix age (middle + 1) stop
+              else prefix age start middle
+            end
+        fun extend start stop pool =
+          if start = stop then pool
+          else extend (start + 1) stop
+            (dadd (#1 (Vector.sub (facts, start))) () pool)
+        fun build checkpoint =
+          if !built >= checkpoint then ()
+          else
+            let
+              val previous = !built
+              val next = previous + 1
+              val pool = extend (previous * block) (next * block)
+                (Array.sub (checkpoints, previous))
+            in
+              Array.update (checkpoints, next, pool);
+              built := next;
+              build checkpoint
+            end
+      in
+        fn age =>
+          let
+            val count = prefix age 0 size
+            val checkpoint = count div block
+            val _ = build checkpoint
+          in
+            extend (checkpoint * block) count
+              (Array.sub (checkpoints, checkpoint))
+          end
+      end)
+    (* A sampled or resumed evaluation may need a single pool. Scan for
+       that first request, and index only if another pool is requested. *)
+    val requested = ref false
+  in
+    fn age =>
+      if size <= block then scan age
+      else if !requested then (Susp.force indexed) age
+      else (requested := true; scan age)
+  end
+
 fun chainy_for thy theorems =
   let
     val order = hhExportLib.sorted_ancestry [thy]
@@ -1504,20 +1566,18 @@ fun chainy_for thy theorems =
       in Redblackmap.insert (ages, name, age) end
     val oldest_facts = List.foldl add_fact
       (Redblackmap.mkDict String.compare) local_facts
+    val pool_by_age = chainy_pool_by_age ancestors oldest_facts
     (* Goals with duplicate names use the first theorem's age. *)
     val goal_ages = if null local_facts then Redblackmap.mkDict String.compare
       else List.foldr (fn ((name, thm), dict) =>
         Redblackmap.insert (dict, name, mlThmData.depnumber_of_thm thm))
         (Redblackmap.mkDict String.compare) theorems
-    fun earlier name = dmem name ancestors
+    fun earlier name = Redblackmap.inDomain (ancestors, name)
     fun facts name =
       case Redblackmap.peek (goal_ages, name) of
           NONE => {pool = fn () => ancestors, permits = earlier}
         | SOME age =>
-            {pool = fn () => Redblackmap.foldl
-               (fn (name, fact_age, pool) =>
-                 if fact_age < age then dadd name () pool else pool)
-               ancestors oldest_facts,
+            {pool = fn () => pool_by_age age,
              permits = fn fact => earlier fact orelse
                (case Redblackmap.peek (oldest_facts, fact) of
                     NONE => false

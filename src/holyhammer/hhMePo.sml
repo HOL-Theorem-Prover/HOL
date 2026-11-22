@@ -572,6 +572,9 @@ val special_set_thmids =
    "pred_setTheory.GSPECIFICATION", "boolTheory.IN_DEF"]
 val ext_thmid = "boolTheory.EQ_EXT"
 
+fun is_special_set_thmid thmid =
+  List.exists (fn name => name = thmid) special_set_thmids
+
 (* Count occurrences only up to the cutoff. This bounds the number of keys
    the restricted pool can need and keeps its original indices. Use the
    map only when the array would be much larger than that upper bound. *)
@@ -649,8 +652,7 @@ fun make_deferred_context {current_theory, facts} =
     val specials = ref []
     fun cache (fact as {thmid, ...}) =
       let val cached = cache_fact read_const index_pconst fact in
-        if thmid = ext_thmid orelse
-           List.exists (fn name => name = thmid) special_set_thmids
+        if thmid = ext_thmid orelse is_special_set_thmid thmid
         then specials := cached :: !specials else ();
         cached
       end
@@ -810,28 +812,33 @@ fun term_uses_set_const term =
     uses term
   end
 
-fun insert_special_facts (fudge : fudge) max_facts special_facts goal_terms
+fun insert_special_facts _ _ [] _ accepted = accepted
+  | insert_special_facts (fudge : fudge) max_facts special_facts goal_terms
       accepted =
-  let
-    val uses_set =
-      List.exists term_uses_set_const goal_terms orelse
-      List.exists (term_uses_set_const o #concl) accepted
-    val wanted =
-      (if could_benefit_from_ext accepted then [ext_thmid] else []) @
-      (if uses_set then special_set_thmids else [])
-    fun wanted_thmid thmid = List.exists (fn item => item = thmid) wanted
-  in
-    if null wanted then accepted
-    else
-      let
-        val add = first_test_n (wanted_thmid o #thmid) max_facts special_facts
-        val without = List.filter (not o wanted_thmid o #thmid) accepted
-        val trimmed = take (max_facts - length add) without
-        val (prefix, after) = split_at (#special_fact_index fudge) trimmed
-      in
-        prefix @ add @ after
-      end
-  end
+    let
+      val uses_set =
+        List.exists (is_special_set_thmid o #thmid) special_facts andalso
+        (List.exists term_uses_set_const goal_terms orelse
+         List.exists (term_uses_set_const o #concl) accepted)
+      val uses_ext =
+        List.exists (fn fact => #thmid fact = ext_thmid) special_facts andalso
+        could_benefit_from_ext accepted
+      val wanted =
+        (if uses_ext then [ext_thmid] else []) @
+        (if uses_set then special_set_thmids else [])
+      fun wanted_thmid thmid = List.exists (fn item => item = thmid) wanted
+    in
+      if null wanted then accepted
+      else
+        let
+          val add = first_test_n (wanted_thmid o #thmid) max_facts special_facts
+          val without = List.filter (not o wanted_thmid o #thmid) accepted
+          val trimmed = take (max_facts - length add) without
+          val (prefix, after) = split_at (#special_fact_index fudge) trimmed
+        in
+          prefix @ add @ after
+        end
+    end
 
 fun mepo_rank_with_fudge (fudge : fudge)
       ({current_theory, facts, special_facts,

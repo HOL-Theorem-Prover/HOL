@@ -8291,6 +8291,33 @@ fun test_hhEval_pool_restriction () =
 
 val _ = test_hhEval_pool_restriction ()
 
+fun test_hhEval_chainy_pools () =
+  let
+    (* Most ages are shared by three facts. The order by name differs from
+       the order by age, and some age groups straddle a checkpoint. *)
+    val local_facts = List.tabulate (769, fn n =>
+      ("local." ^ Int.toString n, n * 257 mod 769 div 3))
+    val ancestor_names = ["ancestor.first", "ancestor.last", "local.1"]
+    val pool = hhEval.chainy_pool_by_age
+      (Redblackmap.fromList String.compare
+        (map (fn name => (name, ())) ancestor_names))
+      (Redblackmap.fromList String.compare local_facts)
+    fun compare age =
+      let
+        val expected = aiLib.mk_string_set (ancestor_names @
+          List.mapPartial (fn (name, fact_age) =>
+            if fact_age < age then SOME name else NONE) local_facts)
+        val actual = Redblackmap.listKeys (pool age)
+      in
+        expect ("hhEval Chainy pool at age " ^ Int.toString age)
+          (actual = expected)
+      end
+  in
+    List.app compare [43, 171, 42, 0, 256, 128, 127, 85, 257, 43]
+  end
+
+val _ = test_hhEval_chainy_pools ()
+
 fun test_hhStature_pure () =
   let
     val truth = DB.fetch "bool" "TRUTH"

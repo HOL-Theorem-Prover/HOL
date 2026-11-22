@@ -648,13 +648,22 @@ struct
       (Redblackmap.mkDict Type.compare, []) formulas))
 
   fun raw_mangle_type ty =
-    if is_vartype ty then "var." ^ dest_vartype ty
-    else
-      let val {Thy, Tyop, Args} = Type.dest_thy_type ty in
-        Thy ^ "." ^ Tyop ^
-        (if null Args then "" else "(" ^
-          String.concatWith "," (map raw_mangle_type Args) ^ ")")
-      end
+    let
+      fun emit acc ty =
+        if is_vartype ty then dest_vartype ty :: "var." :: acc
+        else
+          let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+              val acc = Tyop :: "." :: Thy :: acc
+          in
+            case Args of
+                [] => acc
+              | first :: rest =>
+                  ")" :: List.foldl (fn (arg, acc) => emit ("," :: acc) arg)
+                    (emit ("(" :: acc) first) rest
+          end
+    in
+      String.concat (rev (emit [] ty))
+    end
 
   (* The longest prefix of an escaped name of at most [limit] characters
      that ends between two of aiLib.escape's tokens (a letter or digit,
@@ -676,7 +685,7 @@ struct
   (* A mangled name spells out whole types, so nested types make it
      arbitrarily long, and it is printed at every use.  A name over 80
      characters keeps a readable prefix and ends in a hash of the whole
-     name, as app_symbol does.  The hash follows _h, which aiLib.escape
+     name, as mono_app_symbol does.  The hash follows _h, which aiLib.escape
      never writes at a token boundary, so a shortened name is never an
      escaped name that was not shortened. *)
   fun bounded_name name =
@@ -810,23 +819,18 @@ struct
         end
     end
 
-  fun app_symbol (hhTypeEnc.Native {poly = false, ...})
-        (function_type, argument_type, result_type) =
-        "app_" ^ String.substring (aiLib.sha1_string
-          (raw_mangle_type function_type ^ "\n" ^
-           raw_mangle_type argument_type ^ "\n" ^
-           raw_mangle_type result_type), 0, 16)
-    | app_symbol _ _ = "app_2E"
+  fun mono_app_symbol (function_type, argument_type, result_type) =
+    "app_" ^ String.substring (aiLib.sha1_string
+      (raw_mangle_type function_type ^ "\n" ^
+       raw_mangle_type argument_type ^ "\n" ^
+       raw_mangle_type result_type), 0, 16)
 
   fun is_bound_var head = is_var head andalso not (is_generated_var head)
 
-  (* A bound variable stays the TPTP variable its quantifier binds. *)
-  fun value_symbol (encoding as hhTypeEnc.Native {poly = false, ...}) head =
-        if is_bound_var head then encoded_symbol encoding head else
-        "value_" ^ aiLib.escape (raw_symbol head) ^ "_" ^
-        String.substring
-          (aiLib.sha1_string (raw_mangle_type (type_of head)), 0, 12)
-    | value_symbol encoding head = encoded_symbol encoding head
+  fun mono_value_symbol head =
+    "value_" ^ aiLib.escape (raw_symbol head) ^ "_" ^
+    String.substring
+      (aiLib.sha1_string (raw_mangle_type (type_of head)), 0, 12)
 
   fun signature_compare ((f, a, r), (f', a', r')) =
     case Type.compare (f, f') of
@@ -863,7 +867,12 @@ struct
   fun symbol_table encoding : symbols =
     let
       val head = memoise Term.compare (encoded_symbol encoding)
-      val value = memoise Term.compare (value_symbol encoding)
+      val (value, app) =
+        case encoding of
+            hhTypeEnc.Native {poly = false, ...} =>
+              (memoise Term.compare mono_value_symbol,
+               memoise signature_compare mono_app_symbol)
+          | _ => (head, fn _ => "app_2E")
       val mangle = memoise Type.compare mangle_type
       val ty = memoise Type.compare (type_for mangle encoding)
       val type_args =
@@ -880,7 +889,7 @@ struct
        ty = ty, mangle = mangle, type_args = type_args,
        guard = memoise Type.compare
          (fn ty => bounded_name (aiLib.escape ("gd." ^ mangle ty))),
-       app = memoise signature_compare (app_symbol encoding)}
+       app = app}
     end
 
   fun encode_term (symbols : symbols) encoding (FOHead (head, args)) =
