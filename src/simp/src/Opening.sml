@@ -234,7 +234,7 @@ let
        end
 
 in fn relation =>
-  if not (samerel rel relation) andalso not (same_const rel relation) then
+  if not (same_const rel relation) andalso not (samerel rel relation) then
     liteLib.failwith "not applicable"
   else
     fn {solver,depther,freevars} => fn tm =>

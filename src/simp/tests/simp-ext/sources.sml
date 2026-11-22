@@ -587,6 +587,11 @@ val _ = let
     (projection false ss) (input av) av
   val _ = delta "consumption alone is not a structural change"
     ss ss [] false false
+  val with_key = S.++ (ss,keyed_frag "sources-after-view" fresh_key)
+  val _ = delta "keyed addition preserves earlier views"
+    ss with_key [fresh_key] false false
+  val _ = delta "reverse keyed comparison preserves earlier views"
+    with_key ss [fresh_key] false false
   val suspended = S.suspend_rewrite_sources [source ca ss] ss
   val _ = delta "suspension invalidates a surviving event's dependent view"
     ss suspended [] true false

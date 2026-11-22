@@ -37,11 +37,15 @@ fun source_rewrite (RewriteSource {rewrite,...}) = rewrite
 
 fun rewrite_source_compare
       (RewriteSource {origin=a,...},RewriteSource {origin=b,...}) =
-  Lib.pair_compare
-    (Lib.pair_compare (Int.compare,Int.compare),
-     Lib.pair_compare (Int.compare,Int.compare))
-    (((#event a,#slot a),(#component a,#conjunct a)),
-     ((#event b,#slot b),(#component b,#conjunct b)))
+  case Int.compare (#event a,#event b) of
+      EQUAL =>
+        (case Int.compare (#slot a,#slot b) of
+             EQUAL =>
+               (case Int.compare (#component a,#component b) of
+                    EQUAL => Int.compare (#conjunct a,#conjunct b)
+                  | order => order)
+           | order => order)
+    | order => order
 
 fun same_rewrite_source
       (s1 as RewriteSource {origin=o1,rewrite=(n1,t1),bound=b1},
@@ -1405,10 +1409,6 @@ fun mk_tactic_solver (name,tac) =
  fun is_excluded (SS{excluded,...}) f =
      simpCommon.is_excluded excluded (frag_name f)
 
- fun numbered f xs =
-   #2 (List.foldl (fn (x,(i,acc)) => (i+1, f (i,x)::acc))
-                  (1,[]) xs) |> List.rev
-
  fun compile_native_named event slot component named =
    let
      fun compile _ [] acc = List.rev acc
@@ -1451,13 +1451,16 @@ fun mk_tactic_solver (name,tac) =
      val crewrs = map
        (fn {item=(nm,th),token} => (token,0,(nm,dest_tagged_rewrite th)))
        rewrs
-     val acrewrs = Lib.itlist
-       (fn {item,token} => fn acc =>
-         numbered (fn (component,rw) => (token,component,rw))
-           (mk_ac item []) @ acc) ac []
+     fun derive_ac {item,token} acc =
+       let
+         fun number _ [] = acc
+           | number component (rw::rest) =
+               (token,component,rw)::number (component + 1) rest
+       in number 1 (mk_ac item []) end
+     val acrewrs = Lib.itlist derive_ac ac crewrs
      val named = map
        (fn (slot,component,rw) =>
-         (slot,component,mk_named_rewrs mk_rewrs rw)) (acrewrs @ crewrs)
+         (slot,component,mk_named_rewrs mk_rewrs rw)) acrewrs
    in
      flatten (map
        (fn (slot,component,rws) =>
@@ -1468,6 +1471,11 @@ fun mk_tactic_solver (name,tac) =
    {parts : (ssfrag * int * prepared_native) list,
     rules : (thm * rewrite_source list) list,
     context : thm list}
+
+ fun bundle_events parts =
+   List.foldl
+     (fn ((_,event,_),events) => Binaryset.add (events,event))
+     (Binaryset.empty Int.compare) parts
 
  (* Compilation alone cannot prime an ambient reducer with supplied facts. *)
  fun prepare_rewrite_bundle (SS data) theorems =
@@ -1495,9 +1503,7 @@ fun mk_tactic_solver (name,tac) =
    let
      val data = map (fn RewriteBundle data => data) bundles
      val parts = List.concat (map #parts data)
-     val events = map #2 parts
-     val distinct = Binaryset.addList (Binaryset.empty Int.compare,events)
-     val _ = Binaryset.numItems distinct = length events orelse
+     val _ = Binaryset.numItems (bundle_events parts) = length parts orelse
        raise ERR ("combine_rewrite_bundles","duplicate binding")
    in RewriteBundle
         {parts=parts,rules=List.concat (map #rules data),
@@ -1689,6 +1695,13 @@ fun mk_tactic_solver (name,tac) =
    else add_frag_native AvailableSources NONE [] NONE
           (source_token ()) (ss,fragment)
 
+ fun setexcluded e (SS s) =
+   SS {mk_rewrs = #mk_rewrs s, history = #history s,
+       initial_net = #initial_net s, rewrite_sources = #rewrite_sources s,
+       native_sources = #native_sources s, dprocs = #dprocs s,
+       travrules = #travrules s, limit = #limit s,
+       excluded = e, strategy = #strategy s}
+
  fun install_rewrite_bundle (RewriteBundle {parts,...}) views
        (ss as SS data) =
    let
@@ -1702,9 +1715,7 @@ fun mk_tactic_solver (name,tac) =
          | [(_,event,_)] => installed_single event (#history data)
          | _ =>
              let
-               val events = List.foldl (fn ((_,event,_),events) =>
-                 Binaryset.add (events,event)) (Binaryset.empty Int.compare)
-                 parts
+               val events = bundle_events parts
              in
                List.exists
                  (fn ADDFRAG (_,previous,_,_) =>
@@ -1715,22 +1726,22 @@ fun mk_tactic_solver (name,tac) =
      val _ = not duplicate orelse
        raise ERR ("install_rewrite_bundle","binding already installed")
      val views_by_event = grouped_by Int.compare (source_event o #1) views
-     fun install ((fragment,event,native),SS data) =
+     fun unexclude name (ss as SS data) =
+       if Binaryset.isEmpty (#excluded data) then ss
+       else
+         setexcluded (Binaryset.delete (#excluded data,name)) ss
+         handle NotFound => ss
+     fun install ((fragment,event,native),ss) =
        let
          val name = valOf (frag_name fragment)
-         val excluded = Binaryset.delete (#excluded data,name)
-           handle NotFound => #excluded data
+         val ss = unexclude name ss
          val fragment =
-           setfrag_views (map (fn (s,th) => (s,th,NONE))
-             (group_items views_by_event event)) fragment
+           case group_items views_by_event event of
+               [] => fragment
+             | views => setfrag_views (map (fn (s,th) => (s,th,NONE)) views)
+                          fragment
        in add_frag_native BundleSources (SOME native) [] NONE event
-            (SS {mk_rewrs = #mk_rewrs data, history = #history data,
-                 initial_net = #initial_net data,
-                 rewrite_sources = #rewrite_sources data,
-                 native_sources = #native_sources data,
-                 dprocs = #dprocs data, travrules = #travrules data,
-                 limit = #limit data, excluded = excluded,
-                 strategy = #strategy data},fragment) end
+            (ss,fragment) end
    in List.foldl install ss parts end
 
 val mk_simpset = foldl (fn (f,ss) => ss ++ f) empty_ss
@@ -1810,13 +1821,6 @@ fun build_from_history_with rebind h0 =
     end
 
 fun build_from_history h0 = build_from_history_with NONE h0
-
-fun setexcluded e (SS s) =
-  SS {mk_rewrs = #mk_rewrs s, history = #history s,
-      initial_net = #initial_net s, rewrite_sources = #rewrite_sources s,
-      native_sources = #native_sources s, dprocs = #dprocs s,
-      travrules = #travrules s, limit = #limit s,
-      excluded = e, strategy = #strategy s}
 
 fun rebind_source_controls get_current =
   let
@@ -2078,16 +2082,18 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
     fun added_fragment ((item as ADDFRAG _)::rest) previous =
           if Portable.pointer_eq (rest,previous) then SOME item else NONE
       | added_fragment _ _ = NONE
+    fun viewless (ADDFRAG (SSFRAG_CON {views,...},_,_,_)) = null views
+      | viewless _ = false
     fun changed_histories (old as _::_, current as _::_) =
           (case added_fragment current old of
-               SOME item => ([],[item])
+               SOME item => ([],[item],viewless item)
              | NONE =>
                  case added_fragment old current of
-                     SOME item => ([item],[])
-                   | NONE => (old,current))
-      | changed_histories histories = histories
-    val (old_history,new_history) =
-      if same_history then ([],[])
+                     SOME item => ([item],[],viewless item)
+                   | NONE => (old,current,false))
+      | changed_histories (old,current) = (old,current,false)
+    val (old_history,new_history,same_view_history) =
+      if same_history then ([],[],true)
       else changed_histories (#history old,#history current)
     val (old_convs,old_structure,old_makers) = snapshot old_history
     val (new_convs,new_structure,new_makers) = snapshot new_history
@@ -2158,7 +2164,9 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
                 (#1 (queried_source_index queries sources))
       end
     fun views_changed () =
-      not (same_history andalso
+      (* A viewless addition outside the shared history has no effect on
+         earlier views when it leaves their native sources alone. *)
+      not (same_view_history andalso
            Portable.pointer_eq (#native_sources old,#native_sources current))
       andalso not (ListPair.allEq same_view
         (active_views_of (#history old) (#native_sources old),
