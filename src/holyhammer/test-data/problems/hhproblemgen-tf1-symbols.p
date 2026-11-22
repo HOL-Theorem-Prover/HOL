@@ -13,11 +13,11 @@ tff(sy_2Ec_2Enum_2E0, type,
 tff(sy_2Ec_2Elist_2ENIL, type,
     c_2Elist_2ENIL : !>[A_27a : $tType]: ty_2Elist_2Elist(A_27a)).
 tff(sy_2Eapp, type,
-    app_2E : ($i * $i) > $i).
+    app_2E : !>[A : $tType, B : $tType]: ((ty_2Emin_2Efun(A,B) * A) > B)).
 % Helpers (1)
 tff(help_2Eeq__ext, axiom,
-    ((!>[A_27a : $tType, A_27b : $tType]: (![V_f : A_27a > A_27b]: (![V_g : A_27a > A_27b]: ((![V_x : A_27a]: (app_2E(V_f,V_x) = app_2E(V_g,V_x))) => (V_f = V_g))))))).
+    ((![A_27a : $tType, A_27b : $tType]: (![V_f : ty_2Emin_2Efun(A_27a,A_27b)]: (![V_g : ty_2Emin_2Efun(A_27a,A_27b)]: ((![V_x : A_27a]: (app_2E(A_27a,A_27b,V_f,V_x) = app_2E(A_27a,A_27b,V_g,V_x))) => (V_f = V_g))))))).
 % Facts (0)
 % Conjecture (1)
 tff(conjecture, conjecture,
-    (((![H : ty_2Enum_2Enum > ty_2Enum_2Enum]: (app_2E(H,c_2Enum_2E0) = c_2Enum_2E0)) & ((c_2Elist_2ENIL(ty_2Enum_2Enum) = c_2Elist_2ENIL(ty_2Enum_2Enum)) & (c_2Elist_2ENIL($o) = c_2Elist_2ENIL($o)))))).
+    (((![H : ty_2Emin_2Efun(ty_2Enum_2Enum,ty_2Enum_2Enum)]: (app_2E(ty_2Enum_2Enum,ty_2Enum_2Enum,H,c_2Enum_2E0) = c_2Enum_2E0)) & ((c_2Elist_2ENIL(ty_2Enum_2Enum) = c_2Elist_2ENIL(ty_2Enum_2Enum)) & (c_2Elist_2ENIL(ty_2Emin_2Ebool) = c_2Elist_2ENIL(ty_2Emin_2Ebool)))))).

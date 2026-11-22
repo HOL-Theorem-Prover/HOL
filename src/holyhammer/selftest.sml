@@ -1380,38 +1380,47 @@ fun test_hhProblemGen () =
     val one_only = mk_forall (one_x, mk_eq (one_x, one_x))
     val one_all = problem fof "mono_guards" (input one_only)
     val one_query = problem fof "mono_guards??" (input one_only)
-    val forty_four = problem tf1 "poly_native"
-      {conjecture = full_formula,
-       facts = List.tabulate (44, fn index =>
-         ("f" ^ Int.toString index,
-          Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x))))}
-    val forty_five = problem tf1 "poly_native"
-      {conjecture = full_formula,
-       facts = List.tabulate (45, fn index =>
-         ("f" ^ Int.toString index,
-          Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x))))}
+    (* The conjecture's H : num -> num can take pxy.f X, so below the
+       cut-over Sufficient_App_Op applies pxy.f to one argument only. *)
+    val full_fact = mk_forall (function_var, full_formula)
+    fun poly_facts count fact = problem tf1 "poly_native"
+      {conjecture = full_fact,
+       facts = List.tabulate (count, fn index =>
+         ("f" ^ Int.toString index, fact))}
+    val forty_four = poly_facts 40 full_formula
+    val forty_five = poly_facts 45 full_formula
+    val partial_forty_five = poly_facts 45
+      (Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x)))
     val _ = expect "hhProblemGen respects final application arities"
       (String.isSubstring "pxy_2Ef(" no_function_variable andalso
        not (String.isSubstring "app_2E(pxy_2Ef" no_function_variable) andalso
        String.isSubstring "app_2E(pxy_2Ef" with_function_variable)
     val _ = expect "hhProblemGen switches to Min_App_Op at forty-five facts"
-      (occurrences "app_2E(pxy_2Ef" forty_four = 44 andalso
-       occurrences "app_2E(pxy_2Ef" forty_five = 45)
+      (occurrences "pxy_2Ef(X,Y)" forty_four = 0 andalso
+       occurrences "pxy_2Ef(X,Y)" forty_five = 46)
+    (* pxy.f occurs with one and with two arguments.  TF1 declares it once,
+       so it takes the smaller arity and is never partially applied. *)
+    val _ = expect "TF1 Min_App_Op never leaves a symbol partially applied"
+      (String.isSubstring
+         "pxy_2Ef : ty_2Enum_2Enum > ty_2Emin_2Efun(ty_2Enum_2Enum,"
+         partial_forty_five andalso
+       occurrences "pxy_2Ef(X)" partial_forty_five = 46 andalso
+       not (String.isSubstring "pxy_2Ef(X,Y)" partial_forty_five))
     (* The COND conjecture adds six helpers (if_True, if_False, bool_cases,
        pxy.true, pxy.false, eq_ext) after the main facts, so 38 user facts
        give 44 facts at firstorderize and 39 give 45.  The helpers alone then
        decide whether Min_App_Op applies. *)
     fun pxy_facts count = List.tabulate (count, fn index =>
-      ("f" ^ Int.toString index,
-       Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x))))
-    val cond_conjecture = mk_conj (full_formula, mk_eq (cond_tm, x))
+      ("f" ^ Int.toString index, full_formula))
+    val cond_conjecture = mk_forall (function_var,
+      mk_conj (full_formula, mk_eq (cond_tm, x)))
     val below_threshold = problem tf1 "poly_native"
       {conjecture = cond_conjecture, facts = pxy_facts 38}
     val crossing_threshold = problem tf1 "poly_native"
       {conjecture = cond_conjecture, facts = pxy_facts 39}
     val _ = expect "hhProblemGen recomputes arities when helpers cross 45"
-      (occurrences "app_2E(pxy_2Ef" below_threshold = 1 andalso
-       occurrences "app_2E(pxy_2Ef" crossing_threshold = 39)
+      (occurrences "pxy_2Ef(X,Y)" below_threshold = 0 andalso
+       occurrences "pxy_2Ef(X,Y)" crossing_threshold = 40)
     val z = Term.mk_var ("Z", num)
     val ternary_num = Type.mk_type ("fun", [num, binary_num])
     (* pxy.s and pxy.t take three arguments; pxy.t is over-applied, so the main
@@ -1446,9 +1455,39 @@ fun test_hhProblemGen () =
        String.isSubstring "var_2E_27a" mono_native)
     val _ = expect
       "hhProblemGen binds TF1 type variables and emits declarations"
-      (String.isSubstring "!>[A" poly_native andalso
+      (String.isSubstring "(![A_27a : $tType]:" poly_native andalso
+       not (String.isSubstring "(!>[" poly_native) andalso
        String.isSubstring "tff(ty_" poly_native andalso
        String.isSubstring "tff(sy_" poly_native)
+    val x_alpha = Term.mk_var ("x", alpha)
+    val combin_I = Term.prim_mk_const {Thy = "combin", Name = "I"}
+    val poly_values = problem tf1 "poly_native"
+      (input (mk_eq (Term.mk_abs (x_alpha, x_alpha), combin_I)))
+    val _ = expect
+      "TF1 gives values, lifted lambdas and app their type arguments"
+      (String.isSubstring "lam_2E0(A_27a) = c_2Ecombin_2EI(A_27a)"
+         poly_values andalso
+       String.isSubstring "app_2E(A_27a,A_27a,lam_2E0(A_27a),V_x)"
+         poly_values andalso
+       String.isSubstring
+         "lam_2E0 : !>[A_27a : $tType]: ty_2Emin_2Efun(A_27a,A_27a)"
+         poly_values andalso
+       String.isSubstring ("app_2E : !>[A : $tType, B : $tType]: " ^
+         "((ty_2Emin_2Efun(A,B) * A) > B)") poly_values)
+    val alpha_fun = Term.mk_var ("f", Type.mk_type ("fun", [alpha, alpha]))
+    val bool_var = Term.mk_var ("p", Type.bool)
+    val excluded_middle = mk_forall (alpha_fun,
+      mk_forall (bool_var, mk_disj (bool_var, mk_neg bool_var)))
+    val tf1_sorts = problem tf1 "poly_native" (input excluded_middle)
+    val th1_sorts = problem th1 "poly_native" (input excluded_middle)
+    val _ = expect "TF1 sorts functions and Booleans as first-order types"
+      (String.isSubstring "V_f : ty_2Emin_2Efun(A_27a,A_27a)" tf1_sorts
+       andalso String.isSubstring "V_p : ty_2Emin_2Ebool" tf1_sorts andalso
+       String.isSubstring "pp_2E : ty_2Emin_2Ebool > $o" tf1_sorts)
+    val _ = expect "TH1 poly_native keeps THF's arrow, $o and !>"
+      (String.isSubstring "(!>[A_27a : $tType]:" th1_sorts andalso
+       String.isSubstring "V_f : A_27a > A_27a" th1_sorts andalso
+       String.isSubstring "V_p : $o" th1_sorts)
     val _ = expect "all native encoding paths produce TPTP structures"
       (String.isSubstring "tff(conjecture" mono_native andalso
        String.isSubstring "tff(conjecture" fool_bool_term andalso
