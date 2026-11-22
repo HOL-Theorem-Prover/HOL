@@ -294,6 +294,17 @@ val _ = scoped (fn () => let
   in check "explicit looper target removes only the ordinary collision"
        (case goals of [([],tm)] => aconv tm (#2 goal) | _ => false) end
   val _ = scenario ("split.case bool","case:bool",I)
+  val tyop = "case$name"
+  val _ = new_type (tyop,0)
+  val ty = mk_thy_type {Thy=current_theory (),Tyop=tyop,Args=[]}
+  val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info
+    (ty,{nchotomy=NONE,induction=NONE,size=NONE,encode=NONE})]
+  fun exclude_case name = args S.empty_ss [S.ExclX ("case:" ^ name)]
+  val _ = check "case exclusions accept literal and qualified type names"
+    (List.all (can exclude_case)
+      ["min$bool",tyop,current_theory () ^ "$" ^ tyop])
+  val _ = failure "qualified case exclusion requires the matching theory"
+    (error "ExclX did not match") (fn () => exclude_case ("missing$" ^ tyop))
   val _ = scenario ("split " ^ key,"split:" ^ key,S.add_split split)
 in () end)
 

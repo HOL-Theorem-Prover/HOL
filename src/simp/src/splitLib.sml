@@ -349,8 +349,21 @@ type split_pack =
    depth : int,
    visit : int}
 
-fun fold_candidates cmap head collect packs =
-  case Symtab.lookup_list cmap (const_key head) of
+fun candidate_entries cmap =
+  let
+    fun indexed head = Symtab.lookup_list cmap (const_key head)
+    (* A single head needs no allocated name key, even on a miss. *)
+    val only_bucket =
+      if Symtab.size cmap = 1 then Symtab.min cmap else NONE
+  in
+    case only_bucket of
+        SOME (_,entries as [(key_head,_)]) =>
+          (fn head => if same_const key_head head then entries else [])
+      | _ => indexed
+  end
+
+fun fold_candidates candidates head collect packs =
+  case candidates head of
       [] => packs
     | entries =>
         let
@@ -377,7 +390,7 @@ fun enter_path steps =
 fun matching (rule : split_rule) redex =
   can (match_term (#pattern rule)) redex
 
-fun scan cmap tm =
+fun scan candidates tm =
   let
     val root_type = type_of tm
 
@@ -439,7 +452,7 @@ fun scan cmap tm =
               | NONE => acc
           val here =
             if is_const head then
-              fold_candidates cmap head collect packs
+              fold_candidates candidates head collect packs
             else packs
           fun descend (arg, (i, packs)) =
             let
@@ -451,7 +464,8 @@ fun scan cmap tm =
           #2 (foldl descend (0, here) args)
         end
   in
-    List.rev (walk 0 [] [] tm [])
+    (* The pack comparator already recovers visit order on ties. *)
+    walk 0 [] [] tm []
   end
 
 fun pack_compare (p1 : split_pack, p2 : split_pack) =
@@ -471,6 +485,9 @@ fun fresh_parts th =
     (sth, pred, pattern)
   end
 
+val split_beta =
+  LAND_CONV BETA_CONV THENC RAND_CONV (TOP_DEPTH_CONV BETA_CONV)
+
 fun instantiate (rule : split_rule) target body =
   let
     val (sth, pred, pattern) = fresh_parts (#thm rule)
@@ -480,10 +497,7 @@ fun instantiate (rule : split_rule) target body =
     val context = mk_abs (hole, Term.subst [target |-> hole] body)
     val subst = (pred' |-> context) :: terminst
     val ith = INST subst (INST_TYPE typeinst sth)
-    val beta =
-      LAND_CONV BETA_CONV THENC
-      RAND_CONV (TOP_DEPTH_CONV BETA_CONV)
-    val result = CONV_RULE beta ith
+    val result = CONV_RULE split_beta ith
     val _ =
       if aconv (lhs (concl result)) body then ()
       else raise ERR "instantiate" "instantiated rule has the wrong left side"
@@ -499,46 +513,46 @@ fun first_success packs tm =
   Lib.with_exn (Lib.tryfind (fn pack => apply_pack pack tm)) packs
                (ERR "SPLIT_CONV" "no applicable split rule")
 
-fun split_conv cmap tm =
+fun split_conv cmap =
   let
-    val packs = if Symtab.is_empty cmap then []
-                else Listsort.sort pack_compare (scan cmap tm)
+    val candidates = candidate_entries cmap
     (* Isabelle tries only the first sorted pack.  Trying later packs
        when instantiation fails avoids one rejected rule shadowing an
        otherwise applicable rule, while retaining one split per call. *)
   in
-    first_success packs tm
+    if Symtab.is_empty cmap then first_success []
+    else fn tm => first_success (Listsort.sort pack_compare
+                                   (scan candidates tm)) tm
   end
 
 fun SPLIT_CONV thms = split_conv (index_theorems false thms)
 
-fun clean_asm_eq th =
+val clean_asm_rhs =
   let
-    val not_not = CONJUNCT1 boolTheory.NOT_CLAUSES
-    val cancel = REWR_CONV not_not
-    val negated = AP_TERM boolSyntax.negation th
-    val cleanup =
-      LAND_CONV cancel THENC
-      RAND_CONV cancel THENC
-      RAND_CONV (REDEPTH_CONV cancel)
+    val cancel = REWR_CONV (CONJUNCT1 boolTheory.NOT_CLAUSES)
   in
     (* Cancel the two outer negations without simplifying inside the
        original assumption.  Then remove the double negations generated
        in the case hypotheses.  This is the small fragment of the usual
        NOT_CLAUSES/DE_MORGAN_THM cleanup needed here. *)
-    CONV_RULE cleanup negated
+    LAND_CONV cancel THENC RAND_CONV cancel THENC
+    RAND_CONV (REDEPTH_CONV cancel)
   end
 
-fun asm_eq cmap asm =
+fun clean_asm_eq th =
+  CONV_RULE clean_asm_rhs (AP_TERM boolSyntax.negation th)
+
+fun asm_eq candidates asm =
   let
     val negated = mk_neg asm
-    val packs = Listsort.sort pack_compare (scan cmap negated)
+    val packs = Listsort.sort pack_compare (scan candidates negated)
   in
     clean_asm_eq (first_success packs negated)
   end
 
 fun split_asm_tac cmap =
   let
+    val candidates = candidate_entries cmap
     val heads = Symtab.fold
       (fn (_,entries) => fn acc => foldl (fn ((head,_),acc) => head::acc)
                                        acc entries) cmap []
@@ -565,7 +579,7 @@ fun split_asm_tac cmap =
           raise ERR "SPLIT_ASM_TAC" "no assumption contains a split key"
       | first_split (asm :: rest) =
           if contains_head asm then
-            case Lib.total (asm_eq cmap) asm of
+            case Lib.total (asm_eq candidates) asm of
                 SOME eq => (asm, eq)
               | NONE => first_split rest
           else first_split rest

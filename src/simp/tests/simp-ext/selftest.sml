@@ -58,6 +58,32 @@ in
      aconv (result without a) a andalso aconv (result without b) c andalso
      aconv (result (S.lift_simpset ordinary) a) c)
 end
+
+val _ = let
+  val anon = simpLib.empty_ssfrag
+  val ordinary = simpLib.mk_simpset [anon, simpLib.name_ss "" anon]
+  val omitted = ["absent", "", "also absent", ""]
+in
+  check "lift skips a selected empty name and retains an anonymous fragment"
+    (map S.frag_name (S.ssfrags_of (S.lift_simpset_without omitted ordinary))
+     = [NONE])
+end
+
+val _ = let
+  val seen = ref []
+  fun fragment names = S.rewrites_with_names
+    (map (fn n => ({Thy="bool",Name=n},boolTheory.TRUTH)) names)
+  val ss = S.++ (S.++ (S.empty_ss,fragment ["older"]),fragment ["a","b","c"])
+  fun keep (SOME {Name,...} : S.thname option,_) =
+        (seen := Name :: !seen; Name <> "b")
+    | keep _ = raise Fail "expected a named rewrite"
+  val filtered = S.filter_rewrites keep ss
+in
+  check "filter calls its predicate once per rewrite in history order"
+    (List.rev (!seen) = ["a","b","c","older"] andalso
+     map (length o S.frag_rewrites) (S.ssfrags_of filtered) = [2,1])
+end
+
 val _ = converted "tracked BOOL beta and boolean rewriting"
   (S.SIMP_CONV ext_bool_ss [])
   ``(\x:bool. x /\ T) p`` ``p:bool``

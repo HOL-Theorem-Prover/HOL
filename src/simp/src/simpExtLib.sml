@@ -44,11 +44,13 @@ fun rewrite_source_compare
      ((#event b,#slot b),(#component b,#conjunct b)))
 
 fun same_rewrite_source
-      (RewriteSource {origin=o1,rewrite=(n1,t1),bound=b1},
-       RewriteSource {origin=o2,rewrite=(n2,t2),bound=b2}) =
-  o1 = o2 andalso n1 = n2 andalso aconv (concl t1) (concl t2) andalso
-  HOLset.equal (hypset t1, hypset t2) andalso
-  Option.map #2 b1 = Option.map #2 b2
+      (s1 as RewriteSource {origin=o1,rewrite=(n1,t1),bound=b1},
+       s2 as RewriteSource {origin=o2,rewrite=(n2,t2),bound=b2}) =
+  Portable.pointer_eq (s1,s2) orelse
+  (o1 = o2 andalso n1 = n2 andalso
+   (Portable.pointer_eq (t1,t2) orelse
+    (aconv (concl t1) (concl t2) andalso HOLset.equal (hypset t1, hypset t2)))
+   andalso Option.map #2 b1 = Option.map #2 b2)
 
 fun source_event (RewriteSource {origin,...}) = #event origin
 fun source_is_bounded (RewriteSource {bound,...}) = Option.isSome bound
@@ -1197,11 +1199,19 @@ fun case_display_exists display =
   String.isPrefix case_prefix display andalso
   let
     val wanted = String.extract (display,String.size case_prefix,NONE)
+    (* Compare the common qualified spelling without building a string for
+       each entry. Type names can contain dollar signs themselves. *)
+    val qualified =
+      case String.fields (equal #"$") wanted of
+          [_] => K false
+        | [theory,name] =>
+            (fn (thy,tyop) => thy = theory andalso tyop = name)
+        | _ => (fn (thy,tyop) =>
+            wanted = KernelSig.name_toString {Thy=thy,Name=tyop})
     fun names tyinfo =
       let val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
       in
-        wanted = tyop orelse
-        wanted = KernelSig.name_toString {Thy=thy,Name=tyop}
+        wanted = tyop orelse qualified (thy,tyop)
       end
   in
     List.exists names (TypeBase.elts_of (split_context ()))
@@ -1525,8 +1535,9 @@ fun mk_tactic_solver (name,tac) =
             all_native
        end
    val native = case rebind of NONE => retained | SOME bind => bind retained
-   val new_sources = map #2 native
-   val native_sources = new_sources @ #native_sources sset
+   val native_sources =
+     List.foldr (fn ((_,source),sources) => source::sources)
+       (#native_sources sset) native
    fun bind_view NONE compiled = compiled
      | bind_view (bound as SOME (pair as (counter,declared))) compiled =
          case compiled of
@@ -1561,7 +1572,7 @@ fun mk_tactic_solver (name,tac) =
      else case view_sources of
          BundleSources =>
            let
-             val find = source_finder new_sources #1 views
+             val find = source_finder (map #2 native) #1 views
              fun own_view (entry as (source,_,_)) =
                case find source of
                    NONE => NONE
@@ -1573,7 +1584,7 @@ fun mk_tactic_solver (name,tac) =
              let
                (* Replay also considers ambient sources when a view's
                   own source is missing or has changed. *)
-               val own = source_finder new_sources #1 views
+               val own = source_finder (map #2 native) #1 views
                val ambient = Susp.delay
                  (fn () => source_finder (#native_sources sset) #1 views)
                fun find source =
@@ -1582,9 +1593,13 @@ fun mk_tactic_solver (name,tac) =
                    | found => found
              in map (retain_view find) views end
            else map (retain_view (source_finder native_sources #1 views)) views
-   val newconvdata = convs @ map #1 native @
-     List.mapPartial #1 compiled_views
-   val net = net_add_convs initial_net newconvdata
+   val view_convs = List.mapPartial #1 compiled_views
+   (* Install from the end so fragment conversions retain priority over
+      native rewrites, and native rewrites retain priority over views. *)
+   val net =
+     net_add_convs initial_net view_convs
+     |> itlist (net_add_conv o #1) native
+     |> (fn net => net_add_convs net convs)
    fun travrel (TRAVRULES{relations,...}) = relations
    val sset_rels = travrel travrules
    (* give the existing dprocs the rewrs as additional context -
@@ -1646,8 +1661,14 @@ fun mk_tactic_solver (name,tac) =
        (setfrag_views (map #2 compiled_views) f,event,
         native_override,suspended)
        :: history
+     fun retain_source ({source,...} : tagged_convdata,sources) =
+       case source of NONE => sources | SOME source => source::sources
+     val view_rewrites = List.foldr retain_source (#rewrite_sources sset)
+       view_convs
      val rewrite_sources =
-       List.mapPartial #source newconvdata @ #rewrite_sources sset
+       List.foldr retain_source
+         (List.foldr (fn ((data,_),sources) => retain_source (data,sources))
+            view_rewrites native) convs
      val travrules =
        merge_travrules
          (travrules::mk_travrules relations congs::
@@ -1672,12 +1693,27 @@ fun mk_tactic_solver (name,tac) =
  fun install_rewrite_bundle (RewriteBundle {parts,...}) views
        (ss as SS data) =
    let
-     val events = Binaryset.addList
-       (Binaryset.empty Int.compare,map #2 parts)
-     val _ = null parts orelse not (List.exists
-       (fn ADDFRAG (_,previous,_,_) => Binaryset.member (events,previous)
-         | _ => false)
-       (#history data)) orelse
+     fun installed_single _ [] = false
+       | installed_single event (ADDFRAG (_,previous,_,_)::rest) =
+           previous = event orelse installed_single event rest
+       | installed_single event (_::rest) = installed_single event rest
+     val duplicate =
+       case parts of
+           [] => false
+         | [(_,event,_)] => installed_single event (#history data)
+         | _ =>
+             let
+               val events = List.foldl (fn ((_,event,_),events) =>
+                 Binaryset.add (events,event)) (Binaryset.empty Int.compare)
+                 parts
+             in
+               List.exists
+                 (fn ADDFRAG (_,previous,_,_) =>
+                       Binaryset.member (events,previous)
+                   | _ => false)
+                 (#history data)
+             end
+     val _ = not duplicate orelse
        raise ERR ("install_rewrite_bundle","binding already installed")
      val views_by_event = grouped_by Int.compare (source_event o #1) views
      fun install ((fragment,event,native),SS data) =
@@ -1844,15 +1880,16 @@ fun suspend_rewrite_sources [] ss = ss
             end
     end
 
-fun remove_ssfrags_with_controls preserve names
+fun remove_ssfrags_with_controls _ [] _ = raise Conv.UNCHANGED
+  | remove_ssfrags_with_controls preserve names
       (SS{history,limit,excluded,native_sources,...}) =
     let
       val member = simpCommon.names_member names o frag_name
-      fun filterthis (ADDFRAG (f,_,_,_)) = not(member f)
-        | filterthis hi = true
-      val history' = List.filter filterthis history
-      val _ = length history' < length history orelse
-              raise Conv.UNCHANGED
+      fun removes (ADDFRAG (f,_,_,_)) = member f
+        | removes _ = false
+      (* A miss can leave the history in place. *)
+      val _ = List.exists removes history orelse raise Conv.UNCHANGED
+      val history' = List.filter (not o removes) history
       val rebind = if not preserve then NONE else
         SOME (rebind_source_controls
           (fn () => source_index source_is_bounded native_sources))
@@ -1880,15 +1917,21 @@ fun remove_ssfrags_preserving_controls names ss =
 fun filter_rewrites_with_controls preserve keep
       (ss as SS{history,limit,excluded,native_sources,...}) =
     let
-      val changed = ref false
-      fun filtered (item as ADDFRAG (f,event,cached,suspended)) =
+      (* Delay copying the prefix while the predicate keeps every rewrite.
+         Copy it by length so the predicate runs once per rewrite. *)
+      fun retained_rewrites rewrs =
+        let
+          fun retain ({item,...} : (thname option * thm) source_slot) =
+            keep item
+          fun first_removed _ [] = NONE
+            | first_removed n (entry::rest) =
+                if retain entry then first_removed (n + 1) rest
+                else SOME (List.take (rewrs,n) @ List.filter retain rest)
+        in first_removed 0 rewrs end
+      fun filtered (ADDFRAG (f,event,cached,suspended)) =
             let
               val {rewrs,ac,...} = D f
-              val removed = ref false
-              fun retain {item,...} =
-                if keep item then true else (removed := true; false)
-              val retained = List.filter retain rewrs
-              fun filter_cached {rules,slot_local} =
+              fun filter_cached retained {rules,slot_local} =
                 let
                   val slots = Binaryset.addList (Binaryset.empty Int.compare,
                     map #token retained @ map #token ac)
@@ -1896,17 +1939,25 @@ fun filter_rewrites_with_controls preserve keep
                     Binaryset.member (slots,#slot origin)) rules
                 in {rules=rules,slot_local=slot_local} end
             in
-              if !removed then
-                (changed := true;
-                 ADDFRAG (setfrag_rewrs retained f,event,
-                          Option.map filter_cached cached,suspended))
-              else item
+              case retained_rewrites rewrs of
+                  NONE => NONE
+                | SOME retained =>
+                    SOME (ADDFRAG (setfrag_rewrs retained f,event,
+                      Option.map (filter_cached retained) cached,suspended))
             end
-        | filtered item = item
-      val history' = map filtered history
+        | filtered _ = NONE
+      fun updated item = Option.getOpt (filtered item,item)
+      (* Only build a new history when a rewrite was dropped. *)
+      fun first_changed _ [] = NONE
+        | first_changed n (item::rest) =
+            case filtered item of
+                NONE => first_changed (n + 1) rest
+              | SOME changed =>
+                  SOME (List.take (history,n) @ changed :: map updated rest)
     in
-      if not (!changed) then ss
-      else
+      case first_changed 0 history of
+          NONE => ss
+        | SOME history' =>
         let
           val rebind = if not preserve then NONE else
             SOME (rebind_source_controls
@@ -1955,11 +2006,16 @@ fun lift_history keep ordinary =
 
 fun lift_simpset ordinary = lift_history (K true) ordinary
 
-fun lift_simpset_without names =
-    lift_history
-      (fn f => case simpLib.frag_name f of
-                   SOME name => not (Lib.mem name names)
-                 | NONE => true)
+fun lift_simpset_without [] = lift_simpset
+  | lift_simpset_without names =
+    let
+      val member = simpCommon.names_member names
+    in
+      lift_history
+        (fn f => case simpLib.frag_name f of
+                     name as SOME _ => not (member name)
+                   | NONE => true)
+    end
 
 fun clear_rules (SS s) =
   let
@@ -2024,7 +2080,7 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
        Inspect installed compatibility, not just the event/cache identity.
        Cached rejected shapes and inactive stale handles contribute no view;
        neither inspection nor quota consumption prepares a matcher. *)
-    fun active_views history sources =
+    fun active_views history queries sources =
       let
         fun active installed
               (source as RewriteSource {origin,...},_,
@@ -2035,22 +2091,38 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
                     | NONE => false)
               then Option.map #2 (#source data) else NONE
           | active _ _ = NONE
-        (* A removed bundle may be reinstalled AFTER its old view event.
-           Its compatible handles return, but that event installed no view.
-           Visit events in installation order; a source must already exist
-           when the view is encountered (including its own bundle event). *)
-        fun scan [] _ = []
-          | scan (ADDFRAG (SSFRAG_CON {views,...},event,_,_)::rest)
-                 installed =
+        val wanted = List.foldl
+          (fn (source,events) => Binaryset.add (events,source_event source))
+          (Binaryset.empty Int.compare) queries
+        (* A source must already exist when a view is installed. Visit
+           the relevant events in installation order, including a view's
+           own bundle event. A later reinstall must leave a view stale. *)
+        fun select (ADDFRAG (SSFRAG_CON {views,...},event,_,_),selected) =
+              let val tracked = Binaryset.member (wanted,event)
+              in
+                if tracked orelse not (null views)
+                then (views,event,tracked)::selected else selected
+              end
+          | select (_,selected) = selected
+        fun add_views _ _ [] _ found = found
+          | add_views installed event ((entry as (source,_,_))::rest)
+                i found =
+              case active installed entry of
+                  NONE => add_views installed event rest (i+1) found
+                | SOME th => add_views installed event rest (i+1)
+                    (((event,i),source,th)::found)
+        fun scan [] _ found = List.rev found
+          | scan ((views,event,tracked)::rest) installed found =
               let
-                val installed = Binaryset.add (installed,event)
-                val views = List.mapPartial I (numbered
-                  (fn (i,entry as (source,_,_)) =>
-                    Option.map (fn th => ((event,i),source,th))
-                      (active installed entry)) views)
-              in views @ scan rest installed end
-          | scan (_::rest) installed = scan rest installed
-      in scan (List.rev history) (Binaryset.empty Int.compare) end
+                val installed =
+                  if tracked then Binaryset.add (installed,event)
+                  else installed
+              in
+                scan rest installed (add_views installed event views 1 found)
+              end
+      in
+        scan (List.foldl select [] history) (Binaryset.empty Int.compare) []
+      end
     (* The same bundle event may be installed into separate sets with
        different attached views. Compare compiled statements, not proofs. *)
     fun same_view ((a,s,v),(b,t,w)) =
@@ -2067,7 +2139,7 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
         case List.foldl collect [] history of
             [] => []
           | queries =>
-              active_views history (view_source_index queries sources)
+              active_views history queries (view_source_index queries sources)
       end
     fun views_changed () =
       not (same_history andalso
@@ -2536,10 +2608,12 @@ fun prepare_child_first_with_observer observer
               val theorem = conversion tm
               val _ = visit (boolSyntax.rhs (concl theorem))
             in theorem end
-    fun opaque_fragment (SSFRAG_CON {congs,threaded_congs,relsimps,...}) =
-      not (null congs andalso null threaded_congs andalso null relsimps)
+    fun opaque_event
+          (ADDFRAG (SSFRAG_CON {congs,threaded_congs,relsimps,...},_,_,_)) =
+          not (null congs andalso null threaded_congs andalso null relsimps)
+      | opaque_event _ = false
     val opaque = not (null (#dprocs data)) orelse
-                 List.exists opaque_fragment (ssfrags_of ss)
+                 List.exists opaque_event (#history data)
     fun reducible tm =
       not (null (Ho_Net.lookup tm (#initial_net data))) orelse
       (is_comb tm andalso

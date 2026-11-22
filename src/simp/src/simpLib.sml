@@ -195,8 +195,34 @@ val std_conv_ss =
 
 fun ssfrag_name (SSFRAG_CON s) = #name s
 
+(* Keep the name projection and small-list search together. The prefix
+   check only decides whether to ask the shared partition about indexing. *)
 fun partition_ssfrags names ssdata =
-    simpCommon.partition_ssfrags ssfrag_name names ssdata
+  let
+    fun contains _ [] = false
+      | contains name (wanted::rest) =
+          name = wanted orelse contains name rest
+    fun selected (SSFRAG_CON {name = SOME n,...}) = contains n names
+      | selected _ = false
+    fun possible_index 0 _ _ = true
+      | possible_index n (_::_::_::_::ns) (_::_::_::_::fs) =
+          possible_index (n - 1) ns fs
+      | possible_index _ _ _ = false
+  in
+    case ssdata of
+        [] => ([],[])
+      | [f] => if selected f then ([f],[]) else ([],[f])
+      | _ =>
+          case names of
+              [wanted] =>
+                List.partition
+                  (fn SSFRAG_CON {name = SOME n,...} => n = wanted
+                    | _ => false) ssdata
+            | _ =>
+                if possible_index 4 names ssdata then
+                  simpCommon.partition_ssfrags ssfrag_name names ssdata
+                else List.partition selected ssdata
+  end
 
 (*---------------------------------------------------------------------------*)
 (* Simpsets and basic operations on them. Simpsets contain enough            *)
