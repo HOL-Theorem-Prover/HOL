@@ -1,6 +1,9 @@
-val () = if phase <> "replay" then () else
-  (check_oracle_results (replay_bool
-     ["oracle_hyps.hol4.pft","oracle_retired_instance.hol4.pft"]); pass ());
+val () = if phase <> "replay" andalso phase <> "merged" then () else
+  (check_oracle_results
+     (if phase = "merged" then replay ["oracle_merged.hol4.pft"]
+      else replay_bool
+        ["oracle_hyps.hol4.pft","oracle_retired_instance.hol4.pft"]);
+   pass ());
 
 open HolKernel;
 val () = Theory.new_theory "oracle_hyps";
@@ -67,4 +70,12 @@ val () = List.app (fn (label,ruleset) => let
      output="oracle_retired_instance." ^ label ^ ".pft",ruleset=ruleset}
 in print ("PFT_RETIRED_TYPE_CHECK_PASS " ^ label ^ "\n") end)
   rulesets;
+val () = emit (Systeml.HOLDIR ^ "/src/bool/.hol/objs/boolTheory.tr.gz")
+  "hol4/bool.pft" PFTEmit.HOL4;
+val () = PFTMerge.merge
+  {inputs=["hol4/bool.pft","oracle_hyps.hol4.pft",
+           "oracle_retired_instance.hol4.pft"],
+   targets=[PFTMerge.ThyAll("oracle_hyps",false),
+            PFTMerge.ThyAll("oracle_retired_instance",false)],
+   output="oracle_merged.hol4.pft",binary=true};
 val () = print "PFT_ORACLE_SELFTEST_PASSED\n";

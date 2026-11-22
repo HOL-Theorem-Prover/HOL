@@ -1,6 +1,7 @@
 Theory ripemd160
 Ancestors
   list rich_list arithmetic logroot numposrep byte words cv_std
+  messageDigestPadding[ignore_grammar]
 Libs
   wordsLib cv_transLib intLib
 
@@ -64,7 +65,6 @@ Definition pad_message_def:
     bits ++ (1 :: REPLICATE k 0) ++ lb
 End
 
-val () = cv_auto_trans n2l_n2lA;
 val () = cv_auto_trans pad_message_def;
 
 Theorem pad_message_length_multiple:
@@ -566,7 +566,9 @@ Definition RIPEMD_160_bytes_def:
     MAP (REVERSE o PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
-val () = cv_auto_trans RIPEMD_160_bytes_def;
+val () = RIPEMD_160_bytes_def
+  |> REWRITE_RULE [GSYM messageDigestPaddingTheory.bytes_to_bits_def]
+  |> cv_auto_trans;
 
 Theorem RIPEMD_160_bytes_abc:
   RIPEMD_160_bytes (MAP (n2w o ORD) "abc") =

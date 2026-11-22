@@ -153,11 +153,8 @@ fun main_hh_result caller directory thmdata goal =
   let
     val options = options_for caller (#provers (hhConfig.snapshot ()))
     val schedule = hhSlice.mk_schedule options
-    val context = hhLearn.create_context thmdata
-    fun rank (filter, maximum) =
-      (filter, hhLearn.rank context
-        {filter = filter, pool = NONE, goal = goal, n = maximum})
-    val rankings = map rank (hhSlice.filter_maxima schedule)
+    val rankings =
+      hhLearn.rank_filters thmdata goal (hhSlice.filter_maxima schedule)
   in
     run_schedule caller directory options rankings goal
   end

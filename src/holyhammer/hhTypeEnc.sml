@@ -154,9 +154,8 @@ struct
 
   fun insert_type ty tys = if mem ty tys then tys else tys @ [ty]
 
-  fun is_fequal_head tm =
+  fun is_fequal_head head =
     let
-      val (head, _) = strip_comb tm
       val name =
         if is_const head then fst (dest_const head)
         else if is_var head then fst (dest_var head)
@@ -172,9 +171,9 @@ struct
 
       fun scan_term vars tm types =
         let
-          val (_, args) = strip_comb tm
+          val (head, args) = strip_comb tm
           val types =
-            if is_fequal_head tm then
+            if is_fequal_head head then
               List.foldl (fn (arg, result) =>
                 if is_universal arg vars then insert_type (type_of arg) result
                 else result) types args

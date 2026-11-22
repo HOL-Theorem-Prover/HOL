@@ -603,17 +603,18 @@ local
 in
 
 (* Start path with arguments args (including argv[0]) and environment env, in
-   a new process group, with the descriptor output as both its stdout and
-   stderr.  The child starts with an empty signal mask and every signal at
-   its default disposition.  posix_spawn would otherwise pass on the calling
-   thread's mask and the parent's ignored signals: Poly/ML threads block
-   almost every signal, including SIGXCPU on which E's --cpu-limit relies (a
-   runaway prover would go on for hours), and the runtime ignores SIGPIPE.
+   a new process group, with the descriptor output as its stdout, and as its
+   stderr too if with_stderr; otherwise it keeps the caller's stderr.  The
+   child starts with an empty signal mask and every signal at its default
+   disposition.  posix_spawn would otherwise pass on the calling thread's
+   mask and the parent's ignored signals: Poly/ML threads block almost every
+   signal, including SIGXCPU on which E's --cpu-limit relies (a runaway
+   prover would go on for hours), and the runtime ignores SIGPIPE.
    NONE if the program could not be executed.  Raises OS.SysErr if the spawn
    attributes cannot be set up.  Must run with interrupts deferred: an
    interrupt between the spawn and the return of its pid would orphan the
    child. *)
-fun spawn path args env output =
+fun spawn with_stderr path args env output =
   with_object "posix_spawn_file_actions_init"
     (file_actions_init, file_actions_destroy) (fn file_actions =>
   with_object "posix_spawnattr_init" (attr_init, attr_destroy) (fn attr =>
@@ -631,7 +632,9 @@ fun spawn path args env output =
         (attr_setsigdefault (attr, all_signals))
       val _ = check "posix_spawnattr_setpgroup" (attr_setpgroup (attr, 0))
       val _ = check dup2 (file_actions_dup2 (file_actions, fd_int output, 1))
-      val _ = check dup2 (file_actions_dup2 (file_actions, fd_int output, 2))
+      val _ = if with_stderr then
+                check dup2 (file_actions_dup2 (file_actions, fd_int output, 2))
+              else ()
       val status = c_spawn (pid, path, file_actions, attr,
                             c_vector args, c_vector env)
     in
@@ -652,7 +655,7 @@ fun failed_process started : process_running =
      {output = "", exec_failed = true, killed = false,
       status = Posix.Process.W_EXITSTATUS 0w127, time = elapsed started}}
 
-fun start_process path args limit : process_running =
+fun start_process with_stderr path args limit : process_running =
   let
     val started = Time.now ()
     val spawned = Thread_Attributes.uninterruptible_defer (fn _ => fn () =>
@@ -663,7 +666,8 @@ fun start_process path args limit : process_running =
         val _ = List.app (fn fd => Posix.IO.setfd (fd, close_on_exec))
           [read_fd, write_fd]
         val pid =
-          spawn path (path :: args) (Posix.ProcEnv.environ ()) write_fd
+          spawn with_stderr path (path :: args) (Posix.ProcEnv.environ ())
+            write_fd
           handle exn => (Posix.IO.close read_fd; Posix.IO.close write_fd;
                          raise exn)
         val _ = Posix.IO.close write_fd
@@ -783,7 +787,10 @@ fun start_process path args limit : process_running =
   end
 
 fun read_process path args limit =
-  #wait (start_process path args limit) ()
+  #wait (start_process true path args limit) ()
+
+fun read_stdout path args limit =
+  #wait (start_process false path args limit) ()
 
 val probes : (string *
   {path : string, version : string option, tested : bool} option) list ref =
@@ -884,7 +891,7 @@ fun run_async (config : prover_config) request =
           ((let
               val (path, args) =
                 #mk_command config executable request
-              val process = start_process path args
+              val process = start_process true path args
                 (Real.fromInt (#timeout request + grace_seconds))
               val result_mutex = Mutex.mutex ()
               val saved = ref (NONE : run_result option)

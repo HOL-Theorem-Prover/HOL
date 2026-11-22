@@ -1,0 +1,24 @@
+# A recipe of several command lines runs as one job per line, and every
+# one of those jobs carries the same cost key.  `twoline' and `oneline'
+# do the same total work, split differently, so their recorded costs
+# should agree; recording only `twoline's first line would put it at
+# about a tenth of `oneline'.
+#
+# Each rule's command text is distinct, so Holmake's same-command
+# de-duplication cannot fuse these into one job.
+#
+# No SML here, so there is no heap to depend on.
+
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+all: twoline oneline
+.PHONY: all twoline oneline
+
+twoline:
+	./burn.sh 50000
+	./burn.sh 450000
+
+oneline:
+	./burn.sh 500000

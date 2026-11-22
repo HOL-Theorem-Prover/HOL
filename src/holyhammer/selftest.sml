@@ -855,6 +855,30 @@ fun test_hhLamTrans () =
        List.all (fn (name, _) =>
          has_name (name ^ ".combs") both_defs) lift_defs andalso
        List.all (not o formula_abs o #2) both_defs)
+    val capturing_lam = Term.mk_abs (x,
+      Term.list_mk_comb (f, [Term.mk_comb (g, x), y]))
+    val capturing_consumer = Term.mk_var ("CC", Type.mk_type
+      ("fun", [unary, Type.bool]))
+    val (_, capturing_defs) =
+      hhLamTrans.translate hhLamTrans.CombsAndLifting
+        [Term.mk_comb (capturing_consumer, capturing_lam)]
+    val _ = expect "combs_and_lifting abstracts only the bound variables"
+      (case capturing_defs of
+           [(_, lifted), (combs_name, combs)] =>
+             let
+               val (captured, equation) = strip_forall combs
+               val (replacement, combinators) = dest_eq equation
+             in
+               combs_name = "lam.0.combs" andalso
+               ListPair.allEq (Lib.uncurry Term.aconv)
+                 (captured, [f, g, y]) andalso
+               Term.aconv replacement
+                 (rator (lhs (#2 (strip_forall lifted)))) andalso
+               not (term_abs combinators) andalso
+               Term.aconv (normalise (Term.mk_comb (combinators, x)))
+                 (Term.list_mk_comb (f, [Term.mk_comb (g, x), y]))
+             end
+         | _ => false)
     val _ = expect "keep_lams only eta-contracts"
       (null kept_defs andalso List.exists formula_abs kept andalso
        length kept = length fixtures)
@@ -1866,6 +1890,103 @@ fun test_hhProblemGen_mono_extensionality () =
   end
 
 val _ = test_hhProblemGen_mono_extensionality ()
+
+(* A line name is an escaped ty., sy. or gsy. prefix before its symbol,
+   which is already escaped. *)
+fun test_hhProblemGen_declaration_names () =
+  let
+    open hhTptpProblem
+    val goal = ``LENGTH (l : num list) = SUC n``
+    fun problem_of format encoding = hhProblemGen.generate_problem
+      {format = hhTypeEnc.format_of_string format,
+       type_enc = hhTypeEnc.of_string encoding,
+       lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+       mono_instances = 100} {conjecture = goal, facts = []}
+    fun named_once (TypeDecl (name, symbol, _)) =
+          name = aiLib.escape "ty." ^ symbol
+      | named_once (SymDecl (name, symbol, _)) =
+          symbol = "app_2E" orelse symbol = "pp_2E" orelse
+          name = aiLib.escape "sy." ^ symbol
+      | named_once _ = true
+    fun check (format, encoding) =
+      let val lines = List.concat (map #2 (problem_of format encoding)) in
+        expect ("hhProblemGen escapes declaration names once in " ^ format)
+          (List.exists (fn TypeDecl _ => true | _ => false) lines andalso
+           List.exists (fn SymDecl _ => true | _ => false) lines andalso
+           List.all named_once lines)
+      end
+    (* FOF has no declarations: a gsy. line's symbol is one the printed
+       problem uses. *)
+    val guards = problem_of "fof" "mono_guards"
+    val words = String.tokens
+      (fn c => not (Char.isAlphaNum c orelse c = #"_"))
+      (string_of_problem FOF "line names" guards)
+    val gsy = aiLib.escape "gsy."
+    val gsy_symbols = List.mapPartial
+      (fn FormLine (name, _, _) =>
+            if String.isPrefix gsy name
+            then SOME (String.extract (name, size gsy, NONE)) else NONE
+        | _ => NONE) (List.concat (map #2 guards))
+  in
+    List.app check [("tf0", "mono_native"), ("tf1", "poly_native")];
+    expect "hhProblemGen escapes gsy line names once"
+      (not (null gsy_symbols) andalso
+       List.all (fn symbol => Lib.mem symbol words) gsy_symbols)
+  end
+
+val _ = test_hhProblemGen_declaration_names ()
+
+(* A mangled name spells out a whole type.  Nested types must not make
+   symbols arbitrarily long, and distinct types must keep distinct
+   symbols. *)
+fun test_hhProblemGen_bounded_names () =
+  let
+    open hhTptpProblem
+    val num = Term.type_of ``0 : num``
+    fun nest 0 = num
+      | nest n = listSyntax.mk_list_type (nest (n - 1))
+    val goal = boolSyntax.mk_eq
+      (listSyntax.mk_length (Term.mk_var ("x", nest 12)),
+       listSyntax.mk_length (Term.mk_var ("y", nest 13)))
+    fun check (format, encoding) =
+      let
+        val problem = hhProblemGen.generate_problem
+          {format = hhTypeEnc.format_of_string format,
+           type_enc = hhTypeEnc.of_string encoding,
+           lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+           mono_instances = 100} {conjecture = goal, facts = []}
+        val symbols = List.mapPartial
+          (fn TypeDecl (_, symbol, _) => SOME symbol
+            | SymDecl (_, symbol, _) => SOME symbol
+            | _ => NONE) (List.concat (map #2 problem))
+      in
+        expect ("hhProblemGen bounds mangled names in " ^ format)
+          (length symbols > 4 andalso
+           List.all (fn symbol => size symbol <= 80) symbols andalso
+           length (Lib.mk_set symbols) = length symbols andalso
+           null (mono_tff_errors problem))
+      end
+    (* FOF has no declarations: read the guard predicates and witness
+       constants off the printed problem. *)
+    val fof = hhTptpProblem.FOF
+    val fof_text = string_of_problem fof "bounded names"
+      (hhProblemGen.generate_problem
+        {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
+         lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+         mono_instances = 100} {conjecture = goal, facts = []})
+    val guard_symbols = List.filter (fn word =>
+        String.isPrefix "gd_2E" word orelse String.isPrefix "wit_2E" word)
+      (String.tokens (fn c => not (Char.isAlphaNum c orelse c = #"_"))
+         fof_text)
+  in
+    List.app check [("tf0", "mono_native"), ("tx0", "mono_native_fool")];
+    expect "hhProblemGen bounds guard and witness names in fof"
+      (List.exists (String.isPrefix "gd_2E") guard_symbols andalso
+       List.exists (String.isPrefix "wit_2E") guard_symbols andalso
+       List.all (fn symbol => size symbol <= 80) guard_symbols)
+  end
+
+val _ = test_hhProblemGen_bounded_names ()
 
 (* Generated problems draw schematic and combinator type variables from
    the global Type.gen_tyvar counter.  Their names, compared as strings,
@@ -3398,6 +3519,22 @@ fun test_hhEval root =
       (JSONPrinter.valueToString legacy_header)
     val _ = expect "resume rejects headers without hammer settings"
       (resume_rejected "hammer_options" header)
+    (* A run header reads the HOL commit with git, which must start
+       through hhProver's spawn as the provers do. *)
+    val _ = hhProver.reset_spawn_count ()
+    val {hol_commit, ...} = hhEval.new_run_header
+      {expname = "fixture", corpus = [], added_from_dat = [],
+       conditions = [], sample = 1}
+    val _ = expect "run header commands spawn through hhProver"
+      (not (OS.FileSys.access ("/usr/bin/git", [OS.FileSys.A_EXEC])) orelse
+       hhProver.spawn_count () = 1 andalso
+       (hol_commit = "unknown" orelse
+        (size hol_commit = 40 orelse size hol_commit = 64) andalso
+        CharVector.all Char.isHexDigit hol_commit))
+    (* Their stderr stays out of the output that is read. *)
+    val _ = expect "read_stdout leaves out stderr"
+      (#output (hhProver.read_stdout "/bin/sh"
+                  ["-c", "echo 0123 >&2; echo out"] 10.0) = "out\n")
     val _ = hhEval.write_run_header expdir header
     val _ = expect "sample one selects every goal"
       (hhEval.sample_goal 1 "list.nil")
@@ -9069,6 +9206,48 @@ fun test_hhLearn_target_thmdata () =
 
 val _ = test_hhLearn_target_thmdata ()
 
+fun test_hhLearn_dependency_lookup () =
+  let
+    val {intact, knn} = hhLearn.make_dependency_lookup ()
+    val theorems =
+      map #2 (aiLib.first_n 8 (DB.theorems "list") @
+              aiLib.first_n 8 (DB.theorems "arithmetic"))
+    val data = hhLearn.create_thmdata_for "list"
+    fun agrees theorem =
+      let val goal = Thm.dest_thm theorem in
+        intact theorem = mlThmData.intactdep_of_thm theorem andalso
+        knn data 12 goal = hhLearn.rank_knn data 12 goal
+      end
+  in
+    expect "worker dependency lookup preserves dependency and kNN order"
+      (not (null theorems) andalso List.all agrees theorems)
+  end
+
+val _ = test_hhLearn_dependency_lookup ()
+
+fun test_hhLearn_shared_predictions () =
+  let
+    val entries = aiLib.first_n 40 (DB.theorems "list")
+    val goal = Thm.dest_thm (#2 (hd entries))
+    val features = mlFeature.fea_of_goal true goal
+    (* Equal feature vectors force kNN to break ties at both cutoffs. *)
+    val rows = map (fn (name, _) => ("listTheory." ^ name, features)) entries
+    val data = (mlFeature.learn_tfidf rows, rows)
+    val context = hhLearn.create_context data
+    val filters = [("knn", 3), ("mash", 2), ("mesh", 14), ("knn", 11),
+                   ("mash", 7), ("mepo", 5), ("mesh", 4), ("none", 0)]
+    fun separate (filter, n) =
+      (filter, hhLearn.rank context
+        {filter = filter, pool = NONE, goal = goal, n = n})
+    fun agrees requests =
+      hhLearn.rank_filters data goal requests = map separate requests
+  in
+    expect "shared learner rankings preserve ties, cutoffs and filter order"
+      (agrees filters andalso agrees (rev filters))
+  end
+
+val _ = test_hhLearn_shared_predictions ()
+
 (* A theorem with hypotheses is no premise.  Exported by its bare
    conclusion, [F] |- F hands the provers a false axiom (ContradictoryAxioms,
    bogus proofs Metis then rejects); discharged, it is unusable by replay. *)
@@ -9086,10 +9265,16 @@ fun test_hypothesis_premises () =
     val goal = ([], boolSyntax.T)
     val features = mlFeature.fea_of_goal true goal
     val rows = [(truth, features), (fixture, features)]
-    val context =
-      hhLearn.create_context (mlFeature.learn_tfidf rows, rows)
+    val data = (mlFeature.learn_tfidf rows, rows)
+    val filters = [("knn", 1), ("none", 0)]
+    val lightweight = hhLearn.rank_filters data goal filters
+    val warm = hhLearn.rank_filters data goal filters
+    val context = hhLearn.create_context data
     val none = hhLearn.rank context
       {filter = "none", pool = NONE, goal = goal, n = 2}
+    val knn = hhLearn.rank context
+      {filter = "knn", pool = NONE, goal = goal, n = 1}
+    val promoted = hhLearn.rank_filters data goal filters
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val options : hhConfig.hh_options =
       {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
@@ -9119,6 +9304,9 @@ fun test_hypothesis_premises () =
        not (List.exists (fn name => name = fixture) target_names));
     expect "premise ranking skips theorems with hypotheses"
       (hhLearn.context_thmids context = [truth] andalso none = [truth]);
+    expect "lightweight rankings preserve filter order and hypothesis checks"
+      (lightweight = [("knn", knn), ("none", none)] andalso
+       warm = lightweight andalso promoted = lightweight);
     expect "legacy and generated exports drop theorems with hypotheses"
       (with_fixture = without_fixture);
     remove_tree root;

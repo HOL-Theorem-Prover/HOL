@@ -109,20 +109,33 @@ in {
 
 fun read_footer_raw file = let
   val file_size = Position.toInt (OS.FileSys.fileSize file)
+  val window_size = Int.min (file_size, 65537)
+  val () = if window_size >= 2 then () else
+    raise Fail "PFTReader: missing footer length"
   val r = open_bin_reader file
-  val () = skip_to r (file_size - 2)
-  val lo = #readByte r ()
-  val hi = #readByte r ()
-  val footer_len = hi * 256 + lo
+  val bytes = (skip_to r (file_size - window_size);
+               #readBytes r window_size)
+    handle e => (#close r (); raise e)
   val () = #close r ()
-  val r = open_bin_reader file
-  val () = skip_to r (file_size - footer_len - 2)
-  val opc = #readByte r ()
-  val () = if opc = 0xFF then ()
-           else raise Fail "PFTReader: bad footer opcode"
-  val vi = mk_readVarint r
+  fun byte i = Word8.toInt (Word8Vector.sub(bytes, i))
+  val footer_len = byte (window_size - 2) +
+                   256 * byte (window_size - 1)
+  val start = window_size - footer_len - 2
+  val () = if start >= 0 andalso footer_len > 0 then () else
+    raise Fail "PFTReader: bad footer length"
+  val () = if byte start = 0xFF then () else
+    raise Fail "PFTReader: bad footer opcode"
+  val pos = ref (start + 1)
+  fun vi () = let
+    fun loop acc shift =
+      if !pos >= window_size - 2 then
+        raise Fail "PFTReader: truncated footer"
+      else let val b = byte (!pos)
+               val () = pos := !pos + 1
+           in if b < 128 then acc + b * shift
+              else loop (acc + (b - 128) * shift) (shift * 128) end
+    in loop 0 1 end
   val n_ty = vi () val n_tm = vi () val n_th = vi ()
-  val () = #close r ()
 in {n_ty = n_ty, n_tm = n_tm, n_th = n_th,
     footer_len = footer_len, file_size = file_size} end
 
@@ -149,14 +162,26 @@ fun read_header {file, binary} =
     val () = #close r ()
   in result end
 
+type input = {file: string, version: string, ruleset: string,
+              n_ty: int, n_tm: int, n_th: int, cmd_end: int}
+
+fun inspect {file, binary} : input = let
+  val {version, ruleset} = read_header {file=file, binary=binary}
+  val {n_ty, n_tm, n_th, footer_len, file_size} = read_footer_raw file
+in {file=file, version=version, ruleset=ruleset,
+    n_ty=n_ty, n_tm=n_tm, n_th=n_th,
+    cmd_end=file_size - footer_len - 2} end
+
+fun input_info ({version, ruleset, n_ty, n_tm, n_th, ...}: input) =
+  {version=version, ruleset=ruleset, n_ty=n_ty, n_tm=n_tm, n_th=n_th}
+
 (* ========================================================================= *)
 (* Binary command reader                                                     *)
 (* ========================================================================= *)
 
-fun read_binary file (fh: format_handler) (rh: ruleset_handler) = let
-  val {n_ty, n_tm, n_th, footer_len, file_size} =
-    read_footer_raw file
-  val cmd_end = file_size - footer_len - 2
+fun read_binary (input: input)
+                (fh: format_handler) (rh: ruleset_handler) = let
+  val {file, n_ty, n_tm, n_th, cmd_end, ...} = input
   val r = open_bin_reader file
   val vi = mk_readVarint r
   val vs = mk_readString r
@@ -334,8 +359,11 @@ end (* structure HOL4 *)
 (* Public interface                                                          *)
 (* ========================================================================= *)
 
+fun read_input {input, format_handler, ruleset_handler} =
+  read_binary input format_handler ruleset_handler
+
 fun read {file, binary, format_handler, ruleset_handler} =
-  if binary then read_binary file format_handler ruleset_handler
-  else raise Fail "PFTReader: JSON reader not yet implemented"
+  read_input {input=inspect {file=file, binary=binary},
+              format_handler=format_handler, ruleset_handler=ruleset_handler}
 
 end

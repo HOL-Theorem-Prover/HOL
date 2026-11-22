@@ -23,21 +23,22 @@ fun theory_name_of thmid =
         else NONE
     | NONE => NONE
 
-fun remove_name removed thmid =
-  case String.fields (fn c => c = #".") removed of
-      [name] =>
-        (case theory_name_of thmid of
-             SOME (_, thmname) => thmname = name
-           | NONE => false)
-    | [thy, name] => thmid = thy ^ "Theory." ^ name
-    | _ => thmid = removed
+fun remove_thmid thmid names =
+  #1 (Redblackmap.remove (names, thmid)) handle Redblackmap.NotFound => names
 
 fun remove_from_set removed names =
-  dfoldl
-    (fn (thmid, (), result) =>
-      if remove_name removed thmid then result
-      else dadd thmid () result)
-    (dempty String.compare) names
+  case String.fields (fn c => c = #".") removed of
+      [name] =>
+        dfoldl
+          (fn (thmid, (), result) =>
+            case theory_name_of thmid of
+                SOME (_, thmname) =>
+                  if thmname = name then remove_thmid thmid result
+                  else result
+              | NONE => result)
+          names names
+    | [thy, name] => remove_thmid (thy ^ "Theory." ^ name) names
+    | _ => remove_thmid removed names
 
 fun simp_set_of_deltas deltas =
   foldl
@@ -79,10 +80,8 @@ fun base_name thmid =
     | NONE => thmid
 
 fun induction_by_shape thmid conclusion =
-  let val (parameters, _) = strip_forall conclusion in
-    String.isSubstring "induct" (lower_string (base_name thmid)) andalso
-    List.exists (predicate_type o type_of) parameters
-  end
+  String.isSubstring "induct" (lower_string (base_name thmid)) andalso
+  List.exists (predicate_type o type_of) (#1 (strip_forall conclusion))
 
 fun typebase_induction_concls theories =
   case TypeBase.merge_typebases theories of
@@ -133,9 +132,10 @@ fun create_statures_for current =
 fun create_statures () = create_statures_for (Theory.current_theory ())
 
 fun stature_of statures thmid =
-  case theory_name_of thmid of
+  case Redblackmap.peek (statures, thmid) of
       NONE => empty_stature
-    | SOME _ => if dmem thmid statures then dfind thmid statures
-                else empty_stature
+    | SOME stature =>
+        if Option.isSome (theory_name_of thmid) then stature
+        else empty_stature
 
 end

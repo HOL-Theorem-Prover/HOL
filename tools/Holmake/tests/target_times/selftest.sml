@@ -153,7 +153,163 @@ val _ = if rel (SOME "/p/cake") "/elsewhere/x/y" = "/elsewhere/x/y"
         then OK() else die "unrelated path was rewritten"
 
 (* ------------------------------------------------------------------
+   merge_entries is last-wins within one call, so a caller that times a
+   key twice must combine the two itself.
+   ------------------------------------------------------------------ *)
+val _ = tprint "a repeated key in one call keeps the later pair"
+val _ = OS.Process.system ("rm -rf " ^ fresh)
+val _ = OS.FileSys.mkDir fresh
+val _ = target_times.merge_entries
+          {root = fresh, entries = [("src/dup/tgt", 1.0),
+                                    ("src/dup/tgt", 4.0)]}
+val mdup = target_times.load_seeds {seeds = [], root = SOME fresh}
+val _ = if Real.== (target_times.cost mdup "src/dup/tgt", 4.0) then OK()
+        else die "a repeated key did not resolve to the later pair"
+
+(* ------------------------------------------------------------------
+   End to end: a recipe of several command lines is one job per line,
+   and all of those jobs share the node's cost key, so the node's
+   recorded cost has to be their sum.  Recording a single one of them
+   instead silently understates every multi-command recipe in the tree
+   -- `src/HolRefute/theory-tests', whose first line is a cheap
+   `Holmake -C theory_tests clean', was logged at a few hundredths of a
+   second while the build it drives ran for a minute.
+
+   multiline/ builds `twoline' (cheap line then dear line) and
+   `oneline' (the same total work in one line) and the two recorded
+   costs are compared to each other, never to a wall-clock figure, so
+   the test says the same thing on any machine.  Keeping only
+   `twoline's first line puts the ratio at about 1/10.
+   ------------------------------------------------------------------ *)
+val Holmake = Systeml.HOLDIR ++ "bin" ++ "Holmake"
+val mldir = cwd ++ "multiline"
+val mlhol = mldir ++ ".hol"
+val mlcache = mlhol ++ "build-logs" ++ "target-times"
+
+fun value_of path k =
+  let
+    fun get [] = NONE
+      | get (l :: rest) =
+          (case String.tokens Char.isSpace l of
+               [k', v] => if k' = k then Real.fromString v else get rest
+             | _ => get rest)
+  in
+    get (String.tokens (fn c => c = #"\n") (slurp path))
+  end
+
+val _ = tprint "every command line of a recipe is counted"
+val _ = OS.Process.system ("rm -rf " ^ mlhol)
+val mlres =
+    Systeml.systeml [Holmake, "-C", mldir, "-j", "2", "all"]
+val _ =
+    if not (OS.Process.isSuccess mlres) then die "multiline build failed"
+    else
+      case (value_of mlcache "twoline", value_of mlcache "oneline") of
+          (NONE, _) => die "no cost recorded for twoline"
+        | (_, NONE) => die "no cost recorded for oneline"
+        | (SOME two, SOME one) =>
+          (* A machine fast enough to put `oneline' under the clock's
+             resolution would make the ratio meaningless rather than
+             false; say so rather than passing by luck. *)
+          if one < 0.05 then
+            die ("oneline too cheap to compare: " ^ Real.toString one)
+          else if two >= 0.5 * one then OK()
+          else die ("twoline " ^ Real.toString two ^ " vs oneline " ^
+                    Real.toString one ^ ": a command line went unrecorded")
+
+(* ------------------------------------------------------------------
+   A job's cost is its user time *and* its system time.  `times'
+   reports the two separately and only `cutime' used to be read, which
+   hid everything a child spends in the kernel -- heap mapping, page
+   faults, I/O -- and made a target that mostly does I/O look free.
+
+   systime/ runs one syscall-bound recipe that measures itself with the
+   shell's own `times' builtin, so Holmake's figure is compared against
+   another measurement of the same work rather than against a
+   wall-clock number.  The recipe's sed and awk run after it takes that
+   reading, so self-measured sits a little *under* what Holmake sees;
+   the lower bound allows for it.  Counting user time alone put the
+   ratio at about 0.3.
+   ------------------------------------------------------------------ *)
+val stdir = cwd ++ "systime"
+val sthol = stdir ++ ".hol"
+val stcache = sthol ++ "build-logs" ++ "target-times"
+
+val _ = tprint "a job's system time is counted"
+val _ = OS.Process.system ("rm -rf " ^ sthol)
+val stres = Systeml.systeml [Holmake, "-C", stdir, "all"]
+val _ =
+    if not (OS.Process.isSuccess stres) then die "systime build failed"
+    else
+      let
+        val self = Real.fromString (slurp (stdir ++ "self-measured"))
+      in
+        case (value_of stcache "syswork", self) of
+            (NONE, _) => die "no cost recorded for syswork"
+          | (_, NONE) => die "recipe did not report its own cost"
+          | (SOME recorded, SOME measured) =>
+            (* Too fast to see is a meaningless ratio, not a false one. *)
+            if measured < 0.1 then
+              die ("syswork too cheap to compare: " ^ Real.toString measured)
+            else if recorded >= 0.8 * measured andalso
+                    recorded <= 2.0 * measured
+            then OK()
+            else die ("recorded " ^ Real.toString recorded ^
+                      " against a self-measured " ^ Real.toString measured ^
+                      ": system time is being dropped")
+      end
+
+(* ------------------------------------------------------------------
+   Concurrent jobs are billed separately.  `times' counts waited-for
+   children only, so a child still running contributes nothing to it,
+   and reaping exactly one child and differencing across that `waitpid'
+   bills that child alone.  Nothing in the types keeps reaping and
+   billing in step: batch the reaps, or reap without re-stamping the
+   watermark, and whichever job exits next silently picks up its
+   neighbours' work.
+
+   concurrent/ runs 1:2:4:8 rounds of the same work under `-j 4'.  The
+   assertion is on the spread between the recorded costs, never on a
+   wall-clock figure, and the bands are wide because a loaded machine
+   inflates a long job more than a short one.  Billing the neighbours'
+   work too would pull the cheap jobs up towards the dear ones and
+   collapse that spread.
+   ------------------------------------------------------------------ *)
+val cdir = cwd ++ "concurrent"
+val chol = cdir ++ ".hol"
+val ccache = chol ++ "build-logs" ++ "target-times"
+
+val _ = tprint "concurrent jobs are costed separately"
+val _ = OS.Process.system ("rm -rf " ^ chol)
+val cres = Systeml.systeml [Holmake, "-C", cdir, "-j", "4", "all"]
+val _ =
+    if not (OS.Process.isSuccess cres) then die "concurrent build failed"
+    else
+      case (value_of ccache "one", value_of ccache "two",
+            value_of ccache "four", value_of ccache "eight") of
+          (SOME one, SOME two, SOME four, SOME eight) =>
+          if one < 0.05 then
+            die ("one too cheap to compare: " ^ Real.toString one)
+          else
+            let
+              fun within (lo, hi) r = lo <= r andalso r <= hi
+              val rs = [(two / one, (1.2, 4.0), "two"),
+                        (four / one, (2.0, 8.0), "four"),
+                        (eight / one, (4.0, 16.0), "eight")]
+            in
+              case List.find (fn (r, band, _) => not (within band r)) rs of
+                  NONE => OK()
+                | SOME (r, _, nm) =>
+                  die (nm ^ "/one = " ^ Real.toString r ^
+                       ": jobs are not being costed separately")
+            end
+        | _ => die "a target went uncosted"
+
+(* ------------------------------------------------------------------
    Cleanup
    ------------------------------------------------------------------ *)
 val _ = OS.Process.system ("rm -rf " ^ fresh)
+val _ = OS.Process.system ("rm -rf " ^ mlhol)
+val _ = OS.Process.system ("rm -rf " ^ sthol)
+val _ = OS.Process.system ("rm -rf " ^ chol)
 val _ = OS.FileSys.remove seedpath

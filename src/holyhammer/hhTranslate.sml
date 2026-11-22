@@ -265,8 +265,9 @@ fun close_lifted quant tm =
 
 (* As a conjecture, !F. defs ==> statement: refuting it introduces
    constants obeying the definitions. *)
-fun conjecture_form (defs, statement) =
-  close_lifted list_mk_forall (list_mk_imp (defs, statement))
+fun conjecture_form ([], statement) = statement
+  | conjecture_form (defs, statement) =
+      close_lifted list_mk_forall (list_mk_imp (defs, statement))
 
 (* As an axiom the lifted variables are existential.  Under !F a prover
    can use the axiom only after building a term that meets every
@@ -274,8 +275,9 @@ fun conjecture_form (defs, statement) =
    F x y <=> x = y; ?F instead makes the clausifier introduce such
    constants.  Both forms are HOL theorems, as each definition is met by
    the abstraction it was lifted from. *)
-fun axiom_form (defs, statement) =
-  close_lifted boolSyntax.list_mk_exists (list_mk_conj (defs @ [statement]))
+fun axiom_form ([], statement) = statement
+  | axiom_form (defs, statement) =
+      close_lifted boolSyntax.list_mk_exists (list_mk_conj (defs @ [statement]))
 
 fun translate_nocache tm = conjecture_form (lifted_parts tm)
 

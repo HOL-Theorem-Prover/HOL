@@ -200,7 +200,8 @@ in
 end
 
 (* bin/hol is compiled by configure and by no Holmakefile rule, from
-   tools-poly/hol.ML, the Holmake sources, and tools/parsing (the quote
+   tools-poly/hol.ML, tools-poly/execompile.ML (buildheap --exe), the
+   Holmake sources, and tools/parsing (the quote
    filter is linked in rather than run as bin/unquote; HolLex.sml is
    generated from HolLex by configure).  The sweep above compares those
    sources against bin/Holmake only, so hol can be stale while Holmake
@@ -217,6 +218,7 @@ val _ = let
 in
   if access(hol, [A_READ, A_EXEC]) then
     (check_against hol "tools-poly/hol.ML";
+     check_against hol "tools-poly/execompile.ML";
      app_sml_files (check_against hol)
                    {dirname = fP [HOLDIR, "tools-poly", "Holmake"]};
      app_sml_files (check_against hol)

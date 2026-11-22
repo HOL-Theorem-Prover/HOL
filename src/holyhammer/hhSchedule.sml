@@ -80,17 +80,23 @@ type result =
 
 type success = hhProver.slice * string list * real
 
-(* A lemma list waiting for reconstruction.  A Retry is a list that Metis
-   could not replay, less one of its lemmas; origin is the key of that
-   list. *)
-datatype recon_item =
-    Fresh of success
-  | Retry of {origin : string, success : success}
+(* A retry drops one lemma from a failed reconstruction. The origin key
+   identifies the full list. *)
+type retry =
+  {origin : string, success : hhProver.slice * (unit -> string list) * real}
 
-(* The lists left by dropping each lemma in turn. *)
+datatype recon_item = Fresh of success | Retry of retry
+
+(* Share prefixes and suffixes until a variant is taken for replay. *)
 fun drop_one_variants lemmas =
-  List.tabulate (length lemmas, fn index =>
-    List.take (lemmas, index) @ List.drop (lemmas, index + 1))
+  let
+    fun loop _ [] variants = List.rev variants
+      | loop prefix (lemma :: rest) variants =
+          loop (lemma :: prefix) rest
+            ((fn () => List.revAppend (prefix, rest)) :: variants)
+  in
+    loop [] lemmas []
+  end
 
 fun join left right = OS.Path.concat (left, right)
 
@@ -230,20 +236,25 @@ fun ranking_for rankings filter =
         ("HolyHammer: missing premise ranking for filter '" ^
          filter ^ "'")
 
-(* The named selection of a slice (filter and actual prefix length): the
-   conjecture and the legacy printer are fixed, so slices with the same
-   selection share one legacy problem. *)
-fun selection options rankings filter nfacts =
+(* Count each used ranking once, stopping at its largest requested prefix. *)
+fun selection_sizes (options : hhConfig.hh_options) rankings problems =
   let
-    val premises = ranking_for rankings filter
-    val wanted =
-      if filter = "none" then
-        (case #max_facts options of
-             NONE => length premises
-           | SOME maximum => maximum)
-      else nfacts
+    fun prefix_size 0 _ count = count
+      | prefix_size _ [] count = count
+      | prefix_size remaining (_ :: rest) count =
+          prefix_size (remaining - 1) rest (count + 1)
+    fun size (filter, maximum) =
+      let
+        val premises = ranking_for rankings filter
+        val bound = if filter = "none" then #max_facts options
+                    else SOME maximum
+      in
+        (filter, case bound of
+                     NONE => length premises
+                   | SOME n => prefix_size (Int.max (0, n)) premises 0)
+      end
   in
-    (filter, Int.max (0, Int.min (wanted, length premises)))
+    map size (hhSlice.filter_maxima problems)
   end
 
 datatype kind =
@@ -262,11 +273,17 @@ type work =
 fun ordered_work root options rankings schedule =
   let
     val problems = distinct_problems schedule
-    val _ = List.app (ignore o ranking_for rankings o #filter o #2) problems
+    val sizes = selection_sizes options rankings problems
     fun item index (config, slice) firsts =
       let
         val path = problem_path root slice
-        val key = selection options rankings (#filter slice) (#nfacts slice)
+        val filter = #filter slice
+        val size = ranking_for sizes filter
+        (* The conjecture and the legacy printer are fixed, so slices
+           with the same selection share one legacy problem. *)
+        val count = if filter = "none" then size
+                    else Int.max (0, Int.min (#nfacts slice, size))
+        val key = (filter, count)
         fun work kind =
           {index = index, config = config, slice = slice, path = path,
            key = key, kind = kind}
@@ -804,7 +821,7 @@ fun run_in root {options, goal, rankings, progress} =
        not past the soft deadline: a variant is not a proof a prover
        found, and each can cost two preplay timeouts, so the variants of
        a list would keep the call going for as long as there are lemmas. *)
-    val retries = ref ([] : {origin : string, success : success} list)
+    val retries = ref ([] : retry list)
     val recovered = ref ([] : string list)
     (* stopping: the run ends and reconstruction with it (MaxProofs, the
        caller's interrupt, a failed export, end_run).  halted: the provers
@@ -1290,27 +1307,21 @@ fun run_in root {options, goal, rankings, progress} =
         with_locked wait
       end
 
-    fun reconstruct item =
+    fun reconstruct origin (slice, lemmas, t_prover) =
       let
-        val (origin, (slice, lemmas, t_prover)) =
-          case item of
-              Fresh success => (NONE, success)
-            | Retry {origin, success} => (SOME origin, success)
         val key = lemma_key lemmas
-        fun member list value = List.exists (fn other => value = other) list
         val skip = with_mutex state_mutex (fn () =>
-          (case origin of
-               SOME parent => member (!recovered) parent
-             | NONE => false) orelse
-          member (!tried_keys) key orelse
+          Lib.mem key (!tried_keys) orelse
           (tried_keys := key :: !tried_keys; false))
         fun queue_variants () =
           if #preplay_drop_one options andalso length lemmas > 1 then
-            with_mutex state_mutex (fn () =>
-              retries := !retries @
-                map (fn variant =>
-                       {origin = key, success = (slice, variant, t_prover)})
-                  (drop_one_variants lemmas))
+            let
+              val variants = map (fn variant =>
+                {origin = key, success = (slice, variant, t_prover)})
+                (drop_one_variants lemmas)
+            in
+              with_mutex state_mutex (fn () => retries := !retries @ variants)
+            end
           else ()
       in
         if skip then ()
@@ -1365,7 +1376,12 @@ fun run_in root {options, goal, rankings, progress} =
     fun recon_loop () =
       case take_success () of
           NONE => ()
-        | SOME item => (reconstruct item; recon_loop ())
+        | SOME (Fresh success) => (reconstruct NONE success; recon_loop ())
+        | SOME (Retry {origin, success = (slice, variant, t_prover)}) =>
+            (if with_mutex state_mutex
+                (fn () => Lib.mem origin (!recovered)) then ()
+             else reconstruct (SOME origin) (slice, variant (), t_prover);
+             recon_loop ())
 
     fun reconstruction_worker () =
       ((recon_loop () handle _ => ());

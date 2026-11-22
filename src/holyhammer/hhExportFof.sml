@@ -310,44 +310,35 @@ fun fof_export_chainy dir thyl =
    Interface to holyhammer
    ------------------------------------------------------------------------- *)
 
-fun tml_of_pb (cj,namethml) =
-  let
-    val cjfof = translate cj
-    val thmlfof = map (translate_thm o snd) namethml
-  in
-    mk_term_set (cjfof :: thmlfof)
-  end
-
-fun collect_arity_pb (cj,namethml) =
-  let val tml = tml_of_pb (cj,namethml) in
+fun collect_arity_pb statements =
+  let val tml = mk_term_set statements in
     mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml))
   end
 
-fun fof_cjdef oc cj =
-  let
-    val statement = translate cj
-    val fofname = "conjecture"
-  in
-    os oc (fofpar ^ fofname ^ ",conjecture,");
-    fof_formula oc statement; osn oc ")."
-  end
+fun fof_cjdef oc statement =
+  (os oc (fofpar ^ "conjecture,conjecture,");
+   fof_formula oc statement; osn oc ").")
 
-fun fof_axdef oc (name,thm) =
-  let
-    val statement = translate_axiom_thm thm
-    val fofname = escape ("thm." ^ name)
-  in
+fun fof_axdef oc (name,statement) =
+  let val fofname = escape ("thm." ^ name) in
     os oc (fofpar ^ fofname ^ ",axiom,");
     fof_formula oc statement; osn oc ")."
   end
 
 fun fof_export_pbfile file (cj,namethml) =
   let val oc = TextIO.openOut file in
-    (let val cval = collect_arity_pb (cj,namethml) in
+    (let
+       val conjecture = translate cj
+       val axioms = map (fn (name,thm) =>
+         (name, translate_axiom_thm thm)) namethml
+       (* Arity collection strips the lifted definitions' enclosing
+          quantifiers and connectives in either form. *)
+       val cval = collect_arity_pb (conjecture :: map snd axioms)
+     in
        fof_thmdef_extra oc;
        app (fof_arityeq oc) (mk_sameorder_set tma_compare (cval_extra @ cval));
-       app (fof_axdef oc) namethml;
-       fof_cjdef oc cj;
+       app (fof_axdef oc) axioms;
+       fof_cjdef oc conjecture;
        TextIO.closeOut oc
      end)
     handle exn => ((TextIO.closeOut oc handle _ => ()); raise exn)

@@ -1,0 +1,35 @@
+# Four jobs of very different cost, run together under `-j 4'.
+#
+# What makes a job's figure its own is that `times' counts *waited-for*
+# children only, so a child still running contributes nothing: reaping
+# exactly one child and taking the difference across that `waitpid'
+# bills that child and nobody else.  Nothing enforces that reaping and
+# billing stay in step, and a refactor that batched the reaps, or that
+# reaped anywhere without re-stamping the watermark, would quietly go
+# back to charging whichever job exited next for its neighbours' work.
+#
+# `one' through `eight' do 1:2:4:8 rounds, so the recorded costs have
+# to keep that shape.  If the jobs were soaking up each other's time
+# the cheap ones would be pulled up towards the dear ones and the
+# spread would collapse.
+#
+# No SML here, so there is no heap to depend on.
+
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+all: one two four eight
+.PHONY: all one two four eight
+
+one:
+	./burn.sh 150000
+
+two:
+	./burn.sh 300000
+
+four:
+	./burn.sh 600000
+
+eight:
+	./burn.sh 1200000
