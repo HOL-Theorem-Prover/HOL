@@ -129,8 +129,8 @@ sig
      model_thmdata : mlThmData.thmdata,
      dependencies : dep_table} -> context
   val create_context_for : string -> mlThmData.thmdata -> context
-  (* Resolve the corpus immediately and defer model training and
-     proposition grouping until a ranking filter needs them. *)
+  (* Resolve the corpus immediately and defer MePo frequency aggregation,
+     model training and proposition grouping until a filter needs them. *)
   val create_deferred_context_for : string -> mlThmData.thmdata -> context
   val create_thmdata_for : string -> mlThmData.thmdata
   val create_context : mlThmData.thmdata -> context
@@ -153,6 +153,13 @@ sig
      function also answers queries beyond those depths. *)
   val rank_for_filters : context ->
     {pool : mlThmData.thmid list option, goal : Abbrev.goal} ->
+    (string * int) list -> (string * int -> mlThmData.thmid list)
+  (* Prepared pools use String.compare and retain the corpus order. *)
+  val rank_in : context ->
+    {filter : string, pool : (string, unit) Redblackmap.dict option,
+     goal : Abbrev.goal, n : int} -> mlThmData.thmid list
+  val rank_for_filters_in : context ->
+    {pool : (string, unit) Redblackmap.dict option, goal : Abbrev.goal} ->
     (string * int) list -> (string * int -> mlThmData.thmid list)
   val rank_filters : mlThmData.thmdata -> Abbrev.goal ->
     (string * int) list -> (string * mlThmData.thmid list) list

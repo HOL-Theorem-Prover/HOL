@@ -157,14 +157,10 @@ struct
   fun is_ground rigid ty =
     List.all (fn tvar => mem tvar rigid) (Type.type_vars ty)
 
-  (* Fold f over the constants of tm whose types are ground for rigid. *)
-  fun fold_ground_consts rigid f tm acc =
+  fun fold_consts f tm acc =
     let
       fun walk current result =
-        if is_const current then
-          let val constant as (_, ty) = dest_const current in
-            if is_ground rigid ty then f (constant, result) else result
-          end
+        if is_const current then f (dest_const current, result)
         else if is_comb current then
           walk (rand current) (walk (rator current) result)
         else if is_abs current then walk (body current) result
@@ -174,8 +170,18 @@ struct
     end
 
   fun add_grounds rigid tm table =
-    fold_ground_consts rigid (fn (constant, result) =>
-      add_ground constant result) tm table
+    fold_consts (fn (constant as (_, ty), result) =>
+      if is_ground rigid ty then add_ground constant result else result)
+      tm table
+
+  (* Harvest ground types without copying long sorted-list prefixes. *)
+  fun index_add ((name, ty), dict) =
+    case Redblackmap.peek (dict, name) of
+        NONE => Redblackmap.insert (dict, name,
+          Redblackset.singleton Type.compare ty)
+      | SOME types =>
+          if Redblackset.member (types, ty) then dict
+          else Redblackmap.insert (dict, name, Redblackset.add (types, ty))
 
   (* Both inputs are sorted and unique.  Keep the left representative of
      an equal type, as repeated insertion would. *)
@@ -256,10 +262,12 @@ struct
                     end
               | NONE => ()
         end
-      fun matches_new subst (name, ty) =
+      (* A schematic's ground candidates are fixed throughout the search. *)
+      fun candidates (name, ty) =
+        (ty, lookup name new, lookup name known)
+      fun matches_new subst (ty, fresh, _) =
         List.exists (fn ground =>
-          case match ty ground subst of SOME _ => true | NONE => false)
-          (lookup name new)
+          case match ty ground subst of SOME _ => true | NONE => false) fresh
       fun search remaining subst used_new =
         if !visited >= max_substitution_nodes then ()
         else if complete tvars subst then
@@ -271,7 +279,7 @@ struct
           (visited := !visited + 1;
           case remaining of
               [] => ()
-            | (name, ty) :: rest =>
+            | (ty, fresh, old) :: rest =>
             let
               fun visit _ [] = ()
                 | visit is_new (ground :: grounds) =
@@ -283,11 +291,11 @@ struct
                          | NONE => ();
                        visit is_new grounds)
             in
-              visit true (lookup name new);
-              visit false (lookup name known);
+              visit true fresh;
+              visit false old;
               search rest subst used_new
             end)
-      fun direct (name, ty) =
+      fun direct schematics (ty, fresh, old) =
         let
           fun consider is_new ground =
             case match ty ground [] of
@@ -299,8 +307,8 @@ struct
                   else ()
               | NONE => ()
         in
-          List.app (consider true) (lookup name new);
-          List.app (consider false) (lookup name known)
+          List.app (consider true) fresh;
+          List.app (consider false) old
         end
       val _ =
         (* Later rounds require a match from the current round's types.
@@ -309,8 +317,14 @@ struct
            List.all (fn (name, _) => null (lookup name new)) schematics then ()
         else
           case covering of
-              [] => search schematics [] false
-            | _ => List.app direct covering
+              [] => search (map candidates schematics) [] false
+            | _ =>
+                let
+                  val fresh_candidates =
+                    if require_new then map candidates schematics else []
+                in
+                  List.app (direct fresh_candidates o candidates) covering
+                end
     in
       Redblackmap.foldl' op:: [] (!best)
     end
@@ -374,17 +388,27 @@ struct
   (* The seed of a run: the rigid type variables and the initial table,
      which holds every schematic name (empty when it has no ground type)
      with the ground types of the goal and of the ground premises. *)
-  fun add_premise_grounds rigid infos table =
-    List.foldl (fn (Ground (_, theorem), result) =>
-                  add_grounds rigid theorem result
-                 | (_, result) => result) table infos
+  fun add_premise_grounds infos table =
+    let
+      fun add (constant as (name, _), index) =
+        if Redblackmap.inDomain (table, name) then index_add (constant, index)
+        else index
+      val types = List.foldl (fn (Ground (_, theorem), index) =>
+          fold_consts add theorem index
+        | (_, index) => index) (Redblackmap.mkDict String.compare) infos
+    in
+      Redblackmap.foldl (fn (name, tys, index) =>
+        Redblackmap.insert (index, name,
+          merge_types (lookup name index) (Redblackset.listItems tys)))
+        table types
+    end
 
   (* A reusable seed: the goal, its rigid type variables and, once a run
-     needs it, the ground types of the goal by constant name, sorted, for
-     every constant whose type is ground for the rigid variables.  A run
-     projects the index onto its own schematic names.  Both are computed
-     on demand and at most once, so a pool that is never used (polymorphic
-     encodings, no schematic helper) costs nothing. *)
+     needs it, the ground types of the goal by constant name, sorted.
+     Every type variable in the goal is rigid. A run projects the index
+     onto its own schematic names. Both are computed on demand and at most
+     once, so a pool that is never used (polymorphic encodings, no schematic
+     helper) costs nothing. *)
   type 'a susp = {force : unit -> 'a, forced : unit -> bool}
 
   fun susp f =
@@ -400,33 +424,23 @@ struct
                rigid : hol_type list susp,
                index : (string, hol_type list) Redblackmap.dict susp}
 
-  (* Harvest ground types without copying long sorted-list prefixes.
-     The substitution search still visits types in Type.compare order. *)
-  fun index_add ((name, ty), dict) =
-    case Redblackmap.peek (dict, name) of
-        NONE => Redblackmap.insert (dict, name,
-          Redblackset.singleton Type.compare ty)
-      | SOME types =>
-          if Redblackset.member (types, ty) then dict
-          else Redblackmap.insert (dict, name, Redblackset.add (types, ty))
-
-  fun index_of rigid goal =
+  fun index_of goal =
     Redblackmap.map (Redblackset.listItems o #2)
-      (fold_ground_consts rigid index_add goal
+      (fold_consts index_add goal
         (Redblackmap.mkDict String.compare))
 
   fun mk_pool_with names goal =
     let val rigid = susp (fn () => Term.type_vars_in_term goal) in
       {fresh = names, goal = susp (fn () => goal), rigid = rigid,
-       index = susp (fn () => index_of (#force rigid ()) goal)}
+       index = susp (fn () => index_of goal)}
     end
 
   fun pool_indexed (pool : pool) = #forced (#index pool) ()
 
   (* The pool of [list_mk_conj (goal :: extras)], itself computed on
-     demand.  The conjunction constructor adds the constant [/\] to the
-     index.  A new type variable changes which types are ground, so the
-     index is then rebuilt from the whole conjunction. *)
+     demand. The conjunction constructor adds the constant [/\] to the
+     index. Extras with new rigid variables use an independent index of the
+     whole conjunction. *)
   fun extend_pool (pool : pool) extras =
     if null extras then pool
     else
@@ -443,7 +457,7 @@ struct
           if #force reuse () then
             let
               val extra_types = List.foldl (fn (tm, dict) =>
-                fold_ground_consts (#force rigid ()) index_add tm dict)
+                fold_consts index_add tm dict)
                 (index_add (dest_const boolSyntax.conjunction,
                             Redblackmap.mkDict String.compare)) extras
             in
@@ -453,7 +467,7 @@ struct
                     (Redblackset.listItems types)))
                 (#force (#index pool) ()) extra_types
             end
-          else index_of (#force rigid ()) (#force goal ()))
+          else index_of (#force goal ()))
       in
         {fresh = #fresh pool, goal = goal, rigid = rigid, index = index}
       end
@@ -467,7 +481,7 @@ struct
         if Redblackmap.numItems names = 0 then names
         else
           let val index = #force (#index pool) () in
-            add_premise_grounds rigid infos
+            add_premise_grounds infos
               (Redblackmap.map (fn (name, _) => lookup name index) names)
           end
       val remaining = ref (Int.max (0, max_new_instances))

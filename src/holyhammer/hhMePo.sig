@@ -90,6 +90,10 @@ sig
     string -> mlThmData.thmdata -> hhStature.statures -> context
   val create_context_from_conclusions :
     string -> (string * Term.term * hhStature.stature) list -> context
+  (* Read the HOL terms now and defer combining the per-fact frequencies. *)
+  val create_deferred_context_from_conclusions :
+    string -> (string * Term.term * hhStature.stature) list -> context
+  val prepare_frequencies : context -> unit
   val create_context : mlThmData.thmdata -> hhStature.statures -> context
   val restrict_context : context -> string list -> context
   (* Reuse a set of requested theorem names built with String.compare.

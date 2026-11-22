@@ -184,13 +184,12 @@ fun schedule_paths root schedule =
    Slices with the same problem key share one problem file. *)
 fun distinct_problems schedule =
   let
-    fun collect _ [] = []
-      | collect seen ((entry as (_, path)) :: rest) =
-          if List.exists (fn other => other = path) seen
-          then collect seen rest
-          else entry :: collect (path :: seen) rest
+    fun collect _ entries [] = List.rev entries
+      | collect seen entries ((entry as (_, path)) :: rest) =
+          if Redblackset.member (seen, path) then collect seen entries rest
+          else collect (Redblackset.add (seen, path)) (entry :: entries) rest
   in
-    collect [] schedule
+    collect (Redblackset.empty String.compare) [] schedule
   end
 
 (* The cap on new monomorphic instances.  The monomorphiser instantiates
@@ -663,15 +662,14 @@ fun hoisted_named rankings (works : work list) =
     fun fetch filter =
       let
         val names = first_n (largest filter) (ranking_for rankings filter)
-        val fetched = smlRedirect.hidef (fn () =>
-          map (fn name => mlThmData.thml_of_namel [name]) names) ()
+        val fetched = smlRedirect.hidef (map mlThmData.thm_of_name) names
       in
         (filter, fetched)
       end
     val fetched = map fetch (distinct keys)
     fun named_for (filter, count) =
       premises_of
-        (List.concat (first_n count (valOf
+        (List.mapPartial I (first_n count (valOf
            (Option.map #2 (List.find (fn (old, _) => old = filter) fetched)))))
   in
     memo_named named_for

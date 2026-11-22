@@ -576,9 +576,6 @@ struct
         firstorderize format encoding main main_heads main_var_types main_count
       end
 
-  fun add_once equal value values =
-    if List.exists (equal value) values then values else values @ [value]
-  fun same_value left right = left = right
   (* Distinct types in first-occurrence order.  The state is a membership
      set and the reversed list of first occurrences; types of one formula
      are visited in occurrence order, nested arguments after their type.
@@ -683,27 +680,28 @@ struct
            map (native_type flags) Args)
       end
 
-  fun mono_higher_type ty =
-    if is_vartype ty then hhTptpProblem.TyCon (mangle_type ty, [])
+  fun mono_higher_type mangle ty =
+    if is_vartype ty then hhTptpProblem.TyCon (mangle ty, [])
     else
       let val {Thy, Tyop, Args} = Type.dest_thy_type ty in
         if Thy = "min" andalso Tyop = "fun" then
           (case Args of
                [domain, range] => hhTptpProblem.TyFun
-                 (mono_higher_type domain, mono_higher_type range)
+                 (mono_higher_type mangle domain, mono_higher_type mangle range)
              | _ => fail "malformed function type")
         else if Thy = "min" andalso Tyop = "bool" then
           hhTptpProblem.TyCon ("$o", [])
-        else hhTptpProblem.TyCon (mangle_type ty, [])
+        else hhTptpProblem.TyCon (mangle ty, [])
       end
 
-  fun type_for (hhTypeEnc.Native {poly = true, higher, fool}) =
+  fun type_for _ (hhTypeEnc.Native {poly = true, higher, fool}) =
         native_type {higher = higher, fool = fool}
-    | type_for (hhTypeEnc.Native {higher = true, ...}) = mono_higher_type
-    | type_for (hhTypeEnc.Native {fool = true, ...}) = (fn ty =>
+    | type_for mangle (hhTypeEnc.Native {higher = true, ...}) =
+        mono_higher_type mangle
+    | type_for mangle (hhTypeEnc.Native {fool = true, ...}) = (fn ty =>
         if ty = Type.bool then hhTptpProblem.TyCon ("$o", [])
-        else hhTptpProblem.TyCon (mangle_type ty, []))
-    | type_for _ = fn ty => hhTptpProblem.TyCon (mangle_type ty, [])
+        else hhTptpProblem.TyCon (mangle ty, []))
+    | type_for mangle _ = fn ty => hhTptpProblem.TyCon (mangle ty, [])
 
   fun const_type_args tm =
     if not (is_const tm) then []
@@ -766,25 +764,21 @@ struct
     if is_lambda_var head then [type_of head] else type_args_of_head head
 
   fun encoded_symbol encoding head =
-    if is_var head andalso not (is_generated_var head) then
-      variable_name (raw_symbol head)
-    else if raw_symbol head = "$true" orelse raw_symbol head = "$false" orelse
-            raw_symbol head = "$equal" then raw_symbol head
-    else
-      case encoding of
-          hhTypeEnc.Native {poly = true, ...} =>
-            aiLib.escape (if raw_symbol head = "$ite" then "pxy.ite"
-                          else raw_symbol head)
-        | _ =>
-            let
-              val args = mono_type_args head
-              val base = if raw_symbol head = "$ite" then "pxy.ite"
-                         else raw_symbol head
-            in
-              if null args then aiLib.escape base
-              else bounded_name (aiLib.escape (base ^ "." ^
-                String.concatWith "." (map raw_mangle_type args)))
-            end
+    let val name = raw_symbol head in
+      if is_var head andalso not (is_generated_var head) then variable_name name
+      else if name = "$true" orelse name = "$false" orelse name = "$equal" then
+        name
+      else
+        let val base = if name = "$ite" then "pxy.ite" else name in
+          case encoding of
+              hhTypeEnc.Native {poly = true, ...} => aiLib.escape base
+            | _ =>
+                case mono_type_args head of
+                    [] => aiLib.escape base
+                  | args => bounded_name (aiLib.escape (base ^ "." ^
+                      String.concatWith "." (map raw_mangle_type args)))
+        end
+    end
 
   fun app_symbol (hhTypeEnc.Native {poly = false, ...})
         (function_type, argument_type, result_type) =
@@ -812,14 +806,13 @@ struct
              | order => order)
       | order => order
 
-  fun guard_name ty = bounded_name (aiLib.escape ("gd." ^ mangle_type ty))
-
   (* Per-problem memo of symbols and types, shared by declarations, guard
      axioms and formula encoding.  Entries are computed on demand; a bound
      variable's name keeps its direct, uncached path. *)
   type symbols =
     {head : term -> string, value : term -> string,
      ty : hol_type -> hhTptpProblem.tptp_type,
+     mangle : hol_type -> string,
      guard : hol_type -> string,
      type_args : term -> hhTptpProblem.tptp_type list,
      app : hol_type * hol_type * hol_type -> string}
@@ -841,7 +834,8 @@ struct
     let
       val head = memoise Term.compare (encoded_symbol encoding)
       val value = memoise Term.compare (value_symbol encoding)
-      val ty = memoise Type.compare (type_for encoding)
+      val mangle = memoise Type.compare mangle_type
+      val ty = memoise Type.compare (type_for mangle encoding)
       val type_args =
         case encoding of
             hhTypeEnc.Native {poly = true, ...} =>
@@ -853,8 +847,9 @@ struct
         if is_bound_var tm then encoded_symbol encoding tm else memo tm
     in
       {head = unless_bound head, value = unless_bound value,
-       ty = ty, type_args = type_args,
-       guard = memoise Type.compare guard_name,
+       ty = ty, mangle = mangle, type_args = type_args,
+       guard = memoise Type.compare
+         (fn ty => bounded_name (aiLib.escape ("gd." ^ mangle ty))),
        app = memoise signature_compare (app_symbol encoding)}
     end
 
@@ -884,11 +879,7 @@ struct
 
   fun type_vars_of_formula formula =
     let
-      fun collect_ty ty result =
-        if is_vartype ty then add_once same_value ty result
-        else let val {Args, ...} = Type.dest_thy_type ty in
-          List.foldl (fn (arg, acc) => collect_ty arg acc) result Args
-        end
+      val collect_ty = Type.type_vars_acc
       fun collect_term (FOHead (head, args)) result =
             List.foldl (fn (arg, acc) => collect_term arg acc)
               (collect_ty (type_of head) result) args
@@ -908,7 +899,7 @@ struct
             List.foldl (fn (body, acc) => collect body acc) result bodies
         | collect (FOAtom tm) result = collect_term tm result
     in
-      collect formula []
+      rev (collect formula [])
     end
 
   fun guard_atom (symbols : symbols) ty tm =
@@ -1022,7 +1013,7 @@ struct
 
   (* [distinct] must be the first-occurrence distinct type list (see
      distinct_formula_types): the declarations keep first-occurrence order. *)
-  fun type_declarations encoding distinct =
+  fun type_declarations (symbols : symbols) encoding distinct =
     let
       fun native_op ty =
         if is_vartype ty then NONE
@@ -1046,7 +1037,7 @@ struct
             map (fn symbol => hhTptpProblem.TypeDecl
               (aiLib.escape "ty." ^ symbol, symbol, 0))
               (aiLib.mk_sameorder_set String.compare
-                (map mangle_type distinct))
+                (map (#mangle symbols) distinct))
     end
 
   fun gsy_line (symbols : symbols) encoding needs head =
@@ -1074,9 +1065,9 @@ struct
         end
     end
 
-  fun witness_line symbols ty =
+  fun witness_line (symbols : symbols) ty =
     let
-      val witness = bounded_name (aiLib.escape ("wit." ^ mangle_type ty))
+      val witness = bounded_name (aiLib.escape ("wit." ^ #mangle symbols ty))
       val term = hhTptpProblem.Tm ((witness, []), [])
     in
       hhTptpProblem.FormLine (witness, hhTptpProblem.Axiom,
@@ -1445,8 +1436,8 @@ struct
                  hhTptpProblem.TyCon ("$o", [])))]
               else []
           in
-            type_declarations encoding all_types @ sym_decls @ app_decls @
-            value_decls @ pp_decls
+            type_declarations symbols encoding all_types @ sym_decls @
+            app_decls @ value_decls @ pp_decls
           end
       val gsy = if guarded then
         List.mapPartial (gsy_line symbols encoding needs) declaration_heads
@@ -1560,19 +1551,22 @@ struct
                         (translate (#conjecture lambda_terms)
                           (#facts lambda_terms @ source))
                     in (helpers, helpers) end
-            val translated =
-              case main_pool of
-                  SOME pool =>
-                    hhMonomorph.monomorph_pool caps pool helper_source
-                | NONE => helper_source
-            (* A schematic proxy law with no ground instance is still sound:
-               the mono printer gives its remaining type variables opaque
-               sorts.  Do not silently lose it as an "ignored" user fact. *)
-            fun found name = List.exists (fn (other, _) => other = name)
-              translated
-            val retained = List.filter (not o found o #1) retention_source
           in
-            translated @ retained
+            case main_pool of
+                NONE => helper_source
+              | SOME pool =>
+                  let
+                    val translated =
+                      hhMonomorph.monomorph_pool caps pool helper_source
+                    val names =
+                      Redblackset.fromList String.compare (map #1 translated)
+                    (* A schematic proxy law without a ground instance
+                       still gives a sound law at opaque sorts. *)
+                    val retained = List.filter (fn (name, _) =>
+                      not (Redblackset.member (names, name))) retention_source
+                  in
+                    translated @ retained
+                  end
           end
       (* The caller-side first-orderizations report as the tail's
          failures do after describe_failure. *)

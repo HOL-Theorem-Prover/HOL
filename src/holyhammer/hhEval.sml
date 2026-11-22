@@ -1474,8 +1474,8 @@ fun append_theory_error path expdir thy message =
 fun journal_theory_error expdir thy message =
   append_theory_error (journal_path expdir thy) expdir thy message
 
-(* Share the inventories across goals. Dependency, kNN and none filters use
-   membership. Context-based rankers use the ordered names. *)
+(* Share the ancestor membership across goals. Add age-eligible local
+   facts only when a ranking needs the complete pool. *)
 fun chainy_for thy theorems =
   let
     val order = hhExportLib.sorted_ancestry [thy]
@@ -1484,9 +1484,10 @@ fun chainy_for thy theorems =
         hhExportLib.before_elem thy order
       else order
     fun qualify theory name = theory ^ "Theory." ^ name
-    val earlier_ids = List.concat (map (fn theory =>
-      map (qualify theory o #1) (DB.thms theory)) earlier_theories)
-    val ancestors = Redblackset.fromList String.compare earlier_ids
+    fun add_theory (theory, names) =
+      foldl (fn ((name, _), pool) => dadd (qualify theory name) () pool)
+        names (DB.thms theory)
+    val ancestors = foldl add_theory (dempty String.compare) earlier_theories
     val local_facts =
       if null theorems then []
       else map (fn (name, thm) =>
@@ -1503,14 +1504,15 @@ fun chainy_for thy theorems =
       else List.foldr (fn ((name, thm), dict) =>
         Redblackmap.insert (dict, name, mlThmData.depnumber_of_thm thm))
         (Redblackmap.mkDict String.compare) theorems
-    fun earlier name = Redblackset.member (ancestors, name)
+    fun earlier name = dmem name ancestors
     fun facts name =
       case Redblackmap.peek (goal_ages, name) of
-          NONE => {pool = fn () => earlier_ids, permits = earlier}
+          NONE => {pool = fn () => ancestors, permits = earlier}
         | SOME age =>
-            {pool = fn () => List.foldr (fn ((name, fact_age), acc) =>
-               if fact_age < age then name :: acc else acc)
-               earlier_ids local_facts,
+            {pool = fn () => Redblackmap.foldl
+               (fn (name, fact_age, pool) =>
+                 if fact_age < age then dadd name () pool else pool)
+               ancestors oldest_facts,
              permits = fn fact => earlier fact orelse
                (case Redblackmap.peek (oldest_facts, fact) of
                     NONE => false
@@ -1519,12 +1521,11 @@ fun chainy_for thy theorems =
     facts
   end
 
-fun restrict_features permits = List.filter (fn (name, _) => permits name)
+fun restrict_features permits = List.filter (permits o #1)
 
 fun restrict_features_to_pool pool features =
-  let val permitted = Redblackset.fromList String.compare pool in
-    restrict_features (fn name => Redblackset.member (permitted, name))
-      features
+  let val permitted = dset String.compare pool in
+    restrict_features (fn name => dmem name permitted) features
   end
 
 type selection_data =
@@ -1535,7 +1536,7 @@ type selection_data =
    knn : mlThmData.thmdata -> int -> goal -> mlThmData.thmid list}
 
 type premise_pool =
-  {names : mlThmData.thmid list Susp.susp,
+  {names : (string, unit) Redblackmap.dict Susp.susp,
    thmdata : mlThmData.thmdata Susp.susp}
 
 fun selection_data thy : selection_data =
@@ -1560,7 +1561,7 @@ fun select_filter (data as {context, ...} : selection_data)
   case filter of
       "none" => map #1 (#2 (Susp.force (#thmdata pool)))
     | "knn" => select_knn data pool count goal
-    | _ => hhLearn.rank (Susp.force context)
+    | _ => hhLearn.rank_in (Susp.force context)
         {filter = filter, pool = SOME (Susp.force (#names pool)),
          goal = goal, n = count}
 
@@ -1570,7 +1571,7 @@ fun selection_facts (data as {thmdata, ...} : selection_data)
     val names = Susp.delay pool
     val restricted = Susp.delay (fn () =>
       let val (weights, features) = Susp.force thmdata in
-        (weights, restrict features)
+        (weights, restrict (fn () => Susp.force names) features)
       end)
     val pool = {names = names, thmdata = restricted}
     (* Conditions for this goal and regime share successful selections.
@@ -1595,7 +1596,7 @@ fun selection_facts (data as {thmdata, ...} : selection_data)
         val missing = List.filter (fn query =>
           context_filter query andalso not (isSome (lookup query))) queries
         val shared = Susp.delay (fn () =>
-          hhLearn.rank_for_filters (Susp.force (#context data))
+          hhLearn.rank_for_filters_in (Susp.force (#context data))
             {pool = SOME (Susp.force names), goal = goal} missing)
         fun calculate query =
           if context_filter query then (Susp.force shared) query
@@ -1610,11 +1611,12 @@ fun selection_facts (data as {thmdata, ...} : selection_data)
 
 fun bushy_selection_facts (data : selection_data) goal dependencies =
   let
-    fun restrict _ = hhFactIndex.select (Susp.force (#fact_index data))
-      (dset String.compare dependencies)
+    fun restrict wanted _ =
+      hhFactIndex.select (Susp.force (#fact_index data)) (wanted ())
   in
     selection_facts data goal
-      {pool = fn () => dependencies, restrict = restrict} dependencies
+      {pool = fn () => dset String.compare dependencies, restrict = restrict}
+      dependencies
   end
 
 fun selected_premises_at condition {rank, dependencies, ...} knn_count =
@@ -1839,12 +1841,13 @@ fun eval_loaded_theory expdir thy =
     val completed = read_completed (journal_path expdir thy)
     val theorems = DB.theorems thy
     val data = selection_data thy
-    val chainy_data =
+    val chainy_data = Susp.delay (fn () =>
       if List.exists (fn condition => #regime condition = Chainy)
          (!worker_conditions)
       then SOME (chainy_for thy theorems)
            handle Interrupt => raise Interrupt | error => NONE
-      else SOME (fn _ => {pool = fn () => [], permits = fn _ => false})
+      else SOME (fn _ => {pool = fn () => dempty String.compare,
+                         permits = fn _ => false}))
     fun evaluate (name, thm) =
       let
         val id = goal_id thy name
@@ -1864,18 +1867,21 @@ fun eval_loaded_theory expdir thy =
             fun evaluate_cells facts_for =
               let
                 val {pool, permits} = facts_for name
-                val chainy = List.filter
-                  (fn condition => #regime condition = Chainy) pending
                 val chainy_dependencies =
-                  if List.exists (fn condition => #selector condition = Deps)
-                       chainy then List.filter permits intact_deps
+                  if List.exists (fn condition =>
+                       #regime condition = Chainy andalso
+                       #selector condition = Deps) pending
+                  then List.filter permits intact_deps
                   else []
                 val goal = dest_thm thm
                 val bushy_facts =
                   bushy_selection_facts data goal intact_deps
+                (* kNN can scan feature rows using the age predicate without
+                   materializing the local part of the membership map. *)
+                fun restrict _ = restrict_features permits
                 val chainy_facts =
-                  selection_facts data goal {pool = pool,
-                    restrict = restrict_features permits} chainy_dependencies
+                  selection_facts data goal {pool = pool, restrict = restrict}
+                    chainy_dependencies
                 fun one condition =
                   case #regime condition of
                       Bushy =>
@@ -1888,7 +1894,7 @@ fun eval_loaded_theory expdir thy =
                 app one pending
               end
           in
-            case chainy_data of
+            case Susp.force chainy_data of
                 NONE => app (fn condition =>
                   evaluation_error_cell expdir thy name tags condition
                   "could not construct the chainy premise pool") pending

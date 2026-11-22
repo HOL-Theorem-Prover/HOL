@@ -90,7 +90,10 @@ struct
   fun type_name ty =
     #Tyop (Type.dest_thy_type ty) handle HOL_ERR _ => ""
 
-  fun is_named names ty = List.exists (fn name => type_name ty = name) names
+  fun is_named names ty =
+    let val name = type_name ty in
+      List.exists (fn candidate => candidate = name) names
+    end
 
   fun is_bool ty = type_name ty = "bool"
 

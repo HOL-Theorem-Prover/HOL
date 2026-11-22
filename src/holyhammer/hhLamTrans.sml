@@ -221,15 +221,16 @@ struct
              from the symbol's type, so instances of the definition at
              different types would all define one symbol.  Pass it as a
              (:'b) argument to keep it in the type. *)
-          val visible =
-            Type.type_vars (list_mk_fun (map type_of captured, type_of tm))
+          val captured_type = list_mk_fun (map type_of captured, type_of tm)
+          val visible = Type.type_vars captured_type
           val hidden =
             List.filter (fn ty => not (mem ty visible))
               (type_vars_in_term tm)
-          val arguments = map mk_itself hidden @ captured
+          val witnesses = map mk_itself hidden
+          val arguments = witnesses @ captured
           val matrix' =
             if type_of matrix = Type.bool then formula matrix else term matrix
-          val lam_type = list_mk_fun (map type_of arguments, type_of tm)
+          val lam_type = list_mk_fun (map type_of witnesses, captured_type)
           val lam = mk_var (fresh_name (), lam_type)
           val replacement = list_mk_comb (lam, arguments)
           val _ = definitions :=

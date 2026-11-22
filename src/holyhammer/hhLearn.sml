@@ -68,17 +68,25 @@ type weight_table = (int, real) Redblackmap.dict
 type idf_table =
   {nfacts : int, dffreq : frequency_table, weights : weight_table}
 
-fun increment key table =
-  case Redblackmap.peek (table, key) of
-      SOME count => dadd key (count + 1) table
-    | NONE => dadd key 1 table
+fun add_weight amount key table =
+  Redblackmap.insertWith (op +) (table, key, amount)
+
+fun distinct_features features =
+  let
+    fun increasing (left :: (rest as right :: _)) =
+          left < right andalso increasing rest
+      | increasing _ = true
+  in
+    if increasing features then features
+    else mk_fast_set Int.compare features
+  end
 
 fun create_idf_table facts =
   let
     fun add_fact ((_, features), (nfacts, frequencies)) =
       (nfacts + 1,
-       foldl (fn (feature, table) => increment feature table)
-         frequencies (mk_fast_set Int.compare features))
+       foldl (fn (feature, table) => add_weight 1 feature table)
+         frequencies (distinct_features features))
     val (nfacts, dffreq) =
       foldl add_fact (0, dempty Int.compare) facts
     val ln_nfacts =
@@ -339,11 +347,6 @@ fun add_index ((fact : fact_info), (index, table)) =
 
 fun index_facts facts = #2 (foldl add_index (0, dempty String.compare) facts)
 
-fun add_weight amount key table =
-  case Redblackmap.peek (table, key) of
-      SOME count => dadd key (count + amount) table
-    | NONE => dadd key amount table
-
 fun validate_training idf (facts : fact_info list) =
   let
     val _ =
@@ -405,7 +408,7 @@ fun train_nb_indexed constants idf dependencies facts indices =
       else
         let
           val fact = Vector.sub (information, index)
-          val features = mk_fast_set Int.compare (#features fact)
+          val features = distinct_features (#features fact)
           val _ = add_use (#def_prior_weight constants) index features
           val _ = List.app (fn target => add_use 1 target features)
             (usable_dependencies fact)
@@ -812,7 +815,7 @@ fun make_context_for current (thmdata as (_, facts)) training dependencies =
     {thmdata = thmdata, fact_index = hhFactIndex.create #1 facts,
      model = model,
      statures = statures,
-     mepo = hhMePo.create_context_from_conclusions current
+     mepo = hhMePo.create_deferred_context_from_conclusions current
        (List.mapPartial (fn (thmid, _, concl, stature) =>
           Option.map (fn term => (thmid, term, stature)) concl) candidates),
      dependencies = dependencies, fact_key = fact_key, unknown = unknown,
@@ -820,7 +823,8 @@ fun make_context_for current (thmdata as (_, facts)) training dependencies =
   end
 
 fun force_context (context : context) =
-  (ignore (Susp.force (#model context));
+  (hhMePo.prepare_frequencies (#mepo context);
+   ignore (Susp.force (#model context));
    ignore (Susp.force (#fact_key context));
    context)
 
@@ -1002,12 +1006,11 @@ fun make_dependency_lookup () =
 fun is_induction statures thmid =
   #induction (hhStature.stature_of statures thmid)
 
-fun rank_inputs context pool =
+fun rank_inputs (context : context) wanted =
   let
-    val wanted = Option.map name_set pool
     val restricted = Susp.delay (fn () => restrict_thmdata context wanted)
     val names = Susp.delay (fn () =>
-      restricted_names context pool (#2 (Susp.force restricted)))
+      restricted_names context wanted (#2 (Susp.force restricted)))
     (* MePo's candidates already come from these same feature rows. *)
     val mepo = Susp.delay (fn () =>
       case wanted of
@@ -1079,7 +1082,7 @@ fun shared_prefix limit predict =
 
 (* The prediction inputs are fixed by this goal and pool. Defer each
    learner until a filter asks for it. *)
-fun rank_for_filters context {pool, goal} filters =
+fun rank_for_filters_in context {pool, goal} filters =
   let
     val {knn, nb} = direct_predictions context goal
     fun limits ((filter, n), (knn_max, nb_max)) =
@@ -1103,7 +1106,10 @@ fun rank_for_filters context {pool, goal} filters =
     rank_with_predictions context inputs predictions goal shared_depths
   end
 
-fun rank context {filter, pool, goal, n} =
+fun rank_for_filters context {pool, goal} =
+  rank_for_filters_in context {pool = Option.map name_set pool, goal = goal}
+
+fun rank_in context {filter, pool, goal, n} =
   let
     val inputs as {restricted, names, ...} = rank_inputs context pool
     val {knn, nb} = direct_predictions context goal
@@ -1113,6 +1119,10 @@ fun rank context {filter, pool, goal, n} =
        nb = fn n => nb (Susp.force names) n}
       goal [] (filter, n)
   end
+
+fun rank context {filter, pool, goal, n} =
+  rank_in context {filter = filter, pool = Option.map name_set pool,
+                   goal = goal, n = n}
 
 fun rank_filters thmdata goal filters =
   if List.all (fn (filter, _) => filter = "knn" orelse filter = "none")

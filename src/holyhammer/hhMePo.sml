@@ -147,13 +147,18 @@ fun ptype_compare ((order, patterns), (order', patterns')) =
 
 fun empty_pconst_table () = dempty String.compare
 
-fun add_pconst_to_table (name, ptype) table =
+fun new_pconst_patterns (name, ptype) table =
   case Redblackmap.peek (table, name) of
-      NONE => dadd name [ptype] table
+      NONE => SOME [ptype]
     | SOME old =>
         if List.exists (fn old_ptype => ptype_eq (ptype, old_ptype)) old
-        then table
-        else dadd name (ptype :: old) table
+        then NONE
+        else SOME (ptype :: old)
+
+fun add_pconst_to_table (pconst as (name, _)) table =
+  case new_pconst_patterns pconst table of
+      NONE => table
+    | SOME patterns => dadd name patterns table
 
 fun const_ptype tm =
   let
@@ -552,12 +557,20 @@ type cached_fact =
 type context =
   {current_theory : string, facts : cached_fact list,
    fact_index : cached_fact hhFactIndex.index,
-   frequency_table : frequency_table, weight_cache : weight_cache}
+   special_facts : cached_fact list,
+   frequency_table : frequency_table Susp.susp, weight_cache : weight_cache}
 
-fun context_from_facts current_theory facts frequency_table weight_cache =
+fun context_from_facts current_theory facts special_facts frequency_table
+      weight_cache =
   {current_theory = current_theory, facts = facts,
    fact_index = hhFactIndex.create #thmid facts,
+   special_facts = special_facts,
    frequency_table = frequency_table, weight_cache = weight_cache} : context
+
+val special_set_thmids =
+  ["pred_setTheory.SPECIFICATION",
+   "pred_setTheory.GSPECIFICATION", "boolTheory.IN_DEF"]
+val ext_thmid = "boolTheory.EQ_EXT"
 
 (* Count occurrences only up to the cutoff. This bounds the number of keys
    the restricted pool can need and keeps its original indices. Use the
@@ -602,14 +615,14 @@ fun adjust_frequency delta ((name, ptype), amount) table =
   end
 
 fun adjust_by_facts delta facts table =
-  foldl (fn (fact, table) =>
+  foldl (fn (fact : cached_fact, table) =>
     foldl (fn (entry, table) => adjust_frequency delta entry table)
       table (#counts fact)) table facts
 
 fun frequency_of_facts facts =
   adjust_by_facts 1 facts (empty_frequency_table ())
 
-fun make_context {current_theory, facts} =
+fun make_deferred_context {current_theory, facts} =
   let
     fun compare ((name, ptype), (name', ptype')) =
       case String.compare (name, name') of
@@ -633,25 +646,45 @@ fun make_context {current_theory, facts} =
               indices := dadd pconst entry (!indices);
               entry
             end
-    val cached = map (cache_fact read_const index_pconst) facts
+    val specials = ref []
+    fun cache (fact as {thmid, ...}) =
+      let val cached = cache_fact read_const index_pconst fact in
+        if thmid = ext_thmid orelse
+           List.exists (fn name => name = thmid) special_set_thmids
+        then specials := cached :: !specials else ();
+        cached
+      end
+    val cached = map cache facts
+    val frequency = Susp.delay (fn () => frequency_of_facts cached)
   in
-    context_from_facts current_theory cached (frequency_of_facts cached)
+    context_from_facts current_theory cached (rev (!specials)) frequency
       (Dense (dlength (!indices)))
   end
+
+fun prepare_frequencies (context : context) =
+  ignore (Susp.force (#frequency_table context))
+
+fun prepare_context context = (prepare_frequencies context; context)
+
+fun make_context arguments = prepare_context (make_deferred_context arguments)
 
 fun theory_of_thmid thmid =
   case total (split_string "Theory.") thmid of
       SOME (theory, _) => theory
     | NONE => Theory.current_theory ()
 
-fun create_context_from_conclusions current conclusions =
+fun create_deferred_context_from_conclusions current conclusions =
   let
     fun fact (thmid, concl, stature) =
       {thmid = thmid, theory = theory_of_thmid thmid,
        concl = concl, stature = stature}
   in
-    make_context {current_theory = current, facts = map fact conclusions}
+    make_deferred_context
+      {current_theory = current, facts = map fact conclusions}
   end
+
+fun create_context_from_conclusions current conclusions =
+  prepare_context (create_deferred_context_from_conclusions current conclusions)
 
 fun create_context_for current (_, thm_features) statures =
   let
@@ -671,27 +704,28 @@ fun create_context thmdata statures =
 fun context_thmids ({facts, ...} : context) = map #thmid facts
 
 fun restrict_context_to
-    ({current_theory, facts, fact_index,
+    (context as {current_theory, facts, fact_index, special_facts,
       frequency_table, weight_cache} : context)
     wanted =
   let
-    val (restricted, frequency) =
-      case hhFactIndex.select_sparse fact_index wanted of
-          SOME restricted => (restricted, frequency_of_facts restricted)
-        | NONE =>
-            let
-              val (restricted, excluded) =
-                List.partition (fn fact => dmem (#thmid fact) wanted) facts
-              val frequency =
-                if length excluded < length restricted then
-                  adjust_by_facts ~1 excluded frequency_table
-                else frequency_of_facts restricted
-            in
-              (restricted, frequency)
-            end
+    fun permitted (fact : cached_fact) = dmem (#thmid fact) wanted
+    fun restrict restricted frequency =
+      context_from_facts current_theory restricted
+        (List.filter permitted special_facts) (Susp.delay frequency)
+        (restricted_weight_cache weight_cache restricted)
+    fun rebuild restricted =
+      restrict restricted (fn () => frequency_of_facts restricted)
   in
-    context_from_facts current_theory restricted frequency
-      (restricted_weight_cache weight_cache restricted)
+    case hhFactIndex.select_sparse fact_index wanted of
+        SOME restricted => rebuild restricted
+      | NONE =>
+          let val (restricted, excluded) = List.partition permitted facts in
+            if null excluded then context
+            else if length excluded < length restricted then
+              restrict restricted (fn () =>
+                adjust_by_facts ~1 excluded (Susp.force frequency_table))
+            else rebuild restricted
+          end
   end
 
 fun restrict_context context thmids =
@@ -703,13 +737,16 @@ fun add_fact_pconsts fact table =
   foldl (fn ((pconst, _), result) => add_pconst_to_table pconst result)
     table (#pconsts fact)
 
-fun table_name_changed old_table new_table name =
-  case (Redblackmap.peek (old_table, name),
-        Redblackmap.peek (new_table, name)) of
-      (NONE, NONE) => false
-    (* Adding relevance patterns only prepends new entries. *)
-    | (SOME left, SOME right) => length left <> length right
-    | _ => true
+fun add_relevance (fact : cached_fact, state) =
+  let
+    fun add ((pconst as (name, _), _), state as (table, changed)) =
+      case new_pconst_patterns pconst table of
+          NONE => state
+        | SOME patterns =>
+            (dadd name patterns table, Redblackset.add (changed, name))
+  in
+    foldl add state (#pconsts fact)
+  end
 
 fun widely_irrelevant name =
   irrelevant_const name orelse
@@ -773,12 +810,7 @@ fun term_uses_set_const term =
     uses term
   end
 
-val special_set_thmids =
-  ["pred_setTheory.SPECIFICATION",
-   "pred_setTheory.GSPECIFICATION", "boolTheory.IN_DEF"]
-val ext_thmid = "boolTheory.EQ_EXT"
-
-fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
+fun insert_special_facts (fudge : fudge) max_facts special_facts goal_terms
       accepted =
   let
     val uses_set =
@@ -792,7 +824,7 @@ fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
     if null wanted then accepted
     else
       let
-        val add = first_test_n (wanted_thmid o #thmid) max_facts all_facts
+        val add = first_test_n (wanted_thmid o #thmid) max_facts special_facts
         val without = List.filter (not o wanted_thmid o #thmid) accepted
         val trimmed = take (max_facts - length add) without
         val (prefix, after) = split_at (#special_fact_index fudge) trimmed
@@ -802,11 +834,13 @@ fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
   end
 
 fun mepo_rank_with_fudge (fudge : fudge)
-      ({current_theory, facts, frequency_table, weight_cache, ...} : context)
+      ({current_theory, facts, special_facts,
+        frequency_table, weight_cache, ...} : context)
       (assumptions, conclusion) max_facts =
   if max_facts <= 0 orelse null facts then []
   else
     let
+      val frequency_table = Susp.force frequency_table
       val chained_table =
         foldl
           (fn (term, table) =>
@@ -876,23 +910,17 @@ fun mepo_rank_with_fudge (fudge : fudge)
                     if remaining' = 0 then accepted
                     else
                       let
-                        val rel_table' =
-                          foldl
-                            (fn (fact, table) => add_fact_pconsts fact table)
-                            rel_table accepted
-                        (* Only names the accepted facts add to can change. *)
-                        val changed = List.filter
-                          (table_name_changed rel_table rel_table')
-                          (mk_fast_set String.compare
-                            (map (fst o fst)
-                              (List.concat (map #pconsts accepted))))
-                        val changed_set = Redblackset.addList
-                          (Redblackset.empty String.compare, changed)
+                        val (rel_table', changed) =
+                          foldl add_relevance
+                            (rel_table, Redblackset.empty String.compare)
+                            accepted
+                        val relevance_changed =
+                          not (Redblackset.isEmpty changed)
                         fun dirty fact =
-                          not (null changed) andalso
+                          relevance_changed andalso
                           List.exists
                             (fn ((name, _), _) =>
-                              Redblackset.member (changed_set, name))
+                              Redblackset.member (changed, name))
                             (#pconsts fact)
                         fun reconsider ((fact, weight), (hope, lost)) =
                           if dirty fact then ((fact, NONE) :: hope, lost)
@@ -931,7 +959,7 @@ fun mepo_rank_with_fudge (fudge : fudge)
 
       val accepted = iter 0 max_facts (#fact_threshold0 fudge)
         goal_table [] hopeful
-      val with_specials = insert_special_facts fudge max_facts facts
+      val with_specials = insert_special_facts fudge max_facts special_facts
         (conclusion :: assumptions) accepted
     in
       map #thmid (take max_facts with_specials)
