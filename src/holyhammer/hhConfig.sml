@@ -384,13 +384,15 @@ val option_specs : option_spec list =
     default = fn () => Real.toString default_preplay_timeout,
     expected = "a positive real number",
     doc = "time limit for each replay of a proof, in CPU seconds of " ^
-          "the replay's thread",
+          "the replay's thread (on Linux; elsewhere the lesser of wall " ^
+          "and process CPU time)",
     valid = positive_real},
    {name = "minimize_timeout",
     default = fn () => Real.toString default_minimize_timeout,
     expected = "a positive real number",
     doc = "time limit for each minimization attempt, in CPU seconds " ^
-          "of the attempt's thread",
+          "of the attempt's thread (on Linux; elsewhere the lesser of " ^
+          "wall and process CPU time)",
     valid = positive_real},
    {name = "preplay_drop_one", default = fn () => "true",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",

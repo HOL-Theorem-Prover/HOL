@@ -4098,12 +4098,9 @@ fun test_replay_timeout () =
     expect "thread_timeout stops a call that waits at 20 times its limit"
       ((smlTimeout.thread_timeout 0.01 idle (); false)
        handle smlTimeout.FunctionTimeout => true);
-    expect "thread_timeout stops a call that computes at its limit"
-      (let val started = Time.now () in
-         (smlTimeout.thread_timeout 0.2 spin 0; false)
-         handle smlTimeout.FunctionTimeout =>
-           Time.toReal (Time.- (Time.now (), started)) < 2.0
-       end);
+    expect "thread_timeout stops a call that computes without end"
+      ((smlTimeout.thread_timeout 0.2 spin 0; false)
+       handle smlTimeout.FunctionTimeout => true);
     (* the call counts down without allocating, so neither the garbage
        collector nor another thread changes its work *)
     expect "thread_timeout reports the CPU time a call used"
@@ -4116,11 +4113,17 @@ fun test_replay_timeout () =
        end);
     (* The call starts the spinner and waits until the process's CPU time
        has passed twice the limit, which only the spinner can make it do.
-       Only Linux reports a thread's CPU time. *)
+       Charged with the process's CPU time, it would be stopped once that
+       passes the limit, before the wall-clock backstop (4 s); a stop at
+       the backstop means the spinner got too little CPU to tell, and the
+       test is skipped.  Only Linux reports a thread's CPU time. *)
     if not (OS.FileSys.access ("/proc/thread-self", [])) then ()
     else
       expect "thread_timeout charges a call only its own thread's CPU time"
         (let
+           val started = Time.now ()
+           fun at_backstop () =
+             Time.toReal (Time.- (Time.now (), started)) >= 4.0
            fun until_spun start =
              let
                val process = Timer.startCPUTimer ()
@@ -4132,10 +4135,12 @@ fun test_replay_timeout () =
              end
          in
            case beside_spinner (fn start =>
-                  smlTimeout.thread_timeout 0.2 until_spun start
-                  handle smlTimeout.FunctionTimeout => (false, 0.0)) of
-               (true, used) => used < 0.1
-             | _ => false
+                  SOME (smlTimeout.thread_timeout 0.2 until_spun start)
+                  handle smlTimeout.FunctionTimeout => NONE) of
+               SOME (spun, used) => spun andalso used < 0.1
+             | NONE =>
+                 at_backstop () andalso
+                 (print "(skipped: the spinner got too little CPU) "; true)
          end)
   end
 

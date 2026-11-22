@@ -64,7 +64,7 @@ proof verified before the deadline included), kills the provers still running
 and drops the lists still queued.  Until one has verified, the lists are
 reconstructed until one does or all fail.  Each replay takes about
 `preplay_timeout` of CPU time at most (see below), after its compilation,
-which has a wall-clock limit of its own; a list costs about two, its
+which the limit does not count; a list costs about two, its
 minimisation, which stops at the soft deadline and keeps the shortest
 verified list, and a final replay.  An interrupt and a
 failed export stop everything at once, `max_proofs` stops the provers and the

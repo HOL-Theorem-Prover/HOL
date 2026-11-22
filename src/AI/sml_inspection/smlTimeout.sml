@@ -209,9 +209,12 @@ fun thread_timeout t f x =
         in
           if left <= 0.0 orelse Time.>= (now, backstop) then false
           else
-            (* at least a tick: a shorter slice would end before the
-               clock can move, and a blocked worker would have the waiter
-               reread its clock without pause until the backstop *)
+            (* Neither clock runs faster than wall time, so the worker
+               cannot pass its limit during a slice of the time left by
+               more than a tick and the waiter's wake-up latency.  At
+               least a tick: a shorter slice would end before the clock
+               can move, and a blocked worker would have the waiter
+               reread its clock without pause until the backstop. *)
             let val slice = now + Time.fromReal (Real.max (left, tick)) in
               ignore (ConditionVar.waitUntil
                         (c, m, if Time.< (slice, backstop) then slice
