@@ -1264,10 +1264,11 @@ end
 
 local
   val enabled = ref false
-  fun answer cert = Counterexample
-    [{backend = "", substrate = "stub", certainty = Genuine, bindings = [],
-      evals = [], cert = cert, scope = NONE, model = NONE, stats = [],
-      statement = unlinked}]
+  fun answer_as certainty cert = Counterexample
+    [{backend = "", substrate = "stub", certainty = certainty,
+      bindings = [], evals = [], cert = cert, scope = NONE, model = NONE,
+      stats = [], statement = unlinked}]
+  val answer = answer_as Genuine
   fun named name (Counterexample [c : counterexample]) = Counterexample
         [{backend = name, substrate = #substrate c,
           certainty = #certainty c, bindings = #bindings c,
@@ -1293,6 +1294,14 @@ local
     enabled (fn _ => fn _ => NoCounterexample))
   val _ = register_backend (stub "selftest-refused-none" 10 enabled
     (fn _ => fn _ => (Refute_Facts.check refused; NoCounterexample)))
+  (* the call's refusal caps both: Genuine and QuasiGenuine before it *)
+  val _ = register_backend (stub "selftest-heavy-genuine" 60 enabled
+    (fn _ => fn _ => named "selftest-heavy-genuine" (answer NONE)))
+  val _ = register_backend (stub "selftest-light-quasi" 10 enabled
+    (fn _ => fn _ =>
+       (Refute_Facts.check refused;
+        named "selftest-light-quasi"
+          (answer_as (QuasiGenuine ["stub"]) NONE))))
   fun run_with update names =
     with_enabled [enabled] (fn () =>
       with_global_thread_count 2 (fn () =>
@@ -1317,6 +1326,16 @@ in
                    List.exists (String.isPrefix "refused fact") reasons
                | _ => false)
         | _ => false)
+  (* ranked after the cap: the lighter first, though the heavier was the
+     more certain before it *)
+  val _ = test "candidates a refusal caps keep weight order" (fn () =>
+    case run_with (upd_sequential true)
+           ["selftest-heavy-genuine", "selftest-light-quasi"] of
+        Counterexample [first, second] =>
+          #backend first = "selftest-light-quasi" andalso
+          #backend second = "selftest-heavy-genuine" andalso
+          is_potential first andalso is_potential second
+      | _ => false)
   val _ = test "a back end the finder did not make is capped" (fn () =>
     case run ["selftest-foreign"] of
         Counterexample [c] =>
@@ -1636,17 +1655,25 @@ in
 end
 
 (* A Skolem value is the value of the binder it
-   comes from: an inner binder sharing an outer one's name and type gives
-   the outer one no value, and the statement says so. *)
-val _ = mf_test "an inner binder's value is not an outer binder's"
-  (fn () =>
-     case first_cex (refute mf ``!x:num. P ==> !x:num. x < 2``) of
-         SOME c =>
-           not (List.exists (fn (binder, _) => #1 (Term.dest_var binder) = "x")
-                  (#values (#statement c))) andalso
-           List.exists (String.isSubstring "value of x")
-             (#partial (#statement c))
-       | NONE => false)
+   comes from: an inner binder sharing an outer one's name and type, or
+   one depending on another binder whose value has the outer one's type,
+   gives the outer one no value, and the statement says so. *)
+local
+  fun outer_x_unvalued goal =
+    case first_cex (refute mf goal) of
+        SOME c =>
+          not (List.exists (fn (binder, _) => #1 (Term.dest_var binder) = "x")
+                 (#values (#statement c))) andalso
+          List.exists (String.isSubstring "value of x")
+            (#partial (#statement c))
+      | NONE => false
+in
+  val _ = mf_test "an inner binder's value is not an outer binder's"
+    (fn () => outer_x_unvalued ``!x:num. P ==> !x:num. x < 2``)
+  val _ = mf_test "a dependent inner binder's value is not an outer binder's"
+    (fn () =>
+       outer_x_unvalued ``!x:bool -> bool. P ==> ?y. !x:bool. x = y``)
+end
 
 (* A caller's frac registration that fails
    validation leaves no mark: the library's rat and its [rat_add] row stay

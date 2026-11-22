@@ -127,7 +127,8 @@ Verdicts and trust
   is missing or ambiguous, e.g. a type variable the model finder read as a
   finite scope, a value the model left open at some point, or a model
   finder value not traced to one binder (two binders of the goal share its
-  name and type), along with any reasons the back end gave.
+  name and type, or it depends on another binder), along with any reasons
+  the back end gave.
 * No oracle tags.  No Refute-created type, constant, theorem or binding may
   survive in the user's theory on any path: the definitions Compute makes
   through `Refute_EvalEnum` are bracketed in a theory snapshot/revert that
