@@ -1,0 +1,17 @@
+# Poly/ML only (the test uses threads); built from src/parallel_builds/core.
+INCLUDES = ..
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+selftest.exe: selftest.uo ../blastLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe n-bit-threaded-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: n-bit-threaded-selftest.log
+
+n-bit-threaded-selftest.log: selftest.exe
+	$(tee ./selftest.exe,$@)
+endif
