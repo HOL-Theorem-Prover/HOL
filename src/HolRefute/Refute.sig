@@ -73,9 +73,10 @@ signature Refute = sig
   val MODEL_REFUTE_TAC  : Abbrev.tactic
 
   (* Replaces a backend of the same name.  [certainty_ceiling] must bound
-     what [run] can return: a search stops once a result reaches the best
-     ceiling among the selected backends.  A nested Refute call from
-     [run] raises, so the backend yields [Unknown].  It is a back end the
+     what [run] can return: a search stops once a result with a kernel
+     certificate reaches the best ceiling among the selected backends.  A
+     nested Refute call from [run] raises, so the backend yields
+     [Unknown].  It is a back end the
      library did not make: its candidates never count (they are
      [Potential], with the reason, and a certificate it gives is dropped,
      being its own claim too), and its answer that none exists settles

@@ -1600,18 +1600,37 @@ structure Refute_Core :> Refute_Core = struct
         List.filter (fn tyvar => not (Lib.mem tyvar width_vars))
           unpinned_tyvars
       (* The goal's binders, under the assumptions, and the goal with
-         them free *)
-      fun open_goal 0 tm = boolSyntax.strip_forall tm
-        | open_goal n tm =
+         them free.  A binder is renamed apart from the statement's free
+         variables first, so an assumption's variable of its name and
+         type stays a different variable. *)
+      fun open_binders free tm =
+        let
+          val (binders, body) = boolSyntax.strip_forall tm
+          fun rename (binder, (renamed, avoid)) =
+            if Lib.op_mem Term.aconv binder free then
+              let val fresh = Term.variant avoid binder
+              in (renamed @ [(binder, fresh)], fresh :: avoid) end
+            else (renamed @ [(binder, binder)], avoid)
+          val (renamed, _) =
+            List.foldl rename ([], free @ binders) binders
+        in
+          (map #2 renamed,
+           Term.subst (List.mapPartial (fn (binder, fresh) =>
+               if Term.aconv binder fresh then NONE
+               else SOME {redex = binder, residue = fresh}) renamed) body)
+        end
+      fun open_goal free 0 tm = open_binders free tm
+        | open_goal free n tm =
             case Lib.total boolSyntax.dest_imp_only tm of
                 SOME (assumption, rest) =>
-                  let val (binders, body) = open_goal (n - 1) rest
+                  let val (binders, body) = open_goal free (n - 1) rest
                   in (binders, boolSyntax.mk_imp (assumption, body)) end
-              | NONE => boolSyntax.strip_forall tm
+              | NONE => open_binders free tm
       fun make_instance card theta =
         let
           val original = Term.inst theta original_goal
-          val (binders, raw_goal) = open_goal (length assumptions) original
+          val (binders, raw_goal) =
+            open_goal (Term.free_vars original) (length assumptions) original
           val binders = binders @ Term.free_vars original
         in
           rebuild_instance
@@ -2413,8 +2432,11 @@ structure Refute_Core :> Refute_Core = struct
     (if Option.isSome (#cert cex) then 10 else 0)
 
   (* A result ends the search only when no
-     candidate can come before its best: a certified Genuine one, or, when
-     no selected backend can do better than [ceiling], one reaching it.
+     candidate can come before its best: a certified one reaching
+     [ceiling], the best certainty a selected backend can give (Genuine
+     unless every one declares less).  An uncertified one at the ceiling
+     does not end it, since another backend may still give a certified
+     one of the same certainty.
      Totality outranks an in-flight Potential candidate.  A Genuine
      counterexample racing this result would expose a soundness bug in one
      of the backends; the ordinary first decisive result still wins. *)
@@ -2422,11 +2444,8 @@ structure Refute_Core :> Refute_Core = struct
         not (null cexs) andalso
         (#abort_potential cfg orelse
          List.exists (fn (cex : counterexample) =>
-           case ceiling of
-               Genuine => #certainty cex = Genuine andalso
-                          Option.isSome (#cert cex)
-             | _ => certainty_rank (#certainty cex) >=
-                    certainty_rank ceiling) cexs)
+           Option.isSome (#cert cex) andalso
+           certainty_rank (#certainty cex) >= certainty_rank ceiling) cexs)
     | decisive _ _ NoCounterexample = true
     (* Model search is auxiliary when it is selected alongside refutation.
        In particular, it must not preempt a QC counterexample or proof of

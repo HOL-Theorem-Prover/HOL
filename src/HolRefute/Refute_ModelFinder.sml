@@ -691,8 +691,8 @@ fun run_instance deadline started (config : Refute_Core.config)
         | NONE => #binders instance
     val (normal, traced) = Refute_Core.normalize_closed
       (binders @ Term.free_vars original) closure
-    val pnf = boolSyntax.rhs (Thm.concl
-      (Conv.QCONV Refute_Narrow.prenex_conversion normal))
+    val pnf = Refute_Facts.rhs
+      (Conv.QCONV Refute_Narrow.prenex_conversion normal)
     val prefix = Refute_Skolem.prefix_binders pnf
     (* a prefix binder that is not the statement's own keys no value *)
     val keys = map (fn (name, ty) =>

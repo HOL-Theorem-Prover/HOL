@@ -31,8 +31,17 @@ structure Refute_TypeBase :> Refute_TypeBase = struct
   fun peek ty = TypeBasePure.fetch (theTypeBase ()) ty
   fun elts () = TypeBasePure.listItems (theTypeBase ())
 
-  (* The entry of a type, if it has one. *)
-  fun check_type ty = ignore (fetch ty) handle Feedback.HOL_ERR _ => ()
+  (* The entry of a type, if it has one, and the entry of its operator
+     at its generic type ([prim_get]), which constructors and case
+     expressions are read from when a more specific entry matches. *)
+  fun check_type ty =
+    let val {Thy, Tyop, ...} = Type.dest_thy_type ty
+    in
+      ignore (fetch ty);
+      Option.app check_entry
+        (TypeBasePure.prim_get (theTypeBase ()) (Thy, Tyop))
+    end
+    handle Feedback.HOL_ERR _ => ()
 
   (* [TypeBase]'s own failure for a type it does not know. *)
   fun get name ty =

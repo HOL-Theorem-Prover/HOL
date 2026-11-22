@@ -616,6 +616,14 @@ val _ = test "refute_goal honours assumptions; no_assms drops them"
       is_cex (refute_goal (exhaustive |> upd_no_assms true) g)
     end)
 
+(* The goal's binder [b] is not the assumption's [b]: [b ==> !b. b] is
+   false at [b = T]. *)
+val _ = test "an assumption's variable is not a goal binder of its name"
+  (fn () =>
+    List.all (fn config =>
+      is_cex (refute_goal config ([``b : bool``], ``!b : bool. b``)))
+      [exhaustive, random])
+
 fun same_goal ((asl1, c1), (asl2, c2)) =
   Term.aconv c1 c2 andalso ListPair.allEq (Lib.uncurry Term.aconv) (asl1, asl2)
 
@@ -1150,8 +1158,9 @@ val _ = test "interrupting the caller unwinds the backends" (fn () =>
   end)
 
 (* Racing: a Genuine answer is never cut off by an earlier weaker one, a
-   declared ceiling makes a weaker answer decisive, and merged Potential
-   answers sort by backend weight. *)
+   certified answer at a declared ceiling ends the search and an
+   uncertified one does not, and merged Potential answers sort by backend
+   weight. *)
 local
   val enabled = ref false
   val genuine_may_start = ref false
@@ -1164,6 +1173,14 @@ local
   val quasi_ceiling = fn _ => fn _ => QuasiGenuine ["stub ceiling"]
   val _ = register_backend (with_ceiling quasi_ceiling
     (cex_backend "selftest-race-quasi" 50 (QuasiGenuine ["stub"])))
+  val refutation = Drule.EQF_ELIM (Thm.REFL boolSyntax.F)
+  val _ = register_backend (with_ceiling quasi_ceiling
+    (stub "selftest-race-quasi-certified" 50 enabled (fn _ => fn _ =>
+      Counterexample
+        [{backend = "selftest-race-quasi-certified", substrate = "stub",
+          certainty = QuasiGenuine ["stub"], bindings = [], evals = [],
+          cert = SOME refutation, scope = NONE, model = NONE, stats = [],
+          statement = unlinked}])))
   val _ = register_backend (with_ceiling quasi_ceiling
     (stub "selftest-race-slow-quasi" 55 enabled (fn _ => fn _ =>
       (slow_quasi_started := true;
@@ -1204,15 +1221,24 @@ in
     (fn () =>
       race ExpectGenuine ["selftest-race-quasi", "selftest-race-genuine"]
            ``T`` |> won_by "selftest-race-genuine")
-  val _ = test "an answer at the declared ceiling is decisive" (fn () =>
+  (* in turn, the lighter first *)
+  fun quasi_race names =
     (genuine_may_start := false; slow_quasi_started := false;
      with_enabled [enabled] (fn () =>
        refute (default_config |> quiet |> upd_sequential true
                  |> upd_expect ExpectQuasiGenuine
-                 |> only [RegisteredBackend "selftest-race-quasi",
-                          RegisteredBackend "selftest-race-slow-quasi"])
-              ``zoo_spec = 1``)
-     |> won_by "selftest-race-quasi") andalso not (!slow_quasi_started))
+                 |> only (map RegisteredBackend names)) ``F``))
+  val _ = test "a certified answer at the declared ceiling is decisive"
+    (fn () =>
+      (quasi_race
+         ["selftest-race-quasi-certified", "selftest-race-slow-quasi"]
+       |> won_by "selftest-race-quasi-certified") andalso
+      not (!slow_quasi_started))
+  val _ = test "an uncertified answer at the declared ceiling is not decisive"
+    (fn () =>
+      (ignore (quasi_race
+         ["selftest-race-quasi", "selftest-race-slow-quasi"]);
+       !slow_quasi_started))
   val _ = test "merged Potential answers sort by weight" (fn () =>
     race ExpectPotential ["selftest-merge-low", "selftest-merge-high"] ``T``
     |> won_by "selftest-merge-low")
@@ -1715,6 +1741,35 @@ in
          with_par (fn () =>
            refute config ``!n. rf_chk_par n = rf_chk_par (n + 2)``)
          |> refused_registration "refused fact") [exhaustive, random])
+end
+
+(* Constructors and case expressions are read
+   from a type operator's entry at its generic type, which an entry for
+   the instance in the goal does not replace: a cheated generic entry
+   caps an extracted evaluation at the instance.  The generic entry is
+   restored; the instance entry stays. *)
+local
+  val _ = Datatype.Datatype `rf_chk_pbox = RFPBox 'a | RFPEmpty`
+  val pbox_info =
+    valOf (TypeBase.read {Thy = current_theory (), Tyop = "rf_chk_pbox"})
+  val nchotomy = TypeBasePure.nchotomy_of pbox_info
+  val cheated_info = TypeBasePure.put_nchotomy
+    (Tactical.prove (Thm.concl nchotomy, cheat)) pbox_info
+  val bool_pbox = ``:bool rf_chk_pbox``
+  val instance_info = TypeBasePure.mk_nondatatype_info (bool_pbox,
+    {nchotomy = SOME (Thm.INST_TYPE [Type.alpha |-> Type.bool] nchotomy),
+     induction = NONE, size = NONE, encode = NONE})
+  val goal = ``!b. rf_chk_pbox_CASE (RFPBox b) (\m. m) F = b``
+in
+  val _ = test "a cheated generic entry caps a goal at an instance" (fn () =>
+    (TypeBase.write [instance_info, cheated_info];
+     Portable.finally (fn () => TypeBase.write [pbox_info])
+       (fn () =>
+          isSome (TypeBase.fetch bool_pbox) andalso
+          List.all (fn config =>
+            unknown_with "refused fact"
+              (refute (config |> upd_timeout 5.0) goal))
+            [exhaustive, random]) ()))
 end
 
 (* A generator reads a datatype's constructors
