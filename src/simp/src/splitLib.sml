@@ -369,9 +369,14 @@ fun fold_candidates candidates head collect packs =
         let
           val head_type = type_of head
           fun add ((key_head, rules), packs) =
-            if same_const key_head head andalso
-               can (Type.match_type (type_of key_head)) head_type
-            then foldl collect packs rules
+            if same_const key_head head then
+              let val key_type = type_of key_head
+              in
+                if key_type = head_type orelse
+                   can (Type.match_type key_type) head_type
+                then foldl collect packs rules
+                else packs
+              end
             else packs
         in
           foldl add packs entries
@@ -390,9 +395,35 @@ fun enter_path steps =
 fun matching (rule : split_rule) redex =
   can (match_term (#pattern rule)) redex
 
-fun scan candidates tm =
+fun pack_compare (p1 : split_pack, p2 : split_pack) =
+  case Int.compare (#binders p1, #binders p2) of
+      EQUAL =>
+        (case Int.compare (#depth p1, #depth p2) of
+             EQUAL => Int.compare (#visit p1, #visit p2)
+           | order => order)
+    | order => order
+
+fun scan best_only candidates tm =
   let
     val root_type = type_of tm
+    val best = ref (NONE : split_pack option)
+    val pruned = ref false
+
+    fun remember pack =
+      case !best of
+          NONE => best := SOME pack
+        | SOME earlier =>
+            if pack_compare (pack,earlier) = LESS then best := SOME pack
+            else ()
+
+    (* An earlier pack that references no binder already wins over every
+       pack at the same depth or deeper. Still scan leaves, so that a
+       rejection in a small term does not trigger a second traversal. *)
+    fun can_skip depth =
+      case !best of
+          NONE => false
+        | SOME {binders,depth=best_depth,...} =>
+            binders = 0 andalso best_depth <= depth
 
     (* Keep the path to the innermost binder referenced by the redex.
        Encode it only when trying to apply a rule. *)
@@ -430,8 +461,18 @@ fun scan candidates tm =
     (* At equal depth, preorder visits argument paths in lexicographic
        order. Index each successful pack, including multiple rules at one
        node, so sorting preserves their collection order on ties. *)
+    fun collect depth binders node head args arity (rule, acc) =
+      case mk_pack depth acc binders node head args arity rule of
+          SOME pack =>
+            (if best_only then remember pack else (); pack :: acc)
+        | NONE => acc
     fun walk depth steps (binders : binder_info list) node packs =
-      if is_abs node then
+      if is_const node then
+        fold_candidates candidates node (collect depth binders node node [] 0)
+                        packs
+      else if is_var node then packs
+      else if best_only andalso can_skip depth then (pruned := true; packs)
+      else if is_abs node then
         let
           val (var, body) = dest_abs node
           val body_path = Body :: steps
@@ -446,13 +487,11 @@ fun scan candidates tm =
         let
           val (head, args) = strip_comb node
           val arity = length args
-          fun collect (rule, acc) =
-            case mk_pack depth acc binders node head args arity rule of
-                SOME pack => pack :: acc
-              | NONE => acc
           val here =
             if is_const head then
-              fold_candidates candidates head collect packs
+              fold_candidates candidates head
+                              (collect depth binders node head args arity)
+                              packs
             else packs
           fun descend (arg, (i, packs)) =
             let
@@ -465,16 +504,9 @@ fun scan candidates tm =
         end
   in
     (* The pack comparator already recovers visit order on ties. *)
-    walk 0 [] [] tm []
+    let val packs = walk 0 [] [] tm []
+    in (!best,packs,!pruned) end
   end
-
-fun pack_compare (p1 : split_pack, p2 : split_pack) =
-  case Int.compare (#binders p1, #binders p2) of
-      EQUAL =>
-        (case Int.compare (#depth p1, #depth p2) of
-             EQUAL => Int.compare (#visit p1, #visit p2)
-           | order => order)
-    | order => order
 
 fun fresh_parts th =
   let
@@ -513,6 +545,22 @@ fun first_success packs tm =
   Lib.with_exn (Lib.tryfind (fn pack => apply_pack pack tm)) packs
                (ERR "SPLIT_CONV" "no applicable split rule")
 
+(* Use the best candidate found without sorting. If it is rejected,
+   restore the exhaustive fallback order and skip the failed candidate. *)
+fun split_first candidates tm =
+  case scan true candidates tm of
+      (NONE,_,_) => first_success [] tm
+    | (SOME best,packs,pruned) =>
+        case Lib.total (fn pack => apply_pack pack tm) best of
+            SOME th => th
+          | NONE =>
+              let
+                val all_packs =
+                  if pruned then #2 (scan false candidates tm) else packs
+              in
+                first_success (tl (Listsort.sort pack_compare all_packs)) tm
+              end
+
 fun split_conv cmap =
   let
     val candidates = candidate_entries cmap
@@ -521,8 +569,7 @@ fun split_conv cmap =
        otherwise applicable rule, while retaining one split per call. *)
   in
     if Symtab.is_empty cmap then first_success []
-    else fn tm => first_success (Listsort.sort pack_compare
-                                   (scan candidates tm)) tm
+    else split_first candidates
   end
 
 fun SPLIT_CONV thms = split_conv (index_theorems false thms)
@@ -545,9 +592,8 @@ fun clean_asm_eq th =
 fun asm_eq candidates asm =
   let
     val negated = mk_neg asm
-    val packs = Listsort.sort pack_compare (scan candidates negated)
   in
-    clean_asm_eq (first_success packs negated)
+    clean_asm_eq (split_first candidates negated)
   end
 
 fun split_asm_tac cmap =

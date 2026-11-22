@@ -10,10 +10,18 @@
 structure simpCommon :> simpCommon =
 struct
 
-open Feedback Lib Term Thm boolSyntax Drule Tactical Tactic Conv Abbrev
-     BoundedRewrites Trace Cond_rewr Travrules
+open Abbrev
+
+local
+open Feedback Lib Term Thm boolSyntax Drule BoundedRewrites
+in
+
+type control = BoundedRewrites.control
+type controlled_thm = BoundedRewrites.controlled_thm
 
 infix oo
+
+val trace = Trace.trace
 
 val dest_imp = liteLib.dest_imp
 val is_imp = liteLib.is_imp
@@ -62,9 +70,10 @@ in
                key = SOME (free_varsl (hyp th),
                            lhs(#2 (strip_imp(concl th)))),
                nmopt = nmopt, th = th, tag = tag}) before
-  trace(2, LZ_TEXT(fn () => "New rewrite: " ^ Hol_pp.thm_to_string th))
+  trace(2, Trace.LZ_TEXT(fn () =>
+                           "New rewrite: " ^ Hol_pp.thm_to_string th))
   handle HOL_ERR _ =>
-         (trace (2, LZ_TEXT(fn () =>
+         (trace (2, Trace.LZ_TEXT(fn () =>
                                Hol_pp.thm_to_string th ^
                                " dropped (conversion to rewrite failed)"));
           NONE)
@@ -75,7 +84,7 @@ end
 (*---------------------------------------------------------------------------*)
 
 fun normCong cong_th =
-  Rewrite.PURE_REWRITE_RULE [GSYM boolTheory.AND_IMP_INTRO] cong_th
+  Rewrite.PURE_REWRITE_RULE [Conv.GSYM boolTheory.AND_IMP_INTRO] cong_th
 
 (* ----------------------------------------------------------------------
     maintain a global database of (named) ssfrags
@@ -328,14 +337,15 @@ fun user_conv_tracing {name,trace=trace_level} =
       val trace_string3 = name^" left term unchanged"
       val trace_string4 = name^" raised an unusual exception (ignored)"
   in
-    {enter = fn tm => trace(trace_level+2,REDUCE(trace_string1,tm)),
-     leave = fn (tm, thm) => (trace(trace_level,PRODUCE(tm,name,thm)); thm),
+    {enter = fn tm => trace(trace_level+2,Trace.REDUCE(trace_string1,tm)),
+     leave = fn (tm, thm) =>
+       (trace(trace_level,Trace.PRODUCE(tm,name,thm)); thm),
      failed =
        fn e as HOL_ERR _ =>
-            (trace (trace_level+2,TEXT trace_string2); raise e)
+            (trace (trace_level+2,Trace.TEXT trace_string2); raise e)
         | e as Conv.UNCHANGED =>
-            (trace (trace_level+2,TEXT trace_string3); raise e)
-        | e => (trace (trace_level, TEXT trace_string4); raise e)}
+            (trace (trace_level+2,Trace.TEXT trace_string3); raise e)
+        | e => (trace (trace_level, Trace.TEXT trace_string4); raise e)}
   end
 
  val any = mk_var("x",Type.alpha);
@@ -362,12 +372,12 @@ fun user_conv_tracing {name,trace=trace_level} =
      end
      val congproc = CONGPROC mk_refl th (* do not inline *)
    in
-     (fn rel => QCHANGED_CONV o congproc rel) (* do not eta expand *)
+     (fn rel => Conv.QCHANGED_CONV o congproc rel) (* do not eta expand *)
    end
  in
-   TRAVRULES {relations = rels,
-              congprocs = [],
-              weakenprocs = map cong2proc congs}
+   Travrules.TRAVRULES {relations = rels,
+                       congprocs = [],
+                       weakenprocs = map cong2proc congs}
  end
 
 (* ----------------------------------------------------------------------
@@ -415,7 +425,7 @@ fun user_conv_tracing {name,trace=trace_level} =
                  fun insert (t,th0) n = let
                    val (th,bound) = dest_tagged_rewrite th0
                    val looksloopy = aconv from to orelse
-                                    (is_var_perm (from,to) andalso
+                                    (Cond_rewr.is_var_perm (from,to) andalso
                                      case bound of UNBOUNDED => true
                                                  | _ => false)
                  in
@@ -464,7 +474,7 @@ fun user_conv_tracing {name,trace=trace_level} =
    val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
    fun applythm solver t (bound, th) = let
      val _ =
-         trace(7, LZ_TEXT (fn () =>
+         trace(7, Trace.LZ_TEXT (fn () =>
            "Attempting rewrite: " ^ Hol_pp.thm_to_string th))
      fun dec() = case bound of
                    BOUNDED r =>
@@ -475,17 +485,16 @@ fun user_conv_tracing {name,trace=trace_level} =
                      end
                  | UNBOUNDED => ()
      val matched = PART_MATCH (rator o #2 o strip_imp) th t
-     open Trace
      fun do_sideconds th =
          if is_imp (concl th) then let
            val (h,c) = dest_imp (concl th)
-           val _ = trace(3,SIDECOND_ATTEMPT h)
+           val _ = trace(3,Trace.SIDECOND_ATTEMPT h)
            val scond = solver h
-           val _ = trace(2,SIDECOND_SOLVED scond)
+           val _ = trace(2,Trace.SIDECOND_SOLVED scond)
          in
            do_sideconds (MP th scond)
          end
-       else (dec(); trace(2,REWRITING("?",t,th)); th)
+       else (dec(); trace(2,Trace.REWRITING("?",t,th)); th)
    in
      do_sideconds matched
    end
@@ -504,11 +513,11 @@ fun user_conv_tracing {name,trace=trace_level} =
      val n = case context of redExn n => n
                            | _ => raise ERR ("apply", "Wrong sort of ctxt")
      val lookup_t = mk_icomb(relation,t)
-     val _ = trace(7, LZ_TEXT(fn () =>
+     val _ = trace(7, Trace.LZ_TEXT(fn () =>
                      "Looking up " ^ Hol_pp.term_to_string lookup_t))
      val matches = Net.match lookup_t n
-     val _ = trace(7, LZ_TEXT(fn () => "Found "^Int.toString (length matches)^
-                                       " matches"))
+     val _ = trace(7, Trace.LZ_TEXT(fn () =>
+                     "Found "^Int.toString (length matches)^" matches"))
    in
      tryfind (applythm (solver stack) lookup_t) matches
    end
@@ -585,7 +594,7 @@ fun tactic_only name =
 
 fun SIMP_CONV {process_tags, qconv} ss l tm =
   let val (ss', l') = process_tags ss l
-  in TRY_CONV (qconv ss' l') tm
+  in Conv.TRY_CONV (qconv ss' l') tm
   end;
 
 fun SIMP_PROVE {process_tags, qconv} ss l t =
@@ -616,6 +625,10 @@ fun ASM_SIMP_RULE simp_rule ss l th = simp_rule ss (l@map ASSUME (hyp th)) th;
 
 type simptac_config =
      {strip : bool, elimvars : bool, droptrues : bool, oldestfirst : bool}
+
+local
+open Tactical Tactic
+in
 
 (* back/front assume_tac; backp is true if the new assumption should go at the
    back of the list *)
@@ -690,6 +703,8 @@ fun global_simp_tac {prepare, allasms, asm_simp_tac} cfg ss0 =
         )
       )
     )
+
+end
 
 (* ----------------------------------------------------------------------
     creating per-type ssdata values
@@ -805,5 +820,7 @@ fun pp_simpset {net_names = keysl, frag_names, extra_sections} =
               ("Rewrites" ^ anon_string, real_rewrites),
               ("Other net names/keys:", others)] @ extra_sections))]
   end;
+
+end
 
 end (* struct *)

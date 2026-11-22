@@ -15,7 +15,13 @@
 structure Travrules :> Travrules =
 struct
 
-open HolKernel Drule Psyntax liteLib Trace Opening;
+open Abbrev
+
+local
+open Feedback Lib Term Thm Drule Psyntax liteLib Opening
+in
+
+val samerel = Opening.samerel
 
 fun WRAP x = STRUCT_WRAP "Travrules" x;
 fun ERR x = STRUCT_ERR "Travrules" x;
@@ -124,5 +130,7 @@ fun gen_mk_travrules0 mk_congproc relns congs =
                weakenprocs=[]}
 val mk_travrules = gen_mk_travrules0 Opening.CONGPROC
 val mk_threaded_travrules = gen_mk_travrules0 Opening.THREADED_CONGPROC
+
+end
 
 end (* struct *)

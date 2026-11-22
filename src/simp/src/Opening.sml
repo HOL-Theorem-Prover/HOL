@@ -1,7 +1,11 @@
 structure Opening :>  Opening =
 struct
 
-open Feedback Lib Type Term Thm boolSyntax Drule Conv Abbrev Trace;
+open Abbrev
+
+local
+open Feedback Lib Type Term Thm boolSyntax Drule Conv Trace
+in
 
 val dest_imp = liteLib.dest_imp
 
@@ -57,6 +61,8 @@ in
   (f,x,y)
 end
 
+fun head_of t = if is_comb t then head_of (rator t) else t
+
 fun is_congruence tm =
     is_eq tm orelse let
       val (rel,left,right) = dest_binop tm
@@ -90,6 +96,9 @@ fun strip_n_imp 0 tm = ([],tm)
           val (z,w) = strip_n_imp (n-1) y
       in (x::z,w)
       end;
+
+fun skip_n_imp 0 tm = tm
+  | skip_n_imp n tm = skip_n_imp (n - 1) (#2 (dest_imp tm))
 
 fun strip_ncomb 0 A tm = SOME (tm, A)
   | strip_ncomb n A tm =
@@ -183,7 +192,7 @@ let
                   can (match_term l) r andalso can (match_term r) l
                 end
    val matcher =
-      HO_PART_MATCH (rator o snd o strip_n_imp nconds) congrule'
+      HO_PART_MATCH (rator o skip_n_imp nconds) congrule'
 
  (* work out whether context assumptions need to be reprocessed *)
  (* e.g "~g" in the "else" branch of COND_CONG needs to be.     *)
@@ -234,7 +243,7 @@ in fn relation =>
     val relation' = Term.inst theta relation
     val match_thm = matcher (mk_comb(relation',tm))
     val _ = trace(3,OPENING(tm,match_thm))
-    val (_,conc) = strip_n_imp nconds (concl match_thm)
+    val conc = skip_n_imp nconds (concl match_thm)
     (* The results the traversal has to supply.  Ordinarily these are the
        genvars of the right-hand side.  Threaded: every rule variable the
        match did not determine is a result, whether the conclusion names
@@ -282,12 +291,7 @@ in fn relation =>
               is a congruence condition *)
             val (ho_vars,bdy1) = strip_forall condition
             val (assums,bdy2) = strip_imp_until_rel is_result bdy1
-            val (oper,args) = let
-              val (f,x,y) = dest_binop bdy2
-            in
-              (f,[x,y])
-            end handle HOL_ERR _ => strip_comb bdy2
-            fun discharge orig genv =
+            fun discharge oper orig genv =
               let
                 val assum_thms = map ASSUME assums
                 fun reprocess thm flag =
@@ -345,13 +349,13 @@ in fn relation =>
             in process_subgoals (n-1,new_match_thm,more_flags,allunch)
             end
         in
-          case args of
-              [orig,res] =>
-                let val genv = #1 (strip_comb res)
-                in if is_result genv then discharge orig genv
+          case (SOME (dest_binop bdy2) handle HOL_ERR _ => NONE) of
+              SOME (oper,orig,res) =>
+                let val genv = head_of res
+                in if is_result genv then discharge oper orig genv
                    else side_condition ()
                 end
-            | _ => side_condition ()
+            | NONE => side_condition ()
         end
 
     val (final_thm,allunch) =
@@ -408,5 +412,7 @@ fun EQ_CONGPROC relation =
           end
    | _ => raise UNCHANGED
 
+
+end
 
 end (* struct *)

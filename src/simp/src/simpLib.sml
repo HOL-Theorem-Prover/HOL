@@ -13,9 +13,15 @@ struct
 
 infix oo;
 
-open Feedback Lib Type Term Thm boolTheory boolSyntax Hol_pp Drule Tactical
-     Tactic Thm_cont Conv Rewrite Abbrev BoundedRewrites liteLib Trace
+open Abbrev
+
+local
+open Feedback Lib Type Term Thm boolSyntax Drule Tactical
+     Tactic Conv BoundedRewrites liteLib Trace
      Cond_rewr Travrules Traverse Ho_Net
+in
+
+type controlled_thm = BoundedRewrites.controlled_thm
 
 structure Set = Binaryset
 
@@ -56,6 +62,21 @@ fun appconv (c,UNBOUNDED) = c false (* do not eta expand! *)
       Portable.dec r)
     end
 
+(* The net key only needs the left side of the final equation. Preserve
+   the lhs failure on malformed equations. *)
+fun rewrite_key_lhs tm =
+  if is_comb tm then
+    let val (f,r) = dest_comb tm in
+      if is_comb f then
+        let val (c,l) = dest_comb f in
+          if same_const c boolSyntax.equality then l
+          else if same_const c boolSyntax.implication then rewrite_key_lhs r
+          else lhs tm
+        end
+      else lhs tm
+    end
+  else lhs tm
+
 fun split_name {Thy,Name} = (SOME Thy, Name)
 fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
   val th = SPEC_ALL thm
@@ -66,15 +87,15 @@ fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
 in
   SOME {thypart = thypart,
         cd = {name  = nm,
-              key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
+              key   = SOME (free_varsl (hyp th), rewrite_key_lhs (concl th)),
               trace = 100, (* no need to provide extra tracing here;
                               COND_REWR_CONV provides enough tracing itself *)
               conv  = appconv (COND_REWR_CONV (nm,th), tag)}
        } before
-  trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
+  trace(2, LZ_TEXT(fn () => "New rewrite: " ^ Hol_pp.thm_to_string th))
   handle HOL_ERR _ =>
          (trace (2, LZ_TEXT(fn () =>
-                               thm_to_string th ^
+                               Hol_pp.thm_to_string th ^
                                " dropped (conversion to rewrite failed)"));
           NONE)
 end
@@ -843,5 +864,7 @@ fun pp_simpset (ss as SS {initial_net,...}) =
        frag_names = map ssfrag_name (ssfrags_of ss),
        extra_sections = []}
   end
+
+end
 
 end (* struct *)

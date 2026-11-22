@@ -62,29 +62,28 @@ fun source_index include_source sources =
       else index)
     (Binarymap.mkDict rewrite_source_compare) sources
 
-fun use_full_source_index (_::_::_::_::_) = true
-  | use_full_source_index _ = false
+fun many_source_queries (_::_::_::_::_) = true
+  | many_source_queries _ = false
 
-(* These lookups select the last source-list entry at each origin, then
-   check its statement. Preserve that order for repeated origins. *)
+(* Lookups select the last source-list entry at each origin, then check
+   its statement. Sparse lookups index only requested origins. Report
+   completeness so replay can reuse a dense index for surviving controls. *)
 fun queried_source_index queries sources =
-  if use_full_source_index queries then source_index (K true) sources
-  else
+  if not (many_source_queries queries) then
     let
       fun origin (RewriteSource {origin,...}) = origin
       val wanted = map origin queries
-    in source_index (fn source => Lib.mem (origin source) wanted) sources end
-
-(* Sparse view checks need only the queried origins. A dense check avoids
-   building a second tree. Both paths retain the last source at an origin. *)
-fun view_source_index queries sources =
-  if use_full_source_index queries andalso
-     length queries < length sources div 4 then
+      val index = source_index
+        (fn source => Lib.mem (origin source) wanted) sources
+    in (index,false) end
+  else if length queries < length sources div 4 then
     let
       val wanted = Binaryset.addList
         (Binaryset.empty rewrite_source_compare,queries)
-    in source_index (fn source => Binaryset.member (wanted,source)) sources end
-  else queried_source_index queries sources
+      val index = source_index
+        (fn source => Binaryset.member (wanted,source)) sources
+    in (index,false) end
+  else (source_index (K true) sources,true)
 
 fun grouped_by compare key items =
   let
@@ -1506,12 +1505,9 @@ fun mk_tactic_solver (name,tac) =
 
  datatype view_sources = BundleSources | AvailableSources
 
- fun add_frag_native view_sources native_override suspended rebind event
-       (ss, f) =
-   if is_excluded ss f then ss
-   else let
-   (* Do not destructure/rebox a prohibited addition's input: the no-op
-      contract includes object identity, not just equal fields. *)
+ fun add_frag_native view_sources native_override suspended
+       rebind event (ss, f) =
+   let
    val SS sset = ss
    val SSFRAG_CON ssf = f
    val mk_rewrs' = #mk_rewrs sset
@@ -1580,7 +1576,7 @@ fun mk_tactic_solver (name,tac) =
            in List.mapPartial own_view views
            end
        | AvailableSources =>
-           if isSome native_override andalso use_full_source_index views then
+           if isSome native_override andalso many_source_queries views then
              let
                (* Replay also considers ambient sources when a view's
                   own source is missing or has changed. *)
@@ -1650,8 +1646,12 @@ fun mk_tactic_solver (name,tac) =
    val reltravs = map rsd_travrules relsimps
    val relrels = List.concat (map travrel reltravs)
    val relations = sset_rels @ relrels
+   val strategy = #strategy sset
    val strategy =
-     #strategy sset
+     if null (#loopers ssf) andalso null (#unsafe_solvers ssf) andalso
+        null (#safe_solvers ssf) then strategy
+     else
+       strategy
        |> upd_loopers (update_loopers (#loopers ssf))
        |> upd_unsafe_solvers (add_solvers (#unsafe_solvers ssf))
        |> upd_safe_solvers (add_solvers (#safe_solvers ssf))
@@ -1683,12 +1683,11 @@ fun mk_tactic_solver (name,tac) =
    end
  end
 
- fun add_frag event args =
-   add_frag_native AvailableSources NONE [] NONE event args
-
  fun op++ (ss,fragment) =
+   (* A prohibited addition preserves the simpset and source serial. *)
    if is_excluded ss fragment then ss
-   else add_frag (source_token ()) (ss,fragment)
+   else add_frag_native AvailableSources NONE [] NONE
+          (source_token ()) (ss,fragment)
 
  fun install_rewrite_bundle (RewriteBundle {parts,...}) views
        (ss as SS data) =
@@ -1794,8 +1793,10 @@ fun build_from_history_with rebind h0 =
                   val native = case rebind of
                       NONE => Option.map freshen_prepared_native cached
                     | SOME _ => cached
-                in add_frag_native AvailableSources native suspended rebind
-                     event (ss,sf)
+                in
+                  if is_excluded ss sf then ss
+                  else add_frag_native AvailableSources native suspended
+                         rebind event (ss,sf)
                 end
             | DELETE_EVENT excls =>
                 delete_exclusions (map replay_exclusion excls) ss
@@ -1846,7 +1847,7 @@ fun suspend_rewrite_sources [] ss = ss
   | suspend_rewrite_sources requested (ss as SS data) =
     let
       val sources = #native_sources data
-      val current = queried_source_index requested sources
+      val (current,complete) = queried_source_index requested sources
       fun active source =
         case Binarymap.peek (current,source) of
             SOME installed =>
@@ -1870,7 +1871,7 @@ fun suspend_rewrite_sources [] ss = ss
               (* Use the full index if a bounded survivor needs it. All
                  entries must participate in last-at-origin selection. *)
               val rebind = rebind_source_controls
-                (fn () => if use_full_source_index requested then current
+                (fn () => if complete then current
                           else source_index (K true) sources)
             in
               build_from_history_with (SOME rebind)
@@ -2072,10 +2073,24 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
                     scan rest excluded convs structural (f::makers)
                 | _ => scan rest excluded convs structural makers
       in scan history [] [] [] [] end
-    val (old_convs,old_structure,old_makers) =
-      if same_history then ([],[],[]) else snapshot (#history old)
-    val (new_convs,new_structure,new_makers) =
-      if same_history then ([],[],[]) else snapshot (#history current)
+    (* Appending a fragment leaves the conversion entries in the shared
+       suffix alone. Only the new event contributes to the delta. *)
+    fun added_fragment ((item as ADDFRAG _)::rest) previous =
+          if Portable.pointer_eq (rest,previous) then SOME item else NONE
+      | added_fragment _ _ = NONE
+    fun changed_histories (old as _::_, current as _::_) =
+          (case added_fragment current old of
+               SOME item => ([],[item])
+             | NONE =>
+                 case added_fragment old current of
+                     SOME item => ([item],[])
+                   | NONE => (old,current))
+      | changed_histories histories = histories
+    val (old_history,new_history) =
+      if same_history then ([],[])
+      else changed_histories (#history old,#history current)
+    val (old_convs,old_structure,old_makers) = snapshot old_history
+    val (new_convs,new_structure,new_makers) = snapshot new_history
     (* A view event can survive while its compiled dependency disappears.
        Inspect installed compatibility, not just the event/cache identity.
        Cached rejected shapes and inactive stale handles contribute no view;
@@ -2139,7 +2154,8 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
         case List.foldl collect [] history of
             [] => []
           | queries =>
-              active_views history queries (view_source_index queries sources)
+              active_views history queries
+                (#1 (queried_source_index queries sources))
       end
     fun views_changed () =
       not (same_history andalso

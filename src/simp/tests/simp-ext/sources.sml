@@ -160,6 +160,25 @@ val _ = List.app (fn prepared => List.app (fn reverse =>
       (Portable.pointer_eq (hs,handles ss))
   in () end) (invalidations prepared)) [1,3]) [false,true]) [false,true]
 
+val _ = let
+  val padding = S.rewrites (List.tabulate (24,K u))
+  val ss = S.++ (S.++ (ext_pure_ss,padding),S.rewrites [a,Ntimes b 1])
+  val stale = List.take (handles (S.++ (ext_pure_ss,padding)),4)
+  val selected = source a ss
+  val old = projection true ss
+  val _ = check "sparse stale suspension preserves the simpset"
+    (Portable.pointer_eq (ss,S.suspend_rewrite_sources stale ss))
+  val _ = result "spend unrelated bound before sparse suspension"
+    old (input b) b
+  val suspended = S.suspend_rewrite_sources (selected::stale) ss
+  val cv = projection true suspended
+  val _ = check "sparse suspension removes only its live handle"
+    (same_handles (List.filter (fn h => not (stable (h,selected)))
+      (handles ss)) (handles suspended))
+in result "sparse suspension preserves an unrelated spent bound"
+     cv (input b) (REFL (input b))
+end
+
 (* Compatibility includes statement, hypotheses and declared bound; origin
    equality alone must neither keep an alias nor transfer a spent counter.
    A different proof of the SAME statement remains fully compatible. *)
@@ -548,6 +567,19 @@ val _ = let
      conv=fn _ => fn _ => NO_CONV})
   val _ = delta "replacement reports both old and new conversion keys"
     keyed replacement [key,replacement_key] false false
+  fun keyed_frag name key =
+    S.conv_ss {name=name,key=SOME key,trace=0,conv=fn _ => fn _ => NO_CONV}
+  val unrelated = keyed_frag "sources-other" ([],F)
+  val shared = S.-* (S.++ (keyed,unrelated),["sources-key"])
+  val fresh_key = ([],T)
+  val added = S.merge_ss
+    [keyed_frag "sources-key" replacement_key,
+     keyed_frag "sources-new" fresh_key]
+  val extended = S.++ (shared,added)
+  val _ = delta "appending conversions reports only the new keys in order"
+    shared extended [fresh_key,replacement_key] false false
+  val _ = delta "reverse comparison of a shared history reports removed keys"
+    extended shared [fresh_key,replacement_key] false false
   val _ = delta "keyless addition demands rebuild" base keyless [] true false
   val _ = delta "keyless removal demands rebuild" keyless base [] true false
   val ss = fresh false 2

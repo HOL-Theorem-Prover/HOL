@@ -1,8 +1,12 @@
 structure Cond_rewr :> Cond_rewr =
 struct
 
-open Feedback Lib Type Term Thm boolTheory boolSyntax Hol_pp Drule Tactical
-     Tactic Thm_cont Conv Rewrite Abbrev BoundedRewrites liteLib Trace;
+open Abbrev
+
+local
+open Feedback Lib Type Term Thm boolTheory boolSyntax Drule
+     Conv Rewrite BoundedRewrites liteLib Trace
+in
 
 type controlled_thm = BoundedRewrites.controlled_thm
 
@@ -192,9 +196,23 @@ fun ac_term_ord(tm1,tm2) =
             in (l::conditions,eqn) end
      end
 
+   (* Find the equation without collecting antecedents. Use dest_eq on
+      unsupported shapes to keep the construction diagnostic. *)
+   fun checked_equation tm =
+     if is_comb tm then
+       let val (f,r) = dest_comb tm in
+         if is_comb f then
+           let val (c,l) = dest_comb f in
+             if same_const c boolSyntax.equality then (l,r)
+             else if same_const c boolSyntax.implication then checked_equation r
+             else dest_eq tm
+           end
+         else dest_eq tm
+       end
+     else dest_eq tm
+
    fun prepare th =
-      let val eqn = snd (strip_imp (concl th))
-          val isperm = is_var_perm (dest_eq eqn)
+      let val isperm = is_var_perm (checked_equation (concl th))
           val instth = HO_PART_MATCH rewrite_lhs th
                        handle HOL_ERR _ => ERR("COND_REWR_CONV",
                          "bad theorem argument (not a conditional equation)")
@@ -600,6 +618,8 @@ fun f oo g = fn x =>
 fun mk_cond_rewrs l =
     (QUANTIFY_CONDITIONS oo IMP_EQ_CANON oo IMP_CANON) l
     handle e as HOL_ERR _ => WRAP_ERR("mk_cond_rewrs",e);
+
+end
 
 end;
 

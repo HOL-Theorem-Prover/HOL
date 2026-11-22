@@ -2591,6 +2591,15 @@ val _ = let
      ``P (K T (f:bool -> bool)) : bool``,
      ``P (K T (f:bool -> bool)) : bool``)
 
+  val rejected_k_split =
+    GEN_ALL (REFL ``p (K (x:bool) (p:bool -> bool))``)
+  val _ = convtest
+    ("splitter: rejection resumes search in later subtrees",
+     SPLIT_CONV [if_split, rejected_k_split],
+     ``R (K (x:bool) (p:bool -> bool)) /\ Q (if b then u:bool else v)``,
+     ``(b ==> R (K (x:bool) (p:bool -> bool)) /\ Q (u:bool)) /\
+       (~b ==> R (K x p) /\ Q (v:bool))``)
+
   val _ = shouldfail
     {testfn=fn () => SPLIT_CONV [REFL ``P (if b then x else y)``],
      printresult=K "unexpected conversion",
