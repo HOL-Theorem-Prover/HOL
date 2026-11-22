@@ -102,7 +102,10 @@ then registers the theory's types and constants from its module in
 `directory`, or decodes its `.dat`. It runs no generated code, library
 or load hook, and binds no theorems or theory data. It saves the
 modules of up to `limit` decoded theories to `output` and stops; the
-caller moves them into `directory`.
+caller moves them into `directory`. A module in `directory` that reads
+but can't be used here is left as it is, and its theory is
+decoded without saving or counting a module: processes sharing
+`directory` may load other ancestors.
 
 ## Cache entries
 
