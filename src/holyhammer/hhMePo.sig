@@ -88,6 +88,8 @@ sig
               stature : hhStature.stature} list} -> context
   val create_context_for :
     string -> mlThmData.thmdata -> hhStature.statures -> context
+  val create_context_from_conclusions :
+    string -> (string * Term.term * hhStature.stature) list -> context
   val create_context : mlThmData.thmdata -> hhStature.statures -> context
   val restrict_context : context -> string list -> context
   (* Reuse a set of requested theorem names built with String.compare.

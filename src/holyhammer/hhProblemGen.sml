@@ -325,8 +325,10 @@ struct
      exactly when they are aconv. *)
   val same_head = aconv
 
-  (* Lists of first occurrences, in occurrence order. *)
-  fun distinct_heads heads = aiLib.mk_sameorder_set Term.compare heads
+  (* Collect unique items in reverse order of first occurrence. *)
+  fun collect_once item (state as (seen, firsts)) =
+    if Redblackset.member (seen, item) then state
+    else (Redblackset.add (seen, item), item :: firsts)
 
   (* Tables of the smallest number of arguments each head occurs with. *)
   fun add_head_arity head arity table =
@@ -351,12 +353,16 @@ struct
           table bodies
     | heads_of_formula (HAtom tm) table = heads_of_term tm table
 
-  fun vars_of_formula (HQuant (_, vars, body)) result =
-        vars_of_formula body
-          (List.filter (not o is_generated_var) vars @ result)
-    | vars_of_formula (HConn (_, bodies)) result =
-        List.foldl (fn (body, acc) => vars_of_formula body acc) result bodies
-    | vars_of_formula (HAtom _) result = result
+  fun add_var_types (HQuant (_, vars, body), types) =
+        add_var_types (body, List.foldl (fn (var, types) =>
+          if is_generated_var var then types
+          else Redblackset.add (types, type_of var)) types vars)
+    | add_var_types (HConn (_, bodies), types) =
+        List.foldl add_var_types types bodies
+    | add_var_types (HAtom _, types) = types
+
+  fun add_fact_var_types ((_, formula), types) =
+    add_var_types (formula, types)
 
   fun min_arity var_types (head, ordinary) =
     let
@@ -427,21 +433,20 @@ struct
      45-fact poly-native cut-over uses Min_App_Op: direct symbols then keep
      the smallest spine they occur with, trading a few more app
      applications for a smaller application vocabulary. *)
-  fun app_arities encoding nfacts variables table =
+  fun uses_variable_types (hhTypeEnc.Native {poly = true, ...}) nfacts =
+        nfacts < 45
+    | uses_variable_types _ _ = true
+
+  fun app_arities encoding nfacts variable_types table =
     let
       val poly =
         case encoding of
             hhTypeEnc.Native {poly = true, ...} => true
           | _ => false
       val arities =
-        if poly andalso nfacts >= 45 then table
-        else
-          let
-            val var_types = Redblackset.addList
-              (Redblackset.empty Type.compare, map type_of (variables ()))
-          in
-            Redblackmap.map (min_arity var_types) table
-          end
+        if uses_variable_types encoding nfacts then
+          Redblackmap.map (min_arity (variable_types ())) table
+        else table
     in
       if poly then poly_arities arities else arities
     end
@@ -477,18 +482,15 @@ struct
     heads_of_formula formula result
 
   fun firstorderize format encoding ({conjecture, facts} : formula_ir)
-      main_heads main_count helpers =
+      main_heads main_var_types main_count helpers =
       let
         val all_facts = if null helpers then facts else facts @ helpers
         val table = heads_of_formula conjecture
           (List.foldl add_formula_heads main_heads helpers)
-        fun variables () = vars_of_formula conjecture
-          (List.foldl
-            (fn ((_, formula), result) =>
-              vars_of_formula formula result)
-            [] all_facts)
-        val arities =
-          app_arities encoding (main_count + length helpers) variables table
+        fun variable_types () =
+          List.foldl add_fact_var_types main_var_types helpers
+        val arities = app_arities encoding (main_count + length helpers)
+          variable_types table
         val used_app = ref false
         val used_pp = ref false
         fun term in_position tm =
@@ -553,7 +555,8 @@ struct
          used_app = !used_app, used_pp = !used_pp}
       end
 
-  fun prepare_firstorder format encoding (main as {facts, ...} : formula_ir) =
+  fun prepare_firstorder format encoding
+      (main as {conjecture, facts} : formula_ir) =
     if is_full_ho format then prepare_higher_order main
     else
       let
@@ -561,8 +564,16 @@ struct
            Add helper heads before the conjecture as in a single scan. *)
         val main_heads = List.foldl add_formula_heads
           (Redblackmap.mkDict Term.compare) facts
+        val main_count = length facts
+        val no_types = Redblackset.empty Type.compare
+        (* Helpers can only raise the fact count. *)
+        val main_var_types =
+          if uses_variable_types encoding main_count then
+            List.foldl add_fact_var_types
+              (add_var_types (conjecture, no_types)) facts
+          else no_types
       in
-        firstorderize format encoding main main_heads (length facts)
+        firstorderize format encoding main main_heads main_var_types main_count
       end
 
   fun add_once equal value values =
@@ -963,13 +974,11 @@ struct
         | _ => result
     end
 
-  (* These accumulate symbol occurrences in reverse; distinct_heads of
-     the reversed result lists each head once, in occurrence order. *)
   fun heads_of_fo_term (FOHead (head, args), heads) =
         List.foldl heads_of_fo_term
-          (if is_symbol head then head :: heads else heads) args
+          (if is_symbol head then collect_once head heads else heads) args
     | heads_of_fo_term (FOValue head, heads) =
-        if is_symbol head then head :: heads else heads
+        if is_symbol head then collect_once head heads else heads
     | heads_of_fo_term (FOApp {left, right, ...}, heads) =
         heads_of_fo_term (right, heads_of_fo_term (left, heads))
     | heads_of_fo_term (FOPred body, heads) = heads_of_fo_term (body, heads)
@@ -1272,13 +1281,12 @@ struct
   fun add_app_signature ({function_type, argument_type, result_type, ...}
                          : fo_app,
                          signatures) =
-    (function_type, argument_type, result_type) :: signatures
+    collect_once (function_type, argument_type, result_type) signatures
 
   fun app_function_types formulas =
     let
-      fun add ({function_type, ...} : fo_app, state as (seen, types)) =
-        if Redblackset.member (seen, function_type) then state
-        else (Redblackset.add (seen, function_type), function_type :: types)
+      fun add ({function_type, ...} : fo_app, state) =
+        collect_once function_type state
     in
       rev (#2 (List.foldl (fold_apps_formula add)
         (Redblackset.empty Type.compare, []) formulas))
@@ -1306,7 +1314,7 @@ struct
   fun value_heads_term (FOHead (_, args), result) =
         List.foldl value_heads_term result args
     | value_heads_term (FOValue head, result) =
-        if is_bound_var head then result else head :: result
+        if is_bound_var head then result else collect_once head result
     | value_heads_term (FOApp {left, right, ...}, result) =
         value_heads_term (right, value_heads_term (left, result))
     | value_heads_term (FOPred body, result) =
@@ -1353,9 +1361,10 @@ struct
               [mk_var ("pxy.true", Type.bool),
                mk_var ("pxy.false", Type.bool)]
               else []
-            val heads = distinct_heads
-              (rev (List.foldl heads_of_fo_formula [] all_formulas) @
-               bool_proxies)
+            val heads = List.foldl heads_of_fo_formula
+              (Redblackset.empty Term.compare, []) all_formulas
+            val heads = rev (#2 (List.foldl
+              (fn (head, state) => collect_once head state) heads bool_proxies))
           in
             unique_symbols (List.filter declared heads)
               (Redblackset.empty String.compare)
@@ -1395,9 +1404,10 @@ struct
                               hhTptpProblem.TyFun
                                 (#ty symbols argument_type,
                                  #ty symbols result_type)))
-                      end) (aiLib.mk_sameorder_set signature_compare
-                        (rev (List.foldl (fold_apps_formula add_app_signature)
-                          [] all_formulas)))
+                      end) (rev (#2 (List.foldl
+                        (fold_apps_formula add_app_signature)
+                        (Redblackset.empty signature_compare, [])
+                        all_formulas)))
                 | hhTypeEnc.Native {higher = false, ...} =>
                     if used_app then
                       let
@@ -1426,8 +1436,8 @@ struct
                       (aiLib.escape "sy." ^ #value symbols head,
                        #value symbols head,
                        #ty symbols (type_of head)))
-                      (distinct_heads
-                        (rev (List.foldl value_heads_formula [] all_formulas)))
+                      (rev (#2 (List.foldl value_heads_formula
+                        (Redblackset.empty Term.compare, []) all_formulas)))
                 | _ => []
             val pp_decls = if used_pp then [hhTptpProblem.SymDecl
               ("sy_2Epp", "pp_2E", hhTptpProblem.TyFun
@@ -1505,9 +1515,10 @@ struct
         {conjecture = main_conjecture, facts = main_facts}
       fun firstorder helpers = firstorder_main (proxy_facts helpers)
       fun heads_of ({conjecture, facts, ...} : fo_ir) =
-        distinct_heads (rev (heads_of_fo_formula (conjecture,
+        rev (#2 (heads_of_fo_formula (conjecture,
           List.foldl (fn ((_, formula), heads) =>
-            heads_of_fo_formula (formula, heads)) [] facts)))
+            heads_of_fo_formula (formula, heads))
+            (Redblackset.empty Term.compare, []) facts)))
       (* Helpers have the original problem as their monomorphization ground
          pool.  They are then firstorderized together with it, so application
          arities and the final symbol table are shared by every section. *)

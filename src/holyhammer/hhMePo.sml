@@ -441,17 +441,14 @@ fun pconst_mem pconst_of match pconsts (name, ptype) =
 fun odd_const_name name =
   name = pseudo_abs_name orelse String.isPrefix "%thy%" name
 
-fun score_fact fudge pconst_of rel_weight_of irrel_weight_of stature rel_table
-      fact_pconsts =
+fun score_fact fudge pconst_of rel_weight_of irrel_weight_of is_relevant
+      is_irrelevant stature fact_pconsts =
   let
     val (relevant, rest) =
-      List.partition (pconst_hyper_mem match_ptype rel_table o pconst_of)
-        fact_pconsts
+      List.partition is_relevant fact_pconsts
     val irrelevant =
       if null relevant then []
-      else
-        List.filter (not o pconst_hyper_mem swapped_match rel_table o pconst_of)
-          rest
+      else List.filter is_irrelevant rest
     fun odd entry = odd_const_name (#1 (pconst_of entry))
   in
     if null relevant orelse
@@ -479,31 +476,32 @@ fun score_fact fudge pconst_of rel_weight_of irrel_weight_of stature rel_table
 
 fun fact_weight fudge stature frequency_table rel_table chained_table =
   score_fact fudge I (rel_pconst_weight fudge frequency_table)
-    (irrel_pconst_weight fudge frequency_table chained_table) stature
-    rel_table
+    (irrel_pconst_weight fudge frequency_table chained_table)
+    (pconst_hyper_mem match_ptype rel_table)
+    (not o pconst_hyper_mem swapped_match rel_table) stature
 
 datatype weight_cache = Dense of int | Sparse
 
-fun memo_weight (Dense count) weight_of =
+fun memo_pconst (Dense count) compute =
       let val cache = Array.array (count, NONE) in
         fn (pconst, index) =>
           case Array.sub (cache, index) of
-              SOME weight => weight
+              SOME value => value
             | NONE =>
-                let val weight = weight_of pconst in
-                  Array.update (cache, index, SOME weight);
-                  weight
+                let val value = compute pconst in
+                  Array.update (cache, index, SOME value);
+                  value
                 end
       end
-  | memo_weight Sparse weight_of =
+  | memo_pconst Sparse compute =
       let val cache = ref (Intmap.empty ()) in
         fn (pconst, index) =>
           case Intmap.peek (!cache, index) of
-              SOME weight => weight
+              SOME value => value
             | NONE =>
-                let val weight = weight_of pconst in
-                  cache := Intmap.insert (!cache, index, weight);
-                  weight
+                let val value = compute pconst in
+                  cache := Intmap.insert (!cache, index, value);
+                  value
                 end
       end
 
@@ -646,20 +644,25 @@ fun theory_of_thmid thmid =
       SOME (theory, _) => theory
     | NONE => Theory.current_theory ()
 
+fun create_context_from_conclusions current conclusions =
+  let
+    fun fact (thmid, concl, stature) =
+      {thmid = thmid, theory = theory_of_thmid thmid,
+       concl = concl, stature = stature}
+  in
+    make_context {current_theory = current, facts = map fact conclusions}
+  end
+
 fun create_context_for current (_, thm_features) statures =
   let
     fun fetch (thmid, _) =
       case total mlThmData.thm_of_name thmid of
           SOME (SOME (_, theorem)) =>
-            SOME
-              {thmid = thmid, theory = theory_of_thmid thmid,
-               concl = Thm.concl theorem,
-               stature = hhStature.stature_of statures thmid}
+            SOME (thmid, Thm.concl theorem,
+                  hhStature.stature_of statures thmid)
         | _ => NONE
   in
-    make_context
-      {current_theory = current,
-       facts = List.mapPartial fetch thm_features}
+    create_context_from_conclusions current (List.mapPartial fetch thm_features)
   end
 
 fun create_context thmdata statures =
@@ -704,11 +707,8 @@ fun table_name_changed old_table new_table name =
   case (Redblackmap.peek (old_table, name),
         Redblackmap.peek (new_table, name)) of
       (NONE, NONE) => false
-    | (SOME left, SOME right) =>
-        not (length left = length right andalso
-          List.all
-            (fn entry => List.exists
-              (fn entry' => ptype_eq (entry, entry')) right) left)
+    (* Adding relevance patterns only prepends new entries. *)
+    | (SOME left, SOME right) => length left <> length right
     | _ => true
 
 fun widely_irrelevant name =
@@ -814,10 +814,10 @@ fun mepo_rank_with_fudge (fudge : fudge)
           (empty_pconst_table ()) assumptions
       val goal_table0 =
         add_pconsts_in_term current_theory conclusion chained_table
-      val score =
+      val score_with_membership =
         score_fact fudge fst
-          (memo_weight weight_cache (rel_pconst_weight fudge frequency_table))
-          (memo_weight weight_cache (irrel_pconst_weight fudge frequency_table
+          (memo_pconst weight_cache (rel_pconst_weight fudge frequency_table))
+          (memo_pconst weight_cache (irrel_pconst_weight fudge frequency_table
             chained_table))
       val goal_table =
         if not (Redblackmap.existsi
@@ -843,6 +843,12 @@ fun mepo_rank_with_fudge (fudge : fudge)
         let
           val hopeless' =
             purge_hopeless fudge iteration hopeless
+          val score = Susp.delay (fn () =>
+            score_with_membership
+              (memo_pconst weight_cache
+                (pconst_hyper_mem match_ptype rel_table))
+              (memo_pconst weight_cache
+                (not o pconst_hyper_mem swapped_match rel_table)))
           fun scan candidates rejects [] =
                 if null candidates then
                   if iteration = 0 andalso
@@ -911,7 +917,8 @@ fun mepo_rank_with_fudge (fudge : fudge)
                   val weight =
                     case cached of
                         SOME value => value
-                      | NONE => score (#stature fact) rel_table (#pconsts fact)
+                        | NONE =>
+                            (Susp.force score) (#stature fact) (#pconsts fact)
                 in
                   if weight >= threshold then
                     scan (((fact, #pconsts fact), weight) :: candidates)

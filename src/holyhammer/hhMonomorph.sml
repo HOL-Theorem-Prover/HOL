@@ -400,12 +400,20 @@ struct
                rigid : hol_type list susp,
                index : (string, hol_type list) Redblackmap.dict susp}
 
+  (* Harvest ground types without copying long sorted-list prefixes.
+     The substitution search still visits types in Type.compare order. *)
   fun index_add ((name, ty), dict) =
-    insert_ground dict name ty (lookup name dict)
+    case Redblackmap.peek (dict, name) of
+        NONE => Redblackmap.insert (dict, name,
+          Redblackset.singleton Type.compare ty)
+      | SOME types =>
+          if Redblackset.member (types, ty) then dict
+          else Redblackmap.insert (dict, name, Redblackset.add (types, ty))
 
   fun index_of rigid goal =
-    fold_ground_consts rigid index_add goal
-      (Redblackmap.mkDict String.compare)
+    Redblackmap.map (Redblackset.listItems o #2)
+      (fold_ground_consts rigid index_add goal
+        (Redblackmap.mkDict String.compare))
 
   fun mk_pool_with names goal =
     let val rigid = susp (fn () => Term.type_vars_in_term goal) in
@@ -433,11 +441,18 @@ struct
           else Term.type_vars_in_term (#force goal ()))
         val index = susp (fn () =>
           if #force reuse () then
-            List.foldl (fn (tm, dict) =>
-              fold_ground_consts (#force rigid ()) index_add tm dict)
-              (index_add (dest_const boolSyntax.conjunction,
-                          #force (#index pool) ()))
-              extras
+            let
+              val extra_types = List.foldl (fn (tm, dict) =>
+                fold_ground_consts (#force rigid ()) index_add tm dict)
+                (index_add (dest_const boolSyntax.conjunction,
+                            Redblackmap.mkDict String.compare)) extras
+            in
+              Redblackmap.foldl (fn (name, types, index) =>
+                Redblackmap.insert (index, name,
+                  merge_types (lookup name index)
+                    (Redblackset.listItems types)))
+                (#force (#index pool) ()) extra_types
+            end
           else index_of (#force rigid ()) (#force goal ()))
       in
         {fresh = #fresh pool, goal = goal, rigid = rigid, index = index}

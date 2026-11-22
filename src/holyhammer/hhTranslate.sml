@@ -11,6 +11,10 @@ struct
 open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "hhTranslate"
+datatype translated =
+    Statement of term
+  | Lifted of {conjecture : term Susp.susp, axiom : term Susp.susp}
+
 val translate_cache_glob = ref (dempty Term.compare)
 
 fun foralls (vl,t) = case vl of
@@ -281,14 +285,27 @@ fun axiom_form ([], statement) = statement
 
 fun translate_nocache tm = conjecture_form (lifted_parts tm)
 
-fun cached_parts tm =
+fun cached_translation tm =
   dfind tm (!translate_cache_glob) handle NotFound =>
-  let val x = lifted_parts tm in
+  let
+    val x = case lifted_parts tm of
+        ([], statement) => Statement statement
+      | parts => Lifted
+          {conjecture = Susp.delay (fn () => conjecture_form parts),
+           axiom = Susp.delay (fn () => axiom_form parts)}
+  in
     translate_cache_glob := dadd tm x (!translate_cache_glob); x
   end
 
-fun translate tm = conjecture_form (cached_parts tm)
-fun translate_axiom tm = axiom_form (cached_parts tm)
+fun translate tm =
+  case cached_translation tm of
+      Statement statement => statement
+    | Lifted {conjecture, ...} => Susp.force conjecture
+
+fun translate_axiom tm =
+  case cached_translation tm of
+      Statement statement => statement
+    | Lifted {axiom, ...} => Susp.force axiom
 
 fun thm_statement thm = (concl o GEN_ALL o DISCH_ALL) thm
 fun translate_thm thm = translate (thm_statement thm)

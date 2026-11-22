@@ -889,9 +889,6 @@ fun prover_cell entry =
 
 fun sched_cell entry = not (prover_cell entry)
 
-fun goal_ids entries predicate =
-  sorted_unique (map #goal_id (List.filter predicate entries))
-
 fun proven_cell entry = #szs entry = Szs hhProver.SzsTheorem
 fun reconstructed_cell entry = #recon_ok entry = SOME true
 fun attempted_cell entry = #szs entry <> BrokenDeps
@@ -915,12 +912,9 @@ fun percentage numerator denominator =
   if denominator = 0 then NONE
   else SOME (100.0 * Real.fromInt numerator / Real.fromInt denominator)
 
-fun make_metrics count_goals entries : metrics =
+fun metrics_for_counts (goals, attempted, proved, reconstructed) entries
+    : metrics =
   let
-    val goals = count_goals entries (fn _ => true)
-    val attempted = count_goals entries attempted_cell
-    val proved = count_goals entries proven_cell
-    val reconstructed = count_goals entries reconstructed_cell
     fun cell_time entry =
       case #engine entry of
           SOME (Sched _) =>
@@ -941,6 +935,12 @@ fun make_metrics count_goals entries : metrics =
 fun count_cells entries predicate =
   List.foldl (fn (entry, count) =>
     if predicate entry then count + 1 else count) 0 entries
+
+fun make_metrics entries =
+  metrics_for_counts
+    (length entries, count_cells entries attempted_cell,
+     count_cells entries proven_cell, count_cells entries reconstructed_cell)
+    entries
 
 (* Groups keyed and ordered by [key], each in its original entry order. *)
 fun group_by key items =
@@ -997,10 +997,9 @@ type report_data =
 
 fun condition_report (name, cells) : condition_report =
   let
-    fun subset predicate = make_metrics count_cells
-      (List.filter predicate cells)
+    fun subset predicate = make_metrics (List.filter predicate cells)
   in
-    {name = name, cells = cells, metrics = make_metrics count_cells cells,
+    {name = name, cells = cells, metrics = make_metrics cells,
      ho = subset #ho, non_ho = subset (not o #ho),
      seen = subset (not o #fresh), fresh = subset #fresh}
   end
@@ -1049,26 +1048,62 @@ fun portfolio_key entry =
   string_of_regime (#regime entry) ^ "/" ^
   Int.toString (#timeout entry) ^ "s"
 
-fun unique_count prover predicate entries =
-  let
-    fun ids keep =
-      goal_ids (List.filter (fn entry => keep (#prover entry = SOME prover))
-        entries) predicate
-    val others = Binaryset.addList (Binaryset.empty String.compare,
-      ids not)
-  in
-    length (List.filter (fn goal => not (Binaryset.member (others, goal)))
-      (ids (fn own => own)))
-  end
+datatype attribution = NoOutcome | Unique of hhProver.prover | Nonunique
+
+fun merge_attribution (NoOutcome, other) = other
+  | merge_attribution (other, NoOutcome) = other
+  | merge_attribution (Unique left, Unique right) =
+      if left = right then Unique left else Nonunique
+  | merge_attribution _ = Nonunique
 
 fun portfolio_report (key, cells) : portfolio_report =
-  {key = key, cells = cells,
-   metrics = make_metrics (fn entries => length o goal_ids entries) cells,
-   unique = map (fn prover =>
-     (prover, unique_count prover proven_cell cells,
-      unique_count prover reconstructed_cell cells))
-     (mk_fast_set hhConfig.prover_compare
-        (List.mapPartial #prover cells))}
+  let
+    fun merge ((attempted, proved, reconstructed),
+               (also_attempted, also_proved, also_reconstructed)) =
+      (attempted orelse also_attempted,
+       merge_attribution (proved, also_proved),
+       merge_attribution (reconstructed, also_reconstructed))
+    fun add (entry, (goals, provers)) =
+      let
+        val prover = #prover entry
+        (* An anonymous success covers its goal and precludes uniqueness. *)
+        val outcome = case prover of NONE => Nonunique | SOME p => Unique p
+        val coverage =
+          (attempted_cell entry,
+           if proven_cell entry then outcome else NoOutcome,
+           if reconstructed_cell entry then outcome else NoOutcome)
+      in
+        (Redblackmap.insertWith merge (goals, #goal_id entry, coverage),
+         case prover of
+             NONE => provers
+           | SOME name => Redblackset.add (provers, name))
+      end
+    val (goals, provers) = List.foldl add
+      (Redblackmap.mkDict String.compare,
+       Redblackset.empty hhConfig.prover_compare) cells
+    fun count covered total = if covered then total + 1 else total
+    fun credit (Unique prover) counts =
+          Redblackmap.insertWith (op +) (counts, prover, 1)
+      | credit _ counts = counts
+    fun tally (_, (attempted, proved, reconstructed),
+               (attempts, proofs, replays, unique_proofs, unique_replays)) =
+      (count attempted attempts, count (proved <> NoOutcome) proofs,
+       count (reconstructed <> NoOutcome) replays,
+       credit proved unique_proofs, credit reconstructed unique_replays)
+    val (attempts, proofs, replays, unique_proofs, unique_replays) =
+      Redblackmap.foldl tally
+        (0, 0, 0, Redblackmap.mkDict hhConfig.prover_compare,
+         Redblackmap.mkDict hhConfig.prover_compare) goals
+    fun credits table prover =
+      Option.getOpt (Redblackmap.peek (table, prover), 0)
+    val metrics = metrics_for_counts
+      (Redblackmap.numItems goals, attempts, proofs, replays) cells
+    val unique = map (fn prover =>
+      (prover, credits unique_proofs prover, credits unique_replays prover))
+      (Redblackset.listItems provers)
+  in
+    {key = key, cells = cells, metrics = metrics, unique = unique}
+  end
 
 fun schedule_report (name, cells) : schedule_report =
   {name = name,
@@ -1098,7 +1133,7 @@ fun report_data entries : report_data =
           {name = name, key = key,
            schedule = (case Redblackmap.peek (condition_metrics, name) of
                            SOME metrics => metrics
-                         | NONE => make_metrics count_cells cells),
+                           | NONE => make_metrics cells),
            union = union})
           (Redblackmap.peek (portfolio_metrics, key))
       end

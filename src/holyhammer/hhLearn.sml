@@ -381,24 +381,24 @@ fun train_nb_indexed constants idf dependencies facts indices =
         Array.update (sfreq, target, frequencies')
       end
 
-    fun pure_dependency thmid =
-      let
-        val index = dfind thmid indices
-      in
-        Vector.sub (pure_logic, index)
-      end
+    (* One missing dependency invalidates the entire training example. *)
+    fun dependency_indices [] result = mk_fast_set Int.compare result
+      | dependency_indices (thmid :: rest) result =
+          case Redblackmap.peek (indices, thmid) of
+              NONE => []
+            | SOME index =>
+                dependency_indices rest
+                  (if Vector.sub (pure_logic, index) then result
+                   else index :: result)
 
     fun usable_dependencies (fact : fact_info) =
       case Redblackmap.peek (dependencies, #thmid fact) of
           NONE => []
         | SOME {fetchable, intact, count} =>
             if #def fact orelse not intact orelse
-               count > #max_dependencies constants orelse
-               not (List.all (fn thmid => dmem thmid indices)
-                 fetchable)
+               count > #max_dependencies constants
             then []
-            else filter (not o pure_dependency)
-              (mk_fast_set String.compare fetchable)
+            else dependency_indices fetchable []
 
     fun learn index =
       if index = number then ()
@@ -407,9 +407,7 @@ fun train_nb_indexed constants idf dependencies facts indices =
           val fact = Vector.sub (information, index)
           val features = mk_fast_set Int.compare (#features fact)
           val _ = add_use (#def_prior_weight constants) index features
-          val _ = List.app
-            (fn dependency =>
-              add_use 1 (dfind dependency indices) features)
+          val _ = List.app (fn target => add_use 1 target features)
             (usable_dependencies fact)
         in
           learn (index + 1)
@@ -448,13 +446,17 @@ fun has_hypotheses thmid =
       SOME (SOME (_, theorem)) => not (null (hyp theorem))
     | _ => false
 
-fun fact_info statures (thmid, features) : fact_info =
+fun fact_snapshot statures (thmid, features) =
+  (thmid, features, conclusion_of thmid, hhStature.stature_of statures thmid)
+
+fun fact_info (thmid, features, concl, stature : hhStature.stature) :
+    fact_info =
   {thmid = thmid, features = features,
-   def = #def (hhStature.stature_of statures thmid),
-   concl = conclusion_of thmid}
+   def = #def stature, concl = concl}
 
 fun train_nb_from_thmdata constants idf dependencies statures (_, facts) =
-  train_nb constants idf dependencies (map (fact_info statures) facts)
+  train_nb constants idf dependencies
+    (map (fact_info o fact_snapshot statures) facts)
 
 fun model_index ({indices, ...} : nb_model) thmid =
   Redblackmap.peek (indices, thmid)
@@ -783,18 +785,19 @@ fun proposition_key conclusions =
 (* Without a separate training corpus, every candidate belongs to the model. *)
 fun make_context_for current (thmdata as (_, facts)) training dependencies =
   let
-    val (_, model_facts) = Option.getOpt (training, thmdata)
     val statures = hhStature.create_statures_for current
-    (* Resolve the model's facts before deferring its training. *)
-    val training_facts = map (fact_info statures) model_facts
+    (* Resolve the candidates once for the learners and proposition keys. *)
+    val candidates = map (fact_snapshot statures) facts
+    val (model_facts, training_facts) =
+      case training of
+          NONE => (facts, map fact_info candidates)
+        | SOME (_, model_facts) =>
+            (model_facts, map (fact_info o fact_snapshot statures) model_facts)
     val indices = index_facts training_facts
     val model = Susp.delay (fn () =>
       train_nb_indexed default_constants (create_idf_table model_facts)
         dependencies training_facts indices)
-    val conclusions =
-      case training of
-          NONE => map (fn fact => (#thmid fact, #concl fact)) training_facts
-        | SOME _ => map (fn (thmid, _) => (thmid, conclusion_of thmid)) facts
+    val conclusions = map (fn (thmid, _, concl, _) => (thmid, concl)) candidates
     val fact_key = Susp.delay (fn () => proposition_key conclusions)
     val unknown =
       case training of
@@ -809,7 +812,9 @@ fun make_context_for current (thmdata as (_, facts)) training dependencies =
     {thmdata = thmdata, fact_index = hhFactIndex.create #1 facts,
      model = model,
      statures = statures,
-     mepo = hhMePo.create_context_for current thmdata statures,
+     mepo = hhMePo.create_context_from_conclusions current
+       (List.mapPartial (fn (thmid, _, concl, stature) =>
+          Option.map (fn term => (thmid, term, stature)) concl) candidates),
      dependencies = dependencies, fact_key = fact_key, unknown = unknown,
      pool_order = map #1 facts}
   end
