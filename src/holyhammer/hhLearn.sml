@@ -733,6 +733,7 @@ fun exclude_and_take excluded n facts =
 
 type context =
   {thmdata : mlThmData.thmdata,
+   fact_index : (mlThmData.thmid * mlFeature.fea) hhFactIndex.index,
    model : nb_model Susp.susp,
    statures : hhStature.statures,
    mepo : hhMePo.context,
@@ -809,7 +810,8 @@ fun make_context_for current (thmdata as (_, facts)) training dependencies =
                 else SOME thmid) facts
             end
   in
-    {thmdata = thmdata, model = model,
+    {thmdata = thmdata, fact_index = hhFactIndex.create #1 facts,
+     model = model,
      statures = statures,
      mepo = hhMePo.create_context_for current thmdata statures,
      dependencies = dependencies, fact_key = fact_key, unknown = unknown,
@@ -851,6 +853,9 @@ fun cached_or_build_context prepare current thmdata =
 fun create_context_for current thmdata =
   cached_or_build_context force_context current thmdata
 
+fun create_deferred_context_for current thmdata =
+  cached_or_build_context I current thmdata
+
 fun create_context thmdata =
   create_context_for (Theory.current_theory ()) thmdata
 
@@ -858,9 +863,10 @@ fun context_thmids ({pool_order, ...} : context) = pool_order
 
 fun restrict_thmdata ({thmdata = (weights, facts), ...} : context) NONE =
       (weights, facts)
-  | restrict_thmdata ({thmdata = (weights, facts), ...} : context)
+  | restrict_thmdata
+      ({thmdata = (weights, _), fact_index, ...} : context)
       (SOME wanted) =
-      (weights, filter (member_set wanted o #1) facts)
+      (weights, hhFactIndex.select fact_index wanted)
 
 fun restrict_unknown ({unknown = [], ...} : context) _ = []
   | restrict_unknown {unknown, ...} NONE = unknown
@@ -1134,7 +1140,7 @@ fun rank_filters thmdata goal filters =
     let
       val rank_one =
         rank_for_filters
-          (cached_or_build_context I (Theory.current_theory ()) thmdata)
+          (create_deferred_context_for (Theory.current_theory ()) thmdata)
           {pool = NONE, goal = goal} filters
     in
       map (fn (query as (filter, _)) => (filter, rank_one query)) filters

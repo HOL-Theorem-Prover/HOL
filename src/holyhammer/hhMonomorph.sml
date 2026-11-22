@@ -290,9 +290,14 @@ struct
           List.app (consider false) (lookup name known)
         end
       val _ =
-        case List.filter (covers_all o #2) schematics of
-            [] => search schematics [] false
-          | covering => List.app direct covering
+        (* Later rounds require a match from the current round's types.
+           A fact whose constants have no such types cannot contribute. *)
+        if require_new andalso
+           List.all (fn (name, _) => null (lookup name new)) schematics then ()
+        else
+          case List.filter (covers_all o #2) schematics of
+              [] => search schematics [] false
+            | covering => List.app direct covering
     in
       Redblackmap.foldl' op:: [] (!best)
     end

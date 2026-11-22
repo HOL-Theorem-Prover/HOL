@@ -8715,6 +8715,44 @@ fun test_hhMePo_loop_thresholds_and_goal_context () =
 
 val _ = test_hhMePo_loop_thresholds_and_goal_context ()
 
+fun test_hhMePo_pool_restrictions () =
+  let
+    val p = Term.mk_var ("mepo_pool_p", Type.bool)
+    val q = Term.mk_var ("mepo_pool_q", Type.bool)
+    val goal = ([q], p)
+    val duplicate = "FixtureTheory.duplicate"
+    fun name i = "FixtureTheory.pool_" ^ Int.toString i
+    fun fixture thmid conclusion =
+      mepo_fixture thmid "Fixture" conclusion mepo_plain_stature
+    val facts =
+      fixture duplicate (boolSyntax.mk_conj (p, q)) ::
+      List.tabulate (64, fn i =>
+        fixture (name i) (if i mod 3 = 0 then p else q)) @
+      [fixture duplicate p]
+    val context = mepo_context "Fixture" facts
+    fun keep names = List.filter (fn fact =>
+      List.exists (fn thmid => #thmid fact = thmid) names) facts
+    fun matches restricted selected =
+      let val expected = mepo_context "Fixture" selected in
+        hhMePo.context_thmids restricted = map #thmid selected andalso
+        hhMePo.mepo_rank restricted goal 6 = hhMePo.mepo_rank expected goal 6
+      end
+    val sparse_names = [name 40, "missing", duplicate, name 10, duplicate]
+    val dense_names = List.tabulate (60, name)
+    val dense = hhMePo.restrict_context context dense_names
+    val nested = hhMePo.restrict_context dense sparse_names
+  in
+    expect "hhMePo sparse restriction keeps original order and duplicates"
+      (matches (hhMePo.restrict_context context sparse_names)
+        (keep sparse_names));
+    expect "hhMePo dense restriction agrees with a fresh pool"
+      (matches dense (keep dense_names));
+    expect "hhMePo nested restriction stays within its parent pool"
+      (matches nested (keep [name 10, name 40]))
+  end
+
+val _ = test_hhMePo_pool_restrictions ()
+
 fun test_hhMePo_special_facts () =
   let
     val p = Term.mk_var ("mepo_special_p", Type.bool)

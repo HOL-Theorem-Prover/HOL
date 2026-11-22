@@ -540,7 +540,13 @@ type cached_fact =
 
 type context =
   {current_theory : string, facts : cached_fact list,
+   fact_index : cached_fact hhFactIndex.index,
    frequency_table : frequency_table, pconst_count : int}
+
+fun context_from_facts current_theory facts frequency_table pconst_count =
+  {current_theory = current_theory, facts = facts,
+   fact_index = hhFactIndex.create #thmid facts,
+   frequency_table = frequency_table, pconst_count = pconst_count} : context
 
 fun cache_fact read_const index_pconst {thmid, theory, concl, stature} =
   {thmid = thmid, theory = theory, concl = concl,
@@ -603,9 +609,8 @@ fun make_context {current_theory, facts} =
             end
     val cached = map (cache_fact read_const index_pconst) facts
   in
-    {current_theory = current_theory, facts = cached,
-     frequency_table = frequency_of_facts cached,
-     pconst_count = dlength (!indices)}
+    context_from_facts current_theory cached (frequency_of_facts cached)
+      (dlength (!indices))
   end
 
 fun theory_of_thmid thmid =
@@ -635,21 +640,29 @@ fun create_context thmdata statures =
 fun context_thmids ({facts, ...} : context) = map #thmid facts
 
 fun restrict_context
-    ({current_theory, facts, frequency_table, pconst_count} : context)
+    ({current_theory, facts, fact_index,
+      frequency_table, pconst_count} : context)
     thmids =
   let
     val wanted =
       foldl (fn (thmid, set) => dadd thmid () set)
         (dempty String.compare) thmids
-    val (restricted, excluded) =
-      List.partition (fn fact => dmem (#thmid fact) wanted) facts
+    val (restricted, frequency) =
+      case hhFactIndex.select_sparse fact_index wanted of
+          SOME restricted => (restricted, frequency_of_facts restricted)
+        | NONE =>
+            let
+              val (restricted, excluded) =
+                List.partition (fn fact => dmem (#thmid fact) wanted) facts
+              val frequency =
+                if length excluded < length restricted then
+                  adjust_by_facts ~1 excluded frequency_table
+                else frequency_of_facts restricted
+            in
+              (restricted, frequency)
+            end
   in
-    {current_theory = current_theory, facts = restricted,
-     pconst_count = pconst_count,
-     frequency_table =
-       if length excluded < length restricted then
-         adjust_by_facts ~1 excluded frequency_table
-       else frequency_of_facts restricted}
+    context_from_facts current_theory restricted frequency pconst_count
   end
 
 fun add_fact_pconsts fact table =
@@ -758,7 +771,7 @@ fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
   end
 
 fun mepo_rank_with_fudge (fudge : fudge)
-      ({current_theory, facts, frequency_table, pconst_count} : context)
+      ({current_theory, facts, frequency_table, pconst_count, ...} : context)
       (assumptions, conclusion) max_facts =
   if max_facts <= 0 orelse null facts then []
   else

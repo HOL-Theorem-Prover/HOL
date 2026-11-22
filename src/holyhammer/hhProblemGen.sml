@@ -449,40 +449,46 @@ struct
   fun arity_for head arities =
     case Redblackmap.peek (arities, head) of SOME arity => arity | NONE => 0
 
-  fun firstorderize format encoding ({conjecture, facts} : formula_ir) =
-    if is_full_ho format then
+  fun prepare_higher_order ({conjecture, facts} : formula_ir) =
+    let
+      fun term tm =
+        if is_abs tm then
+          let val (var, body) = dest_abs tm in
+            FOAbs (var, term body)
+          end
+        else
+          let val (head, args) = strip_comb tm in
+            FOHead (head, map term args)
+          end
+      fun formula (HQuant (all, vars, body)) =
+            FOQuant (all, vars, formula body)
+        | formula (HConn (conn, bodies)) = FOConn (conn, map formula bodies)
+        | formula (HAtom tm) = FOAtom (term tm)
+      fun named (name, body) = (name, formula body)
+      val conjecture' = formula conjecture
+      val facts' = map named facts
+    in
+      fn helpers => {conjecture = conjecture',
+        facts = if null helpers then facts' else facts' @ map named helpers,
+        used_app = false, used_pp = false}
+    end
+
+  fun add_formula_heads ((_, formula), result) =
+    heads_of_formula formula result
+
+  fun firstorderize format encoding ({conjecture, facts} : formula_ir)
+      main_heads main_count helpers =
       let
-        fun term in_position tm =
-          if is_abs tm then
-            let val (var, body) = dest_abs tm in
-              FOAbs (var, term false body)
-            end
-          else
-            let val (head, args) = strip_comb tm in
-              FOHead (head, map (term true) args)
-            end
-        fun formula (HQuant (all, vars, body)) =
-              FOQuant (all, vars, formula body)
-          | formula (HConn (conn, bodies)) = FOConn (conn, map formula bodies)
-          | formula (HAtom tm) = FOAtom (term false tm)
-      in
-        {conjecture = formula conjecture,
-         facts = map (fn (name, body) => (name, formula body)) facts,
-         used_app = false, used_pp = false}
-      end
-    else
-      let
+        val all_facts = if null helpers then facts else facts @ helpers
         val table = heads_of_formula conjecture
-          (List.foldl
-            (fn ((_, formula), result) =>
-              heads_of_formula formula result)
-            (Redblackmap.mkDict Term.compare) facts)
+          (List.foldl add_formula_heads main_heads helpers)
         fun variables () = vars_of_formula conjecture
           (List.foldl
             (fn ((_, formula), result) =>
               vars_of_formula formula result)
-            [] facts)
-        val arities = app_arities encoding (length facts) variables table
+            [] all_facts)
+        val arities =
+          app_arities encoding (main_count + length helpers) variables table
         val used_app = ref false
         val used_pp = ref false
         fun term in_position tm =
@@ -543,8 +549,20 @@ struct
                    raise Lambda_survived (labels @ ["conjecture"], tm)
       in
         {conjecture = conjecture',
-         facts = map named_formula facts,
+         facts = map named_formula all_facts,
          used_app = !used_app, used_pp = !used_pp}
+      end
+
+  fun prepare_firstorder format encoding (main as {facts, ...} : formula_ir) =
+    if is_full_ho format then prepare_higher_order main
+    else
+      let
+        (* The helper stages share the heads collected from the main facts.
+           Add helper heads before the conjecture as in a single scan. *)
+        val main_heads = List.foldl add_formula_heads
+          (Redblackmap.mkDict Term.compare) facts
+      in
+        firstorderize format encoding main main_heads (length facts)
       end
 
   fun add_once equal value values =
@@ -1474,7 +1492,7 @@ struct
       val caps = {max_iters = mono_iters, max_new_instances = mono_instances}
       val main_terms = if main_is_mono then lambda_terms
                        else monomorph_with names type_enc caps lambda_terms
-      (* firstorderize reads only the conjecture and facts, so the proxy
+      (* First-orderization reads only the conjecture and facts, so the proxy
          names are not recorded.  The main problem is transformed once;
          helper lists are transformed alone and appended to it. *)
       val proxied = proxy_formula format (fn _ => ())
@@ -1482,9 +1500,9 @@ struct
         (name, proxied (skeleton tm))) facts
       val main_conjecture = proxied (skeleton (#conjecture main_terms))
       val main_facts = proxy_facts (#facts main_terms)
-      fun firstorder helpers = firstorderize format type_enc
-        {conjecture = main_conjecture,
-         facts = main_facts @ proxy_facts helpers}
+      val firstorder_main = prepare_firstorder format type_enc
+        {conjecture = main_conjecture, facts = main_facts}
+      fun firstorder helpers = firstorder_main (proxy_facts helpers)
       fun heads_of ({conjecture, facts, ...} : fo_ir) =
         distinct_heads (rev (heads_of_fo_formula (conjecture,
           List.foldl (fn ((_, formula), heads) =>
@@ -1497,36 +1515,39 @@ struct
           SOME (hhMonomorph.mk_pool_with names (list_mk_conj
             (#conjecture main_terms :: map #2 (#facts main_terms))))
         else NONE
+      val helper_mode = effective_mode format lam_trans
+      val main_helper_facts =
+        if helper_mode = hhLamTrans.Combs then
+          List.filter (is_helper_name o #1) (#facts main_terms)
+        else if helper_mode = hhLamTrans.KeepLams then
+          List.filter (is_helper_name o #1) (#facts lambda_terms)
+        else []
       fun translate_helpers source =
         if null source then []
         else
           let
-            (* [lambda_terms] can contain very large combinator expansions.
-               In pure-combs mode the pass creates no lambda definitions, so
-               translate only the new helpers and add the already translated
-               main problem back as the monomorphization ground pool.  The
-               other modes retain their shared naming pass for generated
-               lifting definitions. *)
-            val (lambda_terms', retention_source) =
-              if lam_trans = hhLamTrans.Combs then
-                let
-                  val helpers = #facts (lambda_with names format lam_trans
-                    (presimp format {conjecture = T, facts = source}))
-                in
-                  ({conjecture = #conjecture main_terms,
-                    facts = #facts main_terms @ helpers}, helpers)
-                end
-              else
-                let
-                  val translated = lambda_with names format lam_trans
-                    (presimp format
-                      {conjecture = #conjecture lambda_terms,
-                       facts = #facts lambda_terms @ source})
-                in
-                  (translated, #facts translated)
-                end
-            val helper_source = List.filter (is_helper_name o #1)
-              (#facts lambda_terms')
+            fun translate conjecture facts =
+              #facts (lambda_with names format lam_trans
+                (presimp format {conjecture = conjecture, facts = facts}))
+            (* Only lifting modes share a naming pass across formulas.
+               KeepLams can process just the formulas that become helpers.
+               Combs also processes each formula independently, and any
+               helper already in the main problem has been combinatorized. *)
+            val (helper_source, retention_source) =
+              case helper_mode of
+                  hhLamTrans.Combs =>
+                    let val helpers = translate T source in
+                      (main_helper_facts @ helpers, helpers)
+                    end
+                | hhLamTrans.KeepLams =>
+                    let val helpers = translate T (main_helper_facts @ source)
+                    in (helpers, helpers) end
+                | _ =>
+                    let
+                      val helpers = List.filter (is_helper_name o #1)
+                        (translate (#conjecture lambda_terms)
+                          (#facts lambda_terms @ source))
+                    in (helpers, helpers) end
             val translated =
               case main_pool of
                   SOME pool =>
@@ -1537,8 +1558,7 @@ struct
                sorts.  Do not silently lose it as an "ignored" user fact. *)
             fun found name = List.exists (fn (other, _) => other = name)
               translated
-            val retained = List.filter (fn (name, _) =>
-              is_helper_name name andalso not (found name)) retention_source
+            val retained = List.filter (not o found o #1) retention_source
           in
             translated @ retained
           end
@@ -1590,10 +1610,21 @@ struct
                     | instances => instances
                 end
           end
-      val helper_terms = translate_helpers with_proxies @ extensionality
+      (* In these modes helper translation draws no fresh type names.
+         With no proxy laws to add, its first result remains valid. *)
+      val reuse_preliminary = null proxy_source andalso
+        not (is_monomorphic type_enc) andalso
+        (helper_mode = hhLamTrans.KeepLams orelse
+         helper_mode = hhLamTrans.Lifting)
+      val translated_helpers =
+        if reuse_preliminary then preliminary_helpers
+        else translate_helpers with_proxies
+      val helper_terms = translated_helpers @ extensionality
       val needs_terms = needs_input type_enc main_terms helper_terms
       val final_firstorder =
         if null helper_terms then fn () => main_fo
+        else if reuse_preliminary andalso null extensionality then
+          fn () => preliminary_fo
         else fn () => firstorder helper_terms
     in
       fn () =>

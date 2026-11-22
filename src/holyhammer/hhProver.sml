@@ -53,12 +53,9 @@ type prover_config =
    legacy : bool}
 
 val trim = hhConfig.trim
-val trim_left = hhConfig.trim_left
-
-fun first_word s =
-  case String.tokens Char.isSpace s of
-      [] => ""
-    | word :: _ => word
+fun first_word text =
+  Substring.string (Substring.takel (not o Char.isSpace)
+    (Substring.dropl Char.isSpace text))
 
 fun status_of_word word =
   case word of
@@ -110,17 +107,15 @@ fun szs_of_line line =
     if Substring.isEmpty rest then NONE
     else
       let
-        val word =
-          first_word (Substring.string
-            (Substring.triml (String.size marker) rest))
+        val word = first_word (Substring.triml (String.size marker) rest)
       in
         if word = "" then NONE else SOME (status_of_word word)
       end
   end
 
 fun is_comment line =
-  let val line' = trim_left line in
-    String.isPrefix "#" line' orelse String.isPrefix "%" line'
+  let val line' = Substring.dropl Char.isSpace (Substring.full line) in
+    Substring.isPrefix "#" line' orelse Substring.isPrefix "%" line'
   end
 
 fun unescape_axiom raw =
@@ -211,15 +206,28 @@ fun file_names line =
 
 fun axiom_name line =
   let
-    val open_paren = String.fields (fn c => c = #"(") line
+    val (_, opened) = Substring.position "(" (Substring.full line)
+    (* The original header parser ignores opening parentheses in fields. *)
+    fun without_open field =
+      let val text = Substring.string field in
+        if String.isSubstring "(" text then
+          String.translate (fn #"(" => "" | c => String.str c) text
+        else text
+      end
   in
-    case open_paren of
-        _ :: rest =>
-          (case String.fields (fn c => c = #",") (String.concat rest) of
-               first :: second :: _ =>
-                 if trim second = "axiom" then unescape_axiom first else NONE
-             | _ => NONE)
-      | [] => NONE
+    if Substring.isEmpty opened then NONE
+    else
+      let val (name, comma) = Substring.position "," (Substring.triml 1 opened)
+      in
+        if Substring.isEmpty comma then NONE
+        else
+          let val (role, _) = Substring.position "," (Substring.triml 1 comma)
+          in
+            if trim (without_open role) = "axiom" then
+              unescape_axiom (without_open name)
+            else NONE
+          end
+      end
   end
 
 val distinct = mk_sameorder_set String.compare
@@ -262,12 +270,13 @@ fun core_axioms lines =
         | [] => []
     val szs_marker = "% SZS core "
     fun from_line line =
-      let val stripped = trim_left line in
-        if String.isPrefix "core" stripped then old_core stripped
-        else if String.isPrefix szs_marker stripped then
-          List.mapPartial unescape_axiom
-            (String.tokens Char.isSpace
-              (String.extract (stripped, String.size szs_marker, NONE)))
+      let val stripped = Substring.dropl Char.isSpace (Substring.full line) in
+        if Substring.isPrefix "core" stripped then
+          old_core (Substring.string stripped)
+        else if Substring.isPrefix szs_marker stripped then
+          List.mapPartial (unescape_axiom o Substring.string)
+            (Substring.tokens Char.isSpace
+              (Substring.triml (String.size szs_marker) stripped))
         else []
       end
   in
@@ -292,7 +301,7 @@ fun version_after marker text =
     | SOME i =>
         let
           val version =
-            first_word (String.extract (text, i + String.size marker, NONE))
+            first_word (Substring.extract (text, i + String.size marker, NONE))
         in
           if version = "" then NONE else SOME version
         end
@@ -842,34 +851,63 @@ fun probe (config : prover_config) =
           end
   end
 
-(* Uniquifying with OS.FileSys.tmpName would leak the empty file that
-   tmpName creates -- one per prover run, so a full sweep exhausts the
-   inodes of $TMPDIR.  Number the files within the debug directory. *)
-val output_mutex = Mutex.mutex ()
-val output_counter = ref 0
+val output_counter = Portable.make_counter {init = 1, inc = 1}
 
-fun next_output directory name =
+fun write_output_fd fd contents =
   let
-    fun candidate n =
-      OS.Path.concat (directory, name ^ "-" ^ Int.toString n ^ ".out")
-    fun exists path = OS.FileSys.access (path, []) handle OS.SysErr _ => false
-    fun fresh n = if exists (candidate n) then fresh (n + 1) else n
-    val n = with_mutex output_mutex (fn () =>
-      let val n = fresh (!output_counter + 1)
-      in output_counter := n; n end)
+    val bytes = Byte.stringToBytes contents
+    val size = Word8Vector.length bytes
+    fun write offset =
+      if offset = size then ()
+      else
+        let
+          val rest = Word8VectorSlice.slice (bytes, offset, NONE)
+          val written = Posix.IO.writeVec (fd, rest)
+        in
+          if written = 0 then raise OS.SysErr ("empty output write", NONE)
+          else write (offset + written)
+        end
   in
-    candidate n
+    write 0
   end
 
 fun save_output directory name contents =
   let
     val _ = hhConfig.ensure_dir directory
-    val path = next_output directory name
-    val stream = TextIO.openOut path
-    val _ = TextIO.output (stream, contents)
-    val _ = TextIO.closeOut stream
+    val prefix = name ^ "-" ^ Portable.unique_tmp_suffix () ^ "-"
+    (* Evaluation workers share this directory. Reserve each name
+       exclusively in case a previous worker used the same process ID. *)
+    fun attempt () =
+      let
+        val path = OS.Path.concat (directory,
+          prefix ^ Int.toString (output_counter ()) ^ ".out")
+        val owned = ref false
+        fun open_output () =
+          let
+            open Posix.FileSys
+            val mode = S.flags [S.irusr, S.iwusr, S.irgrp, S.iwgrp,
+                                S.iroth, S.iwoth]
+            val fd = createf (path, O_WRONLY, O.excl, mode)
+            open Posix.IO
+          in
+            owned := true;
+            ((setfd (fd, FD.cloexec); SOME fd)
+             handle exn => (close fd; raise exn))
+          end
+          handle exn as OS.SysErr (_, SOME error) =>
+            if not (!owned) andalso error = Posix.Error.exist
+            then NONE else raise exn
+        fun write NONE = NONE
+          | write (SOME fd) = (write_output_fd fd contents; SOME path)
+      in
+        Portable.bracket (fn () => with_mutex spawn_mutex open_output)
+          (Option.app Posix.IO.close) write
+        handle exn =>
+          (if !owned then hhConfig.remove_quietly path else (); raise exn)
+      end
+    fun save () = case attempt () of SOME path => path | NONE => save ()
   in
-    path
+    save ()
   end
 
 fun missing_prover name =

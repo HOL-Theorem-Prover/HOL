@@ -129,6 +129,9 @@ sig
      model_thmdata : mlThmData.thmdata,
      dependencies : dep_table} -> context
   val create_context_for : string -> mlThmData.thmdata -> context
+  (* Resolve the corpus immediately and defer model training and
+     proposition grouping until a ranking filter needs them. *)
+  val create_deferred_context_for : string -> mlThmData.thmdata -> context
   val create_thmdata_for : string -> mlThmData.thmdata
   val create_context : mlThmData.thmdata -> context
   val context_thmids : context -> mlThmData.thmid list

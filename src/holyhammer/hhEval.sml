@@ -845,7 +845,8 @@ fun sample_hash text =
 
 fun sample_goal factor goal_id =
   if factor < 1 then raise Fail "--sample must be a positive integer"
-  else IntInf.mod (sample_hash goal_id, IntInf.fromInt factor) = 0
+  else factor = 1 orelse
+    IntInf.mod (sample_hash goal_id, IntInf.fromInt factor) = 0
 
 (* -------------------------------------------------------------------------
    Experiment reports
@@ -1483,18 +1484,17 @@ fun chainy_for thy theorems =
     facts
   end
 
-fun pool_membership names =
-  let val permitted = Redblackset.fromList String.compare names in
-    fn name => Redblackset.member (permitted, name)
-  end
-
 fun restrict_features permits = List.filter (fn (name, _) => permits name)
 
 fun restrict_features_to_pool pool features =
-  restrict_features (pool_membership pool) features
+  let val permitted = Redblackset.fromList String.compare pool in
+    restrict_features (fn name => Redblackset.member (permitted, name))
+      features
+  end
 
 type selection_data =
   {thmdata : mlThmData.thmdata Susp.susp,
+   fact_index : (mlThmData.thmid * mlFeature.fea) hhFactIndex.index Susp.susp,
    context : hhLearn.context Susp.susp,
    intact : thm -> bool * mlThmData.thmid list,
    knn : mlThmData.thmdata -> int -> goal -> mlThmData.thmid list}
@@ -1506,11 +1506,14 @@ type premise_pool =
 fun selection_data thy : selection_data =
   let
     val thmdata = Susp.delay (fn () => hhLearn.create_thmdata_for thy)
+    val fact_index = Susp.delay (fn () =>
+      hhFactIndex.create #1 (#2 (Susp.force thmdata)))
     val context = Susp.delay (fn () =>
-      hhLearn.create_context_for thy (Susp.force thmdata))
+      hhLearn.create_deferred_context_for thy (Susp.force thmdata))
     val {intact, knn} = hhLearn.make_dependency_lookup ()
   in
-    {thmdata = thmdata, context = context, intact = intact, knn = knn}
+    {thmdata = thmdata, fact_index = fact_index, context = context,
+     intact = intact, knn = knn}
   end
 
 fun select_knn ({knn, ...} : selection_data)
@@ -1527,12 +1530,12 @@ fun select_filter (data as {context, ...} : selection_data)
          goal = goal, n = count}
 
 fun selection_facts (data as {thmdata, ...} : selection_data)
-    goal {pool, permits} dependencies =
+    goal {pool, restrict} dependencies =
   let
     val names = Susp.delay pool
     val restricted = Susp.delay (fn () =>
       let val (weights, features) = Susp.force thmdata in
-        (weights, restrict_features (permits ()) features)
+        (weights, restrict features)
       end)
     val pool = {names = names, thmdata = restricted}
     (* Conditions for this goal and regime share successful selections.
@@ -1570,10 +1573,14 @@ fun selection_facts (data as {thmdata, ...} : selection_data)
     {rank = rank, rank_many = rank_many, dependencies = dependencies}
   end
 
-fun bushy_selection_facts data goal dependencies =
-  selection_facts data goal
-    {pool = fn () => dependencies,
-     permits = fn () => pool_membership dependencies} dependencies
+fun bushy_selection_facts (data : selection_data) goal dependencies =
+  let
+    fun restrict _ = hhFactIndex.select (Susp.force (#fact_index data))
+      (dset String.compare dependencies)
+  in
+    selection_facts data goal
+      {pool = fn () => dependencies, restrict = restrict} dependencies
+  end
 
 fun selected_premises_at condition {rank, dependencies, ...} knn_count =
   case #selector condition of
@@ -1833,7 +1840,7 @@ fun eval_loaded_theory expdir thy =
                   bushy_selection_facts data goal intact_deps
                 val chainy_facts =
                   selection_facts data goal {pool = pool,
-                    permits = fn () => permits} chainy_dependencies
+                    restrict = restrict_features permits} chainy_dependencies
                 fun one condition =
                   case #regime condition of
                       Bushy =>
@@ -1967,17 +1974,15 @@ fun configured_sample () =
         if sample < 1 then raise Fail "eval.sample must be a positive integer"
         else sample
 
-fun theory_cells thy conditions sample =
+fun theory_goals thy sample =
   let
     val _ = load_theory thy
-    fun cells (name, _) =
+    fun selected (name, _) =
       let val id = goal_id thy name in
-        if sample_goal sample id then map (fn condition =>
-          (id, #cond_id condition)) conditions
-        else []
+        if sample_goal sample id then SOME id else NONE
       end
   in
-    SOME (List.concat (map cells (DB.theorems thy)))
+    SOME (List.mapPartial selected (DB.theorems thy))
   end
   handle Interrupt => raise Interrupt | _ => NONE
 
@@ -2009,22 +2014,30 @@ fun run_eval {expname, ncore, thyl, conditions} =
         if exists_file (join expdir "run.json") then
           validate_run_header expdir header
         else write_run_header expdir header
-      val states = map (fn thy =>
-        (thy, theory_cells thy conditions sample)) thyl
-      fun pending (thy, NONE) =
-            (journal_theory_error expdir thy
-               "theory could not be loaded by the evaluation driver";
-             false)
-        | pending (thy, SOME cells) =
-            not (journal_complete (journal_path expdir thy) cells)
-      val pending_states = List.filter pending states
-      fun work_size (_, NONE) = 0
-        | work_size (_, SOME cells) = length cells
+      val condition_ids = map #cond_id conditions
+      fun complete thy goals =
+        let
+          val completed = read_completed (journal_path expdir thy)
+          fun goal_done id = List.all (fn cond =>
+            cell_completed completed (id, cond)) condition_ids
+        in
+          List.all goal_done goals
+        end
+      fun pending thy =
+        case theory_goals thy sample of
+            NONE =>
+              (journal_theory_error expdir thy
+                 "theory could not be loaded by the evaluation driver";
+               NONE)
+          | SOME goals =>
+              if complete thy goals then NONE
+              else SOME (length goals, (thy, goals))
       (* Largest theories first, so the long poles start on a free core
          before the short ones fill it up. *)
+      val pending_states = List.mapPartial pending thyl
       val queued_names =
         map (#1 o #2) (dict_sort (fn ((a, _), (b, _)) => Int.compare (b, a))
-          (map (fn state => (work_size state, state)) pending_states))
+          pending_states)
       (* A killed driver runs no handlers; resuming the experiment sweeps
          whatever scripts it left behind. *)
       val _ = app (remove_evalscript expdir) thyl
@@ -2038,11 +2051,10 @@ fun run_eval {expname, ncore, thyl, conditions} =
         end
       val _ = with_flag (aiLib.scratch_dir, join expdir "out")
         (smlParallel.parapp_queue ncore run_worker) queued_names
-      fun note_unfinished (thy, NONE) = ()
-        | note_unfinished (thy, SOME cells) =
-            if journal_complete (journal_path expdir thy) cells then ()
-            else journal_theory_error expdir thy
-              "evaluation worker ended before completing its journal"
+      fun note_unfinished (_, (thy, goals)) =
+        if complete thy goals then ()
+        else journal_theory_error expdir thy
+          "evaluation worker ended before completing its journal"
       val _ = app note_unfinished pending_states
     in
       ()
