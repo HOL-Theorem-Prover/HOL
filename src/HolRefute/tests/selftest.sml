@@ -1292,6 +1292,14 @@ local
        named "selftest-foreign" (answer (SOME refutation))))
   val _ = Refute.register_backend (stub "selftest-foreign-none" 10
     enabled (fn _ => fn _ => NoCounterexample))
+  (* no refusal in the call: by certainty alone the fast Genuine one
+     would come first *)
+  val _ = register_backend (stub "selftest-fast-genuine" 10 enabled
+    (fn _ => fn _ => named "selftest-fast-genuine" (answer NONE)))
+  val _ = register_backend (stub "selftest-slow-quasi-certified" 60 enabled
+    (fn _ => fn _ =>
+       named "selftest-slow-quasi-certified"
+         (answer_as (QuasiGenuine ["stub"]) (SOME refutation))))
   val _ = register_backend (stub "selftest-refused-none" 10 enabled
     (fn _ => fn _ => (Refute_Facts.check refused; NoCounterexample)))
   (* the call's refusal caps both: Genuine and QuasiGenuine before it *)
@@ -1336,6 +1344,16 @@ in
           #backend second = "selftest-heavy-genuine" andalso
           is_potential first andalso is_potential second
       | _ => false)
+  val _ = test "a kernel theorem outranks a more certain candidate"
+    (fn () =>
+      case run_with (upd_sequential true)
+             ["selftest-fast-genuine", "selftest-slow-quasi-certified"] of
+          Counterexample [first, second] =>
+            #backend first = "selftest-slow-quasi-certified" andalso
+            Option.isSome (#cert first) andalso
+            #backend second = "selftest-fast-genuine" andalso
+            is_genuine second
+        | _ => false)
   val _ = test "a back end the finder did not make is capped" (fn () =>
     case run ["selftest-foreign"] of
         Counterexample [c] =>
@@ -1654,6 +1672,43 @@ in
        |> unknown_with "refused fact")
 end
 
+(* An entry with no injectivity or distinctness
+   theorem makes its constructors free on its case theorem alone, from
+   which they are read: a cheated one caps a problem that uses them.
+   Here the cheated case theorem says [rf_chk_par], which is not
+   injective, is the constructor. *)
+local
+  val _ = Datatype.Datatype `rf_chk_two = RFZero | RFOne`
+  val par_def = new_definition ("rf_chk_par_def",
+    ``rf_chk_par n = if EVEN n then RFZero else RFOne``)
+  val _ = new_constant ("rf_chk_par_case", ``:rf_chk_two -> (num -> 'a) -> 'a``)
+  val two_info =
+    valOf (TypeBase.read {Thy = current_theory (), Tyop = "rf_chk_two"})
+  val case_def = Tactical.prove
+    (``!n (f:num -> 'a). rf_chk_par_case (rf_chk_par n) f = f n``, cheat)
+  val nchotomy = Tactical.prove (``!t. ?n. t = rf_chk_par n``,
+    bossLib.Cases THENL [Q.EXISTS_TAC `0`, Q.EXISTS_TAC `1`] THEN
+    bossLib.rw_tac bossLib.arith_ss [par_def])
+  val par_info = TypeBasePure.mk_datatype_info_no_simpls
+    {ax = TypeBasePure.axiom_of0 two_info,
+     induction = TypeBasePure.induction_of0 two_info,
+     case_def = case_def,
+     case_cong = TypeBasePure.case_cong_of two_info,
+     case_eq = TypeBasePure.case_eq_of two_info,
+     case_elim = TypeBasePure.case_elim_of two_info,
+     nchotomy = nchotomy,
+     size = NONE, encode = NONE, lift = NONE, one_one = NONE,
+     distinct = NONE, fields = [], accessors = [], updates = [],
+     destructors = [], recognizers = []}
+in
+  val _ = mf_test "constructors on a cheated case theorem alone are capped"
+    (fn () =>
+       (TypeBase.write [par_info];
+        Portable.finally (fn () => TypeBase.write [two_info])
+          (fn () => refute mf ``rf_chk_par 0 = rf_chk_par 2``) ())
+       |> refused_registration "refused fact")
+end
+
 (* A Skolem value is the value of the binder it
    comes from: an inner binder sharing an outer one's name and type, or
    one depending on another binder whose value has the outer one's type,
@@ -1673,6 +1728,8 @@ in
   val _ = mf_test "a dependent inner binder's value is not an outer binder's"
     (fn () =>
        outer_x_unvalued ``!x:bool -> bool. P ==> ?y. !x:bool. x = y``)
+  val _ = mf_test "an inner binder's value is not a polymorphic outer one's"
+    (fn () => outer_x_unvalued ``!x:'a. P ==> !x:bool. x``)
 end
 
 (* A caller's frac registration that fails

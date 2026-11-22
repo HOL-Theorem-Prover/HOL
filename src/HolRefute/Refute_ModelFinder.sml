@@ -621,8 +621,10 @@ fun abandoned_mono_verdict report exn =
    by that prefix binder's own name and type.  Any other Skolem's value is
    left out and marked: a binder sharing its name and type with another
    in the goal has no such place, and a dependent one is a function of
-   the binders it depends on, not one binder's value. *)
-fun with_raw_values (prefix : (string * Type.hol_type) list)
+   the binders it depends on, not one binder's value.  The type instance
+   is the instance's ([instance_types]), under which each key is its
+   statement binder. *)
+fun with_raw_values instance_types (prefix : (string * Type.hol_type) list)
       (replay_hints : MFM.replay_hint list)
       ({bindings, skolems, ...} : MFM.reconstruction)
       (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
@@ -657,7 +659,8 @@ fun with_raw_values (prefix : (string * Type.hol_type) list)
      certainty = #certainty cex, bindings = #bindings cex,
      evals = #evals cex, cert = #cert cex, scope = #scope cex,
      model = #model cex, stats = #stats cex,
-     statement = {types = types, values = given @ values,
+     statement = {types = (case types of [] => instance_types | _ => types),
+                  values = given @ values,
                   partial = partial @ untraced_reasons}}
   end
 
@@ -966,7 +969,8 @@ fun run_instance deadline started (config : Refute_Core.config)
             MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =
-                with_raw_values prefix replay_hints reconstructed
+                with_raw_values (Refute_Core.instance_types instance) prefix
+                  replay_hints reconstructed
                   (MFM.display_counterexample postprocessors displayed
                      semantic_cex)
               in

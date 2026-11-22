@@ -1662,24 +1662,36 @@ structure Refute_Core :> Refute_Core = struct
             (SOME {skolems, ...}, true) => skolems
           | _ => []
       (* the same value shown twice (a binding and a Skolem) is one, and
-         values of different types are told apart by their types *)
-      fun same (name, value) (other, other_value) =
+         values of different types are told apart by their types.  A value
+         the back end gave keeps the type of the binder it keyed it by. *)
+      fun same (name, value, _) (other, other_value, _) =
         name = other andalso Term.aconv value other_value
       val shown =
         List.foldl (fn (row, kept) =>
             if List.exists (same row) kept then kept else kept @ [row]) []
-          (map (fn (variable, value) => (name_of variable, value)) given @
-           List.filter (fn (name, _) => not (Lib.mem name given_names))
+          (map (fn (variable, value) =>
+                  (name_of variable, value, SOME (Term.type_of variable)))
+             given @
+           List.filter (fn (name, _, _) => not (Lib.mem name given_names))
              (map (fn (variable, value) =>
                     (if Term.is_var variable then name_of variable
-                     else Parse.term_to_string variable, value))
-               (#bindings cex) @ skolems))
+                     else Parse.term_to_string variable, value, NONE))
+               (#bindings cex) @
+              map (fn (name, value) => (name, value, NONE)) skolems))
       fun named name ty =
         Lib.op_mk_set Term.aconv
-          (map #2 (List.filter (fn (other, other_value) =>
+          (map #2 (List.filter (fn (other, other_value, _) =>
              other = name andalso
              Refute_Util.same_type (Term.type_of other_value) ty) shown))
-      fun pair ((name, value), (paired, theta, partial)) =
+      (* A value keyed by a binder fits only a binder of the statement that
+         is that binder under the back end's type instance, never one whose
+         type merely instantiates to the value's. *)
+      fun keyed_by NONE _ = true
+        | keyed_by (SOME key_type) binder =
+            Refute_Util.same_type
+              (Type.type_subst (#types (#statement cex))
+                 (Term.type_of binder)) key_type
+      fun pair ((name, value, key_type), (paired, theta, partial)) =
         if length (named name (Term.type_of value)) > 1 then
           (paired, theta,
            if Lib.mem ("more than one value is named " ^ name) partial
@@ -1693,6 +1705,7 @@ structure Refute_Core :> Refute_Core = struct
               | SOME other => Refute_Util.same_type other residue
           val fitting = List.filter (fn binder =>
             name_of binder = name andalso
+            keyed_by key_type binder andalso
             not (Lib.op_mem Term.aconv binder (map #1 paired)) andalso
             Lib.can (Type.match_type (Term.type_of binder))
               (Term.type_of value)) binders
@@ -2906,9 +2919,17 @@ structure Refute_Core :> Refute_Core = struct
                       (SharedBudget search_context) cfg ceiling forms) jobs
             in
               (* Every candidate completed
-                 within the budget, not only the winner's *)
+                 within the budget, not only the winner's.  A
+                 NoCounterexample that ended the search before another
+                 worker refused a fact rests on that refusal now, so the
+                 candidates are kept rather than dropped for it. *)
               case winner of
-                  SOME NoCounterexample => NoCounterexample
+                  SOME NoCounterexample =>
+                    if Refute_Facts.any_refused () then
+                      (case best_counterexample_result link jobs of
+                           SOME result => result
+                         | NONE => NoCounterexample)
+                    else NoCounterexample
                 | _ =>
                     (case best_counterexample_result link jobs of
                          SOME result => result

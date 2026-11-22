@@ -5577,7 +5577,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      faithful interpretation here.  Word types are the interpreted case
      above; everything else under [cart] refuses by name.  A datatype's
      constructors are encoded as free and covering the type, which its
-     TypeBase entry's theorems state (Refute_Facts). *)
+     TypeBase entry's theorems state (Refute_Facts): the case theorem,
+     from which the constructors are read and which alone makes them free
+     when the entry has no injectivity or distinctness theorem, and the
+     cases theorem. *)
   fun uncached_data_type_constrs ty =
     if is_interpreted_type ty then []
     else if Option.isSome (cart_type_parts ty) then
@@ -5600,7 +5603,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                         [] => []
                       | constructors =>
                           (List.app Refute_Facts.check
-                             (TypeBasePure.nchotomy_of info ::
+                             (TypeBasePure.case_def_of info ::
+                              TypeBasePure.nchotomy_of info ::
                               List.mapPartial I
                                 [TypeBasePure.one_one_of info,
                                  TypeBasePure.distinct_of info]);
