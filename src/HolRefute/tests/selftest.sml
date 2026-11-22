@@ -1845,6 +1845,7 @@ local
   val (rules, _, _) = IndDefLib.Hol_reln
     `rf_chk_ev 0 /\ (!n. rf_chk_od n ==> rf_chk_ev (SUC n)) /\
      (!n. rf_chk_ev n ==> rf_chk_od (SUC n))`
+  val _ = Theory.delete_binding "rf_chk_ev_rules"
   val _ = save_thm ("rf_chk_ev_rules", Tactical.prove (concl rules, cheat))
   val context = Refute_ModelFinder_HOL.make_context (#mf default_config) []
   fun refusals relation = #2 (Refute_Facts.capture (fn () =>
