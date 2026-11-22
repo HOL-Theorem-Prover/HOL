@@ -35,7 +35,7 @@ signature Refute_Core = sig
      value for it, and [partial] names what the back end left open, empty
      when both are complete.  Refute fills it in for every back end's
      candidates; a back end may give the values of its instance's binders
-     in [values], the instance's types ([instance_types]) and what it
+     in [values], the instance's types ([statement_types]) and what it
      left open in [partial], beforehand ([unlinked] otherwise). *)
   type statement_instance =
     { types : (hol_type, hol_type) Lib.subst,
@@ -92,8 +92,8 @@ signature Refute_Core = sig
       transport : (term * term * term) list }
 
   (* The type instance taking the running call's
-     statement to [instance]'s [original] (empty outside a call). *)
-  val instance_types : instance -> (hol_type, hol_type) Lib.subst
+     statement to [tm], an instance of it (empty outside a call). *)
+  val statement_types : term -> (hol_type, hol_type) Lib.subst
 
   datatype requirement =
       AnyGoal

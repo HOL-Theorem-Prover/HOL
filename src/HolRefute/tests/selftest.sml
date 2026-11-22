@@ -616,12 +616,26 @@ val _ = test "refute_goal honours assumptions; no_assms drops them"
       is_cex (refute_goal (exhaustive |> upd_no_assms true) g)
     end)
 
-(* The goal's binder [b] is not the assumption's [b]: [b ==> !b. b] is
-   false at [b = T]. *)
+(* The goal's binder [b] is not the
+   assumption's [b]: [b ==> !b. b] is false at [b = T, b' = F], the
+   binder named apart from the free variable, and each has its value. *)
 val _ = test "an assumption's variable is not a goal binder of its name"
   (fn () =>
     List.all (fn config =>
-      is_cex (refute_goal config ([``b : bool``], ``!b : bool. b``)))
+      case first_cex
+             (refute_goal config ([``b : bool``], ``!b : bool. b``)) of
+          SOME c =>
+            let
+              val values = #values (#statement c)
+              fun has variable value =
+                List.exists (fn (v, x) =>
+                  Term.aconv v variable andalso Term.aconv x value) values
+            in
+              has ``b : bool`` boolSyntax.T andalso
+              has ``b' : bool`` boolSyntax.F andalso
+              null (#partial (#statement c))
+            end
+        | NONE => false)
       [exhaustive, random])
 
 fun same_goal ((asl1, c1), (asl2, c2)) =
@@ -1328,6 +1342,19 @@ local
          (answer_as (QuasiGenuine ["stub"]) (SOME refutation))))
   val _ = register_backend (stub "selftest-refused-none" 10 enabled
     (fn _ => fn _ => (Refute_Facts.check refused; NoCounterexample)))
+  (* the refused fact is read on a thread not working for the call *)
+  val _ = register_backend (stub "selftest-other-thread" 10 enabled
+    (fn _ => fn _ =>
+       let
+         val finished = Synchronized.var "selftest other thread" false
+         val _ = Thread.fork (fn () =>
+           (Refute_Facts.check refused;
+            Synchronized.change finished (fn _ => true)), [])
+       in
+         Synchronized.guarded_access finished
+           (fn true => SOME ((), true) | false => NONE);
+         NoCounterexample
+       end))
   (* the call's refusal caps both: Genuine and QuasiGenuine before it *)
   val _ = register_backend (stub "selftest-heavy-genuine" 60 enabled
     (fn _ => fn _ => named "selftest-heavy-genuine" (answer NONE)))
@@ -1400,6 +1427,8 @@ in
             ["selftest-fast-uncounted", "selftest-slow-certified"] of
          Counterexample [c] => #backend c = "selftest-slow-certified"
        | _ => false))
+  val _ = test "a refusal on a thread not working for the call caps nothing"
+    (fn () => run ["selftest-other-thread"] == NoCounterexample)
   val _ = test "no counterexample resting on a refused fact is Unknown"
     (fn () => unknown_with "refused fact" (run ["selftest-refused-none"]))
   val _ = test "a refused negative keeps the other back ends' candidates"
@@ -1844,6 +1873,18 @@ in
   val _ = mf_test "an inner binder's value is not a polymorphic outer one's"
     (fn () => outer_x_unvalued ``!x:'a. P ==> !x:bool. x``)
 end
+
+(* With type variables merged, a value keyed at the
+   merged type is still its binder's. *)
+val _ = mf_test "a merged type variable keeps its binders' values" (fn () =>
+  case first_cex (refute (mf |> upd_merge_type_vars true)
+         ``!(f:'a -> 'b) (x:'a) (y:'a). f x = f y``) of
+      SOME c =>
+        List.exists (fn (binder, _) => #1 (Term.dest_var binder) = "f")
+          (#values (#statement c)) andalso
+        not (List.exists (String.isSubstring "belongs to no binder")
+               (#partial (#statement c)))
+    | NONE => false)
 
 (* A caller's frac registration that fails
    validation leaves no mark: the library's rat and its [rat_add] row stay

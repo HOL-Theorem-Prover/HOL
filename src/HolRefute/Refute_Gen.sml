@@ -177,7 +177,7 @@ structure Refute_Gen :> Refute_Gen = struct
 
   fun quotient_result_type th =
     let
-      val (_, body) = boolSyntax.strip_forall (Refute_Facts.concl th)
+      val (_, body) = boolSyntax.strip_forall (Thm.concl th)
       val (head, args) = boolSyntax.strip_comb body
       val {Thy, Name, ...} = Term.dest_thy_const head
       val _ =

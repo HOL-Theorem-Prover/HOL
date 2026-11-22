@@ -1144,7 +1144,7 @@ structure Refute_QC :> Refute_QC = struct
           evals = [], cert = NONE, scope = NONE, model = NONE,
           stats = stats,
           (* The instance it was found at *)
-          statement = {types = Refute_Core.instance_types instance,
+          statement = {types = Refute_Core.statement_types (#original instance),
                        (* the values tested, before display, of the
                           statement's binders the goal has *)
                        values = List.map apply_report_transport

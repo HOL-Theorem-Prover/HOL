@@ -36,11 +36,15 @@ structure Refute_Facts :> Refute_Facts = struct
      case Thread_Data.get held of
         SOME reasons => add reasons reason
       | NONE =>
-           Synchronized.change record (fn
-              NONE => NONE
-            | SOME reasons =>
-                SOME (if Lib.mem reason reasons then reasons
-                      else reasons @ [reason])))
+          (* only a thread working for the call ([Refute_Session.bind]):
+             a registration on another thread caps nothing *)
+          if Option.isSome (Refute_Session.current ()) then
+            Synchronized.change record (fn
+                NONE => NONE
+              | SOME reasons =>
+                  SOME (if Lib.mem reason reasons then reasons
+                        else reasons @ [reason]))
+          else ())
 
   fun tentative f =
     let

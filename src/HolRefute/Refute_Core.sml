@@ -1532,6 +1532,34 @@ structure Refute_Core :> Refute_Core = struct
      fall to the generic [exception_reason] dump. *)
   exception InstantiateError of string
 
+  (* The statement with each outer binder of its goal (under its [n]
+     assumptions) renamed, by name, apart from the binders before it and
+     from the free variables of [terms]: the same term, alpha-renamed,
+     whose binders and free variables each have a name of their own,
+     which no type instance makes two share.  A value keyed by a name then
+     belongs to one binder. *)
+  fun distinct_binders terms n statement =
+    let
+      fun rename avoid tm =
+        case Lib.total boolSyntax.dest_forall tm of
+            NONE => tm
+          | SOME (binder, body) =>
+              let val fresh = Term.prim_variant avoid binder
+              in
+                boolSyntax.mk_forall (fresh,
+                  rename (fresh :: avoid)
+                    (Term.subst [{redex = binder, residue = fresh}] body))
+              end
+      fun under 0 avoid tm = rename avoid tm
+        | under n avoid tm =
+            case Lib.total boolSyntax.dest_imp_only tm of
+                SOME (assumption, rest) =>
+                  boolSyntax.mk_imp (assumption, under (n - 1) avoid rest)
+              | NONE => rename avoid tm
+    in
+      under n (Term.free_varsl terms) statement
+    end
+
   fun preprocess_forms (cfg : config) (problem : problem) =
     let
       val assumptions =
@@ -1544,7 +1572,8 @@ structure Refute_Core :> Refute_Core = struct
       val (renamed, renaming) =
         Refute_ModelFinder_Names.rename_irrelevant_collisions
           (unrenamed_goal :: unrenamed_evals)
-      val original_goal = hd renamed
+      val original_goal =
+        distinct_binders renamed (length assumptions) (hd renamed)
       val input_evals = tl renamed
       val types = monomorphic_types (#qc cfg)
       val input_terms = original_goal :: input_evals
@@ -1600,37 +1629,19 @@ structure Refute_Core :> Refute_Core = struct
         List.filter (fn tyvar => not (Lib.mem tyvar width_vars))
           unpinned_tyvars
       (* The goal's binders, under the assumptions, and the goal with
-         them free.  A binder is renamed apart from the statement's free
-         variables first, so an assumption's variable of its name and
-         type stays a different variable. *)
-      fun open_binders free tm =
-        let
-          val (binders, body) = boolSyntax.strip_forall tm
-          fun rename (binder, (renamed, avoid)) =
-            if Lib.op_mem Term.aconv binder free then
-              let val fresh = Term.variant avoid binder
-              in (renamed @ [(binder, fresh)], fresh :: avoid) end
-            else (renamed @ [(binder, binder)], avoid)
-          val (renamed, _) =
-            List.foldl rename ([], free @ binders) binders
-        in
-          (map #2 renamed,
-           Term.subst (List.mapPartial (fn (binder, fresh) =>
-               if Term.aconv binder fresh then NONE
-               else SOME {redex = binder, residue = fresh}) renamed) body)
-        end
-      fun open_goal free 0 tm = open_binders free tm
-        | open_goal free n tm =
+         them free.  Their names are the statement's own
+         ([distinct_binders]), so none meets an assumption's variable. *)
+      fun open_goal 0 tm = boolSyntax.strip_forall tm
+        | open_goal n tm =
             case Lib.total boolSyntax.dest_imp_only tm of
                 SOME (assumption, rest) =>
-                  let val (binders, body) = open_goal free (n - 1) rest
+                  let val (binders, body) = open_goal (n - 1) rest
                   in (binders, boolSyntax.mk_imp (assumption, body)) end
-              | NONE => open_binders free tm
+              | NONE => boolSyntax.strip_forall tm
       fun make_instance card theta =
         let
           val original = Term.inst theta original_goal
-          val (binders, raw_goal) =
-            open_goal (Term.free_vars original) (length assumptions) original
+          val (binders, raw_goal) = open_goal (length assumptions) original
           val binders = binders @ Term.free_vars original
         in
           rebuild_instance
@@ -1738,16 +1749,16 @@ structure Refute_Core :> Refute_Core = struct
      bindings and Skolems are never read for it.  What cannot be paired,
      and a type variable no value or instance fixes, is named in
      [partial]. *)
-  (* The running call's statement, for [instance_types]: Refute calls run
+  (* The running call's statement, for [statement_types]: Refute calls run
      one at a time (Refute_Facts). *)
   val running_statement =
     Synchronized.var "running_statement" (NONE : term option)
 
-  fun instance_types (instance : instance) =
+  fun statement_types tm =
     case Synchronized.value running_statement of
         NONE => []
       | SOME statement =>
-          #2 (Term.match_term statement (#original instance))
+          #2 (Term.match_term statement tm)
           handle Feedback.HOL_ERR _ => []
 
   fun link_candidate (forms : preprocessed_forms) assumption_count
@@ -1760,8 +1771,7 @@ structure Refute_Core :> Refute_Core = struct
             case Lib.total boolSyntax.dest_imp_only tm of
                 SOME (_, rest) => goal_of (n - 1) rest
               | NONE => tm
-      (* An outer binder and a free variable of the same name and type are
-         different binders: a value named so fits both, and is partial. *)
+      (* each with a name of its own ([distinct_binders]) *)
       val binders =
         #1 (boolSyntax.strip_forall (goal_of assumption_count statement)) @
         Term.free_vars_lr statement

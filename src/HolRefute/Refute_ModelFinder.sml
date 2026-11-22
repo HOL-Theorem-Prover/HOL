@@ -624,8 +624,8 @@ fun abandoned_mono_verdict report exn =
    statement's own has no key ([Refute_Core.normalize_closed]), and a
    dependent one is a function of the binders it depends on, not one
    binder's value.  The type instance
-   is the instance's ([instance_types]), under which each key is its
-   statement binder. *)
+   is that of the goal as searched, after any type variables were merged,
+   under which each key is its statement binder. *)
 fun with_raw_values instance_types (prefix : (string * Type.hol_type) list)
       (replay_hints : MFM.replay_hint list)
       ({bindings, skolems, ...} : MFM.reconstruction)
@@ -985,7 +985,7 @@ fun run_instance deadline started (config : Refute_Core.config)
             MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =
-                with_raw_values (Refute_Core.instance_types instance) keys
+                with_raw_values (Refute_Core.statement_types original) keys
                   replay_hints reconstructed
                   (MFM.display_counterexample postprocessors displayed
                      semantic_cex)
