@@ -1059,7 +1059,10 @@ structure Refute_Extract :> Refute_Extract = struct
             handle Feedback.HOL_ERR _ =>
               TypeBasePure.accessors_of info @ TypeBasePure.updates_of info
         in
-          List.find has_head theorems
+          (* the entry is checked only once it holds the theorem *)
+          Option.map (fn theorem =>
+              (Refute_TypeBase.check_entry info; theorem))
+            (List.find has_head theorems)
         end
     in
       Lib.get_first from_info (Refute_TypeBase.elts ())
@@ -1577,6 +1580,7 @@ structure Refute_Extract :> Refute_Extract = struct
         NONE => NONE
       | SOME (info, fields, (is_update, selected)) =>
           let
+            val () = Refute_TypeBase.check_entry info
             val generic_ty = TypeBasePure.ty_of info
             val generic_head = if is_update then
               #fupd (#2 (List.nth (fields, selected)))

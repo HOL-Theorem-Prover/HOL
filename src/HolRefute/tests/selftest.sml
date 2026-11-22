@@ -1674,9 +1674,10 @@ end
 
 (* An entry with no injectivity or distinctness
    theorem makes its constructors free on its case theorem alone, from
-   which they are read: a cheated one caps a problem that uses them.
-   Here the cheated case theorem says [rf_chk_par], which is not
-   injective, is the constructor. *)
+   which they are read: a cheated one caps a problem that uses them, in
+   the model finder and in an extracted evaluation, which builds them as
+   a free datatype.  Here the cheated case theorem says [rf_chk_par],
+   which is not injective, is the constructor. *)
 local
   val _ = Datatype.Datatype `rf_chk_two = RFZero | RFOne`
   val par_def = new_definition ("rf_chk_par_def",
@@ -1700,14 +1701,71 @@ local
      size = NONE, encode = NONE, lift = NONE, one_one = NONE,
      distinct = NONE, fields = [], accessors = [], updates = [],
      destructors = [], recognizers = []}
+  fun with_par body =
+    (TypeBase.write [par_info];
+     Portable.finally (fn () => TypeBase.write [two_info]) body ())
 in
   val _ = mf_test "constructors on a cheated case theorem alone are capped"
     (fn () =>
-       (TypeBase.write [par_info];
-        Portable.finally (fn () => TypeBase.write [two_info])
-          (fn () => refute mf ``rf_chk_par 0 = rf_chk_par 2``) ())
+       with_par (fn () => refute mf ``rf_chk_par 0 = rf_chk_par 2``)
        |> refused_registration "refused fact")
+  val _ = test "extracted constructors on a cheated case theorem are capped"
+    (fn () =>
+       List.all (fn config =>
+         with_par (fn () =>
+           refute config ``!n. rf_chk_par n = rf_chk_par (n + 2)``)
+         |> refused_registration "refused fact") [exhaustive, random])
 end
+
+(* A generator reads a datatype's constructors
+   from its case theorem: a cheated one that leaves a constructor out
+   makes a search that misses it, so the search settles nothing, and the
+   generator is not kept for a later call on the type's own entry. *)
+local
+  val _ = Datatype.Datatype `rf_chk_three = RFC1 | RFC2 | RFC3`
+  val three_info =
+    valOf (TypeBase.read {Thy = current_theory (), Tyop = "rf_chk_three"})
+  val _ = new_constant ("rf_chk_three2_case",
+    ``:rf_chk_three -> 'a -> 'a -> 'a``)
+  val case_def = Tactical.prove
+    (``(!a b. rf_chk_three2_case RFC1 a b = (a:'a)) /\
+       (!a b. rf_chk_three2_case RFC2 a b = (b:'a))``, cheat)
+  val two_of_three = TypeBasePure.mk_datatype_info_no_simpls
+    {ax = TypeBasePure.axiom_of0 three_info,
+     induction = TypeBasePure.induction_of0 three_info,
+     case_def = case_def,
+     case_cong = TypeBasePure.case_cong_of three_info,
+     case_eq = TypeBasePure.case_eq_of three_info,
+     case_elim = TypeBasePure.case_elim_of three_info,
+     nchotomy = TypeBasePure.nchotomy_of three_info,
+     size = NONE, encode = NONE, lift = NONE, one_one = NONE,
+     distinct = TypeBasePure.distinct_of three_info, fields = [],
+     accessors = [], updates = [], destructors = [], recognizers = []}
+  val goal = ``!x. x <> RFC3``
+in
+  val _ = test "a generator on a cheated case theorem is refused, not kept"
+    (fn () =>
+       unknown_with "refused fact"
+         (TypeBase.write [two_of_three];
+          Portable.finally (fn () => TypeBase.write [three_info])
+            (fn () => refute exhaustive goal) ()) andalso
+       (case first_cex (refute exhaustive goal) of
+            SOME c => is_genuine c
+          | NONE => false))
+end
+
+(* A back end gives a value only for a variable
+   it traced to the statement's binder: here normalization drops the
+   vacuous outer [x] and pulls the inner one out. *)
+val _ = test "an inner binder's value is not a vacuous outer one's" (fn () =>
+  List.all (fn config =>
+    case first_cex (refute config ``!x:num. P ==> !x:num. x < 2``) of
+        SOME c =>
+          not (List.exists (fn (binder, _) =>
+                 #1 (Term.dest_var binder) = "x")
+               (#values (#statement c))) andalso
+          Lib.mem "no value for x" (#partial (#statement c))
+      | NONE => false) [exhaustive, random, narrowing])
 
 (* A Skolem value is the value of the binder it
    comes from: an inner binder sharing an outer one's name and type, or
@@ -2467,10 +2525,12 @@ val _ = test "narrowing refutes char and string goals" (fn () =>
   refute narrowing ``!s : string. s <> "ab"``
     |> single_cex_where (fn c => binding_is c ``s : string`` ``"ab"``))
 
-val _ = test "narrowing publishes an uncertified dependent interval"
+(* Its binders kept under their names through normalization, the
+   candidate is certified too. *)
+val _ = test "narrowing publishes a dependent interval"
   (fn () =>
     refute narrowing ``!i : num. lo <= i /\ i < LENGTH l ==> EL i l <= k``
-    |> cex_where (fn c => is_genuine c andalso uncertified c))
+    |> cex_where is_genuine)
 
 (* A two-column case matrix with a wildcard, as a case expression and as
    equations, where [Define] expands the wildcard into one equation per

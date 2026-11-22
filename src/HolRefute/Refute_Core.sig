@@ -73,6 +73,12 @@ signature Refute_Core = sig
 
   type instance =
     { original : term,
+      (* The statement's binders (its free variables and the outer [!]s
+         under its assumptions) that [normal] and [goal] have, free,
+         under their own names ([normalize_closed]) *)
+      binders : term list,
+      (* [goal] before finite quantifiers are expanded *)
+      normal : term,
       goal : term,
       qc_gate : string list option,
       evals : term list,
@@ -163,13 +169,18 @@ signature Refute_Core = sig
   (* The rewrites and the unwinding conversions together. *)
   val normal_conv : term -> thm
   val has_bounded_quantifier : term -> bool
-  val normalize : term -> term
+  (* [tm] normalized, with the statement's [binders] bound along its
+     outer [!]s and implications, and the binders the result still has
+     under their own names: no other variable of the result shares a
+     returned binder's name and type. *)
+  val normalize_closed : term list -> term -> term * term list
   val has_unexpanded_binder : term -> bool
   val register_literal_constants : (term -> term list option) -> unit
   val nonexecutable_constants : term list -> term list
   val show_constants : term list -> string
   val rebuild_instance :
-    {original : term, raw_goal : term, evals_for : term -> term list,
+    {original : term, binders : term list, raw_goal : term,
+     evals_for : term -> term list,
      card : int, transport : (term * term * term) list} -> instance
   val register_mono_instance_transform :
     (config -> instance -> instance) -> unit

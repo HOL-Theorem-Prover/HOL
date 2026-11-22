@@ -80,9 +80,9 @@ Verdicts and trust
   Nitpick); the `real` ersatz is rational-valued.
 * Checked facts: every theorem whose conclusion becomes part of a problem
   (definitions, compset and normalizer rewrites, cases and induction
-  theorems, the case, cases, injectivity and distinctness theorems of a
-  datatype whose case constant or constructors the model finder encodes,
-  registered descriptors and ersatz rows) goes through
+  theorems, registered descriptors and ersatz rows, and every theorem of
+  a `TypeBase` entry whose constructors, case constant, cases,
+  induction, record or size an engine reads) goes through
   `Refute_Facts`.  One with a hypothesis or a tag other than `DISK_THM`
   is refused when a problem uses it (the model finder's tables, read
   whole, hold a refusal until a problem looks the proposition up), and so
@@ -121,7 +121,8 @@ Verdicts and trust
   the library's own and trusted: SML exports every loaded module's
   signature to the session, so calling one deliberately grants trust.
 * Each counterexample's `statement` pairs its values with the binders of
-  the statement (outer `!`s and free variables) and gives the type
+  the statement (outer `!`s and free variables), each value one the back
+  end traced to its binder, never one matched by name, and gives the type
   instance, from the instance the back end searched
   (`Refute_Core.instance_types`) or the values' types; `partial` says what
   is missing or ambiguous, e.g. a type variable the model finder read as a
@@ -261,7 +262,8 @@ Module layout
   context captured at its entry and commits its cache changes at exit.
 * `Refute_RegistrationData`: structural descriptors, typed theorem codecs,
   and ancestry storage; its load hooks never validate or start Refute.
-* `Refute_TypeBase`: `TypeBase` accessors that read the call's context.
+* `Refute_TypeBase`: `TypeBase` accessors that read the call's context
+  and check the entry they read.
 * `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
 * `Refute_Eval`: substrate seam and PRNG;
   `Refute_EvalCompute`, `Refute_EvalSML`: substrates;

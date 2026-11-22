@@ -184,6 +184,8 @@ structure Refute_Core :> Refute_Core = struct
 
   type instance =
     { original : term,
+      binders : term list,
+      normal : term,
       goal : term,
       qc_gate : string list option,
       evals : term list,
@@ -1199,12 +1201,95 @@ structure Refute_Core :> Refute_Core = struct
 
   val normal_conv = Conv.QCONV (Conv.REPEATC (Conv.CHANGED_CONV normal_pass))
 
+  (* [pairs] applied to every variable of [tm], bound ones included:
+     alpha-safe when each new variable is fresh in [tm]. *)
+  fun rename_everywhere pairs tm =
+    if Term.is_var tm then
+      (case List.find (fn (from, _) => Term.aconv from tm) pairs of
+           SOME (_, to) => to
+         | NONE => tm)
+    else if Term.is_comb tm then
+      let val (f, x) = Term.dest_comb tm
+      in Term.mk_comb (rename_everywhere pairs f, rename_everywhere pairs x)
+      end
+    else if Term.is_abs tm then
+      let val (v, body) = Term.dest_abs tm
+      in Term.mk_abs (rename_everywhere pairs v, rename_everywhere pairs body)
+      end
+    else tm
+
   (* The rewrites include HOL's implicit ones, so
-     the theorem goes through the checked point. *)
-  fun normalize tm =
-    #2 (boolSyntax.dest_eq (Refute_Facts.concl (normal_conv tm)))
+     the theorem goes through the checked point.
+
+     The statement's binders are traced through it: each is marked with a
+     fresh name while the rewrites run ([pairs]: each binder with its
+     marker in [marked]), and the result is returned with the binders it
+     still has, under their own names.  The rewrites can drop a binder (a
+     vacuous one) and bring in a variable of its name and type (an inner
+     binder pulled out, a bounded quantifier's own): such a variable keeps
+     its name if the binder is gone and is renamed apart if not, and is
+     never among the binders returned. *)
+  fun normalize_marked pairs marked tm =
+    let
+      val normal =
+        #2 (boolSyntax.dest_eq (Refute_Facts.concl (normal_conv marked)))
+      val present = List.filter (fn (_, marker) =>
+        Lib.op_mem Term.aconv marker (Term.all_vars normal)) pairs
+      val binders = map #1 present
+      val others = List.filter (fn v => Lib.op_mem Term.aconv v binders)
+        (Term.all_vars normal)
+      val (apart, _) = List.foldl (fn (other, (apart, avoid)) =>
+          let val fresh = Term.variant avoid other
+          in (apart @ [(other, fresh)], fresh :: avoid) end)
+        ([], Term.all_vars normal @ map #1 pairs) others
+    in
+      (rename_everywhere
+         (apart @ map (fn (binder, marker) => (marker, binder)) present)
+         normal,
+       binders)
+    end
     handle Interrupt => raise Interrupt
-         | _ => tm
+         | _ => (tm, map #1 pairs)
+
+  fun marker_for variable = (variable, Term.genvar (Term.type_of variable))
+  fun mark_free pairs tm =
+    Term.subst (map (fn (variable, marker) =>
+      {redex = variable, residue = marker}) pairs) tm
+
+  (* [tm] with the statement's [binders] free *)
+  fun normalize binders tm =
+    let val pairs = map marker_for binders
+    in normalize_marked pairs (mark_free pairs tm) tm end
+
+  (* [tm] with the statement's [binders] bound along its outer [!]s and
+     implications *)
+  fun normalize_closed binders tm =
+    let
+      fun mark [] tm = (tm, [])
+        | mark expected tm =
+            case Lib.total boolSyntax.dest_forall tm of
+                SOME (variable, body) =>
+                  if Lib.op_mem Term.aconv variable expected then
+                    let
+                      val pair as (_, marker) = marker_for variable
+                      val (marked, pairs) =
+                        mark (Lib.op_set_diff Term.aconv expected [variable])
+                          (mark_free [pair] body)
+                    in
+                      (boolSyntax.mk_forall (marker, marked), pair :: pairs)
+                    end
+                  else (tm, [])
+              | NONE =>
+                  case Lib.total boolSyntax.dest_imp_only tm of
+                      SOME (assumption, rest) =>
+                        let val (marked, pairs) = mark expected rest
+                        in (boolSyntax.mk_imp (assumption, marked), pairs)
+                        end
+                    | NONE => (tm, [])
+      val (marked, pairs) = mark binders tm
+    in
+      normalize_marked pairs marked tm
+    end
 
   fun expand_quantifiers tm =
     let
@@ -1405,13 +1490,16 @@ structure Refute_Core :> Refute_Core = struct
      depend on it.  Shared by [make_instance] and [Refute_QC]'s
      [use_subtype] transform, so a transported goal gets the same
      simplification as its hand-written equivalent. *)
-  fun rebuild_instance {original, raw_goal, evals_for, card, transport} =
+  fun rebuild_instance {original, binders, raw_goal, evals_for, card,
+                        transport} =
     let
-      val goal = expand_quantifiers
-        (strip_outer_forall_body (normalize raw_goal))
+      val (normal, binders) = normalize binders raw_goal
+      val normal = strip_outer_forall_body normal
+      val goal = expand_quantifiers normal
       val evals = evals_for goal
     in
-      {original = original, goal = goal,
+      {original = original, binders = binders, normal = normal,
+       goal = goal,
        qc_gate = compute_qc_gate goal evals, evals = evals, card = card,
        size_matters = instance_size_matters goal,
        transport = transport} : instance
@@ -1511,12 +1599,23 @@ structure Refute_Core :> Refute_Core = struct
       val unpinned_carrier_vars =
         List.filter (fn tyvar => not (Lib.mem tyvar width_vars))
           unpinned_tyvars
+      (* The goal's binders, under the assumptions, and the goal with
+         them free *)
+      fun open_goal 0 tm = boolSyntax.strip_forall tm
+        | open_goal n tm =
+            case Lib.total boolSyntax.dest_imp_only tm of
+                SOME (assumption, rest) =>
+                  let val (binders, body) = open_goal (n - 1) rest
+                  in (binders, boolSyntax.mk_imp (assumption, body)) end
+              | NONE => boolSyntax.strip_forall tm
       fun make_instance card theta =
-        let val original = Term.inst theta original_goal
+        let
+          val original = Term.inst theta original_goal
+          val (binders, raw_goal) = open_goal (length assumptions) original
+          val binders = binders @ Term.free_vars original
         in
           rebuild_instance
-            {original = original,
-             raw_goal = strip_outer_forall_body original,
+            {original = original, binders = binders, raw_goal = raw_goal,
              evals_for = fn goal => add_equation_eval_terms goal
                (map (Term.inst theta) input_evals),
              card = card, transport = []}
@@ -1613,11 +1712,12 @@ structure Refute_Core :> Refute_Core = struct
       | _ => result
 
   (* The statement a candidate is about, filled
-     in from what the candidate shows: its bindings, the model finder's
-     Skolem values (named after the binder they refute), its scope, and
-     the instances the backend was given.  A value is paired with the
-     statement's binder of its name whose type matches; what cannot be
-     paired, and a type variable no value or instance fixes, is named in
+     in from the values the back end gave in [statement], its scope, and
+     the instances the backend was given.  A back end gives a value only
+     for a variable it can trace to a binder of the statement, under that
+     binder's name and type ([normalize], [Refute_Skolem]); its displayed
+     bindings and Skolems are never read for it.  What cannot be paired,
+     and a type variable no value or instance fixes, is named in
      [partial]. *)
   (* The running call's statement, for [instance_types]: Refute calls run
      one at a time (Refute_Facts). *)
@@ -1647,37 +1747,20 @@ structure Refute_Core :> Refute_Core = struct
         #1 (boolSyntax.strip_forall (goal_of assumption_count statement)) @
         Term.free_vars_lr statement
       fun name_of variable = #1 (Term.dest_var variable)
-      (* A back end may give its binders' values in [statement] itself,
-         as tested, before display formatting: they stand for their names
-         over the displayed bindings, and the displayed Skolems are then
-         not read (a Skolem it left out is one it could not trace). *)
+      (* The values the back end gave, as tested, before display
+         formatting, each keyed by the binder it traced it to *)
       val given = List.filter (Term.is_var o #1) (#values (#statement cex))
-      val given_names = map (name_of o #1) given
       (* a back end's own type instance and reasons come first *)
       val given_partial = List.filter
         (fn reason => not (Lib.mem reason (#partial unlinked)))
         (#partial (#statement cex))
-      val skolems =
-        case (#model cex, null given andalso null given_partial) of
-            (SOME {skolems, ...}, true) => skolems
-          | _ => []
-      (* the same value shown twice (a binding and a Skolem) is one, and
-         values of different types are told apart by their types.  A value
-         the back end gave keeps the type of the binder it keyed it by. *)
       fun same (name, value, _) (other, other_value, _) =
         name = other andalso Term.aconv value other_value
       val shown =
         List.foldl (fn (row, kept) =>
             if List.exists (same row) kept then kept else kept @ [row]) []
           (map (fn (variable, value) =>
-                  (name_of variable, value, SOME (Term.type_of variable)))
-             given @
-           List.filter (fn (name, _, _) => not (Lib.mem name given_names))
-             (map (fn (variable, value) =>
-                    (if Term.is_var variable then name_of variable
-                     else Parse.term_to_string variable, value, NONE))
-               (#bindings cex) @
-              map (fn (name, value) => (name, value, NONE)) skolems))
+                  (name_of variable, value, Term.type_of variable)) given)
       fun named name ty =
         Lib.op_mk_set Term.aconv
           (map #2 (List.filter (fn (other, other_value, _) =>
@@ -1686,11 +1769,10 @@ structure Refute_Core :> Refute_Core = struct
       (* A value keyed by a binder fits only a binder of the statement that
          is that binder under the back end's type instance, never one whose
          type merely instantiates to the value's. *)
-      fun keyed_by NONE _ = true
-        | keyed_by (SOME key_type) binder =
-            Refute_Util.same_type
-              (Type.type_subst (#types (#statement cex))
-                 (Term.type_of binder)) key_type
+      fun keyed_by key_type binder =
+        Refute_Util.same_type
+          (Type.type_subst (#types (#statement cex)) (Term.type_of binder))
+          key_type
       fun pair ((name, value, key_type), (paired, theta, partial)) =
         if length (named name (Term.type_of value)) > 1 then
           (paired, theta,

@@ -2474,7 +2474,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           List.nth (argument_tys, index)))
       val tuple = tuple_term arguments
       fun size_function ty =
-        TypeBasePure.type_size (Refute_TypeBase.theTypeBase ()) ty
+        Refute_TypeBase.type_size ty
       fun component_size (argument, ty) =
         Term.mk_comb (size_function ty, argument)
       fun abstraction body =
@@ -2568,7 +2568,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         handle HOL_ERR _ => NONE
 
       val whole_functions = List.mapPartial (fn ty =>
-        Lib.total (TypeBasePure.type_size (Refute_TypeBase.theTypeBase ())) ty)
+        Lib.total Refute_TypeBase.type_size ty)
         tuple_tys
       val whole = if length whole_functions = length tuple_tys then
           case_measure whole_functions
@@ -2580,7 +2580,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       fun component_function argument_tys index =
         tuple_abstraction argument_tys (fn arguments =>
           Term.mk_comb
-            (TypeBasePure.type_size (Refute_TypeBase.theTypeBase ())
+            (Refute_TypeBase.type_size
                (List.nth (argument_tys, index)),
              List.nth (arguments, index)))
 
@@ -3304,9 +3304,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      [Refute_TypeBase.fetch] is a type-net lookup, so asking at a specialized
      instance can pick a different entry for one operator - [:'a word] finds
      the constructor-free word entry while [:('a,'b) cart] finds the cart
-     entry - and callers would then disagree about [cart]. *)
+     entry - and callers would then disagree about [cart].  Whether a type
+     has constructors classifies it, also on a scan of every type, so the
+     entry is not checked here: the constructors a problem is encoded
+     with are read through [Refute_TypeBase.fetch]
+     ([uncached_data_type_constrs]). *)
   fun database_constructors ty =
-    (case Refute_TypeBase.fetch (generic_instance ty) of
+    (case Refute_TypeBase.peek (generic_instance ty) of
          SOME info => TypeBasePure.constructors_of info
        | NONE => [])
     handle HOL_ERR _ => []
@@ -5577,10 +5581,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      faithful interpretation here.  Word types are the interpreted case
      above; everything else under [cart] refuses by name.  A datatype's
      constructors are encoded as free and covering the type, which its
-     TypeBase entry's theorems state (Refute_Facts): the case theorem,
-     from which the constructors are read and which alone makes them free
-     when the entry has no injectivity or distinctness theorem, and the
-     cases theorem. *)
+     TypeBase entry's theorems state, checked where the entry is read
+     ([Refute_TypeBase.fetch]). *)
   fun uncached_data_type_constrs ty =
     if is_interpreted_type ty then []
     else if Option.isSome (cart_type_parts ty) then
@@ -5599,16 +5601,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         | [] =>
             (case Refute_TypeBase.fetch ty of
                  SOME info =>
-                   (case TypeBasePure.constructors_of info of
-                        [] => []
-                      | constructors =>
-                          (List.app Refute_Facts.check
-                             (TypeBasePure.case_def_of info ::
-                              TypeBasePure.nchotomy_of info ::
-                              List.mapPartial I
-                                [TypeBasePure.one_one_of info,
-                                 TypeBasePure.distinct_of info]);
-                           map (TypeBasePure.cinst ty) constructors))
+                   map (TypeBasePure.cinst ty)
+                     (TypeBasePure.constructors_of info)
                | NONE => [])
 
   fun data_type_constrs
@@ -5914,8 +5908,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         in
           search (0, TypeBasePure.fields_of info)
         end
+      (* the entry is checked only once it holds the field *)
+      fun found info =
+        Option.map (fn field => (Refute_TypeBase.check_entry info; field))
+          (search_type info)
     in
-      Lib.get_first search_type (Refute_TypeBase.elts ())
+      Lib.get_first found (Refute_TypeBase.elts ())
     end handle HOL_ERR _ => NONE
 
   fun dest_record_get term = find_field #accessor term
@@ -6072,7 +6070,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           then NONE
           else SOME (const_key case_const,
                      (length constructors, 0,
-                      [TypeBasePure.case_def_of info]))
+                      Refute_TypeBase.entry_theorems info))
         end handle HOL_ERR _ => NONE
       val raw = List.mapPartial entry (Refute_TypeBase.elts ())
       (* Revalidation, not a formality: a registration that passed at

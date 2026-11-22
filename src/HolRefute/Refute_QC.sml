@@ -172,6 +172,8 @@ structure Refute_QC :> Refute_QC = struct
             in
               Refute_Core.rebuild_instance
                 {original = #original instance,
+                 binders = #binders instance @
+                   map (fn {r, ...} : transport_entry => r) entries,
                  raw_goal = List.foldr boolSyntax.mk_imp body
                    (map transport_guard entries),
                  evals_for = fn _ => evals,
@@ -309,9 +311,12 @@ structure Refute_QC :> Refute_QC = struct
             SOME answer => answer
           | NONE =>
               let
-                val answer = compute ()
+                val (answer, refused) = Refute_Facts.capture compute
                 val _ = store answer
-                val _ = Option.app SmartGen.cache_inference (#result answer)
+                (* the context keeps no program resting on a refused fact *)
+                val _ = if null refused then
+                    Option.app SmartGen.cache_inference (#result answer)
+                  else ()
               in
                 answer
               end
@@ -1140,9 +1145,13 @@ structure Refute_QC :> Refute_QC = struct
           stats = stats,
           (* The instance it was found at *)
           statement = {types = Refute_Core.instance_types instance,
-                       (* the values tested, before display *)
+                       (* the values tested, before display, of the
+                          statement's binders the goal has *)
                        values = List.map apply_report_transport
-                         goal_ordered_bindings,
+                         (List.filter (fn (variable, _) =>
+                            Lib.op_mem Term.aconv variable
+                              (#binders instance))
+                            goal_ordered_bindings),
                        partial = #partial Refute_Core.unlinked} }
       val next =
         {env = env, ground_env = ground_env, case_tree = case_tree,

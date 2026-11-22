@@ -280,15 +280,14 @@ structure Refute_Gen :> Refute_Gen = struct
     let
       val key = induction_key info
       val induction = Option.map Refute_Facts.concl (induction_thm info)
-      (* Another entry's theorem is checked only once it matches: an
-         entry outside the family never reaches the problem. *)
+      (* Another entry is checked only once it matches: an entry outside
+         the family never reaches the problem. *)
       fun member other =
-        same_family key other orelse
-        (case (induction, induction_thm other) of
-           (SOME mine, SOME theirs) =>
-             Term.aconv mine (Thm.concl theirs) andalso
-             (Refute_Facts.check theirs; true)
-         | _ => false)
+        (same_family key other orelse
+         (case (induction, induction_thm other) of
+            (SOME mine, SOME theirs) => Term.aconv mine (Thm.concl theirs)
+          | _ => false)) andalso
+        (Refute_TypeBase.check_entry other; true)
       val theta = Type.match_type (TypeBasePure.ty_of info) ty
       fun instantiate family_info =
         Type.type_subst theta (TypeBasePure.ty_of family_info)

@@ -620,8 +620,10 @@ fun abandoned_mono_verdict report exn =
    statement's binder is under no existential); its value is then keyed
    by that prefix binder's own name and type.  Any other Skolem's value is
    left out and marked: a binder sharing its name and type with another
-   in the goal has no such place, and a dependent one is a function of
-   the binders it depends on, not one binder's value.  The type instance
+   in the goal has no such place, a prefix binder that is not the
+   statement's own has no key ([Refute_Core.normalize_closed]), and a
+   dependent one is a function of the binders it depends on, not one
+   binder's value.  The type instance
    is the instance's ([instance_types]), under which each key is its
    statement binder. *)
 fun with_raw_values instance_types (prefix : (string * Type.hol_type) list)
@@ -680,8 +682,22 @@ fun run_instance deadline started (config : Refute_Core.config)
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
     val (_, closure, _) = Refute_Cert.closure_of original
-    val (_, _, pnf) = Refute_Cert.normalize_to_pnf Conv.QCONV closure
+    (* The replay's prefix, position for position ([normalize_to_pnf]),
+       with only the statement's own binders under their names, at the
+       types [original] gives them *)
+    val binders =
+      case Lib.total (Term.match_term (#original instance)) original of
+          SOME (_, types) => map (Term.inst types) (#binders instance)
+        | NONE => #binders instance
+    val (normal, traced) = Refute_Core.normalize_closed
+      (binders @ Term.free_vars original) closure
+    val pnf = boolSyntax.rhs (Thm.concl
+      (Conv.QCONV Refute_Narrow.prenex_conversion normal))
     val prefix = Refute_Skolem.prefix_binders pnf
+    (* a prefix binder that is not the statement's own keys no value *)
+    val keys = map (fn (name, ty) =>
+        if Lib.op_mem Term.aconv (Term.mk_var (name, ty)) traced
+        then (name, ty) else ("", ty)) prefix
     val prefix_origins =
       Refute_Skolem.mark_source_ambiguities original prefix
     val context = MFH.make_context context_mf eval_terms
@@ -969,7 +985,7 @@ fun run_instance deadline started (config : Refute_Core.config)
             MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =
-                with_raw_values (Refute_Core.instance_types instance) prefix
+                with_raw_values (Refute_Core.instance_types instance) keys
                   replay_hints reconstructed
                   (MFM.display_counterexample postprocessors displayed
                      semantic_cex)
