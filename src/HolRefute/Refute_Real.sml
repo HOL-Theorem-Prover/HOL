@@ -119,8 +119,10 @@ structure Refute_Real :> Refute_Real = struct
     if qualifying_frac_binding binding then SOME (frac_atom_to_real value)
     else NONE
 
+  (* The library's own frac type: trusted
+     (Refute_Facts) *)
   fun register () =
-    (Refute_ModelFinder_Model.register_frac_type_with_display
+    (Refute_ModelFinder_Model.register_library_frac_type_with_display
        (MFH.real_frac_registration, realSyntax.real_ty, frac_atom_to_real);
      Refute_ModelFinder_Model.register_frac_replay recover_frac_binding;
      Refute_Core.register_literal_constants literal_constants;

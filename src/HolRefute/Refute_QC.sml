@@ -1137,7 +1137,13 @@ structure Refute_QC :> Refute_QC = struct
             else Refute_Core.Potential [stuck],
           bindings = ordered_bindings,
           evals = [], cert = NONE, scope = NONE, model = NONE,
-          stats = stats }
+          stats = stats,
+          (* The instance it was found at *)
+          statement = {types = Refute_Core.instance_types instance,
+                       (* the values tested, before display *)
+                       values = List.map apply_report_transport
+                         goal_ordered_bindings,
+                       partial = #partial Refute_Core.unlinked} }
       val next =
         {env = env, ground_env = ground_env, case_tree = case_tree,
          genuine = genuine, run_depth = run_depth} :: ignored
@@ -1460,6 +1466,15 @@ structure Refute_QC :> Refute_QC = struct
                        Compiled test =>
                          (if report then
                             say_selected (#name substrate) explicit
+                          else ();
+                          (* Whatever a
+                             substrate the library did not register
+                             reports, a candidate or exhaustion, rests on
+                             it (Refute_Eval.is_foreign_substrate) *)
+                          if Refute_Eval.is_foreign_substrate
+                               (#name substrate)
+                          then Refute_Facts.foreign
+                                 ("substrate " ^ #name substrate)
                           else ();
                           Selected (#name substrate, test))
                      | Inapplicable why =>
@@ -1848,6 +1863,7 @@ structure Refute_QC :> Refute_QC = struct
        {preflight = Refute_Extract.native_preflight,
         extract = Refute_Extract.extract_problem};
      Refute_EvalCompute.register_substrate ();
-     Refute_Core.register_backend exhaustive_backend;
-     Refute_Core.register_backend random_backend)
+     (* The library's own: trusted *)
+     Refute_Core.register_library_backend exhaustive_backend;
+     Refute_Core.register_library_backend random_backend)
 end

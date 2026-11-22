@@ -507,7 +507,7 @@ fun replace_stats stats (cex : Refute_Core.counterexample) =
   {backend = #backend cex, substrate = #substrate cex,
    certainty = #certainty cex, bindings = #bindings cex,
    evals = #evals cex, cert = #cert cex, scope = #scope cex,
-   model = #model cex, stats = stats}
+   model = #model cex, stats = stats, statement = #statement cex}
 
 (* HOL4 has no type classes or sorts, so all goal type variables occupy
    Isabelle's single default-sort equivalence class.  Keeping the
@@ -611,6 +611,25 @@ fun abandoned_mono_verdict report exn =
       Timeout.TIMEOUT _ => (report ("timeout", ""); false)
     | Util.BAD (location, detail) => (report (location, detail); false)
     | _ => raise exn
+
+(* The statement's values are the model's own,
+   before display formatting: the bindings and the Skolem values by the
+   names they stand for (Refute_Core's [link_candidate]). *)
+fun with_raw_values ({bindings, skolems, ...} : MFM.reconstruction)
+      (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
+  let
+    val values =
+      List.filter (Term.is_var o #1) bindings @
+      map (fn (name, value) => (Term.mk_var (name, Term.type_of value), value))
+        skolems
+    val {types, values = given, partial} = #statement cex
+  in
+    {backend = #backend cex, substrate = #substrate cex,
+     certainty = #certainty cex, bindings = #bindings cex,
+     evals = #evals cex, cert = #cert cex, scope = #scope cex,
+     model = #model cex, stats = #stats cex,
+     statement = {types = types, values = given @ values, partial = partial}}
+  end
 
 fun run_instance deadline started (config : Refute_Core.config)
       incremental solver (initial_max_potential, initial_max_genuine)
@@ -854,7 +873,7 @@ fun run_instance deadline started (config : Refute_Core.config)
        certainty = Refute_Core.Potential [], bindings = [], evals = [],
        cert = NONE,
        scope = SOME (#card_assigns (#scope (metadata problem))),
-       model = NONE, stats = []}
+       model = NONE, stats = [], statement = Refute_Core.unlinked}
 
     fun reconstruct problem bounds =
       if not (valid_instance (raw_problem problem) bounds) then
@@ -916,8 +935,9 @@ fun run_instance deadline started (config : Refute_Core.config)
             MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =
-                MFM.display_counterexample postprocessors displayed
-                  semantic_cex
+                with_raw_values reconstructed
+                  (MFM.display_counterexample postprocessors displayed
+                     semantic_cex)
               in
                 if #genuine_only config andalso
                    certainty_is_potential (#certainty cex)
@@ -1605,7 +1625,8 @@ val kodkod_backend : Refute_Core.backend =
    run = run,
    render = SOME render_witness}
 
+(* The library's own: trusted (Refute_Facts) *)
 fun register_backends () =
-  Refute_Core.register_backend kodkod_backend
+  Refute_Core.register_library_backend kodkod_backend
 
 end

@@ -19,8 +19,10 @@ structure Refute_Rat :> Refute_Rat = struct
              Term.list_mk_comb (rat_cons, [numerator, denominator])
            end handle Feedback.HOL_ERR _ => term)
 
+  (* The library's own frac type: trusted
+     (Refute_Facts) *)
   fun register () =
-    (Refute_ModelFinder_Model.register_frac_type_with_display
+    (Refute_ModelFinder_Model.register_library_frac_type_with_display
        (MFH.rat_frac_registration, ratSyntax.rat_ty, frac_atom_to_rat);
      Refute_EvalRat.register ())
 

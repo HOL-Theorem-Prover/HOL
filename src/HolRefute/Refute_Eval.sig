@@ -131,6 +131,12 @@ signature Refute_Eval = sig
   val ignored_candidate : candidate -> candidate list -> bool
   val fully_applied_constructor : term -> (term * term list) option
 
+  (* [register_substrate] is a registration the
+     finder did not make: QC candidates it finds count only with a trusted
+     kernel certificate.  The library registers its own with
+     [register_library_substrate]. *)
   val register_substrate : substrate -> unit
+  val register_library_substrate : substrate -> unit
+  val is_foreign_substrate : string -> bool
   val get_substrates : unit -> substrate list
 end

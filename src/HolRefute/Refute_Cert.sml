@@ -32,15 +32,15 @@ structure Refute_Cert :> Refute_Cert = struct
     in if message = "" then "unknown proof failure" else message end
     handle Interrupt => raise Interrupt | _ => "unknown proof failure"
 
-  (* Disk theorems are checked kernel imports: DISK_THM is the marker HOL4
-     itself accepts, subtracting it in Theory.oracle_string_of and listing
-     it in Sanity.accepted_oracles.  Every other oracle, and every axiom
-     introduced in this session, crosses Refute's certification trust
-     boundary.  Requiring an empty tag instead would reject every
+  (* The test is Refute_Facts's, which also
+     refuses hypotheses.  Disk theorems are checked kernel imports:
+     DISK_THM is the marker HOL4 itself accepts, subtracting it in
+     Theory.oracle_string_of and listing it in Sanity.accepted_oracles.
+     Every other oracle, and every axiom, crosses Refute's certification
+     trust boundary.  Requiring an empty tag instead would reject every
      certificate whose evaluation touched a library rewrite, which is all
      of them. *)
-  fun trusted theorem =
-    Tag.isEmpty (Thm.tag theorem) orelse Tag.isDisk (Thm.tag theorem)
+  val trusted = Refute_Facts.trusted
 
   fun conform_conclusion label expected theorem =
     Thm.EQ_MP (Thm.ALPHA (Thm.concl theorem) expected) theorem
@@ -289,7 +289,8 @@ structure Refute_Cert :> Refute_Cert = struct
       cert = cert,
       scope = #scope cex,
       model = #model cex,
-      stats = #stats cex }
+      stats = #stats cex,
+      statement = #statement cex }
 
   fun uncertified cex =
     Uncertified (replace cex Refute_Core.Genuine [] NONE)

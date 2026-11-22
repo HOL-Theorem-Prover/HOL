@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Five deliberate reaches outside the [Refute] signature.  One is a
+(* Eight deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -24,7 +24,13 @@ local open Refute_Rat Refute_Real in end
    deadline.  The fifth is [Refute_Cert_Model.certify_portfolio_detailed_rich],
    called by "a failed case split goes on to the next candidate": the
    order in which the model replay tries its candidates is not visible
-   through [Refute]. *)
+   through [Refute].  The sixth is [Refute_Core.register_test_backend],
+   which the stub back ends register with: they stand in for the
+   library's own, and [Refute.register_backend] caps a back end the
+   finder did not make.  The seventh is [Refute_Facts.check], called by
+   stubs that stand for a back end reading a refused fact.  The eighth is
+   [Refute_Eval]'s substrate registry, called by "a caller's substrate is
+   refused": no public route registers a substrate. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -238,7 +244,7 @@ fun mf_test name pred =
 fun stub_cex backend certainty : counterexample =
   {backend = backend, substrate = "stub", certainty = certainty,
    bindings = [], evals = [], cert = NONE, scope = NONE, model = NONE,
-   stats = []}
+   stats = [], statement = unlinked}
 
 fun stub name weight enabled run : backend =
   {name = name, family = OtherFamily, weight = weight,
@@ -260,6 +266,11 @@ fun with_family family (b : backend) : backend =
    requires = #requires b, input = #input b,
    certainty_ceiling = #certainty_ceiling b, run = #run b,
    render = #render b}
+
+(* The stubs stand in for the library's own back ends: one registered
+   with [Refute.register_backend] is one the finder did not make, and its
+   answers are capped at Potential (tested below). *)
+val register_backend = Refute_Core.register_test_backend
 
 fun with_enabled flags body =
   (app (fn f => f := true) flags;
@@ -1206,6 +1217,401 @@ in
     race ExpectPotential ["selftest-merge-low", "selftest-merge-high"] ``T``
     |> won_by "selftest-merge-low")
 end
+
+(* The checked point: a fact with a hypothesis or
+   an untrusted tag, and a back end the finder did not make, leave a
+   candidate at Potential with the reason; among the candidates completed
+   within the budget, one with a kernel theorem comes first. *)
+val _ = section "checked facts and candidate preference"
+
+fun refused_only (Counterexample cs) =
+      not (null cs) andalso
+      List.all (fn (c : counterexample) =>
+        not (Option.isSome (#cert c)) andalso
+        (case #certainty c of
+             Potential reasons =>
+               List.exists (String.isPrefix "refused fact") reasons
+           | _ => false)) cs
+  | refused_only _ = false
+
+local
+  val _ = new_constant ("rf_chk_cheated", ``:num -> num``)
+  val _ = new_constant ("rf_chk_assumed", ``:num -> num``)
+  val _ = new_constant ("rf_chk_rewritten", ``:num``)
+  val cheated = Tactical.prove (``!x. rf_chk_cheated x = x + 1``, cheat)
+  val assumed = Thm.ASSUME ``!x. rf_chk_assumed x = x + 2``
+  val rewrite = Tactical.prove (``rf_chk_rewritten = 4``, cheat)
+in
+  val _ = test "a fact with an untrusted tag is refused" (fn () =>
+    with_compset [cheated] (fn () =>
+      refute (qc |> upd_timeout 20.0) ``!x. rf_chk_cheated x = x``)
+    |> refused_only)
+  val _ = test "a fact with a hypothesis is refused" (fn () =>
+    with_compset [assumed] (fn () =>
+      refute (qc |> upd_timeout 20.0) ``!x. rf_chk_assumed x = x``)
+    |> refused_only)
+  val _ = test "a fact reaching the goal as an implicit rewrite is refused"
+    (fn () =>
+      let val saved = Ho_Rewrite.implicit_rewrites ()
+      in
+        Portable.finally (fn () => Ho_Rewrite.set_implicit_rewrites saved)
+          (fn () =>
+             (Ho_Rewrite.add_implicit_rewrites [rewrite];
+              refute (qc |> upd_timeout 20.0) ``rf_chk_rewritten = 5``)) ()
+        |> refused_only
+      end)
+end
+
+local
+  val enabled = ref false
+  fun answer cert = Counterexample
+    [{backend = "", substrate = "stub", certainty = Genuine, bindings = [],
+      evals = [], cert = cert, scope = NONE, model = NONE, stats = [],
+      statement = unlinked}]
+  fun named name (Counterexample [c : counterexample]) = Counterexample
+        [{backend = name, substrate = #substrate c,
+          certainty = #certainty c, bindings = #bindings c,
+          evals = #evals c, cert = #cert c, scope = #scope c,
+          model = #model c, stats = #stats c, statement = #statement c}]
+    | named _ outcome = outcome
+  (* the fast one reads a refused fact, so it cannot count; the slow one
+     proves the statement [F] false *)
+  val refused = Tactical.prove (``rf_chk_rewritten = 4``, cheat)
+  val refutation = Drule.EQF_ELIM (Thm.REFL boolSyntax.F)
+  val _ = register_backend (stub "selftest-fast-uncounted" 10 enabled
+    (fn _ => fn _ =>
+       (Refute_Facts.check refused;
+        named "selftest-fast-uncounted" (answer NONE))))
+  val _ = register_backend (stub "selftest-slow-certified" 60 enabled
+    (fn _ => fn _ =>
+       (OS.Process.sleep (Time.fromReal 0.2);
+        named "selftest-slow-certified" (answer (SOME refutation)))))
+  val _ = Refute.register_backend (stub "selftest-foreign" 10 enabled
+    (fn _ => fn _ =>
+       named "selftest-foreign" (answer (SOME refutation))))
+  val _ = Refute.register_backend (stub "selftest-foreign-none" 10
+    enabled (fn _ => fn _ => NoCounterexample))
+  val _ = register_backend (stub "selftest-refused-none" 10 enabled
+    (fn _ => fn _ => (Refute_Facts.check refused; NoCounterexample)))
+  fun run_with update names =
+    with_enabled [enabled] (fn () =>
+      with_global_thread_count 2 (fn () =>
+        refute (default_config |> quiet |> upd_timeout 5.0
+                  |> upd_sequential false |> update
+                  |> only (map RegisteredBackend names)) ``F``))
+  val run = run_with I
+in
+  val _ = test "a slower candidate with a kernel theorem comes first"
+    (fn () =>
+      case run ["selftest-fast-uncounted", "selftest-slow-certified"] of
+          Counterexample [first, second] =>
+            #backend first = "selftest-slow-certified" andalso
+            Option.isSome (#cert first) andalso is_genuine first andalso
+            #backend second = "selftest-fast-uncounted" andalso
+            not (Option.isSome (#cert second)) andalso
+            (case #certainty second of
+                 Potential reasons =>
+                   List.exists (String.isPrefix "refused fact") reasons
+               | _ => false)
+        | _ => false)
+  val _ = test "a back end the finder did not make is capped" (fn () =>
+    case run ["selftest-foreign"] of
+        Counterexample [c] =>
+          not (Option.isSome (#cert c)) andalso
+          (case #certainty c of
+               Potential reasons => List.exists
+                 (String.isPrefix "refused registration") reasons
+             | _ => false)
+      | _ => false)
+  val _ = test "a back end the finder did not make settles nothing"
+    (fn () =>
+      not_refuted (run ["selftest-foreign-none"]) andalso
+      unknown_with "refused registration" (run ["selftest-foreign-none"]))
+  val _ = test "genuine_only drops a candidate a refusal capped" (fn () =>
+    unknown_with "refused fact"
+      (run_with (upd_genuine_only true) ["selftest-fast-uncounted"]) andalso
+    (case run_with (upd_genuine_only true)
+            ["selftest-fast-uncounted", "selftest-slow-certified"] of
+         Counterexample [c] => #backend c = "selftest-slow-certified"
+       | _ => false))
+  val _ = test "no counterexample resting on a refused fact is Unknown"
+    (fn () => unknown_with "refused fact" (run ["selftest-refused-none"]))
+  val _ = test "a refused negative keeps the other back ends' candidates"
+    (fn () =>
+      case run ["selftest-refused-none", "selftest-slow-certified"] of
+          Counterexample (c :: _) =>
+            #backend c = "selftest-slow-certified" andalso
+            Option.isSome (#cert c)
+        | _ => false)
+end
+
+local
+  val goal = ``!l:'a list. REVERSE l = l``
+  val l = ``l:'a list``
+  fun binds (c : counterexample) =
+    List.exists (fn (binder, _) => Term.aconv binder l)
+      (#values (#statement c))
+in
+  val _ = mf_test "a candidate without bindings names its binders" (fn () =>
+    case first_cex (refute mf goal) of
+        SOME c =>
+          null (#bindings c) andalso binds c andalso
+          List.exists (String.isSubstring "type variable")
+            (#partial (#statement c))
+      | NONE => false)
+  val _ = test "a candidate carries its type instance" (fn () =>
+    case first_cex (refute qc goal) of
+        SOME c =>
+          binds c andalso null (#partial (#statement c)) andalso
+          List.exists (fn {redex, ...} => redex = Type.alpha)
+            (#types (#statement c))
+      | NONE => false)
+  (* 'a is in no binder's type: only the instance QC tested says it *)
+  val _ = test "a type variable outside the binders keeps its instance"
+    (fn () =>
+      case first_cex (refute qc ``!x:num. x <> dimindex (:'a)``) of
+          SOME c =>
+            null (#partial (#statement c)) andalso
+            List.exists (fn {redex, ...} => redex = Type.alpha)
+              (#types (#statement c))
+        | NONE => false)
+end
+
+(* A generator derived from a cheated induction theorem is refused on
+   every call, not only on the one that derived it first. *)
+val _ = Datatype.Datatype `rf_chk_tree = RFL | RFN rf_chk_tree`
+val _ = test "a generator resting on a refused fact is refused every call"
+  (fn () =>
+    let
+      val info = valOf (TypeBase.read
+        {Thy = current_theory (), Tyop = "rf_chk_tree"})
+      val cheated = Tactical.prove
+        (Thm.concl (TypeBasePure.induction_of info), cheat)
+      val _ = TypeBase.write
+        [TypeBasePure.put_induction (TypeBasePure.ORIG cheated) info]
+      fun refused () =
+        refused_only (refute (qc |> upd_certify false |> upd_timeout 20.0)
+                        ``!t : rf_chk_tree. t = RFL``)
+    in
+      refused () andalso refused ()
+    end)
+
+(* A caller's QC substrate is a registration the finder did not make.  The
+   copy of Compute runs first for this test, then last. *)
+val _ = test "a caller's substrate is refused" (fn () =>
+  let
+    val compute = valOf (List.find (fn s => #name s = "compute")
+      (Refute_Eval.get_substrates ()))
+    fun copy priority : Refute_Eval.substrate =
+      {name = "selftest-compute", priority = priority,
+       accepts = #accepts compute, preflight = #preflight compute,
+       compile = #compile compute}
+    val _ = Refute_Eval.register_substrate (copy ~100)
+    val (outcome, exhausted) =
+      (refute (qc |> upd_certify false |> upd_timeout 20.0)
+         ``!n : num. n < 3``,
+       refute (exhaustive |> upd_timeout 20.0) ``!b : bool. b \/ ~b``)
+      handle e => (Refute_Eval.register_substrate (copy 1000); raise e)
+    val _ = Refute_Eval.register_substrate (copy 1000)
+  in
+    unknown_with "refused registration" exhausted andalso
+    case outcome of
+        Counterexample cs =>
+          List.all (fn (c : counterexample) =>
+            case #certainty c of
+                Potential reasons => List.exists (String.isPrefix
+                  "refused registration the finder did not make: substrate")
+                  reasons
+              | _ => false) cs
+      | _ => false
+  end)
+
+(* A codatatype registered without a witness is the caller's assertion;
+   its cyclic countermodel cannot be certified, so it stays Potential.
+   The registration with a witness is restored afterwards. *)
+val _ = mf_test "a codatatype without a witness is refused" (fn () =>
+  let
+    fun stream witness = register_codatatype
+      {tyop = {Thy = "refuteTableZoo", Tyop = "zoo_stream"},
+       case_const = ``zoo_stream_CASE``, constructors = [``zoo_scons``],
+       witness = witness}
+    val _ = stream NONE
+    val outcome = refute (mf |> upd_card [(NONE, [2, 3])])
+      ``(s : num zoo_stream) <> zoo_scons a s``
+      handle e => (stream (SOME zoo_stream_witness); raise e)
+    val _ = stream (SOME zoo_stream_witness)
+  in
+    case outcome of
+        Counterexample cs =>
+          List.all (fn (c : counterexample) =>
+            not (Option.isSome (#cert c)) andalso
+            (case #certainty c of
+                 Potential reasons => List.exists (String.isPrefix
+                   "refused registration the finder did not make: codatatype")
+                   reasons
+               | _ => false)) cs
+      | _ => false
+  end)
+
+(* A witnessless registration of a built-in codatatype is exempt only when
+   it is the built-in description itself; another case constant is the
+   caller's.  The built-in description is restored afterwards. *)
+val _ = mf_test "a built-in codatatype re-registered otherwise is refused"
+  (fn () =>
+  let
+    val _ = new_definition ("rf_chk_fake_llist_case_def",
+      ``rf_chk_fake_llist_case = llist$llist_CASE``)
+    fun llist case_const = register_codatatype
+      {tyop = {Thy = "llist", Tyop = "llist"}, case_const = case_const,
+       constructors = [``llist$LNIL``, ``llist$LCONS``], witness = NONE}
+    fun builtin () = llist ``llist$llist_CASE``
+    val _ = llist ``rf_chk_fake_llist_case``
+    val outcome = refute (mf |> upd_card [(NONE, [2, 3])])
+      ``(l : num llist) <> LCONS 0 l``
+      handle e => (builtin (); raise e)
+    val _ = builtin ()
+    val needle = "refused registration the finder did not make: codatatype"
+  in
+    case outcome of
+        Counterexample cs =>
+          not (null cs) andalso List.all (fn (c : counterexample) =>
+            not (Option.isSome (#cert c)) andalso
+            (case #certainty c of
+                 Potential reasons =>
+                   List.exists (String.isPrefix needle) reasons
+               | _ => false)) cs
+      | _ => unknown_with needle outcome
+  end)
+
+(* A definition the model finder reads with an
+   untrusted tag caps its answer; one it does not read caps nothing. *)
+local
+  val _ = new_specification ("rf_chk_kk_def", ["rf_chk_kk"],
+    Tactical.prove (``?f : num -> num. !n. f n = 0``, cheat))
+in
+  val _ = mf_test "a model-finder answer reading a cheated definition is capped"
+    (fn () => refute (mf |> upd_timeout 30.0) ``!n. rf_chk_kk n = 1``
+              |> refused_only)
+  (* a true statement: an answer resting on a refusal would list it *)
+  val _ = mf_test
+    "a cheated definition the model finder does not read caps nothing"
+    (fn () =>
+       case refute (mf |> upd_timeout 30.0) ``!b : bool. b \/ ~b`` of
+           NoCounterexample => true
+         | outcome as Unknown _ =>
+             not (List.exists (String.isPrefix "refused")
+                    (reasons_of outcome))
+         | _ => false)
+end
+
+(* A candidate resting on a registration the
+   finder did not make, named by [needle]: Potential with the reason, or an
+   Unknown that names it. *)
+fun refused_registration needle outcome =
+  case outcome of
+      Counterexample cs =>
+        not (null cs) andalso List.all (fn (c : counterexample) =>
+          not (Option.isSome (#cert c)) andalso
+          (case #certainty c of
+               Potential reasons =>
+                 List.exists (String.isPrefix needle) reasons
+             | _ => false)) cs
+    | _ => unknown_with needle outcome
+
+(* A quotient registered by an equivalence
+   theorem, whose abs no QUOTIENT theorem names, gives the type the
+   relation's classes, and that abs quotient semantics, on the caller's
+   word: a problem that applies the abs, or only has a value of the type,
+   rests on a refused registration.  The type's own registration is
+   restored. *)
+val _ = mf_test
+  "a caller's quotient no theorem ties is refused where its type is used"
+  (fn () =>
+  let
+    val _ = new_definition ("rf_chk_fake_quot_abs_def",
+      ``rf_chk_fake_quot_abs b = zoo_bool_quot_abs (~b)``)
+    fun quot abs = register_quotient
+      {qty = ``:zoo_bool_quot``, rty = ``:bool``, abs = abs,
+       rep = ``zoo_bool_quot_rep``, equiv_thm = zoo_bool_equiv}
+    val _ = quot ``rf_chk_fake_quot_abs``
+    val outcomes =
+      map (refute (mf |> upd_card [(SOME ``:zoo_bool_quot``, [2]),
+                                   (NONE, [2])]))
+        [``!b. zoo_bool_quot_rep (rf_chk_fake_quot_abs b) = b``,
+         ``!a b : zoo_bool_quot. a = b``]
+      handle e => (quot ``zoo_bool_quot_abs``; raise e)
+    val _ = quot ``zoo_bool_quot_abs``
+  in
+    List.all (refused_registration
+      "refused registration the finder did not make: quotient") outcomes
+  end)
+
+(* A codatatype the caller described, even with
+   a witness, has its case constant given case semantics on the caller's
+   word: a problem that applies it rests on a refused registration. *)
+val _ = mf_test "a caller's codatatype case constant is refused where applied"
+  (fn () =>
+  let
+    val _ = register_codatatype
+      {tyop = {Thy = "refuteTableZoo", Tyop = "zoo_stream"},
+       case_const = ``zoo_stream_CASE``, constructors = [``zoo_scons``],
+       witness = SOME zoo_stream_witness}
+    val needle =
+      "refused registration the finder did not make: case constant"
+  in
+    case refute (mf |> upd_card [(NONE, [2, 3])])
+           ``!s : num zoo_stream. zoo_stream_CASE s (\a t. a) = 0`` of
+        Counterexample cs =>
+          not (null cs) andalso List.all (fn (c : counterexample) =>
+            not (Option.isSome (#cert c)) andalso
+            (case #certainty c of
+                 Potential reasons =>
+                   List.exists (String.isPrefix needle) reasons
+               | _ => false)) cs
+      | outcome => unknown_with needle outcome
+  end)
+
+(* A codatatype the caller described has its
+   constructors encoded as free, injective and covering the type on the
+   caller's word, which a witness does not show: a problem that uses one,
+   without the case constant, rests on a refused registration. *)
+val _ = mf_test "a caller's codatatype constructor is refused where used"
+  (fn () =>
+  let
+    val _ = register_codatatype
+      {tyop = {Thy = "refuteTableZoo", Tyop = "zoo_stream"},
+       case_const = ``zoo_stream_CASE``, constructors = [``zoo_scons``],
+       witness = SOME zoo_stream_witness}
+  in
+    refused_registration
+      "refused registration the finder did not make: constructors of codatatype"
+      (refute (mf |> upd_card [(NONE, [2, 3])])
+         ``!(a : num) b s. zoo_scons a s = zoo_scons b s``)
+  end)
+
+(* A caller's frac registration that fails
+   validation leaves no mark: the library's rat and its [rat_add] row stay
+   trusted, so an uncertified Genuine on a goal that applies [rat_add]
+   stays Genuine. *)
+val _ = mf_test "a caller's frac registration that fails leaves no mark"
+  (fn () =>
+     rejected (fn () => register_frac_type
+       {tyop = {Thy = "rat", Tyop = "rat"},
+        ersatz = [{original = {Thy = "rat", Name = "rat_add"},
+                   replacement = {Thy = "refute", Name = "plus_frac"}},
+                  {original = {Thy = "rat", Name = "rat_add"},
+                   replacement = {Thy = "refute", Name = "times_frac"}}]})
+     andalso genuine_uncertified (refute mf ``!x : rat. x + 1 = x``))
+
+(* A function value the model leaves open at
+   some point is marked partial. *)
+val _ = mf_test "a function value with an open point is marked partial"
+  (fn () =>
+     case refute (mf |> upd_timeout 30.0) ``!f : num -> num. f 0 = f 1`` of
+         Counterexample (c :: _) =>
+           List.exists (String.isSubstring "leaves a part open")
+             (#partial (#statement c))
+       | _ => false)
 
 (* ------------------------------------------------------------------- *)
 (* Fixtures                                                            *)
@@ -5146,6 +5552,29 @@ val _ = mf_group "ersatz relations"
                         (\n : num. \b : bool. n = 0 /\ b) 0 1``, I,
     V ExpectGenuine, CSome)]
 
+(* A caller's ersatz is a registration the
+   finder did not make.  This one is wrong ([rf_chk_true] is T everywhere,
+   EVEN is not), so its countermodel of a true goal fails certification and
+   stays Potential instead of a false Genuine. *)
+val _ = mf_test "a caller's ersatz is refused" (fn () =>
+  let
+    val _ = new_definition ("rf_chk_true_def", ``rf_chk_true (n : num) = T``)
+    val _ = register_ersatz
+      {original = {Thy = current_theory (), Name = "rf_chk_true"},
+       replacement = {Thy = "arithmetic", Name = "EVEN"}}
+  in
+    case refute mf ``rf_chk_true n`` of
+        Counterexample cexs =>
+          List.all (fn c =>
+            not (isSome (#cert c)) andalso
+            (case #certainty c of
+                 Potential reasons => List.exists (String.isPrefix
+                   "refused registration the finder did not make: ersatz")
+                   reasons
+               | _ => false)) cexs
+      | _ => false
+  end)
+
 (* Quickcheck and the model finder agree on decidable goals. *)
 
 fun best_certainty outcome =
@@ -5484,8 +5913,15 @@ val _ = mf_level2 "a registered codatatype gets cyclic countermodels"
       val eta = zoo_stream_eta |> Thm.INST_TYPE [Type.alpha |-> ``:num``]
         |> Thm.concl |> boolSyntax.strip_forall |> #2
     in
-      genuine (refute (base |> upd_expect ExpectGenuine)
-                      ``(s : num zoo_stream) <> zoo_scons a s``) andalso
+      (* the caller's description: Potential (Refute_Facts) *)
+      cex_where (fn c =>
+          case #certainty c of
+              Potential reasons => List.exists (String.isPrefix
+                "refused registration the finder did not make: constructors")
+                reasons
+            | _ => false)
+        (refute (base |> upd_expect ExpectPotential)
+           ``(s : num zoo_stream) <> zoo_scons a s``) andalso
       let val outcome = refute (base |> upd_expect ExpectUnknown) eta in
         bounds_clean outcome andalso
         unknown_with "card num zoo_stream" outcome

@@ -190,7 +190,10 @@ structure Refute_EvalSML :> Refute_EvalSML = struct
       val application = instantiate (raw_term index) environment
       val theorem = computeLib.EVAL_CONV application
     in
-      boolSyntax.rhs (Thm.concl theorem)
+      (* Read through the checked point
+         (Refute_Facts): a value EVAL computed from an untrusted
+         definition is refused *)
+      Refute_Facts.rhs theorem
     end
 
   (* The reconstruction and split paths differ only in where the value comes
@@ -488,6 +491,7 @@ structure Refute_EvalSML :> Refute_EvalSML = struct
      preflight = SOME preflight,
      compile = compile_problem extract}
 
+  (* The library's own: trusted (Refute_Facts) *)
   fun register_substrate dependencies =
-    Refute_Eval.register_substrate (native_substrate dependencies)
+    Refute_Eval.register_library_substrate (native_substrate dependencies)
 end

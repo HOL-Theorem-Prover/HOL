@@ -351,10 +351,33 @@ structure Refute_Eval :> Refute_Eval = struct
           substrate :: other :: rest
         else other :: insert substrate rest
 
-  fun register_substrate substrate =
-    Refute_Session.publish substrate_registry (fn registry =>
-      insert substrate (List.filter
-        (fn registered => #name registered <> #name substrate) registry))
+  (* A substrate the library did not register
+     is a registration the finder did not make (Refute_Facts): trust
+     goes only to the library's own, at their first registration. *)
+  val library_substrate_names = ["native", "compute"]
+
+  val trusted_substrates =
+    Refute_Session.state "trusted_substrates" ([] : string list)
+
+  fun register_trusted trusted (substrate : substrate) =
+    (Refute_Session.publish trusted_substrates (fn names =>
+       List.filter (fn name => name <> #name substrate) names @
+       (if trusted then [#name substrate] else []));
+     Refute_Session.publish substrate_registry (fn registry =>
+       insert substrate (List.filter
+         (fn registered => #name registered <> #name substrate) registry)))
+
+  fun register_library_substrate (substrate : substrate) =
+    register_trusted
+      (Lib.mem (#name substrate) library_substrate_names andalso
+       not (List.exists (fn registered => #name registered = #name substrate)
+              (Refute_Session.read substrate_registry)))
+      substrate
+
+  val register_substrate = register_trusted false
+
+  fun is_foreign_substrate name =
+    not (Lib.mem name (Refute_Session.read trusted_substrates))
 
   fun get_substrates () = Refute_Session.read substrate_registry
 end

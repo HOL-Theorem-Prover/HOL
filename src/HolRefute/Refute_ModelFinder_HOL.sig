@@ -67,6 +67,9 @@ signature Refute_ModelFinder_HOL = sig
      tac_timeout : Time.time,
      evals : term list,
      case_names : (kname * (int * int)) list,
+     (* The case constants of codatatypes the
+        caller described, refused where a problem applies one *)
+     caller_cases : kname list,
      def_tables : const_table * const_table,
      nondef_table : const_table,
      nondefs : term list,
@@ -172,7 +175,14 @@ signature Refute_ModelFinder_HOL = sig
   val export_typedef :
     {abs : term, absrep_thms : thm list, rep : term, ty : hol_type} -> unit
   val export_registrations : hol_type list -> unit
-  val register_frac_type : frac_info -> unit
+  (* The library's own, trusted; a caller's goes
+     through Refute.register_frac_type, which marks it foreign *)
+  val register_library_frac_type : frac_info -> unit
+  (* [register_library_frac_type] for a caller:
+     its frac type and ersatz rows are registrations the finder did not
+     make (Refute_Facts), marked before they are installed; a
+     registration that fails withdraws its own marks and no other. *)
+  val register_caller_frac_type : frac_info -> unit
   val rat_frac_registration : frac_info
   val real_frac_registration : frac_info
   val is_fun_type : hol_type -> bool

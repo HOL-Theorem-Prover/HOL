@@ -339,5 +339,6 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
      run = run,
      render = NONE}
 
-  fun register_backend () = Refute_Core.register_backend backend
+  (* The library's own: trusted (Refute_Facts) *)
+  fun register_backend () = Refute_Core.register_library_backend backend
 end

@@ -52,7 +52,9 @@ signature Refute_ModelFinder_Model = sig
   val postprocess_term : term_postprocessor_snapshot -> term -> term
   (* Optional fraction support: display and untrusted replay hints. *)
   val dest_frac_atom : term -> (term * term) option
-  val register_frac_type_with_display :
+  (* The library's own, trusted (README_REFUTE,
+     "Checked facts") *)
+  val register_library_frac_type_with_display :
     Refute_ModelFinder_HOL.frac_info * hol_type * term_postprocessor -> unit
   val register_frac_replay : ((term * term) -> term option) -> unit
   (* Installed by default (see Refute.sml), valid at every fmap instance. *)

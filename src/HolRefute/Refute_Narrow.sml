@@ -979,7 +979,8 @@ structure Refute_Narrow :> Refute_Narrow = struct
       normalize tm (Thm.REFL tm)
     end
 
-  fun prenex tm = rhs_of (prenex_conversion tm)
+  (* The rewrites include HOL's implicit ones. *)
+  fun prenex tm = Refute_Facts.rhs (prenex_conversion tm)
 
   fun strip_quantifiers tm =
     if boolSyntax.is_forall tm then

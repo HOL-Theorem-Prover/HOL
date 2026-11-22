@@ -115,15 +115,21 @@ structure Refute_Gen :> Refute_Gen = struct
        enumerations = Redblackmap.insert (enumerations, ty, result)})
 
   (* [compute ty], read from or stored into the cache that [get] selects
-     and [store] extends. *)
+     and [store] extends.  A result resting on a
+     refused fact (Refute_Facts) is not stored: a later call computes it
+     again, and so refuses it again. *)
   fun memo get store compute ty =
     let val generation = current_generation ()
     in
       case Redblackmap.peek (get (Refute_Session.read registry), ty) of
           SOME cached => cached
         | NONE =>
-            let val result = compute ty
-            in store generation ty result; result end
+            let val (result, refused) =
+                  Refute_Facts.capture (fn () => compute ty)
+            in
+              if null refused then store generation ty result else ();
+              result
+            end
     end
 
   fun invalidate_cache _ = register (fn registrations => registrations)
@@ -171,7 +177,7 @@ structure Refute_Gen :> Refute_Gen = struct
 
   fun quotient_result_type th =
     let
-      val (_, body) = boolSyntax.strip_forall (Thm.concl th)
+      val (_, body) = boolSyntax.strip_forall (Refute_Facts.concl th)
       val (head, args) = boolSyntax.strip_comb body
       val {Thy, Name, ...} = Term.dest_thy_const head
       val _ =
@@ -259,10 +265,10 @@ structure Refute_Gen :> Refute_Gen = struct
     | SOME (TypeBasePure.COPY (other, _)) => other = key
     | SOME (TypeBasePure.ORIG _) => TypeBasePure.ty_name_of info = key
 
-  fun induction_concl info =
+  fun induction_thm info =
     case Lib.total TypeBasePure.induction_of0 info of
-      SOME (TypeBasePure.ORIG th) => SOME (Thm.concl th)
-    | SOME (TypeBasePure.COPY (_, th)) => SOME (Thm.concl th)
+      SOME (TypeBasePure.ORIG th) => SOME th
+    | SOME (TypeBasePure.COPY (_, th)) => SOME th
     | NONE => NONE
 
   (* The [COPY] key ties a mutual family together only in the session that
@@ -273,11 +279,15 @@ structure Refute_Gen :> Refute_Gen = struct
   fun family_of ty info =
     let
       val key = induction_key info
-      val induction = induction_concl info
+      val induction = Option.map Refute_Facts.concl (induction_thm info)
+      (* Another entry's theorem is checked only once it matches: an
+         entry outside the family never reaches the problem. *)
       fun member other =
         same_family key other orelse
-        (case (induction, induction_concl other) of
-           (SOME mine, SOME theirs) => Term.aconv mine theirs
+        (case (induction, induction_thm other) of
+           (SOME mine, SOME theirs) =>
+             Term.aconv mine (Thm.concl theirs) andalso
+             (Refute_Facts.check theirs; true)
          | _ => false)
       val theta = Type.match_type (TypeBasePure.ty_of info) ty
       fun instantiate family_info =

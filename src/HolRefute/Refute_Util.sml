@@ -69,9 +69,11 @@ structure Refute_Util :> Refute_Util = struct
   fun close_free term =
     boolSyntax.list_mk_forall (Term.free_vars_lr term, term)
 
-  (* A theorem as one closed proposition: hypotheses imply conclusion. *)
+  (* A theorem as one closed proposition: hypotheses imply conclusion.
+     Through the checked point, Refute_Facts. *)
   fun theorem_term theorem =
-    close_free (boolSyntax.list_mk_imp (Thm.hyp theorem, Thm.concl theorem))
+    close_free (boolSyntax.list_mk_imp
+      (Thm.hyp theorem, Refute_Facts.concl theorem))
 
   (* Spin-acquire a lock without blocking with interrupts masked:
      [Timeout.apply] cancels by raising an interrupt, which a masked block

@@ -2045,8 +2045,10 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
         with_assumptions eval_axioms
       val (final_seen, definitions, _, selected_nondefs, _) =
         if user_axioms = SOME true then
-          List.foldl (fn (axiom, result) =>
-            add_axiom false 1 axiom result) with_evals mono_nondefs
+          (* Used: Refute_Facts.use *)
+          (List.app Refute_Facts.use mono_nondefs;
+           List.foldl (fn (axiom, result) =>
+             add_axiom false 1 axiom result) with_evals mono_nondefs)
         else
           with_evals
       val congruence_axioms =
