@@ -128,9 +128,8 @@ fun unescape_axiom raw =
       else bare
     val name = unescape unquoted handle _ => unquoted
   in
-    (* Monomorphic copies replay the original theorem, so
-       axioms_from_tstp's distinct pass deliberately collapses them with
-       the first copy. *)
+    (* Monomorphic copies replay the original theorem, so deduplication
+       keeps the first occurrence of the original name. *)
     hhTptpProblem.fact_of_name name
   end
 
@@ -173,18 +172,18 @@ fun index_from marker text i =
     if Substring.isEmpty rest then NONE else SOME (#2 (Substring.base rest))
   end
 
-fun file_names line =
+fun fold_file_names add line initial =
   let
     val marker = "file("
     fun find i names =
       case index_from marker line i of
-          NONE => List.rev names
+          NONE => names
         | SOME found =>
           let
             val start = found + String.size marker
           in
             case closing_paren line start of
-                NONE => List.rev names
+                NONE => names
               | SOME finish =>
                 let
                   val args = String.substring (line, start, finish - start)
@@ -195,13 +194,13 @@ fun file_names line =
                         unescape_axiom
                           (String.extract (args, comma + 1, NONE))
                   val names' =
-                    case name of NONE => names | SOME item => item :: names
+                    case name of NONE => names | SOME item => add item names
                 in
                   find (finish + 1) names'
                 end
           end
   in
-    find 0 []
+    find 0 initial
   end
 
 fun axiom_name line =
@@ -234,12 +233,20 @@ val distinct = mk_sameorder_set String.compare
 
 fun axioms_from_tstp lines =
   let
-    val proof_lines = List.filter (not o is_comment) lines
-    val from_files = distinct (List.concat (map file_names proof_lines))
+    val empty = (Redblackset.empty String.compare, [])
+    fun add name (state as (seen, names)) =
+      if Redblackset.member (seen, name) then state
+      else (Redblackset.add (seen, name), name :: names)
+    fun collect scan = List.foldl (fn (line, state) =>
+      if is_comment line then state else scan line state) empty lines
+    fun from_header line state =
+      case axiom_name line of
+          NONE => state
+        | SOME name => add name state
   in
-    if null from_files
-    then distinct (List.mapPartial axiom_name proof_lines)
-    else from_files
+    case #2 (collect (fold_file_names add)) of
+        [] => List.rev (#2 (collect from_header))
+      | names => List.rev names
   end
 
 fun parse_tstp lines =

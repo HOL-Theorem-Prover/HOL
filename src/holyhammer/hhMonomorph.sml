@@ -27,6 +27,20 @@ struct
 
   val sort = Listsort.sort
 
+  (* Direct matching has no node budget. Repeating an identical cover
+     only rediscovers substitutions already considered. *)
+  fun dedup_covering [] = []
+    | dedup_covering ((first as (name, ty)) :: rest) =
+        let
+          fun skip (items as (next_name, next_ty) :: tail) =
+                if name = next_name andalso
+                   Type.compare (ty, next_ty) = EQUAL then skip tail
+                else items
+            | skip [] = []
+        in
+          first :: dedup_covering (skip rest)
+        end
+
   (* Return NONE if the type was already present. *)
   fun insert_type ty [] = SOME [ty]
     | insert_type ty (types as old :: rest) =
@@ -118,7 +132,7 @@ struct
                   else NONE
                 val covering =
                   if length ordered > max_schematic_occurrences then []
-                  else List.mapPartial cover ordered
+                  else dedup_covering (List.mapPartial cover ordered)
               in
                 Schematic {
                   nickname = nickname,
@@ -231,7 +245,31 @@ struct
     SOME (Type.match_type_in_context ty ground subst)
       handle HOL_ERR _ => NONE
 
-  fun substitutions tvars schematics covering known new require_new limit =
+  (* Index a constant's fresh types on demand and share them across facts
+     in the same round. The search still iterates over the original lists. *)
+  fun fresh_membership () =
+    let
+      val indexed = ref (Redblackmap.mkDict String.compare)
+      fun member (_, [], _) = false
+        | member (_, [ground], ty) = Type.compare (ground, ty) = EQUAL
+        | member (name, grounds, ty) =
+            let
+              val types = case Redblackmap.peek (!indexed, name) of
+                  SOME types => types
+                | NONE =>
+                    let val types = Redblackset.fromList Type.compare grounds in
+                      indexed := Redblackmap.insert (!indexed, name, types);
+                      types
+                    end
+            in
+              Redblackset.member (types, ty)
+            end
+    in
+      member
+    end
+
+  fun substitutions tvars schematics covering known new has_fresh
+      require_new limit =
     let
       val visited = ref 0
       val best = ref (Redblackmap.mkDict compare_keys)
@@ -264,10 +302,12 @@ struct
         end
       (* A schematic's ground candidates are fixed throughout the search. *)
       fun candidates (name, ty) =
-        (ty, lookup name new, lookup name known)
-      fun matches_new subst (ty, fresh, _) =
-        List.exists (fn ground =>
-          case match ty ground subst of SOME _ => true | NONE => false) fresh
+        (name, ty, lookup name new, lookup name known)
+      (* Both callers have a complete substitution. Every type variable in
+         the schematic belongs to it, so a match is an exact type lookup. *)
+      fun matches_new subst (name, ty, fresh, _) =
+        not (null fresh) andalso
+        has_fresh (name, fresh, Type.type_subst subst ty)
       fun search remaining subst used_new =
         if !visited >= max_substitution_nodes then ()
         else if complete tvars subst then
@@ -279,7 +319,7 @@ struct
           (visited := !visited + 1;
           case remaining of
               [] => ()
-            | (ty, fresh, old) :: rest =>
+            | (_, ty, fresh, old) :: rest =>
             let
               fun visit _ [] = ()
                 | visit is_new (ground :: grounds) =
@@ -295,7 +335,7 @@ struct
               visit false old;
               search rest subst used_new
             end)
-      fun direct schematics (ty, fresh, old) =
+      fun direct schematics (_, ty, fresh, old) =
         let
           fun consider is_new ground =
             case match ty ground [] of
@@ -346,7 +386,8 @@ struct
     List.foldl (fn ((_, _, theorem), result) =>
       add_grounds rigid theorem result) table instances
 
-  fun process_fact rigid round merged known new remaining fact next_new =
+  fun process_fact rigid round merged known new has_fresh remaining fact
+      next_new =
     case fact of
         Schematic {theorem, tvars, schematics, covering, initial_round,
                    instances, ...} =>
@@ -366,8 +407,8 @@ struct
                  filtered below.  Instantiate only the bounded prefix that
                  can therefore contribute to this fact. *)
               val substs = if room <= 0 then [] else
-                substitutions tvars schematics covering old fresh require_new
-                  (room + length (!instances))
+                substitutions tvars schematics covering old fresh has_fresh
+                  require_new (room + length (!instances))
               val candidates = map (fn subst =>
                 (round, subst, Term.inst subst theorem))
                 substs
@@ -496,10 +537,11 @@ struct
             (* Known and new are immutable during the round: merge once,
                for the facts entering now and for the next round. *)
             val merged = merge_grounds known new
+            val has_fresh = fresh_membership ()
             val next = List.foldl
               (fn (fact, result) =>
-                process_fact rigid round merged known new remaining fact
-                  result) names infos
+                process_fact rigid round merged known new has_fresh remaining
+                  fact result) names infos
           in
             rounds (round + 1) merged next
           end

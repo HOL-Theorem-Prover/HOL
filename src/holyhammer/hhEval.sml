@@ -408,10 +408,13 @@ fun holdir () =
       SOME directory => directory
     | NONE => Globals.HOLDIR
 
+fun source_theories root =
+  theories_from_srcfiles (join (join root "sigobj") "SRCFILES")
+
 fun stdlib_coverage () =
   let
     val root = holdir ()
-    val srcfiles = theories_from_srcfiles (join (join root "sigobj") "SRCFILES")
+    val srcfiles = source_theories root
     val dat_theories = dat_theories_under (join root "src")
     val added_from_dat = coverage_check
       {srcfiles = srcfiles, dat_theories = dat_theories}
@@ -868,17 +871,21 @@ fun journal_files expdir =
 
 fun cell_key entry = (#goal_id entry, #cond entry)
 
-fun latest_cells reversed_entries =
+fun latest_cells paths =
   let
-    fun add_latest (entry, (seen, cells)) =
-      let val key = cell_key entry in
-        if Binaryset.member (seen, key) then (seen, cells)
-        else (Binaryset.add (seen, key), entry :: cells)
-      end
-    val (_, cells) = List.foldl add_latest
-      (Binaryset.empty cell_key_compare, []) reversed_entries
+    (* Record file and row order so the latest rows can be returned
+       newest first after streaming the journals in their original order. *)
+    fun add_latest (entry, (position, cells)) =
+      (position + 1,
+       Redblackmap.insert (cells, cell_key entry, (position, entry)))
+    val (_, cells) = List.foldl (fn (path, state) =>
+      fold_journal path add_latest state)
+      (0, Redblackmap.mkDict cell_key_compare) paths
+    val positioned = Redblackmap.foldl (fn (_, item, acc) => item :: acc)
+      [] cells
   in
-    List.rev cells
+    map #2 (Listsort.sort (fn ((left, _), (right, _)) =>
+      Int.compare (right, left)) positioned)
   end
 
 fun regular_cell entry =
@@ -1385,9 +1392,7 @@ fun report_markdown (data : report_data) =
 fun report expdir =
   let
     val paths = map (join (join expdir "journal")) (journal_files expdir)
-    val reversed_entries = List.foldl (fn (path, acc) =>
-      fold_journal path (op ::) acc) [] paths
-    val entries = List.filter regular_cell (latest_cells reversed_entries)
+    val entries = List.filter regular_cell (latest_cells paths)
     val data = report_data entries
     val _ = ensure_dir expdir
   in
@@ -2038,11 +2043,14 @@ fun run_eval {expname, ncore, thyl, conditions} =
       val _ = ensure_dir (join expdir "journal")
       val _ = ensure_dir (join expdir "out")
       val _ = ensure_dir (join expdir "pb")
-      val {added_from_dat, ...} = stdlib_coverage ()
+      val root = holdir ()
+      val sources = Redblackset.fromList String.compare (source_theories root)
       val requested = Redblackset.fromList String.compare thyl
+      val missing = Redblackset.difference (requested, sources)
       val included_from_dat =
-        List.filter (fn name => Redblackset.member (requested, name))
-          added_from_dat
+        if Redblackset.isEmpty missing then []
+        else List.filter (fn name => Redblackset.member (missing, name))
+          (dat_theories_under (join root "src"))
       fun corpus_entry thy =
         ((load_theory thy; loaded_corpus_entry thy)
          handle Interrupt => raise Interrupt

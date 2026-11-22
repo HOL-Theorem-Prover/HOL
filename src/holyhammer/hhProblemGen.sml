@@ -481,18 +481,12 @@ struct
   fun add_formula_heads ((_, formula), result) =
     heads_of_formula formula result
 
-  fun firstorderize format encoding ({conjecture, facts} : formula_ir)
-      main_heads main_var_types main_count helpers =
+  fun firstorderize format arities ({conjecture, facts} : formula_ir)
+      (previous : fo_ir option) helpers =
       let
-        val all_facts = if null helpers then facts else facts @ helpers
-        val table = heads_of_formula conjecture
-          (List.foldl add_formula_heads main_heads helpers)
-        fun variable_types () =
-          List.foldl add_fact_var_types main_var_types helpers
-        val arities = app_arities encoding (main_count + length helpers)
-          variable_types table
-        val used_app = ref false
-        val used_pp = ref false
+        val used_app =
+          ref (Option.getOpt (Option.map #used_app previous, false))
+        val used_pp = ref (Option.getOpt (Option.map #used_pp previous, false))
         fun term in_position tm =
           if is_abs tm then
             raise Lambda_survived ([], tm)
@@ -545,19 +539,31 @@ struct
           handle Fail message => fail ("fact " ^ name ^ ": " ^ message)
                | Lambda_survived (labels, tm) =>
                    raise Lambda_survived (labels @ ["fact " ^ name], tm)
-        val conjecture' = formula conjecture
-          handle Fail message => fail ("conjecture: " ^ message)
-               | Lambda_survived (labels, tm) =>
-                   raise Lambda_survived (labels @ ["conjecture"], tm)
+        val (conjecture', facts') =
+          case previous of
+              SOME {conjecture, facts, ...} =>
+                (conjecture, facts @ map named_formula helpers)
+            | NONE =>
+                let val goal = formula conjecture
+                  handle Fail message => fail ("conjecture: " ^ message)
+                       | Lambda_survived (labels, tm) =>
+                           raise Lambda_survived (labels @ ["conjecture"], tm)
+                in
+                  (goal, map named_formula
+                    (if null helpers then facts else facts @ helpers))
+                end
       in
         {conjecture = conjecture',
-         facts = map named_formula all_facts,
+         facts = facts',
          used_app = !used_app, used_pp = !used_pp}
       end
 
   fun prepare_firstorder format encoding
       (main as {conjecture, facts} : formula_ir) =
-    if is_full_ho format then prepare_higher_order main
+    if is_full_ho format then
+      let val add_helpers = prepare_higher_order main in
+        fn () => (add_helpers [], add_helpers)
+      end
     else
       let
         (* The helper stages share the heads collected from the main facts.
@@ -572,8 +578,32 @@ struct
             List.foldl add_fact_var_types
               (add_var_types (conjecture, no_types)) facts
           else no_types
+        fun arities_for table helpers =
+          app_arities encoding (main_count + length helpers)
+            (fn () => List.foldl add_fact_var_types main_var_types helpers)
+            table
       in
-        firstorderize format encoding main main_heads main_var_types main_count
+        fn () =>
+          let
+            val main_table = heads_of_formula conjecture main_heads
+            val main_arities = arities_for main_table []
+            val main_fo = firstorderize format main_arities main NONE []
+            fun add_helpers [] = main_fo
+              | add_helpers helpers =
+                let
+                  (* Keep the original order for equal representatives. *)
+                  val table = heads_of_formula conjecture
+                    (List.foldl add_formula_heads main_heads helpers)
+                  val arities = arities_for table helpers
+                  val unchanged = Redblackmap.alli (fn (head, arity) =>
+                    arity = arity_for head arities) main_arities
+                  val previous = if unchanged then SOME main_fo else NONE
+                in
+                  firstorderize format arities main previous helpers
+                end
+          in
+            (main_fo, add_helpers)
+          end
       end
 
   (* Distinct types in first-occurrence order.  The state is a membership
@@ -1502,9 +1532,8 @@ struct
         (name, proxied (skeleton tm))) facts
       val main_conjecture = proxied (skeleton (#conjecture main_terms))
       val main_facts = proxy_facts (#facts main_terms)
-      val firstorder_main = prepare_firstorder format type_enc
+      val prepare_main = prepare_firstorder format type_enc
         {conjecture = main_conjecture, facts = main_facts}
-      fun firstorder helpers = firstorder_main (proxy_facts helpers)
       fun heads_of ({conjecture, facts, ...} : fo_ir) =
         rev (#2 (heads_of_fo_formula (conjecture,
           List.foldl (fn ((_, formula), heads) =>
@@ -1570,9 +1599,11 @@ struct
           end
       (* The caller-side first-orderizations report as the tail's
          failures do after describe_failure. *)
+      val (main_fo, firstorder_main) = prepare_main ()
+        handle (exn as Lambda_survived _) => raise describe_failure exn
+      fun firstorder helpers = firstorder_main (proxy_facts helpers)
       fun firstorder_now helpers = firstorder helpers
         handle (exn as Lambda_survived _) => raise describe_failure exn
-      val main_fo = firstorder_now []
       val main_heads = heads_of main_fo
       val initial = hol_helpers format lam_trans (#used_app main_fo) main_heads
       val preliminary_helpers = translate_helpers initial
