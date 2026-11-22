@@ -125,7 +125,7 @@ Verdicts and trust
   the statement (outer `!`s and free variables), each value one the back
   end traced to its binder, never one matched by name, and gives the type
   instance, from the instance the back end searched
-  (`Refute_Core.instance_types`) or the values' types; `partial` says what
+  (`Refute_Core.statement_types`) or the values' types; `partial` says what
   is missing or ambiguous, e.g. a type variable the model finder read as a
   finite scope, a value the model left open at some point, or a model
   finder value not traced to one binder (two binders of the goal share its

@@ -30,7 +30,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      cases : term list,
      (* Derived from a [p = lfp F] (or [gfp]) definition, whose leastness
         is the definition's. *)
-     derived : bool}
+     derived : bool,
+     (* the theorems it rests on, checked wherever it is used *)
+     facts : thm list}
   type fixpoint_cache = (kname * fixpoint_group option) list
   type type_operator = {Thy : string, Tyop : string}
   type ersatz = {original : kname, replacement : kname}
@@ -1596,7 +1598,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           val group : fixpoint_group =
             {kind = kind, stem = #Name (original_const_key constant),
              members = [original_const_key constant],
-             rules = rules, cases = cases, derived = true}
+             rules = rules, cases = cases, derived = true,
+             facts = [case_thm]}
           fun extend table props = List.foldl
             (fn (prop, entries) =>
               let val (head, value) = pair_for_prop prop
@@ -1661,7 +1664,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           in fixpoint_cache := (key, derived) :: !fixpoint_cache; derived end
       in
         case key_lookup key (!fixpoint_cache) of
-            SOME result => result
+            (* checked again on each use: a call's refusals are its own *)
+            SOME result =>
+              (Option.app (List.app Refute_Facts.check o #facts) result;
+               result)
           | NONE =>
               if kind = NoFp then cache_derived ()
               else
@@ -1697,7 +1703,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                            [cases_theorem, rules_theorem]
                          val group : fixpoint_group =
                            {kind = kind, stem = stem, members = members,
-                            rules = rules, cases = cases, derived = false}
+                            rules = rules, cases = cases, derived = false,
+                            facts = [cases_theorem, rules_theorem]}
                          fun install (member, entries) =
                            (member, SOME group) ::
                            List.filter (fn (other, _) =>

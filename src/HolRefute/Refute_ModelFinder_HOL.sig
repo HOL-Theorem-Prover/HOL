@@ -29,7 +29,9 @@ signature Refute_ModelFinder_HOL = sig
      members : kname list,
      rules : term list,
      cases : term list,
-     derived : bool}
+     derived : bool,
+     (* the theorems it rests on, checked wherever it is used *)
+     facts : thm list}
 
   type fixpoint_cache = (kname * fixpoint_group option) list
 

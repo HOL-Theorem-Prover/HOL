@@ -1838,6 +1838,23 @@ in
           | NONE => false))
 end
 
+(* A mutual inductive group is cached under each member; its theorems are
+   checked again whenever the cache gives it out, so a cache that keeps
+   nothing resting on a refused fact sees the refusal for every member. *)
+local
+  val (rules, _, _) = IndDefLib.Hol_reln
+    `rf_chk_ev 0 /\ (!n. rf_chk_od n ==> rf_chk_ev (SUC n)) /\
+     (!n. rf_chk_ev n ==> rf_chk_od (SUC n))`
+  val _ = save_thm ("rf_chk_ev_rules", Tactical.prove (concl rules, cheat))
+  val context = Refute_ModelFinder_HOL.make_context (#mf default_config) []
+  fun refusals relation = #2 (Refute_Facts.capture (fn () =>
+    Refute_ModelFinder_HOL.instantiated_fixpoint_group context relation))
+in
+  val _ = test "a cached fixpoint group is checked again" (fn () =>
+    List.all (not o null o refusals)
+      [``rf_chk_ev``, ``rf_chk_od``, ``rf_chk_ev``])
+end
+
 (* A back end gives a value only for a variable
    it traced to the statement's binder: here normalization drops the
    vacuous outer [x] and pulls the inner one out. *)
@@ -1883,7 +1900,10 @@ val _ = mf_test "a merged type variable keeps its binders' values" (fn () =>
         List.exists (fn (binder, _) => #1 (Term.dest_var binder) = "f")
           (#values (#statement c)) andalso
         not (List.exists (String.isSubstring "belongs to no binder")
-               (#partial (#statement c)))
+               (#partial (#statement c))) andalso
+        (* the instance searched: 'a and 'b as one type *)
+        Type.type_subst (#types (#statement c)) Type.alpha =
+          Type.type_subst (#types (#statement c)) Type.beta
     | NONE => false)
 
 (* A caller's frac registration that fails
