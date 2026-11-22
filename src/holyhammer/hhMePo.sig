@@ -90,6 +90,10 @@ sig
     string -> mlThmData.thmdata -> hhStature.statures -> context
   val create_context : mlThmData.thmdata -> hhStature.statures -> context
   val restrict_context : context -> string list -> context
+  (* Reuse a set of requested theorem names built with String.compare.
+     The result retains the context's fact order. *)
+  val restrict_context_to : context -> (string, unit) Redblackmap.dict ->
+    context
   val context_thmids : context -> string list
   val mepo_rank_with_fudge : fudge -> context -> Abbrev.goal -> int ->
     string list

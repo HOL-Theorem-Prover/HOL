@@ -1384,6 +1384,7 @@ struct
             val app_decls =
               case encoding of
                   hhTypeEnc.Native {poly = false, ...} =>
+                    if not used_app then [] else
                     map (fn app_signature as (function_type, argument_type,
                                               result_type) =>
                       let val symbol = #app symbols app_signature in
@@ -1416,11 +1417,11 @@ struct
                          (hhTptpProblem.TyCon ("$i", []),
                           hhTptpProblem.TyCon ("$i", []))))]
                   else []
-            (* Only mono native values get symbols of their own; elsewhere
-               a value is its head, which sym_decls already declares. *)
+            (* First-order mono native values have their own symbols.
+               THF uses head nodes for every symbol. *)
             val value_decls =
-              case encoding of
-                  hhTypeEnc.Native {poly = false, ...} =>
+              case (is_full_ho format, encoding) of
+                  (false, hhTypeEnc.Native {poly = false, ...}) =>
                     map (fn head => hhTptpProblem.SymDecl
                       (aiLib.escape "sy." ^ #value symbols head,
                        #value symbols head,
@@ -1662,22 +1663,41 @@ struct
     end
 
   type export_memo =
-    {entries : (hhLamTrans.mode * named_terms * named_terms) list ref,
+    {simplified : (term * (string * thm) list * named_terms) list ref,
+     entries : (hhLamTrans.mode * named_terms * named_terms) list ref,
      runs : int ref, names : hhNames.supply}
 
-  fun new_export_memo_with names = {entries = ref [], runs = ref 0,
-                                    names = names}
+  fun new_export_memo_with names =
+    {simplified = ref [], entries = ref [], runs = ref 0, names = names}
   fun new_export_memo () = new_export_memo_with hhNames.global
   fun memo_lambda_runs ({runs, ...} : export_memo) = !runs
 
+  (* The scheduler shares the exact named list for each selection. Keep
+     identity here, since alpha-equivalent inputs can print different names. *)
+  fun memoized_presimp ({simplified, ...} : export_memo) format
+      (conjecture, named) =
+    case List.find (fn (old_conjecture, old_named, _) =>
+      Portable.pointer_eq (old_conjecture, conjecture) andalso
+      Portable.pointer_eq (old_named, named)) (!simplified) of
+        SOME (_, _, result) => result
+      | NONE =>
+          let val result = presimp format {conjecture = conjecture,
+            facts = map (fn (name, theorem) =>
+              (name, Thm.concl theorem)) named}
+          in
+            simplified := (conjecture, named, result) :: !simplified;
+            result
+          end
+
   fun same_terms left right =
     Term.aconv (#conjecture left) (#conjecture right) andalso
-    ListPair.allEq (fn ((left_name, left_tm), (right_name, right_tm)) =>
-      left_name = right_name andalso Term.aconv left_tm right_tm)
-      (#facts left, #facts right)
+    (Portable.pointer_eq (#facts left, #facts right) orelse
+     ListPair.allEq (fn ((left_name, left_tm), (right_name, right_tm)) =>
+       left_name = right_name andalso Term.aconv left_tm right_tm)
+       (#facts left, #facts right))
 
-  fun memoized_lambda ({entries, runs, names} : export_memo) format mode
-      terms =
+  fun memoized_lambda ({entries, runs, names, ...} : export_memo)
+      format mode terms =
     let val key = effective_mode format mode in
       case List.find (fn (old_key, old_terms, _) => old_key = key andalso
           same_terms old_terms terms) (!entries) of
@@ -1718,19 +1738,18 @@ struct
   (* The caller-side stage: everything that draws fresh names or reads the
      memo, theorem data or the translation cache.  The tail it returns
      builds the TPTP AST and may run on another thread. *)
-  fun prepare_pb memo options (conjecture, named) =
+  fun prepare_pb memo options input =
     let
-      val input = presimp (#format options) {conjecture = conjecture,
-        facts = map (fn (name, theorem) =>
-          (name, Thm.concl theorem)) named}
+      val simplified = memoized_presimp memo (#format options) input
       val {type_enc, lam_trans, mono_iters, mono_instances, ...} = options
       val pre_mono =
         lam_trans = hhLamTrans.Combs andalso is_monomorphic type_enc
       val names = #names memo
       val lambda_input = if pre_mono then
         monomorph_with names type_enc
-          {max_iters = mono_iters, max_new_instances = mono_instances} input
-        else input
+          {max_iters = mono_iters, max_new_instances = mono_instances}
+          simplified
+        else simplified
       val lambda_terms = if pre_mono then
         lambda_with names (#format options) lam_trans lambda_input
         else memoized_lambda memo (#format options) lam_trans lambda_input

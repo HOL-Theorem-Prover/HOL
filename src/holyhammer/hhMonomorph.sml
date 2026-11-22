@@ -20,6 +20,7 @@ struct
         theorem : term,
         tvars : hol_type list,
         schematics : (string * hol_type) list,
+        covering : (string * hol_type) list,
         initial_round : int,
         instances : (int * subst * term) list ref
       }
@@ -59,10 +60,10 @@ struct
   fun groundable tvars schematics =
     let
       val schematic_tvars =
-        List.foldl (fn ((_, ty), result) =>
-          List.foldl (fn (tvar, vars) =>
-            if tvar_is_bound vars tvar then vars else tvar :: vars)
-            result (Type.type_vars ty)) [] schematics
+        List.foldl (fn ((_, vars, _), result) =>
+          List.foldl (fn (tvar, seen) =>
+            if tvar_is_bound seen tvar then seen else tvar :: seen)
+            result vars) [] schematics
     in
       List.all (tvar_is_bound schematic_tvars) tvars
     end
@@ -94,10 +95,14 @@ struct
           let
             val (theorem, tvars) = rename_apart names rigid original
               original_vars
-            val schematics = schematic_consts theorem
-            fun compare ((left_name, left_ty), (right_name, right_ty)) =
-              case Int.compare (length (Type.type_vars right_ty),
-                                length (Type.type_vars left_ty)) of
+            fun describe (constant as (_, ty)) =
+              let val vars = Type.type_vars ty in
+                (constant, vars, length vars)
+              end
+            val schematics = map describe (schematic_consts theorem)
+            fun compare (((left_name, left_ty), _, left_count),
+                         ((right_name, right_ty), _, right_count)) =
+              case Int.compare (right_count, left_count) of
                   EQUAL =>
                     (case String.compare (left_name, right_name) of
                          EQUAL => Type.compare (left_ty, right_ty)
@@ -105,14 +110,26 @@ struct
                 | order => order
           in
             if not (groundable tvars schematics) then Ignored
-            else Schematic {
-              nickname = nickname,
-              theorem = theorem,
-              tvars = tvars,
-              schematics = sort compare schematics,
-              initial_round = if rank < privileged_facts then 1 else 2,
-              instances = ref []
-            }
+            else
+              let
+                val ordered = sort compare schematics
+                fun cover (constant, vars, _) =
+                  if List.all (tvar_is_bound vars) tvars then SOME constant
+                  else NONE
+                val covering =
+                  if length ordered > max_schematic_occurrences then []
+                  else List.mapPartial cover ordered
+              in
+                Schematic {
+                  nickname = nickname,
+                  theorem = theorem,
+                  tvars = tvars,
+                  schematics = map #1 ordered,
+                  covering = covering,
+                  initial_round = if rank < privileged_facts then 1 else 2,
+                  instances = ref []
+                }
+              end
           end
 
   fun schema_names infos =
@@ -208,7 +225,7 @@ struct
     SOME (Type.match_type_in_context ty ground subst)
       handle HOL_ERR _ => NONE
 
-  fun substitutions tvars schematics known new require_new limit =
+  fun substitutions tvars schematics covering known new require_new limit =
     let
       val visited = ref 0
       val best = ref (Redblackmap.mkDict compare_keys)
@@ -270,10 +287,6 @@ struct
               visit false (lookup name known);
               search rest subst used_new
             end)
-      fun covers_all ty =
-        let val vars = Type.type_vars ty in
-          List.all (fn tvar => mem tvar vars) tvars
-        end
       fun direct (name, ty) =
         let
           fun consider is_new ground =
@@ -295,9 +308,9 @@ struct
         if require_new andalso
            List.all (fn (name, _) => null (lookup name new)) schematics then ()
         else
-          case List.filter (covers_all o #2) schematics of
+          case covering of
               [] => search schematics [] false
-            | covering => List.app direct covering
+            | _ => List.app direct covering
     in
       Redblackmap.foldl' op:: [] (!best)
     end
@@ -321,7 +334,7 @@ struct
 
   fun process_fact rigid round merged known new remaining fact next_new =
     case fact of
-        Schematic {theorem, tvars, schematics, initial_round,
+        Schematic {theorem, tvars, schematics, covering, initial_round,
                    instances, ...} =>
           if round < initial_round orelse !remaining <= 0 orelse
              length schematics > max_schematic_occurrences then next_new
@@ -339,7 +352,7 @@ struct
                  filtered below.  Instantiate only the bounded prefix that
                  can therefore contribute to this fact. *)
               val substs = if room <= 0 then [] else
-                substitutions tvars schematics old fresh require_new
+                substitutions tvars schematics covering old fresh require_new
                   (room + length (!instances))
               val candidates = map (fn subst =>
                 (round, subst, Term.inst subst theorem))

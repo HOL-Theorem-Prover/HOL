@@ -326,7 +326,6 @@ type fact_feature = {feature : int, frequency : int, negative : real}
 type nb_model =
   {constants : constants,
    idf : idf_table,
-   names : mlThmData.thmid vector,
    indices : (mlThmData.thmid, int) Redblackmap.dict,
    tfreq : int vector,
    sfreq : fact_feature vector vector}
@@ -361,7 +360,6 @@ fun train_nb_indexed constants idf dependencies facts indices =
   let
     val number = length facts
     val information = Vector.fromList facts
-    val names = Vector.map #thmid information
     val pure_logic = Vector.map
       (fn (fact : fact_info) =>
         case #concl fact of
@@ -428,8 +426,8 @@ fun train_nb_indexed constants idf dependencies facts indices =
         Vector.fromList (map entry (dlist (Array.sub (sfreq, index))))
       end
   in
-    {constants = constants, idf = idf, names = names,
-     indices = indices, tfreq = Array.vector tfreq,
+    {constants = constants, idf = idf, indices = indices,
+     tfreq = Array.vector tfreq,
      sfreq = Vector.tabulate (number, fact_features)}
   end
 
@@ -619,8 +617,6 @@ fun distinct_by key facts =
   in
     rev (#2 (foldl add (Redblackset.empty String.compare, []) facts))
   end
-
-val distinct = mk_sameorder_set String.compare
 
 fun name_set names = dset String.compare names
 
@@ -873,7 +869,7 @@ fun restrict_unknown ({unknown = [], ...} : context) _ = []
   | restrict_unknown {unknown, ...} (SOME wanted) =
       filter (member_set wanted) unknown
 
-fun add_thmdep dependencies max_facts predictions =
+fun take_unique_expansions expand_one max_facts predictions =
   let
     fun expand remaining seen result pending predictions =
       if remaining <= 0 then rev result
@@ -890,12 +886,14 @@ fun add_thmdep dependencies max_facts predictions =
                   [] => rev result
                 | prediction :: rest =>
                     expand remaining seen result
-                      (prediction :: Option.getOpt
-                        (dependencies_of dependencies prediction, []))
-                      rest
+                      (expand_one prediction) rest
   in
     expand max_facts (Redblackset.empty String.compare) [] [] predictions
   end
+
+fun add_thmdep dependencies =
+  take_unique_expansions (fn prediction => prediction ::
+    Option.getOpt (dependencies_of dependencies prediction, []))
 
 type mash_result =
   {ranking : mlThmData.thmid list,
@@ -970,7 +968,9 @@ fun knn_expander resolve_dependencies thmid =
   end
 
 fun expand_knn with_dependencies n predictions =
-  take n (distinct (List.concat (map with_dependencies predictions)))
+  (* Resolve every returned neighbor before taking the prefix, so a failed
+     lookup still reaches the caller even after enough premises were found. *)
+  take_unique_expansions I n (map with_dependencies predictions)
 
 fun rank_knn_with resolve_dependencies thmdata n goal =
   expand_knn (knn_expander resolve_dependencies) n
@@ -1000,12 +1000,14 @@ fun is_induction statures thmid =
 fun rank_inputs context pool =
   let
     val wanted = Option.map name_set pool
-    val restricted as (_, facts) = restrict_thmdata context wanted
-    val names = Susp.delay (fn () => restricted_names context pool facts)
+    val restricted = Susp.delay (fn () => restrict_thmdata context wanted)
+    val names = Susp.delay (fn () =>
+      restricted_names context pool (#2 (Susp.force restricted)))
+    (* MePo's candidates already come from these same feature rows. *)
     val mepo = Susp.delay (fn () =>
-      case pool of
+      case wanted of
           NONE => #mepo context
-        | SOME _ => hhMePo.restrict_context (#mepo context) (Susp.force names))
+        | SOME wanted => hhMePo.restrict_context_to (#mepo context) wanted)
   in
     {wanted = wanted, restricted = restricted, names = names, mepo = mepo}
   end
@@ -1085,7 +1087,7 @@ fun rank_for_filters context {pool, goal} filters =
     val (knn_max, nb_max) = foldl limits (0, 0) filters
     val inputs as {restricted, names, ...} = rank_inputs context pool
     val predictions =
-      {knn = shared_prefix knn_max (knn restricted),
+      {knn = shared_prefix knn_max (fn n => knn (Susp.force restricted) n),
        nb = shared_prefix nb_max (fn n => nb (Susp.force names) n)}
     fun component_depth (filter, n) =
       if filter = "mepo" orelse filter = "mash" orelse filter = "mesh" then
@@ -1102,7 +1104,8 @@ fun rank context {filter, pool, goal, n} =
     val {knn, nb} = direct_predictions context goal
   in
     rank_with_predictions context inputs
-      {knn = knn restricted, nb = fn n => nb (Susp.force names) n}
+      {knn = fn n => knn (Susp.force restricted) n,
+       nb = fn n => nb (Susp.force names) n}
       goal [] (filter, n)
   end
 

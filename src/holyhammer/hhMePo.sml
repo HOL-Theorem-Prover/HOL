@@ -482,17 +482,30 @@ fun fact_weight fudge stature frequency_table rel_table chained_table =
     (irrel_pconst_weight fudge frequency_table chained_table) stature
     rel_table
 
-fun memo_weight count weight_of =
-  let val cache = Array.array (count, NONE) in
-    fn (pconst, index) =>
-      case Array.sub (cache, index) of
-          SOME weight => weight
-        | NONE =>
-            let val weight = weight_of pconst in
-              Array.update (cache, index, SOME weight);
-              weight
-            end
-  end
+datatype weight_cache = Dense of int | Sparse
+
+fun memo_weight (Dense count) weight_of =
+      let val cache = Array.array (count, NONE) in
+        fn (pconst, index) =>
+          case Array.sub (cache, index) of
+              SOME weight => weight
+            | NONE =>
+                let val weight = weight_of pconst in
+                  Array.update (cache, index, SOME weight);
+                  weight
+                end
+      end
+  | memo_weight Sparse weight_of =
+      let val cache = ref (Intmap.empty ()) in
+        fn (pconst, index) =>
+          case Intmap.peek (!cache, index) of
+              SOME weight => weight
+            | NONE =>
+                let val weight = weight_of pconst in
+                  cache := Intmap.insert (!cache, index, weight);
+                  weight
+                end
+      end
 
 val split_at = part_n
 
@@ -541,12 +554,27 @@ type cached_fact =
 type context =
   {current_theory : string, facts : cached_fact list,
    fact_index : cached_fact hhFactIndex.index,
-   frequency_table : frequency_table, pconst_count : int}
+   frequency_table : frequency_table, weight_cache : weight_cache}
 
-fun context_from_facts current_theory facts frequency_table pconst_count =
+fun context_from_facts current_theory facts frequency_table weight_cache =
   {current_theory = current_theory, facts = facts,
    fact_index = hhFactIndex.create #thmid facts,
-   frequency_table = frequency_table, pconst_count = pconst_count} : context
+   frequency_table = frequency_table, weight_cache = weight_cache} : context
+
+(* Count occurrences only up to the cutoff. This bounds the number of keys
+   the restricted pool can need and keeps its original indices. Use the
+   map only when the array would be much larger than that upper bound. *)
+fun restricted_weight_cache Sparse _ = Sparse
+  | restricted_weight_cache (dense as Dense count) facts =
+      let
+        fun fits _ [] = true
+          | fits remaining ((fact : cached_fact) :: rest) =
+              let val left = remaining - length (#pconsts fact) in
+                left >= 0 andalso fits left rest
+              end
+      in
+        if fits (count div 128) facts then Sparse else dense
+      end
 
 fun cache_fact read_const index_pconst {thmid, theory, concl, stature} =
   {thmid = thmid, theory = theory, concl = concl,
@@ -610,7 +638,7 @@ fun make_context {current_theory, facts} =
     val cached = map (cache_fact read_const index_pconst) facts
   in
     context_from_facts current_theory cached (frequency_of_facts cached)
-      (dlength (!indices))
+      (Dense (dlength (!indices)))
   end
 
 fun theory_of_thmid thmid =
@@ -639,14 +667,11 @@ fun create_context thmdata statures =
 
 fun context_thmids ({facts, ...} : context) = map #thmid facts
 
-fun restrict_context
+fun restrict_context_to
     ({current_theory, facts, fact_index,
-      frequency_table, pconst_count} : context)
-    thmids =
+      frequency_table, weight_cache} : context)
+    wanted =
   let
-    val wanted =
-      foldl (fn (thmid, set) => dadd thmid () set)
-        (dempty String.compare) thmids
     val (restricted, frequency) =
       case hhFactIndex.select_sparse fact_index wanted of
           SOME restricted => (restricted, frequency_of_facts restricted)
@@ -662,8 +687,14 @@ fun restrict_context
               (restricted, frequency)
             end
   in
-    context_from_facts current_theory restricted frequency pconst_count
+    context_from_facts current_theory restricted frequency
+      (restricted_weight_cache weight_cache restricted)
   end
+
+fun restrict_context context thmids =
+  restrict_context_to context
+    (foldl (fn (thmid, set) => dadd thmid () set)
+      (dempty String.compare) thmids)
 
 fun add_fact_pconsts fact table =
   foldl (fn ((pconst, _), result) => add_pconst_to_table pconst result)
@@ -771,7 +802,7 @@ fun insert_special_facts (fudge : fudge) max_facts all_facts goal_terms
   end
 
 fun mepo_rank_with_fudge (fudge : fudge)
-      ({current_theory, facts, frequency_table, pconst_count, ...} : context)
+      ({current_theory, facts, frequency_table, weight_cache, ...} : context)
       (assumptions, conclusion) max_facts =
   if max_facts <= 0 orelse null facts then []
   else
@@ -785,8 +816,8 @@ fun mepo_rank_with_fudge (fudge : fudge)
         add_pconsts_in_term current_theory conclusion chained_table
       val score =
         score_fact fudge fst
-          (memo_weight pconst_count (rel_pconst_weight fudge frequency_table))
-          (memo_weight pconst_count (irrel_pconst_weight fudge frequency_table
+          (memo_weight weight_cache (rel_pconst_weight fudge frequency_table))
+          (memo_weight weight_cache (irrel_pconst_weight fudge frequency_table
             chained_table))
       val goal_table =
         if not (Redblackmap.existsi

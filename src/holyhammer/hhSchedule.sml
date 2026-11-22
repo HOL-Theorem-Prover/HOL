@@ -1587,11 +1587,14 @@ fun run_with_root share_digests root {options, goal, rankings, progress} =
    its progress callback.  Those runs hash the file for each request. *)
 val run_in = run_with_root false
 
-fun run request =
+fun run_under parent request =
   let val options = #options request in
-    with_problem_dir (join (hhConfig.state_dir ()) "problems") options
+    with_problem_dir parent options
       (fn root =>
-        run_with_root (not (isSome (#debug_dir options))) root request)
+        (root, run_with_root (not (isSome (#debug_dir options))) root request))
   end
+
+fun run request =
+  #2 (run_under (join (hhConfig.state_dir ()) "problems") request)
 
 end

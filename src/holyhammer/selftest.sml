@@ -1631,14 +1631,17 @@ fun test_hhProblemGen () =
        String.isSubstring "help_2Epxy_2Eall_2E2" combs_all andalso
        String.isSubstring "help_2Eeq__ext_2E2" combs_all andalso
        String.isSubstring "var_2E_27a" combs_all)
-    val memo = new_export_memo ()
+    fun unused_fresh_name () = raise Fail "memo fixture draws a type variable"
+    fun fresh_memo () = new_export_memo_with unused_fresh_name
+    val memo = fresh_memo ()
     val output1 = OS.FileSys.tmpName ()
     val output2 = OS.FileSys.tmpName ()
     val export_options =
       {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
        lam_trans = hhLamTrans.Lifting, mono_iters = 3, mono_instances = 100}
-    val theorem = DB.fetch "bool" "TRUTH"
-    val exported = (``free_goal:bool`` : Term.term, [("truth", theorem)])
+    val memo_goal = ``free_goal:bool`` : Term.term
+    val memo_facts = [("truth", DB.fetch "bool" "TRUTH")]
+    val exported = (memo_goal, memo_facts)
     val _ = export_pb_in memo export_options output1 exported
     val _ = export_pb_in memo export_options output2 exported
     val first_export = String.concat (read_lines output1)
@@ -1653,6 +1656,25 @@ fun test_hhProblemGen () =
        String.isSubstring "% Helpers" first_export andalso
        String.isSubstring "% Facts" first_export andalso
        String.isSubstring "% Conjecture" first_export)
+    fun render export_memo options terms =
+      format_pb options (force_tail (prepare_pb export_memo options terms))
+    fun fresh_export terms = render (fresh_memo ()) export_options terms
+    val changed_goal = (mk_neg memo_goal, memo_facts)
+    val new_goal_export = render memo export_options changed_goal
+    val _ = expect "hhProblemGen export memo distinguishes conjectures"
+      (new_goal_export <> first_export andalso
+       new_goal_export = fresh_export changed_goal)
+    val changed_facts = (memo_goal, [("truth", Thm.REFL T)])
+    val new_facts_export = render memo export_options changed_facts
+    val _ = expect "hhProblemGen export memo distinguishes facts of one name"
+      (new_facts_export <> first_export andalso
+       new_facts_export = fresh_export changed_facts)
+    val higher_export_options =
+      {format = th0, type_enc = hhTypeEnc.of_string "mono_native_higher",
+       lam_trans = hhLamTrans.KeepLams, mono_iters = 3, mono_instances = 100}
+    val _ = expect "hhProblemGen export memo agrees with fresh across formats"
+      (render memo higher_export_options changed_facts =
+       render (fresh_memo ()) higher_export_options changed_facts)
     val comb_problem = string_of_problem tf0 "combin helpers"
       (generate_problem
         {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
@@ -8741,6 +8763,11 @@ fun test_hhMePo_pool_restrictions () =
     val dense_names = List.tabulate (60, name)
     val dense = hhMePo.restrict_context context dense_names
     val nested = hhMePo.restrict_context dense sparse_names
+    (* A wide parent keeps the selected facts' pconst indices high, even
+       though this restriction only needs a few cached weights. *)
+    val wide = mepo_context "Fixture" (List.tabulate (2048, fn i =>
+      fixture ("OtherTheory.noise_" ^ Int.toString i)
+        (Term.mk_var ("mepo_pool_noise_" ^ Int.toString i, Type.bool))) @ facts)
   in
     expect "hhMePo sparse restriction keeps original order and duplicates"
       (matches (hhMePo.restrict_context context sparse_names)
@@ -8748,7 +8775,9 @@ fun test_hhMePo_pool_restrictions () =
     expect "hhMePo dense restriction agrees with a fresh pool"
       (matches dense (keep dense_names));
     expect "hhMePo nested restriction stays within its parent pool"
-      (matches nested (keep [name 10, name 40]))
+      (matches nested (keep [name 10, name 40]));
+    expect "hhMePo ranks a tiny pool with high pconst indices"
+      (matches (hhMePo.restrict_context wide sparse_names) (keep sparse_names))
   end
 
 val _ = test_hhMePo_pool_restrictions ()
@@ -9367,9 +9396,23 @@ fun test_hhLearn_dependency_lookup () =
         intact theorem = mlThmData.intactdep_of_thm theorem andalso
         knn data 12 goal = hhLearn.rank_knn data 12 goal
       end
+    val truth = "boolTheory.TRUTH"
+    val t_def = "boolTheory.T_DEF"
+    val f_def = "boolTheory.F_DEF"
+    val goal = ([], boolSyntax.T)
+    fun neighbors names : mlThmData.thmdata =
+      (#1 mlThmData.empty_thmdata, map (fn name => (name, [])) names)
+    val overlapping = neighbors [truth, f_def, t_def]
+    val missing = neighbors [truth, "boolTheory.hh_missing_knn_fact"]
+    val missing_raises =
+      (ignore (knn missing 2 goal); false) handle Feedback.HOL_ERR _ => true
   in
     expect "worker dependency lookup preserves dependency and kNN order"
-      (not (null theorems) andalso List.all agrees theorems)
+      (not (null theorems) andalso List.all agrees theorems);
+    expect "kNN keeps the first occurrence of overlapping dependencies"
+      (knn overlapping 3 goal = [truth, t_def, f_def]);
+    expect "kNN still checks a missing neighbor beyond the output cutoff"
+      missing_raises
   end
 
 val _ = test_hhLearn_dependency_lookup ()

@@ -220,7 +220,13 @@ sig
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> result
   (* The temporary problems of a non-debug run are private to the
-     scheduler, which shares cache digests across byte copies. *)
+     scheduler, which shares cache digests across byte copies. The returned
+     path refers to a retained directory only in debug mode. *)
+  val run_under : string ->
+    {options : hhConfig.hh_options, goal : goal,
+     rankings : (string * string list) list,
+     progress : (event -> unit) option} -> string * result
+  (* run uses the default parent and discards the problem directory path. *)
   val run :
     {options : hhConfig.hh_options, goal : goal,
      rankings : (string * string list) list,
