@@ -1391,6 +1391,8 @@ local
     ``rf_thy_package = rf_thy_pkg [rf_thy_inc 1] 2``)
   val _ = new_definition ("rf_thy_arb_def",
     ``rf_thy_arb (x : num) = x + ARB``)
+  val _ = new_definition ("rf_thy_small_def",
+    ``rf_thy_small (l : num list) <=> !x. MEM x l ==> x < 3``)
   val configs =
     List.concat (map (fn backend =>
       map (fn substrate =>
@@ -1409,11 +1411,11 @@ in
         val initial = keys ()
         val outside = not (List.exists (fn (name, _) => Lib.mem name
           ["rf_thy_inc", "rf_thy_twice", "rf_thy_sum", "rf_thy_slot",
-           "rf_thy_package", "rf_thy_arb"]) initial)
+           "rf_thy_package", "rf_thy_arb", "rf_thy_small"]) initial)
         val refuted = List.all refuted_everywhere
           [``!x. rf_thy_inc x = 0``, ``!x. rf_thy_twice x < 5``,
            ``!n. rf_thy_sum n < 3``, ``!l. rf_thy_slot l < 4``,
-           ``rf_thy_package.rf_thy_exports = []``]
+           ``rf_thy_package.rf_thy_exports = []``, ``!l. rf_thy_small l``]
         val refused = List.all (fn cfg =>
             refute cfg ``!x. rf_thy_arb x = 0``
               == Unknown ["not executable: ARB"]) configs
@@ -1433,6 +1435,26 @@ in
           ``rf_thy_again (x : num) = x + 5``)
       in
         first andalso refuted_everywhere ``!x. rf_thy_again x < 5``
+      end)
+
+  (* The definitions a term needs are collected through every call, not
+     only those an earlier goal left behind: a fresh chain, its outermost
+     constant evaluated first. *)
+  val _ = test "a chain of theory definitions is collected from its top"
+    (fn () =>
+      let
+        val _ = new_definition ("rf_thy_leaf_def",
+          ``rf_thy_leaf (x : num) = x + 3``)
+        val _ = new_definition ("rf_thy_middle_def",
+          ``rf_thy_middle (x : num) = rf_thy_leaf x * 2``)
+        val _ = new_definition ("rf_thy_outer_def",
+          ``rf_thy_outer (x : num) = rf_thy_middle x + 1``)
+        val goal = ``!x. rf_thy_outer x < 7``
+      in
+        case refute (default_config |> only [Exhaustive] |> quiet
+                       |> upd_substrate Compute) goal of
+          Counterexample (c :: _) => certifies goal c
+        | _ => false
       end)
 end
 

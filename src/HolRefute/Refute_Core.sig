@@ -136,6 +136,9 @@ signature Refute_Core = sig
 
   val change_mf : mf_update -> mf_config -> mf_config
   val bounded_rewrites : thm list
+  (* a definition's bounded quantifiers rewritten into list searches, its
+     left sides untouched *)
+  val normalize_definition : thm -> thm
   val normal_rewrites : thm list
   (* The rewrites and the unwinding conversions together. *)
   val normal_conv : term -> thm

@@ -1180,63 +1180,8 @@ structure Refute_Extract :> Refute_Extract = struct
       | candidates => SOME (List.last candidates)
     end
 
-  (* Bounded quantifiers inside a definition's right-hand side.
-     [Refute_Core.normalize] rewrites a goal's bounded quantifiers into
-     list searches, but a definition's equations reach the clause compiler
-     as [DefnBase] presents them, so [!x. MEM x l ==> P x] in a body
-     compiled through [FORALL_DEF] as a function equality.  The same
-     rewrites are applied to each equation's right side here, after
-     currying the antecedents ([a /\ b ==> c] to [a ==> b ==> c]) and
-     pushing a binder past the antecedents and conjuncts that do not
-     mention it, so that [!x y. MEM x l /\ MEM y (f x) ==> P] becomes
-     [!x. MEM x l ==> !y. MEM y (f x) ==> P] before the bound of each
-     binder is read.  The two-index shape [!i j. i < j ==> j < n ==> P i j]
-     is a nested count, [refuteTheory.forall_lt_lt_count_list].  Patterns
-     on the left side are untouched. *)
-  fun definition_body_conv tm =
-    let
-      fun pass theorems = Ho_Rewrite.REWRITE_CONV theorems
-    in
-      (* Curried first: the pair lemma needs [i < j] and [j < n] as
-         separate antecedents, and an interval rule applied to the raw
-         conjunction would consume the inner binder and leave [!i] with
-         no bound.  The bounded rules run on the curried form, where
-         [n < e ==> P n] takes any P, then again refolded, where the
-         interval shapes are conjunctions. *)
-      Conv.EVERY_CONV
-        [pass [Conv.GSYM boolTheory.AND_IMP_INTRO],
-         pass [refuteTheory.forall_lt_lt_count_list],
-         pass [boolTheory.RIGHT_FORALL_IMP_THM,
-               boolTheory.RIGHT_EXISTS_AND_THM],
-         pass Refute_Core.bounded_rewrites,
-         pass [boolTheory.AND_IMP_INTRO],
-         pass Refute_Core.bounded_rewrites] tm
-    end
-
-  (* Only a right side with a quantifier is rewritten; any other equation
-     stays as [DefnBase] presents it. *)
-  fun normalize_definition theorem =
-    let
-      fun quantified tm =
-        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
-      fun rhs_of tm =
-        case Lib.total boolSyntax.dest_eq tm of
-            SOME (_, right) => right
-          | NONE => boolSyntax.T
-      fun equations tm =
-        if boolSyntax.is_forall tm then
-          Conv.STRIP_QUANT_CONV equations tm
-        else if boolSyntax.is_conj tm then
-          Conv.BINOP_CONV equations tm
-        else if Lib.can (HolKernel.find_term quantified) (rhs_of tm) then
-          Conv.RAND_CONV definition_body_conv tm
-        else Conv.ALL_CONV tm
-    in
-      Conv.CONV_RULE (Conv.QCONV equations) theorem
-    end
-
   fun definition_theorem context constant =
-    normalize_definition (presented_definition context constant)
+    Refute_Core.normalize_definition (presented_definition context constant)
 
   and presented_definition context constant =
     let

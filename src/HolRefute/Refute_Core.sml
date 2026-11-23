@@ -1296,6 +1296,62 @@ structure Refute_Core :> Refute_Core = struct
      are family constructors. *)
   val data_constants = [pred_setSyntax.empty_tm]
 
+  (* Bounded quantifiers inside a definition's right-hand side, read the
+     same way by extraction and by [definition_closure] below.
+     [normalize] rewrites a goal's bounded quantifiers into
+     list searches, but a definition's equations reach the clause compiler
+     as [DefnBase] presents them, so [!x. MEM x l ==> P x] in a body
+     compiled through [FORALL_DEF] as a function equality.  The same
+     rewrites are applied to each equation's right side here, after
+     currying the antecedents ([a /\ b ==> c] to [a ==> b ==> c]) and
+     pushing a binder past the antecedents and conjuncts that do not
+     mention it, so that [!x y. MEM x l /\ MEM y (f x) ==> P] becomes
+     [!x. MEM x l ==> !y. MEM y (f x) ==> P] before the bound of each
+     binder is read.  The two-index shape [!i j. i < j ==> j < n ==> P i j]
+     is a nested count, [refuteTheory.forall_lt_lt_count_list].  Patterns
+     on the left side are untouched. *)
+  fun definition_body_conv tm =
+    let
+      fun pass theorems = Ho_Rewrite.REWRITE_CONV theorems
+    in
+      (* Curried first: the pair lemma needs [i < j] and [j < n] as
+         separate antecedents, and an interval rule applied to the raw
+         conjunction would consume the inner binder and leave [!i] with
+         no bound.  The bounded rules run on the curried form, where
+         [n < e ==> P n] takes any P, then again refolded, where the
+         interval shapes are conjunctions. *)
+      Conv.EVERY_CONV
+        [pass [Conv.GSYM boolTheory.AND_IMP_INTRO],
+         pass [refuteTheory.forall_lt_lt_count_list],
+         pass [boolTheory.RIGHT_FORALL_IMP_THM,
+               boolTheory.RIGHT_EXISTS_AND_THM],
+         pass bounded_rewrites,
+         pass [boolTheory.AND_IMP_INTRO],
+         pass bounded_rewrites] tm
+    end
+
+  (* Only a right side with a quantifier is rewritten; any other equation
+     stays as [DefnBase] presents it. *)
+  fun normalize_definition theorem =
+    let
+      fun quantified tm =
+        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
+      fun rhs_of tm =
+        case Lib.total boolSyntax.dest_eq tm of
+            SOME (_, right) => right
+          | NONE => boolSyntax.T
+      fun equations tm =
+        if boolSyntax.is_forall tm then
+          Conv.STRIP_QUANT_CONV equations tm
+        else if boolSyntax.is_conj tm then
+          Conv.BINOP_CONV equations tm
+        else if Lib.can (HolKernel.find_term quantified) (rhs_of tm) then
+          Conv.RAND_CONV definition_body_conv tm
+        else Conv.ALL_CONV tm
+    in
+      Conv.CONV_RULE (Conv.QCONV equations) theorem
+    end
+
   type constant_key = string * string
 
   fun constant_key constant =
@@ -1352,7 +1408,10 @@ structure Refute_Core :> Refute_Core = struct
   (* The constants [terms] reach that [known]
      doesn't hold: those with a theory definition ([defined], with
      [definitions]), whose right sides are followed in turn, and those
-     with none ([missing]).  [known] holds the compset's keys, so a
+     with none ([missing]).  A definition is read as extraction reads it,
+     its bounded quantifiers rewritten ([normalize_definition]), so a
+     binder left on a right side is one nothing bounds.  [known] holds the
+     compset's keys, so a
      constant evaluation already reduces is never unfolded.  The binders
      are never unfolded either: [bool] defines [!] as [\P. P = \x. T],
      which nothing evaluates, and the search handles them itself. *)
@@ -1364,7 +1423,7 @@ structure Refute_Core :> Refute_Core = struct
       fun definition constant =
         if List.exists (fn binder => Term.same_const binder constant) binders
         then NONE
-        else theory_definition constant
+        else Option.map normalize_definition (theory_definition constant)
       fun executable constant =
         Refute_TypeBase.is_constructor constant orelse
         List.exists (fn data => Term.same_const data constant)
