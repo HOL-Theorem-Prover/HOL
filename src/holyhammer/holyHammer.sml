@@ -1,7 +1,8 @@
 (* ===================================================================== *)
 (* FILE          : holyHammer.sml                                        *)
 (* DESCRIPTION   : Premise selection and external provers                *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
+(* AUTHORS       : (c) Thibault Gauthier, University of Innsbruck        *)
+(*                 Lukasz Czajka                                         *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
 

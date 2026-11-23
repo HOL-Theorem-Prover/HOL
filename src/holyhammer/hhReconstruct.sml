@@ -2,7 +2,8 @@
 (* FILE          : hhReconstruct.sml                                     *)
 (* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP   *)
 (*                 and optionally minimize them.                         *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
+(* AUTHORS       : (c) Thibault Gauthier, University of Innsbruck        *)
+(*                 Lukasz Czajka                                         *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
 
