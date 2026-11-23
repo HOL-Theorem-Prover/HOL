@@ -1,7 +1,8 @@
 (* PROBE_ARGS, space-separated: the order in which to load the diamond's
    theories (letters from "abcde"), then flags: "nocache", "shadow" (rebind
    a structure the generated theory source uses), "customloader" (replace
-   TheoryReader.load_thydata_fn), "limit<n>" (write at most n modules),
+   TheoryReader.load_thydata_fn), "customanon" (replace
+   ThyDataSexp.anon_thm_lookup), "limit<n>" (write at most n modules),
    "loadprobe" (load the probe theory exported by an earlier run instead
    of exporting it).  Writes the diamond's theorems to "fingerprint". *)
 open HolKernel Parse boolLib bossLib;
@@ -43,6 +44,9 @@ val _ = if flag "customloader" then
             TheoryReader.load_thydata_fn :=
               (fn args => (loader_calls := !loader_calls + 1; default args))
           end
+        else ();
+val _ = if flag "customanon" then
+          ThyDataSexp.anon_thm_lookup := (fn _ => NONE)
         else ();
 val events = ref ([] : string list);
 val _ = Theory.register_hook
@@ -88,6 +92,23 @@ val _ =
                      (Listsort.sort (fn ((a, _), (b, _)) =>
                                         String.compare (a, b))
                                     (DB.thms t)))
+        (map thy_of (explode "abcde"));
+    (* the order lookups see, and where the reverse map finds each
+       theorem *)
+    app (fn t => TextIO.output (out, "order " ^ t ^ ": " ^
+                                     String.concatWith " "
+                                       (map #1 (DB.thms t)) ^ "\n"))
+        (map thy_of (explode "abcde"));
+    app (fn t =>
+            app (fn (n, th) =>
+                    TextIO.output
+                      (out, "rev " ^ t ^ "." ^ n ^ ": " ^
+                            String.concatWith " "
+                              (map (fn DB_dtype.Stored {Thy, Name} =>
+                                       Thy ^ "." ^ Name
+                                     | DB_dtype.Local s => s)
+                                   (DB.revlookup th)) ^ "\n"))
+                (DB.thms t))
         (map thy_of (explode "abcde"));
     TextIO.closeOut out
   end;
@@ -146,6 +167,15 @@ val _ = if enabled then
     \Int.toString misses ^ \" \" ^ Int.toString writes); \
     \TextIO.closeOut out end"
   else ();
+
+val _ =
+  let
+    val {offered, installed} = TheoryReader.prepared_statistics ()
+    val out = TextIO.openOut "prepared-stats"
+  in
+    TextIO.output (out, Int.toString offered ^ " " ^ Int.toString installed);
+    TextIO.closeOut out
+  end;
 
 val _ = if flag "loadprobe" then OS.Process.exit OS.Process.success
         else ();

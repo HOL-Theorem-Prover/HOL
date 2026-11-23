@@ -431,4 +431,8 @@ val wlog_then = wlog_then
 
 val suspend = markerLib.suspend
 
+(* bin/hol.state ends with bossLib and the theories it needs: theory
+   modules prepare the theory data of the types made so far *)
+val _ = TheoryReader.fix_preparers ()
+
 end (* struct *)

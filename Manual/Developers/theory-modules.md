@@ -45,13 +45,24 @@ their constants, are copied into it. The signature is the one
 compiled from that text, so every value it declares is a theorem; no
 `FooTheory.sig` is read.
 
+The module also stores what the load builds from that data alone
+(`TheoryReader.prepare`): the theory's DB name map and reverse-map
+table, and its theory data read for the types `ThyDataSexp` made in
+`bin/hol.state` (fixed when `bossLib` is loaded). It stores none when
+`ThyDataSexp.anon_thm_lookup` isn't the default, since reading theory
+data then depends on more than the data.
+
 A later `Meta.load "FooTheory"` installs the signature where the source
 loader compiles `FooTheory.sig`, loads the parents and other
 dependencies listed in `FooTheory.uo` as usual, then replaces compiling
 `FooTheory.sml` with the same registration steps in the same order
-(`TheoryReader.register_decoded`, `Theory.record_metadata`,
+(`TheoryReader.register_prepared`, `Theory.record_metadata`,
 `Theory.load_complete`) and only then binds the structure. Load hooks
-and theory data run exactly as for a source load. The theory is linked
+and theory data run exactly as for a source load; the stored values are
+installed instead of being built again only when the default
+`anon_thm_lookup` is installed and they were made from the module's
+own decoded data, and only theory data values whose type tag is the
+loading process's own. The theory is linked
 into the graph under the hash `FooTheory.sml` names, as a source load
 does; build tools may write a hash there other than the `.dat`'s
 SHA-1.

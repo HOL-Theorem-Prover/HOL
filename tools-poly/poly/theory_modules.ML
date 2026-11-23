@@ -268,6 +268,7 @@ type module =
      {signature_value : string * PolyML.NameSpace.Signatures.signatureVal,
       values : string * Thm.thm vector,
       data : TheoryReader.decoded,
+      prepared : TheoryReader.prepared option,
       bindings : PolyML.NameSpace.Structures.structureVal list,
       id : Save.moduleId}
 
@@ -282,11 +283,12 @@ fun read_module path name (thy, dat_digest) : module option =
     in
       case roots of
           signature_root :: structure_root :: data_root :: digest_root ::
-          guards =>
+          prepared_root :: guards =>
           if Universal.tagIs Tags.signatureTag signature_root andalso
              Universal.tagIs TheoryReader.values_tag structure_root andalso
              Universal.tagIs TheoryReader.decoded_tag data_root andalso
              Universal.tagIs TheoryReader.digest_tag digest_root andalso
+             Universal.tagIs TheoryReader.prepared_tag prepared_root andalso
              List.all (Universal.tagIs Tags.structureTag) guards
           then
             let
@@ -304,6 +306,8 @@ fun read_module path name (thy, dat_digest) : module option =
               then
                 SOME {signature_value = signature_value, values = values,
                       data = data,
+                      prepared = Universal.tagProject
+                                   TheoryReader.prepared_tag prepared_root,
                       bindings = map (#2 o Universal.tagProject
                                              Tags.structureTag) guards,
                       id = id}
@@ -352,8 +356,9 @@ fun compile_signature name text =
   end
 
 (* A module's roots, in the order read_module expects, built from a
-   theory's decoded data.  The signature is the one export_theory
-   prints for the theorems, so every value it declares is a theorem. *)
+   theory's decoded data and what TheoryReader.prepare makes of it.  The
+   signature is the one export_theory prints for the theorems, so every
+   value it declares is a theorem. *)
 fun module_roots name dat_digest data bindings =
   let
     val thy = TheoryReader.decoded_name data
@@ -385,6 +390,8 @@ fun module_roots name dat_digest data bindings =
                                         (name, RunCall.unsafeCast words) ::
                     Universal.tagInject TheoryReader.decoded_tag data ::
                     Universal.tagInject TheoryReader.digest_tag dat_digest ::
+                    Universal.tagInject TheoryReader.prepared_tag
+                                        (TheoryReader.prepare data) ::
                     map (fn b => Universal.tagInject Tags.structureTag ("", b))
                         bindings)
   end
@@ -459,9 +466,10 @@ fun load_signature directory base_id use file =
   end
 
 (* Loads the theory from module [m], unless its .dat can't be read or
-   TheoryReader.register_decoded refuses its data: then false, having
+   TheoryReader.register_prepared refuses its data: then false, having
    registered nothing. *)
-fun warm_load file hash ({signature_value, values, data, ...} : module) =
+fun warm_load file hash
+              ({signature_value, values, data, prepared, ...} : module) =
   let
     val name = #1 values
     val thy = TheoryReader.decoded_name data
@@ -477,7 +485,7 @@ fun warm_load file hash ({signature_value, values, data, ...} : module) =
     case timestamp of
         NONE => false
       | SOME timestamp =>
-        TheoryReader.register_decoded hash data andalso
+        TheoryReader.register_prepared hash data prepared andalso
         (Theory.record_metadata thy {timestamp = timestamp, path = path};
          if !Globals.print_thy_loads
          then TextIO.print ("Loading " ^ name ^ " ... done\n") else ();

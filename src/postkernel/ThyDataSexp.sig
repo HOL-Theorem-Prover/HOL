@@ -24,6 +24,11 @@ datatype ('a,'b,'c,'d) sum4 = in14 of 'a | in24 of 'b | in34 of 'c | in44 of 'd
    to look up a replayed theorem instead of creating a disk_thm.
    Returns NONE to fall back to disk_thm. *)
 val anon_thm_lookup : (string * int -> Thm.thm option) ref
+(* Whether anon_thm_lookup is the default, so that reading theory data
+   depends only on the data and the kernel. *)
+val default_readers : unit -> bool
+(* The theory data types made by new and new_noload. *)
+val sexp_types : unit -> string list
 
 val uptodate : t -> bool
 val compare : t * t -> order
@@ -40,6 +45,8 @@ val compare : t * t -> order
 val alist_merge : {old: t, new : t} -> t
 val append_merge : {old : t, new : t} -> t
 
+(* merge must depend only on its arguments: a theory's entries may be
+   read and merged in another process, where its module is written. *)
 val new : {thydataty : string,
            merge : {old : t, new : t} -> t,
            load : {thyname : string, data : t option} -> unit,

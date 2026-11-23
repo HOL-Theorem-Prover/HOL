@@ -1,9 +1,10 @@
 (* Decoded data whose parents are canonical but whose references aren't
-   current is refused before anything is registered, and the context
-   stays usable.  moduleA stays canonical after a rollback to before its
-   load, since the canonical set isn't part of the context, but its
-   entries are gone.  Run in a process of its own, without a module
-   cache; exits with failure, saying why, if any of this doesn't hold. *)
+   current is refused before anything is registered, with or without
+   prepared data, and the context stays usable.  moduleA stays canonical
+   after a rollback to before its load, since the canonical set isn't
+   part of the context, but its entries are gone.  Run in a process of
+   its own, without a module cache; exits with failure, saying why, if
+   any of this doesn't hold. *)
 open HolKernel Parse boolLib bossLib;
 fun fail s = (TextIO.output (TextIO.stdErr, "stale: " ^ s ^ "\n");
               OS.Process.exit OS.Process.failure);
@@ -24,6 +25,10 @@ fun has_data () =
                                     {thy = "moduleB", thydataty = ty}))
                 ["compute", "simp.deltas"];
 val _ = has_data () orelse fail "moduleB's load added no theory data";
+val prepared =
+    case TheoryReader.prepare decoded of
+        SOME p => SOME p
+      | NONE => fail "nothing prepared from moduleB's decoded data";
 
 val _ = Context.restore before_a;
 val _ = TheoryReader.is_canonical "moduleA" orelse
@@ -32,6 +37,11 @@ val _ = not (TheoryReader.refs_current decoded) orelse
         fail "references to moduleA's removed entries count as current";
 val _ = not (TheoryReader.register_decoded (theory_hash "moduleB") decoded)
         orelse fail "decoded data with stale references was registered";
+val _ = not (TheoryReader.register_prepared (theory_hash "moduleB") decoded
+                                            prepared)
+        orelse fail "prepared data with stale references was registered";
+val _ = #offered (TheoryReader.prepared_statistics ()) = 0 orelse
+        fail "the refused registration was offered prepared data";
 val _ = raises (fn () => prim_mk_const {Thy = "moduleB", Name = "b_value"})
         orelse fail "the refused registration added a constant";
 val _ = raises (fn () =>

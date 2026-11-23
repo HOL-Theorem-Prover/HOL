@@ -36,6 +36,20 @@ sig
   val decoded_theorems : decoded -> (string * Thm.thm * DB_dtype.thminfo) list
   val capture_decoded : ('a -> 'b) -> 'a -> 'b * decoded option
   val register_decoded : string -> decoded -> bool
+  (* What a theory's load builds from its decoded data alone, made where
+     its module is written (NONE when reading theory data there depends
+     on more than the data, or fix_preparers wasn't called), and
+     register_decoded using it when it was made from the same decoded
+     value.  Only the theory data types there were at the last
+     fix_preparers, which bossLib calls, are read. *)
+  type prepared
+  val prepared_tag : prepared option MLSYSPortable.persistent_tag
+  val fix_preparers : unit -> unit
+  val prepare : decoded -> prepared option
+  val register_prepared : string -> decoded -> prepared option -> bool
+  (* How many read theory data segments loads from prepared data were
+     given, and how many of them they installed. *)
+  val prepared_statistics : unit -> {offered : int, installed : int}
   (* Whether the other theories' kernel entries the decoded values refer
      to are still the ones they were decoded against: those theories are
      canonical and the entries unchanged. *)

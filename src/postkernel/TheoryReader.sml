@@ -254,6 +254,80 @@ fun register_decoded hash d =
          | e => raise TheoryReader ("Exception raised: " ^
                                     General.exnMessage e)
 
+(* What a theory's load builds from its decoded data [decoded] alone,
+   made where the theory's module is written so that loads from the
+   module needn't build it again: the read theory data by type and the
+   theory's DB shard. *)
+type prepared = {decoded : decoded,
+                 segments : (string * Theory.LoadableThyData.t) list,
+                 names : DB.shard}
+val prepared_tag : prepared option MLSYSPortable.persistent_tag =
+    MLSYSPortable.new_persistent_tag ()
+
+(* The theory data types prepare reads, as they were when fix_preparers
+   was last called: bossLib calls it, so that they are those of
+   bin/hol.state and of every state built on it, in the processes that
+   write modules and in those that load them.  A module refers to their
+   operations in the saved state it depends on rather than copying them.
+   Only ThyDataSexp's types are read: their reader builds plain data. *)
+val fixed : string list option ref = ref NONE
+fun fix_preparers () = fixed := SOME (ThyDataSexp.sexp_types ())
+
+(* From [d] alone; NONE when reading theory data here depends on more
+   than the data, or fix_preparers wasn't called. *)
+fun prepare (d as {thyname, strings, terms, theorems, thydata, ...}
+             : decoded) =
+    case (!fixed, ThyDataSexp.default_readers ()) of
+        (SOME types, true) =>
+        SOME {decoded = d,
+              segments =
+                Theory.LoadableThyData.read_segments
+                  (fn ty => List.exists (fn t => t = ty) types)
+                  {strings = fn i => Vector.sub (strings, i),
+                   terms = Term.read_raw terms}
+                  (map (fn {data, ty} => {thydataty = ty, data = data})
+                       thydata),
+              names = DB.shard_of thyname theorems}
+      | _ => NONE
+
+val offered_segments = ref 0
+val installed_segments = ref 0
+fun prepared_statistics () =
+    {offered = !offered_segments, installed = !installed_segments}
+
+fun bind_prepared ({thyname,strings,terms,theorems,thydata,...} : decoded)
+                  ({segments, names, ...} : prepared) =
+    let
+      val installed = Theory.LoadableThyData.install_segments
+                        {thy = thyname, data = segments}
+    in
+      offered_segments := !offered_segments + length segments;
+      installed_segments := !installed_segments + length installed;
+      DB.bind_shard thyname names theorems;
+      app (fn e as {ty, ...} =>
+              if List.exists (fn t => t = ty) installed then ()
+              else temp_encoded_update (strings, terms) thyname e)
+          thydata
+    end
+
+(* register_decoded, using [p] instead of building what it holds again
+   when p was made from [d] and reading theory data here depends only on
+   the data. *)
+fun register_prepared hash d (p : prepared option) =
+    case p of
+        SOME (p as {decoded, ...}) =>
+        if MLSYSPortable.pointer_eq (decoded, d) andalso
+           ThyDataSexp.default_readers ()
+        then
+          kernel_refs_ok d andalso (link_kernel hash d; bind_prepared d p;
+                                    true)
+          handle Interrupt => raise Interrupt
+               | e as TheoryReader _ => raise e
+               | e => raise TheoryReader ("Exception raised: " ^
+                                          General.exnMessage e)
+        else register_decoded hash d
+      | NONE => register_decoded hash d
+
 (* Hook for alternative theorem sources. Default is to read from .dat files. *)
 val load_thydata_fn :
     ({thyname:string,path:string,hash:string} ->

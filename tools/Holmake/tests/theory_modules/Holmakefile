@@ -1,6 +1,7 @@
 ifdef POLY
 TEST_INPUTS = testdir/probe.sml testdir/writer.sml testdir/rollback.sml \
               testdir/refused.sml testdir/stale.sml testdir/theory_hash.sml \
+              testdir/mismatch.sml \
               $(wildcard testdir/*Script.sml) \
               $(HOLDIR)/tools-poly/poly/theory_modules.ML
 

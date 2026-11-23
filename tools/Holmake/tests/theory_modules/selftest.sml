@@ -73,6 +73,16 @@ val _ = if not supported then () else
   let
     val _ = tprint "first load saves a module per theory"
     val _ = expect "cold" [0, 5, 5]
+    fun prepared () = List.mapPartial Int.fromString
+                        (String.tokens Char.isSpace (read "prepared-stats"))
+    fun expect_prepared what want =
+      if prepared () = want then OK ()
+      else die (what ^ ": prepared data " ^ read "prepared-stats")
+    (* moduleA's and moduleB's theory data of ThyDataSexp's types: each
+       has compute, grammardelta and userdef.deltas values, and moduleA
+       a TypeBase.deltas one and moduleB a simp.deltas one *)
+    val all_prepared = [8, 8]
+    val _ = expect_prepared "cold" [0, 0]
     val _ = tprint "module names carry each .dat file's SHA-1"
     fun named_digest m =
       case String.fields (fn c => c = #"-") (OS.Path.base m) of
@@ -87,7 +97,12 @@ val _ = if not supported then () else
     val _ = tprint "modules load in another order"
     val _ = probe ["cbda"]
     val _ = expect "warm, reversed diamond" [5, 0, 0]
+    val _ = tprint "warm loads install all their prepared theory data"
+    val _ = expect_prepared "warm" all_prepared
     val _ = tprint "warm theorems are the source load's"
+    (* the reverse map lists theorems in load order: load as the source
+       probe did *)
+    val _ = probe ["abcd"]
     val _ = if read "fingerprint" = source_fingerprint then OK ()
             else die "warm fingerprint differs"
     val _ = tprint "modules load in the original order"
@@ -134,6 +149,7 @@ val _ = if not supported then () else
     val _ = move_written ()
     val _ = probe ["abcd"]
     val _ = expect "writer's modules" [5, 0, 0]
+    val _ = expect_prepared "writer's modules" all_prepared
     val _ = if read "fingerprint" = source_fingerprint then OK ()
             else die "writer's modules give other theorems"
     val _ = tprint "the writer writes nothing when every module is there"
@@ -144,6 +160,29 @@ val _ = if not supported then () else
     val _ = (rollback "modules"; OK ())
     val _ = tprint "a module over a non-canonical parent falls back"
     val _ = (command [hol, "run", "--noconfig", "refused.sml"]; OK ())
+    val _ = tprint "a module's prepared data from another theory is ignored"
+    val _ = command [hol, "run", "--noconfig", "mismatch.sml"]
+    val _ = probe ["abcd"]
+    val _ = expect "mismatched prepared data" [5, 0, 0]
+    (* moduleA's own, but not moduleB's moduleA-made data *)
+    val _ = expect_prepared "mismatched prepared data" [4, 4]
+    val _ = if read "fingerprint" = source_fingerprint then OK ()
+            else die "mismatched prepared data gives other theorems"
+    val _ = tprint "a custom anonymous theorem lookup reads theory data"
+    val _ = probe ["abcd", "customanon"]
+    val _ = expect "custom lookup" [5, 0, 0]
+    val _ = expect_prepared "custom lookup" [0, 0]
+    val _ = if read "fingerprint" = source_fingerprint then OK ()
+            else die "a custom lookup gives other theorems"
+    val _ = tprint "modules written with a custom lookup hold no read data"
+    val _ = clear "modules"
+    val _ = probe ["abcd", "customanon"]
+    val _ = expect "custom lookup, cold" [0, 5, 5]
+    val _ = probe ["abcd"]
+    val _ = expect "custom lookup's modules" [5, 0, 0]
+    val _ = expect_prepared "custom lookup's modules" [0, 0]
+    val _ = if read "fingerprint" = source_fingerprint then OK ()
+            else die "a custom lookup's modules give other theorems"
     val _ = tprint "module names keep the SHA-1 when libcrypto refuses it"
     (* default properties naming a missing provider make libcrypto's
        SHA1 return NULL *)
@@ -168,6 +207,7 @@ val _ = if not supported then () else
 val _ = clear "modules";
 val _ = clear "written";
 val _ = app remove ["module-stats", "fingerprint", "probe-fingerprint",
-                    "nosha1.cnf", "refusedScratchTheory.sml",
-                    "refusedScratchTheory.sig", "refusedScratchTheory.dat"];
+                    "nosha1.cnf", "prepared-stats",
+                    "refusedScratchTheory.sml", "refusedScratchTheory.sig",
+                    "refusedScratchTheory.dat"];
 val _ = command [holmake, "--no-cache", "cleanAll"];
