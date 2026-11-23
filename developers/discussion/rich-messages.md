@@ -201,14 +201,29 @@ message into a surface of its own.
 
 ## Not done
 
-- **The message channels are not yet structured end to end.**
-  `HOL_MESGm` and friends exist and take a message, but they flatten
-  it for the four `*_outstream` refs.  Giving them a `Listener` beside
-  those refs — the shape `src/simp/src/Trace.sml` already uses for
-  term-carrying trace events — is what would let the LSP turn a
-  located `HOL_WARNING` into a squiggle instead of undifferentiated
-  compiler output.  Deliberately left: the listener is easy, and
-  deciding which messages deserve to become diagnostics is not.
+- **The message channels are only half structured.**  `HOL_MESGm`
+  now offers its message to `Feedback.MESG_hook` before flattening it
+  for `MESG_outstream`, so a consumer can get at the terms; the
+  outstream's text is unchanged.  A plain ref rather than the
+  `Listener.t` this section first proposed, because `Listener` is
+  built on `Feedback` and naming it there would close a cycle — the
+  `*_outstream` refs beside it are refs for the same reason.
+
+  `HOL_WARNINGm` and `HOL_INFOm` still only flatten.  The warning
+  channel is the one that wants care rather than another ref:
+  `WARNINGs_as_ERRs` turns a warning into an exception built with
+  `mk_HOL_ERR`, so it drops the message on a second floor, and
+  fixing that means `mk_HOL_ERRm` there and a decision about whether
+  a located `HOL_WARNING` should become a squiggle.  Still
+  deliberately left: that decision is the hard part, not the
+  plumbing.
+
+  Nothing in the LSP installs a hook yet — what surface a plain
+  `HOL_MESG` should get in an editor is a separate question from
+  whether its terms survive the trip.  `src/num/theories/selftest.sml`
+  is what holds the mechanism up: a term sent through `HOL_MESGm`,
+  with its free variable's type and its constant's theory-qualified
+  name recovered from the message the hook was handed.
 
 - **Proof-pool failures.**  `LSPExtension.Failed of string` still
   reduces a tactic failure to text via `exn_to_string`, so a term

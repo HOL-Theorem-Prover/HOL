@@ -234,8 +234,20 @@ fun HOL_MESG s =
 (* The `m' variants of the four channels take a message rather than a
    string.  They flatten it for the outstreams, which is all a terminal
    wants; a consumer that can do more with the values the message holds
-   gets at them through the listener below rather than through here. *)
-fun HOL_MESGm m = HOL_MESG (HOLmessage.toString m)
+   gets at them through the hook rather than through here.
+
+   A plain ref rather than a `Listener.t', which is the shape this
+   wants: `Listener' is built on `Feedback' (it raises `HOL_ERR'), so
+   naming it here would close a cycle.  The outstreams beside it are
+   refs for the same reason. *)
+val MESG_hook : (HOLmessage.message -> unit) ref = ref (fn _ => ())
+
+fun HOL_MESGm m =
+  (if !emit_MESG then
+     (!MESG_hook m
+      handle Portable.Interrupt => raise Portable.Interrupt | _ => ())
+   else ();
+   HOL_MESG (HOLmessage.toString m))
 
 fun HOL_PROGRESS_MESG (start, finish) f x =
   if !emit_MESG then
