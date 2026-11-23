@@ -41,6 +41,8 @@ sig
   val selectDB    : selector list -> public_data list
   val listDB      : unit -> data list
   val revlookup   : thm -> location list
+  (* The head of revlookup.  It doesn't build the reverse map when the
+     newest bindings of the theory binding last decide it (see bindl). *)
   val revhead     : thm -> location option
 
   val polarity_search : bool -> term -> public_data list
@@ -49,6 +51,9 @@ sig
   val local_thm   : string -> thm option
 
   val dest_theory  : string -> theory
+  (* bindl thy blist binds theory thy's own theorems, as loading thy does,
+     after thy's types and constants exist; revhead relies on no earlier
+     binding mentioning them *)
   val bindl : string -> (string * thm * thminfo) list -> unit
 
   (* Derived search functions *)
