@@ -85,21 +85,3 @@ fun toString m =
 
 end  (* HOLmessage *)
 
-(* Poly/ML prints a value of an opaque type as `?', and `exnMessage' --
-   which much of the tree reaches for when it reports an exception --
-   answers from that generic printer.  Without this, a HOL error comes
-   back as `message = ?' and the text it was raised with is simply
-   gone, which is not what the string-valued interfaces promise.
-
-   The registration has to sit outside the seal: inside, it would be
-   against the representation, which Poly/ML holds to be a different
-   type from the one everyone else sees, and is never found.  A
-   registration is saved with the heap, so this reaches scripts run in
-   batch -- which load no prelude -- as well as the REPL.  The quoting
-   is Poly/ML's own rendering of a string, which is what this field
-   printed as before it held a message. *)
-val () =
-    PolyML.addPrettyPrinter
-      (fn _ => fn _ => fn (m : HOLmessage.message) =>
-          PolyML.PrettyString
-            ("\"" ^ String.toString (HOLmessage.toString m) ^ "\""))

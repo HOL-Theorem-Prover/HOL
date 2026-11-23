@@ -327,10 +327,19 @@ val _ = let
     (case printTacAsSML "FIRST_PROVE [a, b]" parsedFirstProve of
        SOME text => String.isSubstring "FIRST_PROVE" text
      | NONE => false)
-  val _ = assert "FIRST_PROVE was not lowered as a choice"
+  val _ = tprint "ProofStepPlan makes each FIRST_PROVE alternative solve"
+  val _ = assert "FIRST_PROVE alternatives were not lowered as solving selects"
     (case fromTactic parsedFirstProve of
-       [Choice {source = SOME _, alternatives = [[Leaf _], [Leaf _]]}] => true
+       [Choice {source = SOME _,
+                alternatives =
+                  [[Select {selector = SelectFirst, mode = SelectSolve,
+                            body = [Leaf _]}],
+                   [Select {selector = SelectFirst, mode = SelectSolve,
+                            body = [Leaf _]}]]}] => true
      | _ => false)
+  val _ = assert "FIRST_PROVE and FIRST have the same plan"
+    (canonicalPlan projections (fromTactic parsedFirstProve) <>
+     canonicalPlan projections (fromTactic (parseTactic "FIRST [a, b]")))
   val _ = tprint "TacticParse preserves by rather than elaborating it as sg"
   val parsedBy = parseTactic "q by tac"
   val _ = assert "by parsed as ordinary subgoal/THEN1 structure"

@@ -36,6 +36,11 @@ structure LSPNameSpace : sig
      resume at dec N re-installs the file-layer state that was live
      at the end of dec N.  Symmetric to `Meta.snapshotLoaded`. *)
   val snapshotLayer : unit -> unit -> unit
+  (* Every value this file's compile bound under `nm', newest first,
+     shadowed ones included.  Empty for a name the file layer has
+     never entered -- in particular for anything that is only in
+     `globalNameSpace'.  See `vTbl' for why the history is kept. *)
+  val valuesNamed : string -> PolyML.NameSpace.Values.value list
 end = struct
 
   (* Mirrors src/portableML/poly/concurrent/ThreadLocal, which cannot be
@@ -68,8 +73,33 @@ end = struct
                                  (tblGet t)
   fun tblClear t = tblSet t (emptyTbl ())
 
+  (* The value table's own three, over a `value list'.  Newest first,
+     so `vLookup' is a head and the shadowing order is readable. *)
+  fun vHistory t k = case Binarymap.peek (tblGet t, k) of
+                       NONE => [] | SOME vs => vs
+  fun vLookup t k = case vHistory t k of [] => NONE | v :: _ => SOME v
+  fun vEnter t (k, v) = tblSet t (Binarymap.insert (tblGet t, k,
+                                                    v :: vHistory t k))
+  fun vAll t = Binarymap.foldr (fn (_, [], acc) => acc
+                                 | (n, v :: _, acc) => (n, v) :: acc)
+                               [] (tblGet t)
+
+  (* Values, unlike the other five kinds, are kept as a per-name
+     history rather than as the latest binding alone.  A file is free
+     to bind one name twice --- `val foo = …' and a later
+     `Theorem foo' --- and a flat table answers both with the second,
+     so a hover over the first printed a value belonging to the
+     other.  Keeping both costs nothing and loses nothing: each entry
+     carries its own `CPBindingSeq' id as a `PTrefId', the same
+     number the compiler puts on the declaration and on every
+     reference to it, so a caller holding an id can say which of them
+     it meant.  `lookupVal' still answers with the newest, so name
+     resolution during the compile is unchanged.
+
+     One entry per binding the compile makes either way, and
+     `clearFileLayer' drops the lot. *)
   val vTbl = mkTable ()
-      : (string, PolyML.NameSpace.Values.value) Binarymap.dict
+      : (string, PolyML.NameSpace.Values.value list) Binarymap.dict
         ThreadLocal.t
   val tTbl = mkTable ()
       : (string, PolyML.NameSpace.TypeConstrs.typeConstr) Binarymap.dict
@@ -113,7 +143,7 @@ end = struct
        lookupSig = gLSig, enterSig = _, allSig = gASig,
        lookupFunct = gLFn, enterFunct = _, allFunct = gAFn} = ns
 
-  val v = overlay tblLookup tblAll tblEnter vTbl gLV gAV
+  val v = overlay vLookup vAll vEnter vTbl gLV gAV
   val t = overlay tblLookup tblAll tblEnter tTbl gLT gAT
   val f = overlay tblLookup tblAll tblEnter fTbl gLF gAF
   val s = overlay tblLookup tblAll tblEnter sTbl gLS gAS
@@ -131,6 +161,8 @@ end = struct
   fun clearFileLayer () =
     (tblClear vTbl; tblClear tTbl; tblClear fTbl;
      tblClear sTbl; tblClear gTbl; tblClear nTbl)
+
+  fun valuesNamed nm = vHistory vTbl nm
 
   (* Captures this thread's layer; the returned thunk installs it on
      whichever thread calls it.  That is both the mid-compile resume

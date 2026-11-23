@@ -5075,9 +5075,6 @@ fun start {diag, dbg, warnings} = let
        nor for `DECIDE_TAC' and friends.  Install the captured layer,
        exactly as `completionsAt' does. *)
     val () = case !(#nsLayer v) of SOME restore => restore () | NONE => ()
-    (* The names this buffer declares at top level, from the outline's
-       own (cached) parse -- see `isNamespaceName' below. *)
-    val topLevelSyms = symbolsOf v
     val startOffset = fromLineCol (#lines text) startTarget
     fun ppToString pp = let
       val mds = DArray.new (8, "")
@@ -5149,41 +5146,6 @@ fun start {diag, dbg, warnings} = let
           handle _ => []
         val range = SOME (getLineCol (#lines text) startPos, getLineCol (#lines text) endPos)
         val help = map (fn d => {range = range, markdown = d}) help
-        (* Does this identifier name something the file namespace can
-           resolve *to this same binding*?
-
-           `i = 0' is everything declared outside the file: those are
-           in the layer (or in `globalNameSpace' behind it) under the
-           name written here.  Anything else was declared in the file,
-           and only its top-level declarations are entered into the
-           layer -- a function parameter or a `let'-bound name never
-           is, and a same-named top-level binding is a different thing
-           entirely, so looking one up would print a value belonging to
-           something else.
-
-           `PDeclaredAt' points at the declared name as written, and so
-           does an outline symbol's `selSpan', so equal spans mean this
-           identifier was declared by that top-level declaration.  The
-           outline is already parsed and cached per buffer version, so
-           this costs a list scan.
-
-           Poly/ML's own answer to the question -- `PReferences' on the
-           declaring node, reached by navigating to `PDeclaredAt' --
-           does not survive the trip: the node the built trees return
-           for that span carries no such property. *)
-        val isNamespaceName = i = 0 orelse let
-          fun look [] = NONE
-            | look (HOL_IDE.PDeclaredAt loc :: _) = SOME loc
-            | look (_ :: props) = look props
-          in
-            case look props of
-              NONE => false
-            | SOME {startPosition, endPosition, ...} => let
-                val span = (startPosition, endPosition)
-                in List.exists (fn Sym {selSpan, ...} => selSpan = span)
-                               topLevelSyms
-                end
-          end
         (* Lookup via the LSP file layer, not `globalNameSpace`, so
            hovers on a deleted `val foo = …` return NONE instead of
            the retained Poly/ML binding.  The layer falls through to
@@ -5201,10 +5163,46 @@ fun start {diag, dbg, warnings} = let
                NONE => NONE
              | SOME st =>
                lookupDotted (PolyML.NameSpace.Structures.contents st) cs)
+        (* Which binding does this occurrence denote?
+
+           `i' is Poly/ML's answer.  `holide.ML' compiles with
+           `CPBindingSeq', so every binding the pass makes is given a
+           serial number, carried on the declaring node as `PTdefId'
+           and on each reference as `PTrefId' -- and, crucially, on
+           the entered value itself, which is how the two are matched
+           up here.  Zero is everything the pass did not bind: names
+           from `globalNameSpace', and the ones a `Theory foo' header
+           `open's into the layer, which keep the id of wherever they
+           were originally bound.  Those resolve by name, and must,
+           since the file layer is where the `open'ed ones live.
+
+           For anything the file bound, the name alone will not do.
+           `lookupVal' is keyed on it and a file is free to bind one
+           twice -- `val foo = …' and a later `Theorem foo' -- so it
+           answers both occurrences with the second; the type beside
+           it comes from this node and is per-occurrence, so the
+           earlier `foo' rendered one binding's type against the
+           other's value.  `valuesNamed' keeps every entry under the
+           name and `i' picks the one meant.
+
+           It also subsumes the test this used to make -- comparing
+           `PDeclaredAt' against the outline's `selSpan' to tell a
+           top-level declaration from a `let'-bound name or a
+           function parameter.  Only top-level bindings are entered
+           into the layer, so a local name's id is simply not there
+           to be found, and the outline scan (a list walk per hover,
+           and a `symbolsOf' to build it) is gone with it. *)
+        fun valBindingId value = let
+          fun look [] = NONE
+            | look (PolyML.PTrefId j :: _) = SOME j
+            | look (_ :: rest) = look rest
+          in look (PolyML.NameSpace.Values.properties value) end
         val value =
-          if isNamespaceName
-          then lookupDotted LSPNameSpace.fileNS (splitOn #"." id)
-          else NONE
+          if i = 0 then lookupDotted LSPNameSpace.fileNS (splitOn #"." id)
+          else case splitOn #"." id of
+                 [nm] => List.find (fn v => valBindingId v = SOME i)
+                                   (LSPNameSpace.valuesNamed nm)
+               | _ => NONE
         in (SOME id, value, help) end
       open PolyML
       val ty = Option.map (fn ty =>

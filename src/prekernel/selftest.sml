@@ -216,17 +216,17 @@ val _ =
       else die ("FAILED: got " ^ String.toString shown)
     end
 
-(* `exnMessage' is what much of the tree reaches for when reporting an
-   exception, and Poly/ML answers it from the generic value printer
-   rather than from anything in `Feedback'.  The message a HOL error
-   holds is an opaque type, so without a printer registered for it the
-   text the error was raised with never reaches the report -- and the
-   loss is silent, because the origins still print. *)
-val _ = tprint "exnMessage shows a HOL error's message"
+val _ = tprint "HOLmessage.toPretty shows a HOL error's message"
 val _ =
     let
+      open Feedback
       val mesg = "a message that must survive exnMessage"
-      val shown = exnMessage (Feedback.mk_HOL_ERR "Selftest" "exn" mesg)
+      val exn = mk_HOL_ERR "Selftest" "exn" mesg
+      val shown =
+          case exn of
+              HOL_ERR (HOL_ERROR {message, ...}) =>
+                HOLPP.pp_to_string 70 HOLmessage.toPretty message
+            | _ => die ("FAILED: mk_HOL_ERR returned " ^ exnMessage exn)
     in
       if String.isSubstring mesg shown then print "OK\n"
       else die ("FAILED: got " ^ String.toString shown)

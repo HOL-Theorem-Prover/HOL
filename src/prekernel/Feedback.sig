@@ -70,6 +70,21 @@ sig
     val failwith          : string -> 'a
     val HOL_MESG          : string -> unit
     val HOL_MESGm         : HOLmessage.message -> unit
+    (* Offered the message `HOL_MESGm' was called with, before it is
+       flattened for `MESG_outstream'.  A terminal wants the text and
+       gets it unchanged; a consumer that can do something with the
+       values the message holds -- the types of the terms it names,
+       say -- needs the message itself, because `toString' renders
+       through `HOLmessage.plain_renderer', which pins a raw back end,
+       and no choice of `Parse.current_backend' at the call site can
+       get behind that.
+
+       Called only when `emit_MESG' is set, so a hook sees exactly the
+       messages the channel carries.  A hook that raises is ignored
+       (an interrupt excepted): this runs while something is being
+       reported, and must not become the thing that goes wrong.  See
+       `developers/discussion/rich-messages.md'. *)
+    val MESG_hook         : (HOLmessage.message -> unit) ref
     val HOL_PROGRESS_MESG : string * string -> ('a -> 'b) -> 'a -> 'b
     val HOL_WARNING       : string -> string -> string -> unit
     val HOL_WARNINGm      : string -> string -> HOLmessage.message -> unit
