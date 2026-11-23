@@ -178,6 +178,26 @@ fun close_first (n, g) = let
     | go _ = raise Bind
   in (n-1, applyN go (n-1) g) end
 
+(* FIRST_PROVE runs each alternative as `t THEN NO_TAC', so an
+   alternative that leaves goals has failed like one that raised, and
+   the next one runs on the goals the frame opened with. *)
+fun next_first_prove (n, g) = let
+  fun go (Try (Running (Base (gs as ([], _))), _)) = Done gs
+    | go (Try (Running (Base _), gs)) = Try (Running (Base gs), gs)
+    | go (Try (Failed _, gs)) = Try (Running (Base gs), gs)
+    | go (Done gs) = Done gs
+    | go _ = raise Bind
+  in (n, applyN go (n-1) g) end
+
+fun close_first_prove (n, g) = let
+  fun go (Try (Running (Base (gs as ([], _))), _)) = Base gs
+    | go (Try (Running _, _)) =
+        raise ERR "FIRST_PROVE" "No tactic in the list proved the goal"
+    | go (Try (Failed e, _)) = Portable.reraise e
+    | go (Done gs) = Base gs
+    | go _ = raise Bind
+  in (n-1, applyN go (n-1) g) end
+
 fun open_repeat (n, g) = (n+1, apply (fn gs => Repeat (Running $ Base gs, Running o Base, gs)) g)
 fun close_repeat (n, g) = (n-1, applyN close_repeat_frame (n-1) g)
 

@@ -546,6 +546,7 @@ datatype tac_frag_open
 
 datatype tac_frag_mid
   = FNextFirst
+  | FNextFirstProve
   | FNextTacsToLT
   | FNextSplit
   | FNextSelect
@@ -553,6 +554,7 @@ datatype tac_frag_mid
 datatype tac_frag_close
   = FClose
   | FCloseFirst
+  | FCloseFirstProve
   | FCloseRepeat
   | FCloseFirstLT
 
@@ -595,7 +597,7 @@ fun linearize isAtom e = let
         map (fn e => snd (go e (one, []))) (e::ls))) acc
     | FirstProve [] => (true, FAtom (FirstProve []) :: acc')
     | FirstProve (e::ls) =>
-      asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
+      asTac (mbracket FCloseFirstProve FNextFirstProve FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls))) acc
     | Try e' => asTac (tryish FClose e') acc
     | Repeat e => asTac (bracket2 FCloseRepeat (fn one => go e (one, [])) FOpenRepeat) acc

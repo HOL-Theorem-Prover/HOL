@@ -283,6 +283,7 @@ fun applyOpen tacText ok state = case ok of
 
 fun applyMid m state = case m of
     FNextFirst    => Portable.total goalFrag.next_first     state
+  | FNextFirstProve => Portable.total goalFrag.next_first_prove state
   | FNextTacsToLT => Portable.total goalFrag.next_tacs_to_lt state
   | FNextSplit    => Portable.total goalFrag.next_split_lt  state
   | FNextSelect   => Portable.total goalFrag.next_select_lt state
@@ -290,6 +291,7 @@ fun applyMid m state = case m of
 fun applyClose c state = case c of
     FClose        => Portable.total goalFrag.close_paren    state
   | FCloseFirst   => Portable.total goalFrag.close_first    state
+  | FCloseFirstProve => Portable.total goalFrag.close_first_prove state
   | FCloseRepeat  => Portable.total goalFrag.close_repeat   state
   | FCloseFirstLT => Portable.total goalFrag.close_first_lt state
 

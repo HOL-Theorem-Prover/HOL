@@ -6420,6 +6420,66 @@ def test_goalState_walks_map_first():
         c.close()
 
 
+def test_goalState_first_prove_skips_partial_alternative():
+    """`FIRST_PROVE` runs each alternative as `t THEN NO_TAC`, so one
+    that leaves goals fails and the next one runs.  The walk used to
+    give it `FIRST`'s fragments and keep `conj_tac`'s two goals, where
+    HOL goes on to `simp[]` and proves the theorem."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_first_prove.sml"
+        #  6   FIRST_PROVE [conj_tac, simp[]] >>
+        #  7   all_tac
+        src = ("Theory goalstate_first_prove\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  FIRST_PROVE [conj_tac, simp[]] >>\n"
+               "  all_tac\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 720, uri, 7, 2).get("result")
+        assert_true(r is not None, "goal state after the FIRST_PROVE")
+        assert_eq(r.get("error"), None,
+                  f"FIRST_PROVE applied cleanly ({r!r})")
+        assert_eq(r.get("goals"), [],
+                  f"simp[] proved the goal, not conj_tac's split ({r!r})")
+    finally:
+        c.close()
+
+
+def test_goalState_first_prove_fails_if_no_alternative_proves():
+    """A `FIRST_PROVE` whose alternatives all leave goals fails, as it
+    does in HOL, rather than handing those goals on."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/goalstate_first_prove_fails.sml"
+        #  6   FIRST_PROVE [conj_tac] >>
+        #  7   simp[]
+        src = ("Theory goalstate_first_prove_fails\n"
+               "Ancestors arithmetic\n\n"
+               "Theorem t:\n"
+               "  T /\\ T\n"
+               "Proof\n"
+               "  FIRST_PROVE [conj_tac] >>\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 721, uri, 7, 2).get("result")
+        assert_true(r is not None, "goal state after the FIRST_PROVE")
+        assert_true("FIRST_PROVE" in (r.get("error") or ""),
+                    f"the FIRST_PROVE is reported as failing ({r!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_walks_squiggle_minus_rename():
     """`>>~- ([pat], tac)` elaborates to `LSelectThen (Rename …, …)`.
     The `Rename` atom carries only the pattern's span; the walker
@@ -13765,6 +13825,10 @@ TESTS = [
                                      test_goalState_selector_that_matches_nothing_is_flagged),
     ("goalState_walks_map_every",    test_goalState_walks_map_every),
     ("goalState_walks_map_first",    test_goalState_walks_map_first),
+    ("goalState_first_prove_skips_partial_alternative",
+                     test_goalState_first_prove_skips_partial_alternative),
+    ("goalState_first_prove_fails_if_no_alternative_proves",
+                     test_goalState_first_prove_fails_if_no_alternative_proves),
     ("goalState_walks_squiggle_minus_rename",
                                      test_goalState_walks_squiggle_minus_rename),
     ("goalState_try_absorbs_failure",

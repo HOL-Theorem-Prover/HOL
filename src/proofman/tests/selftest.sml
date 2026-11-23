@@ -585,6 +585,38 @@ val _ =
       else die (Int.toString (length gs) ^ " goals")
     end
 
+(* FIRST_PROVE runs each alternative as `t THEN NO_TAC', so one that
+   makes progress but leaves goals has failed.  Replayed with FIRST's
+   `next_first', CONJ_TAC's two goals were kept and the alternative
+   that proves the goal never ran. *)
+val _ = tprint "next_first_prove skips an alternative that leaves goals"
+val _ =
+    let
+      val tm = “T ∧ T”
+      val ctxt = Context.snapshot()
+      fun ex tac st = goalFrag.expand tac ctxt st
+      val st = goalFrag.open_first (goalFrag.new_goal ([], tm))
+      val st = goalFrag.next_first_prove (ex CONJ_TAC st)
+      val st = ex (CONJ_TAC THEN ACCEPT_TAC boolTheory.TRUTH) st
+      val th = goalFrag.finish (goalFrag.close_first_prove st)
+    in
+      if aconv (concl th) tm then OK()
+      else die ("proved " ^ term_to_string (concl th))
+    end
+
+val _ = tprint "close_first_prove fails if no alternative proves the goal"
+val _ =
+    let
+      val ctxt = Context.snapshot()
+      val st = goalFrag.open_first (goalFrag.new_goal ([], “T ∧ T”))
+      val st = goalFrag.expand CONJ_TAC ctxt st
+    in
+      case Lib.total goalFrag.close_first_prove st of
+          NONE => OK()
+        | SOME st' =>
+          die (Int.toString (length (goalFrag.top_goals st')) ^ " goals")
+    end
+
 (* The three things the goal state is made of are also asked for one at
    a time: a client that pins the first two above a scrolling view of
    the third would otherwise show them twice.  See `focus_note' and
