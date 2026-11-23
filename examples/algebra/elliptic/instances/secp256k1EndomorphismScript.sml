@@ -80,23 +80,13 @@ Proof
             secp256k1_endo_group, secp256k1_group_def]
 QED
 
-local
-    val definitions = [secp256k1_group_def, secp256k1_base_field_def,
-      secp256k1_p_def, secp256k1_a_def, secp256k1_b_def,
-      secp256k1_generator_def, secp256k1_lambda_def]
-    fun numeric th = CONV_RULE certificateComputeLib.NAT_CONV
-      (REWRITE_RULE definitions th)
-    val prime = numeric secp256k1_p_prime
-    val curve = numeric secp256k1_curve
-    val member = numeric secp256k1_generator_member
-    val step = ellipticCertificateLib.SCALAR_STEP_TAC prime curve member
-in
-  val secp256k1_endo_scalar_normalize = CONV_TAC (RAND_CONV
-    (REWRITE_CONV definitions THENC certificateComputeLib.NAT_CONV))
-  val secp256k1_endo_scalar_certificate =
-    ellipticCertificateLib.SCALAR_CERTIFICATE_TAC 4 prime curve member
-  val secp256k1_endo_scalar_step = step
-end
+val (secp256k1_endo_scalar_normalize, secp256k1_endo_scalar_certificate,
+     secp256k1_endo_scalar_step) =
+  ellipticCertificateLib.SCALAR_CERTIFICATE_TOOLS
+    [secp256k1_group_def, secp256k1_base_field_def, secp256k1_p_def,
+     secp256k1_a_def, secp256k1_b_def, secp256k1_generator_def,
+     secp256k1_lambda_def]
+    4 secp256k1_p_prime secp256k1_curve secp256k1_generator_member;
 
 (* Write [n]P for scalar multiplication. For the standard generator G,
    phi(G)=[lambda]G,
@@ -106,6 +96,7 @@ Theorem secp256k1_endo_generator:
   secp256k1_endo secp256k1_generator =
     secp256k1_group.exp secp256k1_generator secp256k1_lambda
 Proof
+  CONV_TAC SYM_CONV >>
   secp256k1_endo_scalar_normalize >>
   secp256k1_endo_scalar_certificate
   >| (List.tabulate (64, K secp256k1_endo_scalar_step) @ [
