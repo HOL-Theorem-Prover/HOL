@@ -1131,6 +1131,138 @@ def test_simple_thm_rhs_hovers():
         c.close()
 
 
+def test_hover_on_a_shadowed_top_level_name():
+    """A name the file binds twice hovers as the binding under the
+    cursor, not as the last one.
+
+    `LSPNameSpace`'s file layer is keyed on the bare name, so a file
+    holding both `val foo = \u2026` and a later `Theorem foo` left
+    `lookupVal "foo"` answering the theorem for every occurrence.
+    The hover's type comes from the built tree and is per-occurrence,
+    so the earlier `foo` rendered its own type beside the other one's
+    value.  On the file this was reported from, that read `val foo:
+    DefnBase.defn_presentation option = \u22a2 (\u2200x. x + y \u2265 x) \u2227 \u2026`
+    -- two different bindings in one rendering.
+
+    The layer now keeps a per-name history and the hover picks by
+    `CPBindingSeq` id, which Poly/ML puts on the declaring node, on
+    every reference, and on the entered value alike.
+
+    Three things are pinned here.  The `Theorem` form, because its
+    value reaches the layer through a synthetic expansion and so is
+    the one whose id could fail to line up.  And the two local forms,
+    because matching on the id is also what now tells a top-level
+    binding from a `let`-bound name or a function parameter -- the
+    job an outline `selSpan` scan used to do.  Locals are never
+    entered into the layer, so their ids are not there to find and
+    the hover falls back to the type alone; get that wrong and
+    `grab`'s parameter prints the theorem."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/shadowed_name.sml"
+        src = ("Theory shadowed_name\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "val foo = CONJ_COMM\n"
+               "val once = CONJ_ASSOC\n"
+               "fun grab foo = foo\n"
+               "val held = let val once = 3 in once + 1 end\n"
+               "\n"
+               "Theorem foo:\n"
+               "  1 + 1 = 2\n"
+               "Proof\n"
+               "  simp[]\n"
+               "QED\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        lines = src.split("\n")
+
+        def hover(line, needle, offset=0):
+            idx = lines[line].index(needle) + offset
+            col = len(lines[line][:idx].encode("utf8"))
+            res = _hover_at(c, 7700 + line * 100 + col, uri, line, col)
+            return None if res is None else res["contents"]["value"]
+
+        md = hover(3, "foo", 1)
+        assert_true(md is not None, "hover on the shadowed `val foo`")
+        assert_contains(md, "t1 \u2227 t2 \u21d4 t2 \u2227 t1",
+                        "the value `val foo` was bound to")
+        assert_true("1 + 1 = 2" not in md,
+                    "the later theorem's value is not what `val foo` "
+                    "shows (%r)" % (md,))
+
+        md = hover(8, "foo", 1)
+        assert_true(md is not None, "hover on the `Theorem foo` name")
+        assert_contains(md, "1 + 1 = 2", "the theorem's own statement")
+
+        # An unshadowed name still carries its value, so the history
+        # has not broken the common case.
+        md = hover(4, "once", 1)
+        assert_true(md is not None, "hover on an unshadowed `val`")
+        assert_contains(md, "t1 \u2227 t2 \u2227 t3",
+                        "the unshadowed binding's value")
+
+        # A parameter and a `let`-bound name, each shadowing a
+        # top-level binding of the same name.  Both are typed, and
+        # neither has a value to show: the type is the whole answer.
+        for (line, needle, label, wrong) in [
+                (5, "foo", "`grab`'s parameter", "t1 \u2227 t2 \u21d4"),
+                (6, "once", "a `let`-bound name", "t1 \u2227 t2 \u2227 t3")]:
+            md = hover(line, needle, 1)
+            assert_true(md is not None, "hover on " + label)
+            assert_true(wrong not in md,
+                        "%s shows no top-level value (%r)" % (label, md))
+    finally:
+        c.close()
+
+
+def test_hover_renders_a_hol_message():
+    """A `HOLmessage.message` prints as its text, not as `?`.
+
+    Poly/ML renders a value of an opaque type as `?` unless a pretty
+    printer is registered for it, and `exnMessage` answers from that
+    same generic printer -- so with none registered a `HOL_ERR` reads
+    back as `HOL_ERROR {message = ?, origins = ...}` and the text it
+    was raised with is gone.
+
+    The registration lived in `src/prekernel/HOLmessage.sml`, where it
+    was saved with the heap and so reached every session.  It had to
+    leave `src` because `PolyML.addPrettyPrinter` does not exist under
+    Moscow ML, and the two preludes it moved to -- `tools-poly/
+    prelude.ML` and `tools/std.prelude` -- are the two an LSP session
+    does not load.  `pretty_printers_init.ML` is the LSP's own copy of
+    that installation and now carries this one too.
+
+    The failure is silent in the way that matters: nothing errors,
+    nothing is logged, and the hover still answers -- with `?` where
+    the message should be."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/hol_message_pp.sml"
+        src = ("Theory hol_message_pp\n"
+               "Ancestors arithmetic\n"
+               "\n"
+               "val msg = HOLmessage.txt \"a plain message\"\n")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        lines = src.split("\n")
+        idx = lines[3].index("msg") + 1
+        col = len(lines[3][:idx].encode("utf8"))
+        res = _hover_at(c, 7750, uri, 3, col)
+        md = None if res is None else res["contents"]["value"]
+        assert_true(md is not None, "hover on a `message`-valued binding")
+        assert_contains(md, "HOLmessage.message", "the value's type")
+        assert_contains(md, "a plain message", "the message's own text")
+        assert_true("= ?" not in md,
+                    "the message is not the opaque placeholder (%r)" % (md,))
+    finally:
+        c.close()
+
+
 def test_hover_shows_entry_documentation():
     """Hover on a documented entry point carries its Reference entry
     and a link to the file the entry was read from.
@@ -7568,6 +7700,96 @@ def test_term_error_points_inside_a_definition():
                    "the squiggle covers the `T' inside the definition")
 
 
+def _rich_message_src(name):
+    """A definition whose body is a type error naming two constants --
+    `SUC' from `num' and `T' from `bool' -- so the message HOL writes
+    mentions terms whose types a reader might want."""
+    return (f"Theory {name}\n"
+            "Ancestors arithmetic\n"
+            "\n"
+            "Definition bad_def:\n"
+            "  bad_def n = SUC T\n"
+            "End\n")
+
+
+def _at_first_diag(src, name, method, timeout=60):
+    """Open SRC as /tmp/<name>.sml, let it compile, then send METHOD at
+    the start of the first diagnostic.  Returns (diagnostics, result)."""
+    uri = f"file:///tmp/{name}.sml"
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", timeout),
+                    f"{name}: compileCompleted")
+        diags = _diag_count(c, uri)
+        assert_true(diags, f"{name}: something was squiggled")
+        c.send({"jsonrpc": "2.0", "id": 9001, "method": method,
+                "params": {"textDocument": {"uri": uri},
+                           "position": diags[0]["range"]["start"]}})
+
+        def got(cl):
+            with cl.msgs_lock:
+                for m in cl.msgs:
+                    if m.get("id") == 9001:
+                        return m
+            return None
+        reply = c.wait_until(got, 15)
+        assert_true(reply is not None, f"{name}: {method} replied")
+        return diags, reply.get("result")
+
+
+    finally:
+        c.close()
+
+
+def test_hover_at_a_type_error_names_the_terms_it_mentions():
+    """A `Diagnostic.message' is a plain string in every version of the
+    protocol, and nothing in it lets a tooltip carry tooltips -- so the
+    types of the terms an error talks about cannot ride along with the
+    squiggle.  They arrive instead through the hover at the same
+    position, which both VS Code and eglot consult and show beside the
+    diagnostic.
+
+    This is the end of the chain that starts at `Msg.tm' in
+    `Preterm's message: suspended there, carried through `HOL_ERR'
+    unrendered, and turned into annotated spans by `error_locn_init'."""
+    diags, result = _at_first_diag(_rich_message_src("richmsgh"),
+                                   "richmsgh", "textDocument/hover")
+    assert_true(any("Type error" in d.get("message", "") for d in diags),
+                f"the squiggle is the type error ({diags!r})")
+    assert_true(result is not None, "hover answered at the squiggle")
+    md = result["contents"]["value"]
+    assert_contains(md, "num$SUC", "hover names SUC by theory")
+    assert_contains(md, "num -> num", "hover gives SUC's type")
+    assert_contains(md, "bool$T", "hover names T by theory")
+
+
+def test_hol_message_returns_the_message_as_annotated_segments():
+    """`$/hol/message' hands a client the message *and* the spans of it
+    that are constants, free variables and type operators, so it can
+    render one its reader can point into.
+
+    The contract that makes that cheap: concatenating the segments'
+    `text' reproduces `message' exactly, so a client lays the text
+    down once and decorates by arithmetic rather than by searching
+    it.  `PPBackEnd.lsp_terminal' emits its markers at zero width to
+    make that true, and this holds it to it."""
+    diags, result = _at_first_diag(_rich_message_src("richmsgm"),
+                                   "richmsgm", "$/hol/message")
+    assert_true(result is not None, "$/hol/message answered")
+    segs = result["segments"]
+    assert_eq("".join(s["text"] for s in segs), result["message"],
+              "the segments rejoin to the message")
+    consts = {s.get("name"): s.get("ty") for s in segs
+              if s.get("kind") == "const"}
+    assert_true("num$SUC" in consts,
+                f"SUC is marked as a constant ({segs!r})")
+    assert_eq(consts["num$SUC"], "num -> num", "SUC carries its type")
+    assert_true("bool$T" in consts,
+                f"T is marked as a constant ({segs!r})")
+
+
 def test_cross_clause_type_error_points_at_the_operator():
     """A `Definition' whose clauses disagree about the type of the
     function being defined.
@@ -13313,6 +13535,10 @@ TESTS = [
                              test_term_error_points_inside_a_theorem_goal),
     ("term_error_points_inside_a_definition",
                                test_term_error_points_inside_a_definition),
+    ("hover_at_a_type_error_names_the_terms_it_mentions",
+     test_hover_at_a_type_error_names_the_terms_it_mentions),
+    ("hol_message_returns_the_message_as_annotated_segments",
+     test_hol_message_returns_the_message_as_annotated_segments),
     ("cross_clause_type_error_points_at_the_operator",
                      test_cross_clause_type_error_points_at_the_operator),
     ("term_error_points_at_the_inductive_rule_that_is_wrong",
@@ -13365,6 +13591,9 @@ TESTS = [
     ("cheat_proofs_installed",       test_cheat_proofs_installed),
     ("thm_hover_shows_statement",    test_thm_hover_shows_statement),
     ("simple_thm_rhs_hovers",        test_simple_thm_rhs_hovers),
+    ("hover_on_a_shadowed_top_level_name",
+                             test_hover_on_a_shadowed_top_level_name),
+    ("hover_renders_a_hol_message", test_hover_renders_a_hol_message),
     ("hover_shows_entry_documentation",
                                      test_hover_shows_entry_documentation),
     ("hover_inside_proof_qed",       test_hover_inside_proof_qed),

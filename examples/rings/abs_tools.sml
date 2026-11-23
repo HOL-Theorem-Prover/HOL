@@ -46,7 +46,7 @@ structure Parse = struct
   fun Term q = let
       val a = Absyn q
       val a' = add_ip a
-      val prfns = SOME(term_to_string, type_to_string)
+      val prfns = Parse.stdprinters
       open Preterm errormonad
     in
       smash (absyn_to_preterm a' >- typecheck prfns) Pretype.Env.empty

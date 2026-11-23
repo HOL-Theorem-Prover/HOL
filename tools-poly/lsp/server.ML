@@ -2155,7 +2155,16 @@ fun start {diag, dbg, warnings} = let
         logMessage "commit hold: end")
 
   datatype report =
-    Error of {hard: bool, pos: range, msg: encode}
+    (* `segs' is the message again as annotated spans -- which parts of
+       it are constants, which are free variables, and their types.  A
+       `Diagnostic.message' is a plain string in every version of the
+       protocol, so a client that wants to show the type of a term an
+       error mentions gets it from here instead, through the hover at
+       the squiggle or `$/hol/message'.  Empty for every report that
+       does not come from a HOL exception carrying HOL values, which
+       is most of them. *)
+    Error of {hard: bool, pos: range, msg: encode,
+              segs: LSPExtension.pp_segment list}
   | CompilerOut of int * string list
   | ToplevelOut of int * string list
   | Progress of int
@@ -2168,7 +2177,7 @@ fun start {diag, dbg, warnings} = let
      JSON and differ only in which `lines' they have in hand, so this
      takes that and nothing else.  The other report kinds never reach
      a client: they are the compile's own channel.  *)
-  fun encDiagAt lines (Error {hard, pos, msg}) print = (
+  fun encDiagAt lines (Error {hard, pos, msg, ...}) print = (
       print "{\"range\":"; encRangeLC lines pos print;
       print ",\"severity\":";
       encInt (if hard then ErrorSeverity else WarnSeverity) print;
@@ -2736,7 +2745,7 @@ fun start {diag, dbg, warnings} = let
            PolyML.compiler"). *)
         SOME (l as {file = "", ...}) => locToRange l
       | _ => (i, i)
-    val {range, message} = !LSPExtension.exnReport e
+    val {range, message, segments} = !LSPExtension.exnReport e
     (* `locn' columns count bytes, so the conversion out of them does
        too; `encDiagAt' turns the byte offsets back into whatever the
        client negotiated.  Going through the client's units here would
@@ -2764,7 +2773,7 @@ fun start {diag, dbg, warnings} = let
                   SOME m => encString m
                 | NONE => encPretty textWidth (exceptionMessage e)
   in
-    Error {hard = true, pos = pos, msg = msg}
+    Error {hard = true, pos = pos, msg = msg, segs = segments}
   end
 
   fun exnToReport i e = exnToReportIn NONE (0, 0) i e
@@ -2901,12 +2910,14 @@ fun start {diag, dbg, warnings} = let
         val soft = String.isSubstring "unclosed quotation" s
                    orelse String.isSubstring "expected" s
                    orelse String.isSubstring "does not match file" s
-      in report (Error {hard = not soft, pos = pos, msg = encString s}) end,
+      in report (Error {hard = not soft, pos = pos, msg = encString s,
+                        segs = []}) end,
       compilerOut = fn s => report (CompilerOut (!lastPos, [s])),
       toplevelOut = fn s => report (ToplevelOut (!lastPos, [s])),
       progress = fn i => (lastPos := i; report (Progress i)),
       error = fn {hard, location, message, ...} => report (Error {
-        hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
+        hard = hard, pos = locToRange location,
+        msg = encPretty textWidth message, segs = []}),
       (* The declaration's own start as the floor for a claimed
          position, so an exception cannot squiggle something above the
          declaration that raised it. *)
@@ -2963,6 +2974,46 @@ fun start {diag, dbg, warnings} = let
   fun nReports m = Binarymap.foldl (fn (_, l, n) => n + length l) 0 m
   fun pushReports (d, m) =
       Binarymap.app (fn (_, l) => List.app (fn r => DArray.push (d, r)) l) m
+
+  (* The diagnostic covering `offset' that has annotated spans to
+     offer, as `(start, end, segments, message)'.
+
+     Same union `publishAllDiagnostics' sends -- compile, walker and
+     pool -- so what a hover says here and what the squiggle says
+     cannot come apart.  Innermost wins: a tactic failure's squiggle
+     sits inside the declaration's, and the narrower one is the one
+     the cursor is really on.  Reports with no segments are skipped
+     rather than returned empty, so a plain diagnostic does not mask
+     a rich one that also covers the position. *)
+  fun richReportAt ({lastTrees, walkerDiags, proofDiags, ...}: file_data)
+                   offset = let
+    val {parse, ...} = Sref.value lastTrees
+    val compileDiags = #diags parse
+    val wd = Sref.value walkerDiags
+    val pd = Sref.value proofDiags
+    val all = DArray.clone (compileDiags,
+                DArray.size compileDiags + nReports wd + nReports pd)
+    val _ = pushReports (all, wd)
+    val _ = pushReports (all, pd)
+    (* An exception with no usable `locn' is squiggled zero-width at
+       the declaration's start, and a zero-width span covers no
+       cursor at all -- so count it as one character wide, or such an
+       error could never be asked about.  Widths are compared the same
+       way, which keeps a real one-character squiggle from losing the
+       innermost-wins tie to it. *)
+    fun width (s, e) = Int.max (e - s, 1)
+    fun pick (Error {pos = (s, e), segs, msg, ...}, best) =
+          if List.null segs orelse offset < s orelse offset >= s + width (s, e)
+          then best
+          else (case best of
+                    SOME (bs, be, _, _) =>
+                      if width (s, e) < width (bs, be)
+                      then SOME (s, e, segs, msg) else best
+                  | NONE => SOME (s, e, segs, msg))
+      | pick (_, best) = best
+  in
+    DArray.foldl pick NONE all
+  end
 
   (* Emit `$/proofStates` for `uri`: one change in what the
      proof-checking pool is doing.
@@ -3265,12 +3316,12 @@ fun start {diag, dbg, warnings} = let
      is left clean.  The closing marker carries a message of its own:
      a client shows it on its own, away from the first. *)
   fun failReports (pos, close, msg) =
-      Error {hard = true, pos = pos, msg = encString msg} ::
+      Error {hard = true, pos = pos, msg = encString msg, segs = []} ::
       (case close of
            NONE => []
          | SOME p =>
            [Error {hard = true, pos = p,
-                   msg = encString "end of the failing branch"}])
+                   msg = encString "end of the failing branch", segs = []}])
 
   (* Emit publishDiagnostics for `uri` combining the last-completed
      compile's diagnostics and any walker-observed runtime squiggles. *)
@@ -3330,7 +3381,7 @@ fun start {diag, dbg, warnings} = let
         Option.map (fn (hard, msg) =>
                        Error {hard = hard,
                               pos = proofRange v (size text) offset,
-                              msg = encString msg})
+                              msg = encString msg, segs = []})
                    (proofDiagOf status)
     (* One critical section.  Pool workers settle concurrently and every
        one of them lands here, so reading the map, deciding, and writing
@@ -4111,7 +4162,7 @@ fun start {diag, dbg, warnings} = let
         val snapshot = dedupReports snapshot
         val key =
             DArray.foldl
-              (fn (Error {hard, pos = (s, e), msg}, acc) =>
+              (fn (Error {hard, pos = (s, e), msg, ...}, acc) =>
                   (if hard then "!" else "?") :: Int.toString s :: ":" ::
                   Int.toString e :: ":" :: encodeToString msg :: "\n" :: acc
                 | (_, acc) => acc)
@@ -4420,7 +4471,7 @@ fun start {diag, dbg, warnings} = let
          the only thing that does help. *)
       fun latchUntilRestart (pos, message) = (
         DArray.push (#diags (!trees), Error {
-          hard = true, pos = pos,
+          hard = true, pos = pos, segs = [],
           msg = encString (message ^
             "\n\nrestart the language server to compile this file")});
         latchBlock message)
@@ -4436,7 +4487,7 @@ fun start {diag, dbg, warnings} = let
             describe (m, e) ^
             "\n\nnot compiling this file until its Ancestors / Libs change"
         val () = app (fn (m, pos, e) => DArray.push (diags, Error {
-                       hard = true, pos = pos,
+                       hard = true, pos = pos, segs = [],
                        msg = encString (blockedText (m, e))})) fails
         val message = String.concatWith "; " (map (fn (m, _, e) =>
                         describe (m, e)) fails)
@@ -4536,7 +4587,7 @@ fun start {diag, dbg, warnings} = let
             NONE => ()
           | SOME pos =>
             DArray.push (diags, Error {
-              hard = false, pos = pos,
+              hard = false, pos = pos, segs = [],
               msg = encString
                 (m ^ " is older than " ^ src ^ ", so this file is being \
                  \elaborated against the theory as it was built.  \
@@ -5024,9 +5075,6 @@ fun start {diag, dbg, warnings} = let
        nor for `DECIDE_TAC' and friends.  Install the captured layer,
        exactly as `completionsAt' does. *)
     val () = case !(#nsLayer v) of SOME restore => restore () | NONE => ()
-    (* The names this buffer declares at top level, from the outline's
-       own (cached) parse -- see `isNamespaceName' below. *)
-    val topLevelSyms = symbolsOf v
     val startOffset = fromLineCol (#lines text) startTarget
     fun ppToString pp = let
       val mds = DArray.new (8, "")
@@ -5098,41 +5146,6 @@ fun start {diag, dbg, warnings} = let
           handle _ => []
         val range = SOME (getLineCol (#lines text) startPos, getLineCol (#lines text) endPos)
         val help = map (fn d => {range = range, markdown = d}) help
-        (* Does this identifier name something the file namespace can
-           resolve *to this same binding*?
-
-           `i = 0' is everything declared outside the file: those are
-           in the layer (or in `globalNameSpace' behind it) under the
-           name written here.  Anything else was declared in the file,
-           and only its top-level declarations are entered into the
-           layer -- a function parameter or a `let'-bound name never
-           is, and a same-named top-level binding is a different thing
-           entirely, so looking one up would print a value belonging to
-           something else.
-
-           `PDeclaredAt' points at the declared name as written, and so
-           does an outline symbol's `selSpan', so equal spans mean this
-           identifier was declared by that top-level declaration.  The
-           outline is already parsed and cached per buffer version, so
-           this costs a list scan.
-
-           Poly/ML's own answer to the question -- `PReferences' on the
-           declaring node, reached by navigating to `PDeclaredAt' --
-           does not survive the trip: the node the built trees return
-           for that span carries no such property. *)
-        val isNamespaceName = i = 0 orelse let
-          fun look [] = NONE
-            | look (HOL_IDE.PDeclaredAt loc :: _) = SOME loc
-            | look (_ :: props) = look props
-          in
-            case look props of
-              NONE => false
-            | SOME {startPosition, endPosition, ...} => let
-                val span = (startPosition, endPosition)
-                in List.exists (fn Sym {selSpan, ...} => selSpan = span)
-                               topLevelSyms
-                end
-          end
         (* Lookup via the LSP file layer, not `globalNameSpace`, so
            hovers on a deleted `val foo = …` return NONE instead of
            the retained Poly/ML binding.  The layer falls through to
@@ -5150,10 +5163,46 @@ fun start {diag, dbg, warnings} = let
                NONE => NONE
              | SOME st =>
                lookupDotted (PolyML.NameSpace.Structures.contents st) cs)
+        (* Which binding does this occurrence denote?
+
+           `i' is Poly/ML's answer.  `holide.ML' compiles with
+           `CPBindingSeq', so every binding the pass makes is given a
+           serial number, carried on the declaring node as `PTdefId'
+           and on each reference as `PTrefId' -- and, crucially, on
+           the entered value itself, which is how the two are matched
+           up here.  Zero is everything the pass did not bind: names
+           from `globalNameSpace', and the ones a `Theory foo' header
+           `open's into the layer, which keep the id of wherever they
+           were originally bound.  Those resolve by name, and must,
+           since the file layer is where the `open'ed ones live.
+
+           For anything the file bound, the name alone will not do.
+           `lookupVal' is keyed on it and a file is free to bind one
+           twice -- `val foo = …' and a later `Theorem foo' -- so it
+           answers both occurrences with the second; the type beside
+           it comes from this node and is per-occurrence, so the
+           earlier `foo' rendered one binding's type against the
+           other's value.  `valuesNamed' keeps every entry under the
+           name and `i' picks the one meant.
+
+           It also subsumes the test this used to make -- comparing
+           `PDeclaredAt' against the outline's `selSpan' to tell a
+           top-level declaration from a `let'-bound name or a
+           function parameter.  Only top-level bindings are entered
+           into the layer, so a local name's id is simply not there
+           to be found, and the outline scan (a list walk per hover,
+           and a `symbolsOf' to build it) is gone with it. *)
+        fun valBindingId value = let
+          fun look [] = NONE
+            | look (PolyML.PTrefId j :: _) = SOME j
+            | look (_ :: rest) = look rest
+          in look (PolyML.NameSpace.Values.properties value) end
         val value =
-          if isNamespaceName
-          then lookupDotted LSPNameSpace.fileNS (splitOn #"." id)
-          else NONE
+          if i = 0 then lookupDotted LSPNameSpace.fileNS (splitOn #"." id)
+          else case splitOn #"." id of
+                 [nm] => List.find (fn v => valBindingId v = SOME i)
+                                   (LSPNameSpace.valuesNamed nm)
+               | _ => NONE
         in (SOME id, value, help) end
       open PolyML
       val ty = Option.map (fn ty =>
@@ -5253,11 +5302,63 @@ fun start {diag, dbg, warnings} = let
              ppToString = ppToString, width = width},
             {quote = quote, quoteStart = qs, target = startOffset}) end
     fun f () = fromTree innermost
+    (* A `Diagnostic.message' is a plain string -- the protocol has no
+       richer field, and no way to hang a tooltip off a word inside
+       one -- so the types of the terms an error talks about have to
+       reach the reader by another route.  Both editors consult the
+       hover provider at the position they are already showing a
+       squiggle at, and show hover and diagnostic together, which
+       makes this the one place the information can land with no
+       protocol extension at all.
+
+       A legend, not a repeat: the message is already on screen beside
+       this, and saying it again would push the part that is new off
+       the end.  Hence `thy$name' and the type, keyed by the text as
+       it appears in the message. *)
+    fun segLine ({text, kind, name, ty}: LSPExtension.pp_segment) =
+      case kind of
+          "const" =>
+            SOME ("`" ^ text ^ "` \226\128\148 constant `" ^ name ^
+                  "` : `" ^ ty ^ "`")
+        | "fv" =>
+            SOME ("`" ^ text ^ "` \226\128\148 free variable : `" ^ ty ^ "`")
+        | "bv" =>
+            SOME ("`" ^ text ^ "` \226\128\148 bound variable : `" ^ ty ^ "`")
+        | "tyop" =>
+            SOME ("`" ^ text ^ "` \226\128\148 type operator `" ^ name ^ "`")
+        | "tysyn" =>
+            SOME ("`" ^ text ^ "` \226\128\148 type abbreviation `" ^
+                  name ^ "`")
+        | _ => NONE
+    val errorHover =
+      case richReportAt v startOffset of
+          NONE => []
+        | SOME (s, e, segs, _) => let
+            (* One entry per distinct thing, in the order the message
+               mentions them.  A message names the same variable many
+               times over, and eglot shows only the first rendered
+               line in the echo area, so both the de-duplication and
+               the order matter more than they look. *)
+            fun dedup ([], _, acc) = List.rev acc
+              | dedup (l :: rest, seen, acc) =
+                  if List.exists (fn x => x = l) seen then
+                    dedup (rest, seen, acc)
+                  else dedup (rest, l :: seen, l :: acc)
+            val entries = dedup (List.mapPartial segLine segs, [], [])
+            val entries = List.take (entries, Int.min (12, length entries))
+          in
+            if List.null entries then []
+            else [{markdown = String.concatWith "\n\n" entries,
+                   range = SOME (getLineCol (#lines text) s,
+                                 getLineCol (#lines text) e)}]
+          end
+      handle Interrupt => raise Interrupt | _ => []
     val out =
       case (out, inQuoteSpan) of
         (_::_, _)     => out
       | ([], SOME sp) => fq sp
       | ([], NONE)    => f ()
+    val out = out @ errorHover
     val _ = case out of [] => raise Empty | _ => ()
     fun merge ({range = NONE, ...}, a) = a
       | merge ({range = a, ...}, NONE) = a
@@ -5666,7 +5767,7 @@ fun start {diag, dbg, warnings} = let
                                   Error {hard = true,
                                          pos = proofRange v (size text)
                                                          offset,
-                                         msg = encString msg} ::
+                                         msg = encString msg, segs = []} ::
                                   failReports
                                     (pos, failedCloseRange, msg)), true)
                             else (pd, false))
@@ -5923,7 +6024,7 @@ fun start {diag, dbg, warnings} = let
   val evalLayerAt : (int * int) ref = ref (~1, ~1)
 
   val busyReport = Error {
-    hard = true, pos = (0, 0),
+    hard = true, pos = (0, 0), segs = [],
     msg = encString "$/eval: a compile holds the state; try again"}
 
   fun eval id args =
@@ -5958,7 +6059,7 @@ fun start {diag, dbg, warnings} = let
         print ",\"id\":"; encReqId id print; print "}")))
     | _ => ()
 
-    fun encReport (Error {hard, pos, msg}) print = (
+    fun encReport (Error {hard, pos, msg, ...}) print = (
         print "{\"kind\":\"error\"";
         print ",\"hard\":"; print (if hard then "true" else "false");
         print ",\"pos\":"; encRangeLC lines pos print;
@@ -6154,6 +6255,40 @@ fun start {diag, dbg, warnings} = let
                 else encArray
                        (fn (c, sym) => encSymbolInformation uri lines c sym)
                        (flatSymbols syms))
+          end)
+    (* `$/hol/message': the diagnostic at a position, with the terms
+       and types its message talks about marked out.
+
+       A `Diagnostic.message' can only be a string, and nothing in the
+       protocol lets a tooltip carry tooltips of its own, so a client
+       that wants a message the reader can point *into* has to render
+       it itself.  This hands over what that needs: the same text the
+       diagnostic carries, plus the spans of it that are constants,
+       free variables and type operators.  Concatenating `segments'
+       gives `message' exactly, so a client lays the text down once
+       and decorates by arithmetic rather than by searching it.
+
+       `null' when nothing at that position has anything to add --
+       including a perfectly good plain diagnostic, whose text the
+       client already has. *)
+    | Request {method = "$/hol/message", id, params} =>
+      spawnJob id params textDocumentPositionParams (fn {uri, pos} =>
+        case withFileInfo (fn fileInfo =>
+               (fileInfo, Binarymap.peek (fileInfo, uri))) of
+          NONE => Ok encNull
+        | SOME v => let
+            val {text = {lines, ...}, ...} =
+                Sref.value (#lastTrees (v: file_data))
+            val offset = fromLineCol lines pos
+          in
+            case richReportAt v offset of
+                NONE => Ok encNull
+              | SOME (s, e, segs, msg) =>
+                Ok (fn print => (
+                      print "{\"range\":"; encRangeLC lines (s, e) print;
+                      print ",\"message\":"; msg print;
+                      print ",\"segments\":"; encArray encSegment segs print;
+                      print "}"))
           end)
     | Request {method = "$/hol/search", id, params} =>
       spawnJob id params searchParams (fn {selectors, limit} =>

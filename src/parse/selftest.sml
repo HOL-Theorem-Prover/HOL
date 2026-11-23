@@ -1348,4 +1348,74 @@ in
     | SOME NONE => die "\nerror carried no file position"
 end
 
+
+(* ----------------------------------------------------------------------
+    Msg -- messages built out of HOL values
+
+    Terms here are made with `Term.mk_var' rather than parsed: this
+    directory is built before `boolTheory', so there are no constants
+    to be had, and a variable exercises the same path.
+   ---------------------------------------------------------------------- *)
+
+local
+  val xvar = Term.mk_var ("x", Type.bool)
+  val m = Msg.^^ (Msg.txt "not a ", Msg.tm xvar)
+in
+
+val _ = tprint "Msg.toString agrees with term_to_string"
+
+(* The compatibility property the migration of existing error sites
+   rests on.  `term_to_string' pins a raw back end and lays out at
+   `Globals.linewidth'; a message has to do both, or every error
+   message that gains a `Msg.tm' silently changes its text.
+
+   Under a colour back end on purpose.  The session this runs in has
+   a raw one installed already, so without the `with_flag' the test
+   passes whether or not `toString' pins anything and says nothing
+   about the interactive case -- which is the only case where the two
+   can disagree. *)
+val _ =
+    let
+      fun under b f x = Lib.with_flag (Parse.current_backend, b) f x
+      val viaMsg = under PPBackEnd.vt100_terminal
+                         (fn () => Msg.toString (Msg.tm xvar)) ()
+      val direct = under PPBackEnd.vt100_terminal
+                         (fn () => Parse.term_to_string xvar) ()
+    in
+      if viaMsg = direct then OK()
+      else die ("message gives " ^ String.toString viaMsg ^
+                " but term_to_string gives " ^ String.toString direct)
+    end
+
+val _ = tprint "a message's segments carry the term's annotations"
+
+val _ =
+    let
+      val segs = Msg.segments m
+      val fv = List.find (fn {kind, ...} => kind = "fv") segs
+    in
+      case fv of
+          SOME {text, ty, ...} =>
+            if text = "x" andalso ty = "x :bool" then OK()
+            else die ("got text " ^ text ^ " ty " ^ ty)
+        | NONE => die "no annotated segment for the variable"
+    end
+
+val _ = tprint "a message's segments rejoin to its text"
+
+(* Same property the `lsp_terminal' tests above hold the back end to,
+   now across a whole message: the annotations ride at zero width, so
+   a consumer that ignores them sees exactly `toString'. *)
+val _ =
+    let
+      val rejoined = String.concat (List.map #text (Msg.segments m))
+      val plain = Msg.toString m
+    in
+      if rejoined = plain then OK()
+      else die ("rejoined " ^ String.toString rejoined ^
+                " but toString gives " ^ String.toString plain)
+    end
+
+end
+
 val _ = exit_count0 failcount

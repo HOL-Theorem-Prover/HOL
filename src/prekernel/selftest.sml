@@ -123,3 +123,111 @@ val _ =
     else die ("FAILED: pinned read " ^ Int.toString restoredInPin ^
               " (want 5), live cell " ^ Int.toString (readSlot ()) ^
               " (want 2)")
+
+(* ----------------------------------------------------------------------
+    HOLmessage, and Feedback's string-valued interfaces over it
+
+    The whole point of putting a message where a string used to be is
+    that it does not have to be rendered.  These check the two halves
+    of that: text put in comes back out unchanged, so that every
+    existing caller of the string interfaces still means what it meant;
+    and a value put in is not touched until someone looks.
+   ---------------------------------------------------------------------- *)
+
+val _ = tprint "txt round-trips, newlines and all"
+
+val multiline = "first line\nsecond line\n  indented"
+
+val _ = if HOLmessage.toString (HOLmessage.txt multiline) = multiline
+        then print "OK\n"
+        else die ("FAILED: got " ^
+                  String.toString
+                    (HOLmessage.toString (HOLmessage.txt multiline)))
+
+val _ = tprint "a plain error's message_of is the string it was built from"
+
+(* This is the compatibility property the migration rests on: 2000-odd
+   `raise ERR' sites and every selftest that matches on error text go
+   through here.  Re-wrapping the text -- laying it out at the reader's
+   width like a term -- would shift all of them at once. *)
+val _ =
+    let
+      val e = Feedback.mk_hol_error "Struct" "fn" locn.Loc_Unknown multiline
+    in
+      if Feedback.message_of e = multiline then print "OK\n"
+      else die ("FAILED: got " ^ String.toString (Feedback.message_of e))
+    end
+
+val _ = tprint "is_empty_hol_error agrees with the equality test it replaces"
+
+val _ =
+    let
+      val nonempty = Feedback.mk_hol_error "S" "f" locn.Loc_Unknown "boom"
+      val noMessage = Feedback.mk_hol_error "S" "f" locn.Loc_Unknown ""
+    in
+      if Feedback.is_empty_hol_error Feedback.empty_hol_error andalso
+         not (Feedback.is_empty_hol_error nonempty) andalso
+         not (Feedback.is_empty_hol_error noMessage)
+      then print "OK\n"
+      else die "FAILED"
+    end
+
+val _ = tprint "a value in a message is not printed until it is read"
+
+(* The property that makes this type affordable.  `can', `Lib.total'
+   and `handle HOL_ERR' raise and discard errors as a control
+   structure, so building one must not cost a pretty-print.  The
+   counter is the control: it says the suspension really was the thing
+   that would have done the work. *)
+val _ =
+    let
+      val forced = ref 0
+      val m = HOLmessage.^^
+                (HOLmessage.txt "a term: ",
+                 HOLmessage.pp (fn () => (forced := !forced + 1;
+                                          HOLPP.add_string "<the term>")))
+      val e = Feedback.mk_HOL_ERRm "S" "f" m
+      val afterRaise = !forced
+      val shown = Feedback.exn_to_string e
+      val afterShow = !forced
+    in
+      if afterRaise = 0 andalso afterShow = 1 andalso
+         String.isSubstring "a term: <the term>" shown
+      then print "OK\n"
+      else die ("FAILED: forced " ^ Int.toString afterRaise ^ " before, " ^
+                Int.toString afterShow ^ " after; message " ^
+                String.toString shown)
+    end
+
+val _ = tprint "a value whose printer fails does not take the report down"
+
+(* A message is read while something has already gone wrong.  A printer
+   that raises -- a term naming a type the context no longer has --
+   must not replace the error being reported with itself. *)
+val _ =
+    let
+      val m = HOLmessage.^^ (HOLmessage.txt "before ",
+                             HOLmessage.pp (fn () => raise Fail "printer"))
+      val shown = HOLmessage.toString m
+    in
+      if String.isSubstring "before " shown andalso
+         String.isSubstring "unprintable" shown
+      then print "OK\n"
+      else die ("FAILED: got " ^ String.toString shown)
+    end
+
+val _ = tprint "HOLmessage.toPretty shows a HOL error's message"
+val _ =
+    let
+      open Feedback
+      val mesg = "a message that must survive exnMessage"
+      val exn = mk_HOL_ERR "Selftest" "exn" mesg
+      val shown =
+          case exn of
+              HOL_ERR (HOL_ERROR {message, ...}) =>
+                HOLPP.pp_to_string 70 HOLmessage.toPretty message
+            | _ => die ("FAILED: mk_HOL_ERR returned " ^ exnMessage exn)
+    in
+      if String.isSubstring mesg shown then print "OK\n"
+      else die ("FAILED: got " ^ String.toString shown)
+    end

@@ -99,6 +99,7 @@ in
   val _ = installPP (mosmlpp locpp)
   val _ = installPP (mosmlpp HOLFlags.pp_trace_elt)
   val _ = installPP (mosmlpp Feedback.pp_hol_error)
+  val _ = installPP (mosmlpp HOLmessage.toPretty)
 end;
 
 
