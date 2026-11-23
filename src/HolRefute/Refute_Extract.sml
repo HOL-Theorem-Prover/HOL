@@ -1302,8 +1302,13 @@ structure Refute_Extract :> Refute_Extract = struct
                       | NONE => reject reason))
           end
       | SOME {thm = DefnBase.OTHER _, ...} =>
-          reject ("non-equational definition for " ^
-                  kname_text (kname constant))
+          (* The registration is a fact about the constant, never handed
+             on; the definition its theory holds is what the executable
+             gate admitted. *)
+          (case theorem_for_theory constant of
+             SOME theorem => theorem
+           | NONE => reject ("non-equational definition for " ^
+                             kname_text (kname constant)))
       | NONE => without_userdef ()
     end
 

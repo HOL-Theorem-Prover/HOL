@@ -1405,7 +1405,10 @@ in
   val _ = test "theory definitions outside the compset are executable"
     (fn () =>
       let
-        val keys = computeLib.listItems (computeLib.the_compset ())
+        fun keys () = map #1 (computeLib.listItems (computeLib.the_compset ()))
+        val before = keys ()
+        val outside = not (List.exists
+          (fn (name, _) => String.isPrefix "rf_thy_" name) before)
         val refuted = List.all refuted_everywhere
           [``!x. rf_thy_inc x = 0``, ``!x. rf_thy_twice x < 5``,
            ``!n. rf_thy_sum n < 3``, ``!l. rf_thy_slot l < 4``,
@@ -1414,9 +1417,21 @@ in
             refute cfg ``!x. rf_thy_arb x = 0``
               == Unknown ["not executable: ARB"]) configs
       in
-        refuted andalso refused andalso
-        length (computeLib.listItems (computeLib.the_compset ())) =
-          length keys
+        outside andalso refuted andalso refused andalso keys () = before
+      end)
+
+  (* A constant defined again under its old name keeps its key: what was
+     kept for the first definition must not answer for the second. *)
+  val _ = test "a constant defined again evaluates by its new definition"
+    (fn () =>
+      let
+        val _ = new_definition ("rf_thy_again_def",
+          ``rf_thy_again (x : num) = x + 1``)
+        val first = refuted_everywhere ``!x. rf_thy_again x = 0``
+        val _ = new_definition ("rf_thy_again_def",
+          ``rf_thy_again (x : num) = x + 5``)
+      in
+        first andalso refuted_everywhere ``!x. rf_thy_again x < 5``
       end)
 end
 

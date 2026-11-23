@@ -51,13 +51,15 @@ structure Refute_Cert :> Refute_Cert = struct
 
   (* A term reaching constants only their theories define
      ([new_definition] leaves them out of the compset, see
-     [Refute_Core.definition_closure]) evaluates in a copy of [the_compset ()] given their definitions; the caller's compset
-     is never written.  The copy is kept for the next term while
+     [Refute_Core.definition_closure]) evaluates in a copy of
+     [the_compset ()] given their definitions; the caller's compset is
+     never written.  The copy is kept for the next term while
      [the_compset ()] is the same value ([computeLib.upd_compset] writes a
-     new one), with [known]: the copy's keys and the constants found
-     without a definition, so a term walks only what is new.  A copy is
-     replaced, never changed, since other threads may be evaluating in
-     it. *)
+     new one) and no theory has changed since (a constant defined again
+     under its old name keeps its key), with [known]: the copy's keys and
+     the constants found without a definition, so a term walks only what
+     is new.  A copy is replaced, never changed, since other threads may be
+     evaluating in it. *)
   local
     type defined =
       {base : computeLib.compset,
@@ -77,6 +79,8 @@ structure Refute_Cert :> Refute_Cert = struct
            (boolSyntax.strip_conj (Thm.concl theorem))
       then Conv.CONV_RULE (!Defn.SUC_TO_NUMERAL_DEFN_CONV_hook) theorem
       else theorem
+    val _ = Theory.register_hook ("Refute_Cert.defined", fn _ =>
+      Synchronized.change cache (fn _ => NONE))
   in
     fun default_compset tm =
       let
