@@ -6,6 +6,9 @@ sig
       SliceStarted of hhProver.slice
     | SliceDone of hhProver.slice * hhProver.szs * real
     | ProofFound of hhProver.slice * string list
+    (* Metis could not replay the list a prover found (the drop-one
+       variants that follow are not reported). *)
+    | ReplayFailed of hhProver.slice * string list
     | Verified of suggestion
     | ScheduleDone of stop_reason
   and stop_reason = MaxProofs | Timeout | Exhausted | Interrupted

@@ -176,6 +176,10 @@ How to read the verbose output:
     (the selected premises do not imply the goal, which does not mean the
     goal is false), and `ContradictoryAxioms` (see the FAQ).
   * `proof found by <prover>:` lists *all* the facts the prover used.
+  * `proof by <prover> not replayed`: Metis could not re-prove the goal
+    from those facts within `preplay_timeout`.  The hammer goes on with
+    the other proofs (and, with `preplay_drop_one`, with that list less
+    one fact).
   * `verified proof (replays in t s):` is the minimised tactic that
     actually re-proved the goal in HOL4; `t` is how long its Metis
     replay took.  It is repeated in the last message (`Replace `hh`

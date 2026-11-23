@@ -66,6 +66,7 @@ datatype event =
     SliceStarted of hhProver.slice
   | SliceDone of hhProver.slice * hhProver.szs * real
   | ProofFound of hhProver.slice * string list
+  | ReplayFailed of hhProver.slice * string list
   | Verified of suggestion
   | ScheduleDone of stop_reason
 and stop_reason = MaxProofs | Timeout | Exhausted | Interrupted
@@ -127,6 +128,8 @@ fun default_progress (SliceStarted slice) =
          ("    metis_tac [" ^
           String.concatWith ", " (map mlThmData.dbfetch_of_thmid lemmas) ^
           "]"))
+  | default_progress (ReplayFailed (slice, _)) =
+      print_endline ("  proof by " ^ prover_of slice ^ " not replayed")
   | default_progress (Verified suggestion) =
       print_endline
         ("  verified proof (replays in " ^
@@ -768,7 +771,8 @@ fun distinct_configs schedule =
 (* A failure that is reported and does not end the run, on stderr. *)
 fun warn what error =
   TextIO.output (TextIO.stdErr,
-    "HolyHammer " ^ what ^ " failed: " ^ General.exnMessage error ^ "\n")
+    "HolyHammer " ^ what ^ " failed: " ^ Feedback.exn_to_string error ^
+    "\n")
 
 fun run_with_root share_digests root
     {options, max_proofs, goal, rankings, progress} =
@@ -1411,11 +1415,16 @@ fun run_with_root share_digests root
             end)
            handle Interrupt => raise Interrupt
                 | error =>
-                    (* A variant that fails is expected and not reported. *)
-                    if Option.isSome origin then ()
-                    else
-                      (warn "reconstruction" error;
-                       queue_variants ()))
+                    (* A list Metis cannot replay fails with HOL_ERR, which
+                       is expected and only an event (none for a variant);
+                       any other exception is a bug and is reported. *)
+                    ((case error of
+                          HOL_ERR _ => ()
+                        | _ => warn "reconstruction" error);
+                     if Option.isSome origin then ()
+                     else
+                       (emit (ReplayFailed (slice, lemmas));
+                        queue_variants ())))
       end
 
     fun recon_loop () =

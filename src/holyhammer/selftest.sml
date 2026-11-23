@@ -4296,6 +4296,8 @@ fun observe_schedule_event (hhSchedule.SliceStarted slice) =
       "done|" ^ slice_event_tag slice
   | observe_schedule_event (hhSchedule.ProofFound (slice, _)) =
       "found|" ^ slice_event_tag slice
+  | observe_schedule_event (hhSchedule.ReplayFailed (slice, _)) =
+      "not-replayed|" ^ slice_event_tag slice
   | observe_schedule_event (hhSchedule.Verified suggestion) =
       "verified|" ^ slice_event_tag (#slice suggestion)
   | observe_schedule_event (hhSchedule.ScheduleDone reason) =
@@ -4414,6 +4416,31 @@ fun test_schedule_max_proofs parser =
     ()
   end
 
+(* f (), with stderr sent to a temporary file: its result and what was
+   written to stderr. *)
+fun capture_stderr f =
+  let
+    val path = OS.FileSys.tmpName ()
+    val file = TextIO.openOut path
+    val saved = TextIO.getOutstream TextIO.stdErr
+    fun restore () =
+      (TextIO.flushOut TextIO.stdErr;
+       TextIO.setOutstream (TextIO.stdErr, saved);
+       TextIO.closeOut file)
+    fun written () =
+      let
+        val stream = TextIO.openIn path
+        val text = TextIO.inputAll stream
+      in
+        TextIO.closeIn stream; OS.FileSys.remove path; text
+      end
+    val _ = TextIO.setOutstream (TextIO.stdErr, TextIO.getOutstream file)
+    val result =
+      f () handle e => (restore (); ignore (written ()); raise e)
+  in
+    restore (); (result, written ())
+  end
+
 fun test_schedule_reconstruction_failure parser =
   let
     val name = "hh-schedule-reconstruction-failure"
@@ -4429,10 +4456,22 @@ fun test_schedule_reconstruction_failure parser =
         (read_lines (join schedule_fixture_dir "schedule-add1.out"))
     val options = fixture_options [Z3] 2 1 5 false "" NONE
     val goal = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
-    val (result, events) =
-      with_fixtures [(Z3, config)] (fn () => run_schedule_on goal options)
+    val ((result, events), stderr) = capture_stderr (fn () =>
+      with_fixtures [(Z3, config)] (fn () => run_schedule_on goal options))
     val found = List.filter (String.isPrefix "found|") events
     val verified = List.filter (String.isPrefix "verified|") events
+    val not_replayed = List.filter (String.isPrefix "not-replayed|") events
+    (* A reconstruction that raises anything but HOL_ERR is a bug: it is
+       reported on stderr, readably. *)
+    val saved_reconstruct = !hhSchedule_Test.reconstruct
+    val _ = hhSchedule_Test.reconstruct :=
+      (fn _ => fn _ => fn _ => raise Fail "selftest bug")
+    val ((_, bug_events), bug_stderr) =
+      capture_stderr (fn () =>
+        with_fixtures [(Z3, config)] (fn () => run_schedule_on goal options)
+        handle e => (hhSchedule_Test.reconstruct := saved_reconstruct;
+                     raise e))
+    val _ = hhSchedule_Test.reconstruct := saved_reconstruct
     val _ = expect "unreconstructable scheduler recording parses as theorem"
       (bad_status = hhProver.SzsTheorem andalso
        bad_axioms = SOME ["fixtureTheory.unreconstructable"])
@@ -4443,6 +4482,13 @@ fun test_schedule_reconstruction_failure parser =
       (length found = 2)
     val _ = expect "only the replayable reconstruction verifies"
       (length verified = 1)
+    val _ = expect "the unreplayable list is an event, not a warning"
+      (length not_replayed = 1 andalso
+       not (String.isSubstring "HolyHammer reconstruction" stderr))
+    val _ = expect "an unexpected reconstruction error is warned readably"
+      (String.isSubstring "HolyHammer reconstruction failed: " bug_stderr
+       andalso String.isSubstring "selftest bug" bug_stderr andalso
+       length (List.filter (String.isPrefix "not-replayed|") bug_events) = 2)
     val _ = expect "failed reconstruction does not stop the schedule"
       (#stopped result = hhSchedule.MaxProofs andalso
        case #suggestions result of
@@ -5255,7 +5301,10 @@ fun test_schedule_deadline_recon sleeper_parser =
         val _ = note ("start|" ^ key lemmas)
         val _ = case behave lemmas of
                     Delay ms => pause ms
-                  | DelayFail ms => (pause ms; raise Fail "failed")
+                  | DelayFail ms =>
+                      (pause ms;
+                       raise Feedback.mk_HOL_ERR "selftest" "reconstruct"
+                         "failed")
                   | Cut => wait_for_cut lemmas
       in
         {stac = "fake " ^ key lemmas, tac = Tactical.ALL_TAC,
