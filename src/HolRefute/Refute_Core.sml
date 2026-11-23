@@ -1296,34 +1296,99 @@ structure Refute_Core :> Refute_Core = struct
      are family constructors. *)
   val data_constants = [pred_setSyntax.empty_tm]
 
-  fun nonexecutable_constants terms =
+  type constant_key = string * string
+
+  fun constant_key constant =
+    let val {Name, Thy, ...} = Term.dest_thy_const constant
+    in (Name, Thy) end
+
+  fun executable_keys compset =
+    List.foldl (fn ((key, transforms), keys) =>
+      if null transforms then keys else Redblackset.add (keys, key))
+      (Redblackset.empty
+        (Portable.pair_compare (String.compare, String.compare)))
+      (computeLib.listItems compset)
+
+  (* The definitions of [constant] in the theory
+     that created it, oldest first, at their own types and cut to the
+     conjuncts headed by [constant]: what [Definition.new_definition] and
+     [Prim_rec.new_recursive_definition] leave there without adding the
+     constant to [DefnBase] or the compset.  A recursive definition with
+     no termination proof has only its [WFREC] primitive there, which
+     nothing evaluates, so none. *)
+  fun theory_definitions constant =
     let
-      val comp_items = computeLib.listItems (computeLib.the_compset ())
-      val executable_keys =
-        List.foldl (fn ((key, transforms), keys) =>
-          if null transforms then keys else Redblackset.add (keys, key))
-          (Redblackset.empty
-            (Portable.pair_compare (String.compare, String.compare)))
-          comp_items
-      fun executable_constant constant =
+      val {Name, Thy, ...} = Term.dest_thy_const constant
+      val entries =
+        (* A script run with [hol run] has no current theory. *)
+        if Lib.total Theory.current_theory () = SOME Thy then
+          Theory.current_definitions ()
+        else DB.definitions Thy
+      fun is_primitive equation =
+        case Lib.total Term.dest_thy_const (#1 (boolSyntax.strip_comb
+               (boolSyntax.rhs (#2 (boolSyntax.strip_forall
+                  (Thm.concl equation)))))) of
+          SOME {Name = "WFREC", Thy = "relation", ...} => true
+        | _ => false
+      fun own (_, theorem) =
+        if not (Theory.uptodate_thm theorem) then NONE
+        else
+          case List.filter (fn (key, _) => key = {Name = Name, Thy = Thy})
+                 (DefnBase.defn_eqns theorem
+                  handle DefnBase.nonstdform => []) of
+            [] => NONE
+          | equations =>
+              if List.exists (is_primitive o #2) equations then NONE
+              else SOME (Drule.LIST_CONJ (map #2 equations))
+    in
+      List.mapPartial own entries
+    end
+
+  fun theory_definition constant =
+    case theory_definitions constant of
+      [] => NONE
+    | definitions => SOME (List.last definitions)
+
+  (* The constants [terms] reach that [known]
+     doesn't hold: those with a theory definition ([defined], with
+     [definitions]), whose right sides are followed in turn, and those
+     with none ([missing]).  [known] holds the compset's keys, so a
+     constant evaluation already reduces is never unfolded. *)
+  fun definition_closure known terms =
+    let
+      fun executable constant =
         Refute_TypeBase.is_constructor constant orelse
         List.exists (fn data => Term.same_const data constant)
           data_constants orelse
-        Refute_Gen.is_family_constructor constant orelse
-        let
-          val {Name, Thy, ...} = Term.dest_thy_const constant
-        in
-          Redblackset.member (executable_keys, (Name, Thy))
-        end
-      fun add (term, constants) =
-        List.foldl (fn (constant, collected) =>
-          if List.exists (fn old => Term.same_const old constant) collected
-          then collected
-          else constant :: collected) constants (term_constants term)
-      val constants = List.foldl add [] terms
+        Refute_Gen.is_family_constructor constant
+      fun right_constants theorem =
+        List.concat (map (term_constants o boolSyntax.rhs o #2 o
+                          boolSyntax.strip_forall)
+                       (boolSyntax.strip_conj (Thm.concl theorem)))
+      fun visit (constant, state as (seen, defined, definitions, missing)) =
+        if Redblackset.member (seen, constant_key constant) orelse
+           executable constant then state
+        else
+          let val seen = Redblackset.add (seen, constant_key constant)
+          in
+            case theory_definition constant of
+              SOME theorem =>
+                List.foldl visit
+                  (seen, constant :: defined, theorem :: definitions, missing)
+                  (right_constants theorem)
+            | NONE => (seen, defined, definitions, constant :: missing)
+          end
+      val (_, defined, definitions, missing) =
+        List.foldl visit (known, [], [], [])
+          (List.concat (map term_constants terms))
     in
-      List.filter (not o executable_constant) constants
+      {defined = List.rev defined, definitions = List.rev definitions,
+       missing = List.rev missing}
     end
+
+  fun nonexecutable_constants terms =
+    #missing (definition_closure
+      (executable_keys (computeLib.the_compset ())) terms)
 
   fun show_constants constants =
     String.concatWith ", "

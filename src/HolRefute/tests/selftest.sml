@@ -1366,6 +1366,60 @@ val _ = test "non-executable goals report the gate reason" (fn () =>
   unknown_with "GSPEC" (refute (exhaustive |> upd_size 4)
                           ``!x : num. x IN {y | y < 3}``))
 
+(* Constants only their theories define
+   ([new_definition], [new_recursive_definition]: neither in [DefnBase]
+   nor in the compset) are executable through those definitions, followed
+   to what they call, under every Quickcheck back end and substrate, with
+   certified counterexamples and the caller's compset unchanged.  A
+   definition reaching [ARB] stays refused. *)
+local
+  val _ = Datatype.Datatype
+    `rf_thy_pkg = <| rf_thy_exports : num list; rf_thy_size : num |>`
+  val _ = Datatype.Datatype `rf_thy_loc = RFThyA | RFThyB num`
+  val _ = new_definition ("rf_thy_inc_def", ``rf_thy_inc (x : num) = x + 1``)
+  val _ = new_definition ("rf_thy_twice_def",
+    ``rf_thy_twice (x : num) = rf_thy_inc x * 2``)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_sum_def", rec_axiom = prim_recTheory.num_Axiom,
+     def = ``(rf_thy_sum 0 = 0) /\
+             (!n. rf_thy_sum (SUC n) = rf_thy_twice n + rf_thy_sum n)``}
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_slot_def", rec_axiom = TypeBase.axiom_of ``:rf_thy_loc``,
+     def = ``(rf_thy_slot RFThyA = rf_thy_twice 0) /\
+             (!k. rf_thy_slot (RFThyB k) = rf_thy_inc k)``}
+  val _ = new_definition ("rf_thy_package_def",
+    ``rf_thy_package = rf_thy_pkg [rf_thy_inc 1] 2``)
+  val _ = new_definition ("rf_thy_arb_def",
+    ``rf_thy_arb (x : num) = x + ARB``)
+  val configs =
+    List.concat (map (fn backend =>
+      map (fn substrate =>
+        default_config |> only [backend] |> quiet |> upd_substrate substrate)
+        [NativeSML, Compute]) [Exhaustive, Random])
+  fun refuted_everywhere goal =
+    List.all (fn cfg =>
+      case refute cfg goal of
+          Counterexample (c :: _) => certifies goal c
+        | _ => false) configs
+in
+  val _ = test "theory definitions outside the compset are executable"
+    (fn () =>
+      let
+        val keys = computeLib.listItems (computeLib.the_compset ())
+        val refuted = List.all refuted_everywhere
+          [``!x. rf_thy_inc x = 0``, ``!x. rf_thy_twice x < 5``,
+           ``!n. rf_thy_sum n < 3``, ``!l. rf_thy_slot l < 4``,
+           ``rf_thy_package.rf_thy_exports = []``]
+        val refused = List.all (fn cfg =>
+            refute cfg ``!x. rf_thy_arb x = 0``
+              == Unknown ["not executable: ARB"]) configs
+      in
+        refuted andalso refused andalso
+        length (computeLib.listItems (computeLib.the_compset ())) =
+          length keys
+      end)
+end
+
 val _ = test "an any-goal backend still receives gated instances" (fn () =>
   let
     val enabled = ref false

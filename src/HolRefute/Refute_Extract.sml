@@ -1154,10 +1154,6 @@ structure Refute_Extract :> Refute_Extract = struct
      witness in that class, and extraction refuses further down. *)
   fun theorem_for_theory constant =
     let
-      val (thy, _) = kname constant
-      val entries =
-        if thy = Theory.current_theory () then Theory.current_definitions ()
-        else DB.definitions thy
       fun instantiate theorem =
         let
           val (head, _) = boolSyntax.strip_comb
@@ -1167,17 +1163,19 @@ structure Refute_Extract :> Refute_Extract = struct
         in
           Thm.INST_TYPE theta theorem
         end
-      fun usable (_, theorem) =
-        if not (Theory.uptodate_thm theorem) then NONE
-        else
-          case Lib.total instantiate theorem of
-            NONE => NONE
-          | SOME instance =>
-              if Option.isSome (shape_refusal constant instance) then NONE
-              else SOME instance
+      fun usable theorem =
+        case Lib.total instantiate theorem of
+          NONE => NONE
+        | SOME instance =>
+            if Option.isSome (shape_refusal constant instance) then NONE
+            else SOME instance
     in
-      (* Last wins, as it does when [DefnBase] folds the same list. *)
-      case List.mapPartial usable entries of
+      (* Last wins, as it does when [DefnBase] folds the same list.  The
+         candidates are [Refute_Core.theory_definitions]: cut to
+         [constant]'s own conjuncts, without [WFREC] primitives, and read
+         with no current theory too. *)
+      case List.mapPartial usable
+             (Refute_Core.theory_definitions constant) of
         [] => NONE
       | candidates => SOME (List.last candidates)
     end
@@ -1249,8 +1247,13 @@ structure Refute_Extract :> Refute_Extract = struct
             (case theorem_for_compset context constant of
                SOME theorem => theorem
              | NONE =>
-                 reject ("no extractable equations for constant " ^
-                         kname_text (kname constant)))
+                 (* a constant only its theory defines, as
+                    [new_definition] leaves one *)
+                 (case theorem_for_theory constant of
+                    SOME theorem => theorem
+                  | NONE =>
+                      reject ("no extractable equations for constant " ^
+                              kname_text (kname constant))))
       fun usable_without_userdef () =
         case Lib.total without_userdef () of
           SOME theorem =>

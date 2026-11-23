@@ -49,7 +49,69 @@ structure Refute_Cert :> Refute_Cert = struct
        Parse.term_to_string (Thm.concl theorem) ^ " versus " ^
        Parse.term_to_string expected)
 
-  fun eval tm = computeLib.CBV_CONV (computeLib.the_compset ()) tm
+  (* A term reaching constants only their theories define
+     ([new_definition] leaves them out of the compset, see
+     [Refute_Core.definition_closure]) evaluates in a copy of [the_compset ()] given their definitions; the caller's compset
+     is never written.  The copy is kept for the next term while
+     [the_compset ()] is the same value ([computeLib.upd_compset] writes a
+     new one), with [known]: the copy's keys and the constants found
+     without a definition, so a term walks only what is new.  A copy is
+     replaced, never changed, since other threads may be evaluating in
+     it. *)
+  local
+    type defined =
+      {base : computeLib.compset,
+       known : Refute_Core.constant_key Redblackset.set,
+       compset : computeLib.compset}
+    val cache = Synchronized.var "Refute_Cert.defined" (NONE : defined option)
+    fun fresh base =
+      {base = base, known = Refute_Core.executable_keys base,
+       compset = base}
+    (* As [Defn] does for the compset: evaluation meets numerals, never
+       [SUC n], so an equation with [SUC] in a pattern is restated over
+       numerals. *)
+    fun numeral_patterns theorem =
+      if List.exists
+           (Lib.can (HolKernel.find_term numSyntax.is_suc) o boolSyntax.lhs o
+            #2 o boolSyntax.strip_forall)
+           (boolSyntax.strip_conj (Thm.concl theorem))
+      then Conv.CONV_RULE (!Defn.SUC_TO_NUMERAL_DEFN_CONV_hook) theorem
+      else theorem
+  in
+    fun default_compset tm =
+      let
+        val base = computeLib.the_compset ()
+        val (cached, current) =
+          case Synchronized.value cache of
+            SOME (cached as {base = cached_base, ...}) =>
+              if PolyML.pointerEq (cached_base, base) then (cached, true)
+              else (fresh base, false)
+          | NONE => (fresh base, false)
+        val {defined, definitions, missing} =
+          Refute_Core.definition_closure (#known cached) [tm]
+      in
+        if null defined andalso null missing then
+          (if current then ()
+           else Synchronized.change cache (fn _ => SOME cached);
+           #compset cached)
+        else
+          let
+            val compset =
+              if null definitions then #compset cached
+              else computeLib.add_thms (map numeral_patterns definitions)
+                     (computeLib.copy (#compset cached))
+            val known = List.foldl (fn (constant, keys) =>
+              Redblackset.add (keys, Refute_Core.constant_key constant))
+              (#known cached) (defined @ missing)
+          in
+            Synchronized.change cache (fn _ =>
+              SOME {base = base, known = known, compset = compset});
+            compset
+          end
+      end
+  end
+
+  fun eval tm = computeLib.CBV_CONV (default_compset tm) tm
 
   (* [has_bounded_quantifier] is a syntactic over-approximation of what
      [bounded_rewrites] can rewrite; when the two disagree, [REWRITE_CONV]
