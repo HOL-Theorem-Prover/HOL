@@ -162,14 +162,10 @@ Proof
   (* metis_tac [perm_isort, PERM_CONG_2] *)
 QED
 
-(* The hammer still fails on the second step, even with
-   perm_isort_perm available.  But the hammer's proof of isort_idem
-   above shows what such a proof looks like, and the same metis_tac
-   call with perm_isort_perm in place of perm_isort proves it.  Hammer
-   output is a good template for proofs of similar goals. *)
 Theorem isort_perm_eq:
   PERM l1 l2 ==> isort l1 = isort l2
 Proof
-  metis_tac [perm_isort_perm, sorted_isort, EQ_LESS_EQ, transitive_LE,
-             relationTheory.antisymmetric_def, SORTED_PERM_EQ]
+  hh
+  (* metis_tac [perm_isort_perm, sorted_isort, EQ_LESS_EQ, transitive_LE,
+                relationTheory.antisymmetric_def, SORTED_PERM_EQ] *)
 QED
