@@ -25,7 +25,7 @@ Use `(sw_group r a b).exp` for scalars and the existing `order` operation.
 Point constructors are total; group laws require curve and carrier hypotheses.
 Torsion means rational points over the stated field, not an algebraic closure.
 `sw_ring_ops` supplies the field-to-ring translation used by the algebraic
-proofs. 
+proofs.
 
 ## Build
 
