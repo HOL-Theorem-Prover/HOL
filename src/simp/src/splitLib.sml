@@ -616,7 +616,12 @@ fun split_asm_tac cmap =
         fn head => List.exists (fn key_head => same_const key_head head) heads
       else indexed_head
     fun contains_head tm =
-      can (find_term (fn subtm => is_const subtm andalso has_head subtm)) tm
+      if is_const tm then has_head tm
+      else if is_comb tm then
+        let val (f,x) = dest_comb tm
+        in contains_head f orelse contains_head x end
+      else if is_abs tm then contains_head (body tm)
+      else false
 
     (* [contains_head] sees only the head constant, so an assumption it
        admits may still yield no pack -- a partial application, or a rule
@@ -629,7 +634,7 @@ fun split_asm_tac cmap =
     fun first_split [] =
           raise ERR "SPLIT_ASM_TAC" "no assumption contains a split key"
       | first_split (asm :: rest) =
-          if contains_head asm then
+          if Lib.total contains_head asm = SOME true then
             case Lib.total (asm_eq candidates) asm of
                 SOME eq => (asm, eq)
               | NONE => first_split rest

@@ -389,6 +389,9 @@ val _ = List.app (fn reverse => let
   val restored = S.install_rewrite_bundle bundle [] removed
   val _ = check "reinstallation returns source identity, not an old alias"
     (same_handles (handles viewed) (handles restored))
+  val _ = check "source reinstallation leaves shared view history unchanged"
+    (not (#rebuild (S.rewrite_context_changes (removed,restored))) andalso
+     not (#rebuild (S.rewrite_context_changes (restored,removed))))
   val cv = projection reverse restored
   val _ = result "source reinstalled after view event has no alias conversion"
     cv (input av) (REFL (input av))
@@ -592,6 +595,11 @@ val _ = let
     ss with_key [fresh_key] false false
   val _ = delta "reverse keyed comparison preserves earlier views"
     with_key ss [fresh_key] false false
+  val with_rule = S.++ (ss,S.rewrites [u])
+  val _ = delta "native rewrite addition preserves earlier views"
+    ss with_rule [] false false
+  val _ = delta "reverse native rewrite comparison preserves earlier views"
+    with_rule ss [] false false
   val suspended = S.suspend_rewrite_sources [source ca ss] ss
   val _ = delta "suspension invalidates a surviving event's dependent view"
     ss suspended [] true false

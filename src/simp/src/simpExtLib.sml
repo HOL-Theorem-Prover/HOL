@@ -101,17 +101,28 @@ fun grouped_by compare key items =
 fun group_items groups key =
   Option.getOpt (Binarymap.peek (groups,key),[])
 
-(* For batches, keep only the queried origins in the index. Match within
-   each bucket because replay can change the statement at that origin. *)
+(* Match within each origin bucket because replay can change a statement
+   without changing its origin. *)
 fun source_finder sources query_key queries =
-  case (sources,queries) of
+  let
+    (* Index sources directly when there are at least four queries per
+       source. Stop the ratio check as soon as it can be decided. *)
+    fun many_queries [] _ = true
+      | many_queries (_::ss) (_::_::_::_::qs) = many_queries ss qs
+      | many_queries _ _ = false
+  in case (sources,queries) of
       (_::_::_::_,_::_::_::_::_) =>
         let
-          val wanted = Binaryset.addList
-            (Binaryset.empty rewrite_source_compare,map query_key queries)
           val matching_origins =
-            List.filter (fn source => Binaryset.member (wanted,source))
-              sources
+            if many_queries sources queries then sources
+            else
+              let
+                val wanted = Binaryset.addList
+                  (Binaryset.empty rewrite_source_compare,map query_key queries)
+              in
+                List.filter (fn source => Binaryset.member (wanted,source))
+                  sources
+              end
           val groups = grouped_by rewrite_source_compare I matching_origins
         in fn wanted =>
           List.find (fn other => same_rewrite_source (wanted,other))
@@ -119,6 +130,7 @@ fun source_finder sources query_key queries =
         end
     | _ => fn wanted =>
         List.find (fn other => same_rewrite_source (wanted,other)) sources
+  end
 
 local open markerTheory in end;
 
@@ -2092,8 +2104,8 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
                      SOME item => ([item],[],viewless item)
                    | NONE => (old,current,false))
       | changed_histories (old,current) = (old,current,false)
-    val (old_history,new_history,same_view_history) =
-      if same_history then ([],[],true)
+    val (old_history,new_history,viewless_delta) =
+      if same_history then ([],[],false)
       else changed_histories (#history old,#history current)
     val (old_convs,old_structure,old_makers) = snapshot old_history
     val (new_convs,new_structure,new_makers) = snapshot new_history
@@ -2164,10 +2176,11 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
                 (#1 (queried_source_index queries sources))
       end
     fun views_changed () =
-      (* A viewless addition outside the shared history has no effect on
-         earlier views when it leaves their native sources alone. *)
-      not (same_view_history andalso
-           Portable.pointer_eq (#native_sources old,#native_sources current))
+      (* A viewless addition introduces its own event's sources only.
+         A view in the shared history can only use an earlier source. *)
+      not (viewless_delta orelse
+           (same_history andalso
+            Portable.pointer_eq (#native_sources old,#native_sources current)))
       andalso not (ListPair.allEq same_view
         (active_views_of (#history old) (#native_sources old),
          active_views_of (#history current) (#native_sources current)))
@@ -2696,13 +2709,33 @@ type simp_mode = {safe : bool}
 
 fun reconcile_hyps asl th =
   let
+    val hypotheses = hyp th
+    val find_asm =
+      if HOLset.numItems (hypset th) < 64 orelse length asl < 128 then
+        (fn h => List.find (aconv h) asl)
+      else
+        let
+          (* Index assumptions only as far as needed. Termtab compares
+             up to alpha equivalence, and default keeps the first match. *)
+          val unindexed = ref asl
+          val index = ref Termtab.empty
+          fun advance h [] = (unindexed := []; NONE)
+            | advance h (asm::rest) =
+                (index := Termtab.default (asm,asm) (!index);
+                 if aconv h asm then (unindexed := rest; SOME asm)
+                 else advance h rest)
+          fun lookup h =
+            case Termtab.lookup (!index) h of
+                NONE => advance h (!unindexed)
+              | found => found
+        in lookup end
     fun asm_for h =
-      case List.find (aconv h) asl of
+      case find_asm h of
           SOME a => a
         | NONE => raise ERR ("GEN_SIMP_TAC", "Solver introduced a hypothesis")
     fun replace_hyp h result = PROVE_HYP (ASSUME (asm_for h)) result
   in
-    Lib.itlist ADD_ASSUM asl (Lib.itlist replace_hyp (hyp th) th)
+    Lib.itlist ADD_ASSUM asl (Lib.itlist replace_hyp hypotheses th)
   end
 
 fun simp_conv_with_xdata traversal xdata reducer_context solver_context =

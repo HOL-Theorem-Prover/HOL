@@ -180,6 +180,27 @@ val _ = let
 in check "supplied rule compiled once, solver saw plain theorem"
   (!seen andalso !calls = 1) end
 
+val _ = let
+  fun quantified binder i =
+    let val p = mk_var ("reconcile_" ^ Int.toString i, bool --> bool)
+    in mk_forall (binder, mk_comb (p,binder)) end
+  val x = mk_var ("x", bool)
+  val y = mk_var ("y", bool)
+  val asms = List.tabulate (128,quantified x) @ [quantified y 127]
+  val fact = SPEC (mk_var ("reconcile_goal", bool)) boolTheory.EXCLUDED_MIDDLE
+  val required = List.tabulate (64,fn i => quantified y (i + 64))
+  val good = List.foldl (fn (h,th) => ADD_ASSUM h th) fact required
+  val bad = ADD_ASSUM (mk_var ("reconcile_missing", bool)) good
+  val calls = ref []
+  fun solver name th =
+    {name=name, solve=fn _ => fn _ => (calls := name :: !calls; th)}
+  val ss = S.set_safe_solvers [solver "missing" bad,solver "matched" good]
+    S.empty_ss
+  val _ = tactic "solver reconciles alpha-equivalent assumptions"
+    (S.GEN_SIMP_TAC {safe=true} ss [markerLib.NoAsms]) (asms,concl fact) []
+in check "missing hypothesis falls through to the next solver"
+  (!calls = ["matched","missing"]) end
+
 (* Nested wrappers qualify directives, not rewrites of marker propositions.
    Requirements on content directives are stripped before interpretation. *)
 val _ = let
