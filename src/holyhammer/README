@@ -2,217 +2,147 @@ HOLyHammer
 ==========
 
 HOLyHammer selects premises for a goal, translates the goal and premises to
-TPTP, schedules time slices across external provers, and reconstructs a proof
-with Metis.  It returns as soon as the first reconstructed proof is verified.
+TPTP, runs external provers on them in parallel time slices, and replays a
+proof they found with Metis through the HOL4 kernel.  The provers are never
+trusted, and a hammer proof adds no oracle tag.
+
+`examples/README.md` is the user guide: worked examples, tips, and a FAQ.
+This file covers the options, the schedule, and the installation of the
+provers.
 
 Usage
 -----
 
-At least one external prover must be installed.
+At least one external prover must be installed (see "Installing provers").
 
-    load "holyHammer";
-    open holyHammer;
-    hh ([], ``1 + 1 = 2``);
+    load "holyHammer"; open holyHammer;
     holyhammer ``1 + 1 = 2``;
+    g `1 + 1 = 2`; e hh;
 
-The overall default timeout is 30 seconds.  `set_timeout` is deprecated; use
-the option interface instead:
+`holyhammer : term -> thm` proves a closed statement and `hh` is the same
+search as a tactic, assumptions included.  `hh_pb dir provers premises` runs
+the given provers on exactly the given premises (fully qualified names, such
+as `"listTheory.EVERY_MEM"`), writing its problems below `dir`.  Each returns
+the first proof Metis replays and prints the `metis_tac` call to put in a
+script.
+
+Options
+-------
 
     hhConfig.hh_set ("timeout", "60");
     hhConfig.hh_set ("provers", "e vampire");
-    hhConfig.hh_set ("format", "th0");
-    hhConfig.hh_set ("type_enc", "mono_native_higher");
-    hhConfig.hh_set ("lam_trans", "lifting");
-    hhConfig.hh_params ();
+    hhConfig.hh_get "timeout";
+    hhConfig.hh_unset "timeout";
     hhConfig.print_params ();
 
-`hh_set` validates values immediately.  `hh_params` returns every effective
-option as `(name, value, provenance)`, while `print_params` prints the same
-information with short descriptions.  Runtime settings take precedence over
-the user or system configuration and environment; use `hh_unset` to remove a
-runtime override.
+`hh_set` validates the value at once.  `print_params` prints every option
+with its value, where the value comes from, and a short description.  An
+option takes its value from, in order: `hh_set`; the user configuration
+`$HOME/.hol4/hammer/config`; the system configuration
+`$HOLDIR/etc/hammer-config`; the environment variable `HOL4_HAMMER_<NAME>`
+(the option name in upper case, such as `HOL4_HAMMER_TIMEOUT`); the default.
+The configuration files hold one `name = value` per line.
+
+The options are `timeout`, `provers`, `slices`, `cores`, `export_workers`,
+`filter`, `max_facts`, `format`, `type_enc`, `lam_trans`, `mono_iters`,
+`mono_instances`, `minimize`, `preplay_timeout`, `minimize_timeout`,
+`preplay_drop_one`, `cache`, `cache_dir`, `cache_max_entries`,
+`debug_dir`, and `verbose`.  `set_timeout n` is a deprecated alias for
+`hh_set ("timeout", Int.toString n)`.
+
+By default a call prints only its outcome: the verified tactic or why it
+failed.  With `verbose` it also reports every slice as it starts and ends.
 
 Each call writes its TPTP problems to a fresh directory below the state
 directory (`$HOME/.hol4/hammer`, or `$HOL4_HAMMER_DIR`) and deletes it when
-the call returns, also on failure or interruption.  With `debug_dir` set,
-the problems are kept instead, in `debug_dir/problems`, next to the raw
-prover output.
+the call returns.  With `debug_dir` set, the problems are kept in
+`debug_dir/problems`, next to the raw prover output.
 
-The options are `timeout`, `max_proofs`, `provers`, `slices`, `cores`,
-`export_workers`, `filter`, `max_facts`, `format`, `type_enc`, `lam_trans`,
-`mono_iters`, `mono_instances`, `minimize`, `preplay_timeout`,
-`minimize_timeout`, `preplay_drop_one`, `cache`, `cache_dir`,
-`cache_max_entries`, `debug_dir`, and `verbose`.  By default a call prints
-only its outcome: the verified tactic or why it failed.  With `verbose` set
-it also reports every slice as it starts and ends.
+Time limits
+-----------
 
-The `timeout` is a wall-clock budget of the proof search, counted from the
-launch of the provers.
-Every problem is exported before that, on the calling thread, so the export is
-not charged to it, except where the measured policy (see `export_mode` in
-`hhSchedule.sml`, which states the conditions) overlaps the export with the
-search; an empty schedule, a pinned caller and `debug_dir`
-always export first.  An overlapped run starts the clock at the launch and the
-export then uses the budget: at the soft deadline no slice is started and an
-export that no slice waits for any more is cancelled; slices already started
-keep their grace period, and at the hard deadline the provers still running
-are killed.  Reconstruction is not bounded by the timeout: the proofs the
-provers found are all reconstructed, in the order they arrived, so a call can
-return after the timeout.  `max_proofs` ends the run whenever that many proofs
-have verified; past the soft deadline the first verified proof also ends it (a
-proof verified before the deadline included), kills the provers still running
-and drops the lists still queued.  Until one has verified, the lists are
-reconstructed until one does or all fail.  Each replay takes about
-`preplay_timeout` of CPU time at most (see below), after its compilation,
-which the limit does not count; a list costs about two, its
-minimisation, which stops at the soft deadline and keeps the shortest
-verified list, and a final replay.  An interrupt and a
-failed export stop everything at once, `max_proofs` stops the provers and the
-export (a replay is not cut); the provers are killed, the exports cancelled
-and every thread has exited before the call returns (an export is cut at the
-end of the problem it is preparing).
+`timeout` (30 s by default) is the wall-clock budget of the proof search,
+counted from the launch of the provers.  At the timeout no further slice
+starts, and the provers still running are stopped after a short grace
+period.  The proofs the provers found are still reconstructed until one
+replays, so a call can return after the timeout.
 
-An export error wins over everything but a stop.  The first one to be
-reported (after the problems admitted before it have settled) is raised on
-the caller, with no result and no ScheduleDone, unless a stop (`max_proofs`,
-the deadlines, an interrupt) came first; then it is a late error of a
-cancelled export, dropped and printed on stderr like the failure of a
-slice.  This holds when a proof has already been verified but `max_proofs`
-is not reached: the run raises the error, as the default run does before
-any search, and the events already reported, `Verified` included, stay
-observable.  The problems of an overlapped run that stops early are partly
-exported: a root that the caller owns (`hhSchedule.run_in`) holds only the
-files published until then.  The files that are published equal the
-blocking export's files for the same counter start, because the export
-draws its fresh names from a supply of its own, so that a replay of a
-proof, which draws fresh names too, cannot change them, and what the
-export prints while a replay runs goes to the file
-that hides the replay's output.
+Each proof is replayed by Metis within `preplay_timeout` (2.5 s), and with
+`minimize` set (the default) shortened by attempts of at most
+`minimize_timeout` (1.0 s) each.  With `preplay_drop_one` (the default) a
+proof that fails to replay is retried once without each of its lemmas in
+turn.  These limits are CPU seconds of the replaying thread, so a replay
+beside busy provers is not cut short; outside Linux they are the lesser of
+wall time and the process's CPU time.
 
-`export_workers` is the number of threads that finish the
-generated problems (the draw-free tail, then format and write) before the
-provers start (also settable through the environment variable
-`HOL4_HAMMER_EXPORT_WORKERS`).  The default is 2; 1 does the
-work on the calling thread, 0 means `cores`, and the count never exceeds
-`cores`.  The files written are the same whatever the count.
+`cores` (0, the default, means all processors) is the number of provers
+run at once, and `export_workers` (default 2) the number of threads that
+write the problems.
 
-A prover's lemma list sometimes holds a lemma that sends Metis astray, so
-the list cannot be replayed within `preplay_timeout` although a sublist
-can.  With `preplay_drop_one` set, as it is by default, each list that
-fails to replay is tried again once without each of its lemmas in turn.
-These retries run only while no new list waits for reconstruction, and stop
-at the timeout (they are not proofs the provers found, and each can cost
-two `preplay_timeout`s).  `preplay_timeout` is 2.5 seconds by default.
+Schedule
+--------
 
-`preplay_timeout` and `minimize_timeout` limit the CPU time of the thread
-that runs the replay, not wall time: the provers keep running while a proof
-is replayed, so a replay on a busy machine can get a small share of a CPU,
-and under a wall-clock limit whether a list replays would depend on the
-load.  The replay times reported (`t_replay`, "replays in ... s") are CPU
-seconds on the same clock.  A replay that does not compute (one blocked on
-a lock, say) is still stopped after 20 times its limit in wall time.
-Outside Linux, which reports a thread's CPU time, the clock is the lesser
-of the wall time and the process's CPU time.
+The default schedule has 24 slices, each with its own prover, premise
+filter, number of facts, TPTP format, type encoding, and lambda
+translation.  The first 16 slices select premises by kNN; the last eight
+use MePo, MaSh, and MeSh.  The slices use FOF and typed `tx0`, `tx0-`,
+`th0`, and `th1` problems.  `slices` caps the number of slices (0, the
+default, runs them all) and `max_facts` the facts per slice.
 
-The `filter` values are:
+`filter`, `format`, `type_enc`, and `lam_trans` override the choice of every
+slice; empty, the default, keeps each slice's own.
 
-* `knn`, the existing dependency-aware nearest-neighbour selector;
-* `mepo`, a relevance filter based on the goal's constants and types;
-* `mash`, the meshed sparse-Naive-Bayes and kNN learner;
-* `mesh`, the combined MePo and MaSh ranking; and
-* `none`, all available premises in dependency order.
+  * Filters: `knn` (dependency-aware k-nearest neighbours), `mepo`
+    (relevance by the goal's constants and types), `mash` (sparse Naive
+    Bayes meshed with kNN), `mesh` (MePo and MaSh combined), and `none`
+    (all available premises in dependency order).
+  * Formats: `fof`, `tf0`, `tf1`, `tx0`, `tx0-`, `th0`, and `th1`.
+  * Type encodings: `mono_native`, `mono_native_fool`, `mono_native_higher`,
+    `mono_native_higher_fool`, `poly_native`, `mono_guards`, and
+    `mono_guards??`; empty selects the untyped FOF translation.
+  * Lambda translations: `lifting`, `combs`, `combs_and_lifting`, and
+    `keep_lams`.
 
-The default value is empty, meaning that every slice uses its tested table
-filter.  A nonempty value overrides the filter across the whole schedule.
-For example, this runs every selected slice with MePo:
-
-    hhConfig.hh_set ("filter", "mepo");
-
-Use `hhConfig.hh_unset "filter"` to restore the per-slice default.  The old
-public references `timeout_glob`, `premise_selection_flag`, and `all_atps`
-have been removed; their replacements are the `timeout`, `filter`, and
-`provers` options.  `lemmas_glob` has also been removed: integrations should
-consume `main_hh_lemmas` directly.
-
-The default 24-slice schedule chooses its premise filter, TPTP format, type
-encoding, and lambda translation independently for each slice.  Its first 16
-slices retain the kNN schedule; the final eight add MePo, MaSh, and MeSh
-rankings.  The built-in slices combine the legacy FOF exporter with typed
-`tx0`, `tx0-`, `th0`, and `th1` problems.  The problem generator also
-supports `tf0` and `tf1`.  Per-slice choices are validated against the
-selected prover before proof search and are included in cache keys and
-evaluation journals.
-
-`format`, `type_enc`, and `lam_trans` are schedule-wide overrides; leave
-them empty to retain the tested per-slice choices.  Formats are `fof`,
-`tf0`, `tf1`, `tx0`, `tx0-`, `th0`, and `th1`.  Type encodings are
-`mono_native`, `mono_native_fool`, `mono_native_higher`,
-`mono_native_higher_fool`, `poly_native`, `mono_guards`, and
-`mono_guards??`; an empty encoding selects the legacy FOF exporter.  Lambda
-modes are `lifting`, `combs`, `combs_and_lifting`, and `keep_lams`.
-Unsupported prover/format combinations are rejected.  `mono_iters` controls
-monomorphization rounds, while `mono_instances` caps new instances; empty,
-the default, uses each prover's own cap.
+A combination the slice's prover does not support is rejected before the
+search.  `mono_iters` sets the monomorphisation rounds and `mono_instances`
+caps the new instances (empty, the default, uses the slice's fact count, at
+least the prover's own cap).
 
 The provers are the constructors of `holyHammer.prover`: `Eprover`,
-`Vampire`, `Zipperposition`, and `Z3`.  The `provers` option names them `e`,
-`vampire`, `zipperposition`, and `z3`, and `hh_pb` takes a list of them.  Z3
-has no scheduler slices yet, so selecting it schedules nothing: a Z3 slice
-is added only once an `hhEval` measurement shows that it raises the
-portfolio's success rate rather than duplicating existing slices.
+`Vampire`, `Zipperposition`, and `Z3`, named `e`, `vampire`,
+`zipperposition`, and `z3` in the `provers` option.  Z3 has no slices, so
+scheduling it alone runs nothing.
 
 Installing provers
 ------------------
 
-The recommended installation command is:
-
     tools/download-provers
 
-The end-to-end smoke suite first runs every installed prover, including
-Z3, on a one-step problem, and `hh_pb` with E on a library theorem.  It
-then exercises every Phase 2 slice through export, proof search, TSTP
-parse-back, and reconstruction.  It also runs cardinality soundness
-fixtures through the complete 16-slice public `hh` schedule:
+installs the tested versions:
+
+  * E 3.2.5-ho;
+  * Vampire 5.0.1; and
+  * Zipperposition 2.1 (Isabelle component revision 2).
+
+`provers/README` says where it puts them.  Alternatively, put a supported
+binary on `PATH`: `eprover-ho` or `eprover`, `vampire`, `zipperposition`, or
+`z3_tptp`, Z3's TPTP front end built from `examples/tptp` in the Z3 sources
+(tested with 4.11.2).  The plain `z3` binary does not read TPTP and is never
+used.
+
+A prover is found by the first of:
+
+  1. the configuration entry `prover.<name>.executable`, for example
+     `prover.e.executable = /opt/e/bin/eprover`;
+  2. its environment variable: `HOL4_EPROVER_EXECUTABLE`,
+     `HOL4_VAMPIRE_EXECUTABLE`, `HOL4_ZIPPERPOSITION_EXECUTABLE`, or
+     `HOL4_Z3_TPTP_EXECUTABLE` (HolSmt's `HOL4_Z3_EXECUTABLE` names an
+     SMT-LIB solver and is not consulted);
+  3. `PATH`;
+  4. an installation in `$HOLDIR/src/holyhammer/provers`, in the state
+     directory's `provers`, or in `$HOME/.hol4/hammer/provers`.
+
+To check the installed provers end to end:
 
     cd src/holyhammer
-    ../../bin/Holmake smoke.exe
-    ./smoke.exe
-
-Alternatively, put a supported binary on `PATH`.  HOLyHammer looks for
-`eprover-ho` or `eprover`, `vampire`, `zipperposition`, and, for the
-schedule-less Z3 entry, `z3_tptp`: Z3's TPTP front end, built from
-`examples/tptp` in the Z3 sources.  The plain `z3` binary does not read
-TPTP, so HOLyHammer never uses it.
-
-The tested versions are:
-
-* E 3.2.5-ho ("Puttabong Moondrop");
-* Vampire 5.0.1; and
-* Zipperposition 2.1, Isabelle component revision 2.
-
-Executable discovery
---------------------
-
-A prover executable may also be selected in
-`$HOME/.hol4/hammer/config` or `$HOLDIR/etc/hammer-config`:
-
-    prover.e.executable = /opt/e/bin/eprover
-
-User configuration takes precedence over system configuration.  Dedicated
-environment variables are also supported:
-
-* `HOL4_EPROVER_EXECUTABLE`;
-* `HOL4_VAMPIRE_EXECUTABLE`;
-* `HOL4_ZIPPERPOSITION_EXECUTABLE`; and
-* `HOL4_Z3_TPTP_EXECUTABLE`.
-
-HolSmt's `HOL4_Z3_EXECUTABLE` names an SMT-LIB solver and is not consulted.
-
-Discovery checks configuration, the dedicated environment variable, `PATH`,
-and versioned installation directories under
-`$HOLDIR/src/holyhammer/provers` and `$HOME/.hol4/hammer/provers`.
-
-Questions
----------
-
-Questions may be sent to email@thibaultgauthier.fr.
+    ../../bin/Holmake smoke.exe && ./smoke.exe

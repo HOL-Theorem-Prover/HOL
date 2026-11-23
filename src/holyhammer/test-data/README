@@ -1,34 +1,35 @@
-These are raw stdout recordings captured on 2026-07-15 from the pinned
-Phase 0 prover binaries:
+These are the fixtures of `selftest.sml`.
 
-  E 3.2.5-ho, Vampire 5.0.1, and Zipperposition 2.1.
+The `.out` files named after a prover are raw stdout recordings of the
+tested binaries: E 3.2.5-ho, Vampire 5.0.1, and Zipperposition 2.1 (captured
+2026-07-15 and 2026-08-04).  `z3-tptp-theorem.out` is a minimal `z3_tptp`
+theorem output.  The theorem recordings use the escaped axiom name
+`thm_2Ekeep__name`, so the parser tests check both unescaping and the
+removal of the `thm.` prefix; the E recording keeps its `--auto-schedule`
+comment chatter.  The recordings with a version and a format in their name
+come from the end-to-end export, proof, parse-back, and reconstruction of
+`arithmeticTheory.ADD1`, one for each of slices 9 to 16 of
+`hhProver.portfolio`, including the Vampire TH0, E TX0-minus, and
+Zipperposition FOF substitutes for the formats those binaries reject.
+Pigeonhole instances gave E's `GaveUp`, Vampire's `Timeout`, and
+Zipperposition's `ResourceOut` (its spelling of a timeout); the
+Zipperposition `GaveUp` comes from a small higher-order counterexample.
+The `-version.out` files are raw `--version` output.
 
-The theorem recordings use an escaped HolyHammer axiom name
-`thm_2Ekeep__name`; parser tests therefore check both unescaping and removal
-of the `thm.` prefix.  The E theorem recording also retains its
-`--auto-schedule` comment chatter.  The versioned Phase 2 recordings were
-captured on 2026-08-04 from the full export/prove/parse-back/reconstruction
-smoke path, each using `arithmeticTheory.ADD1`.  They include the documented
-Vampire TH0, E TX0-minus, and Zipperposition legacy-FOF substitutions for
-pinned-parser rejections of TF1, TF0, and guarded FOF respectively.
-Pigeonhole instances produced E's
-`GaveUp`, Vampire's `Timeout`, and Zipperposition's `ResourceOut` (the
-Zipperposition timeout spelling).  The Zipperposition `GaveUp` recording is
-from a small higher-order counterexample.  Version recordings are the
-corresponding raw `--version` output.
+`runner-print-e.sh` and `runner-forking-sleeper.sh` are process runner and
+scheduler fixtures.  The former prints the recorded E theorem output by
+default and accepts an optional delay and recording filename.  The latter
+starts a long-lived child, prints its pid, and stays alive, so that the
+process-group cancellation test can check that both generations die.  The
+shell is fixture material only, never used by the runner or the scheduler.
 
-`runner-print-e.sh` and `runner-forking-sleeper.sh` are hermetic process
-runner and scheduler fixtures.  The former prints the recorded E theorem
-output by default and accepts an optional delay and recording filename.  The
-latter starts a long-lived child, prints its pid, and remains alive so the
-process-group cancellation selftest can verify that both generations die.
-The `schedule-*.out` files, except the `schedule-lemmas-*.out`, are minimal
+The `schedule-*.out` files, except `schedule-lemmas-*.out`, are minimal
 E-style theorem outputs naming replayable HOL axioms and one deliberately
-unavailable fixture axiom.  The `schedule-lemmas-*.out` are not E output:
-their one line lists comma-separated lemma names, which the deadline test of
-the reconstruction parses itself, to have lists to tell apart.  The
-shell is used only as fixture material, never by the production runner or
-scheduler.
+unavailable fixture axiom.  Each `schedule-lemmas-*.out` is not prover
+output but one line of comma-separated lemma names, which the
+reconstruction deadline test parses itself, to have lists to tell apart.
 
-`problems/` contains hermetic golden TPTP problems emitted by
-`hhTptpProblem` for FOF, TF0, TX0, TF1, TH0, and TH1.
+`hhproblemgen-roundtrip.out` is TSTP output for the parse-back tests.
+`problems/` holds golden TPTP problems emitted by `hhTptpProblem` and
+`hhProblemGen` for FOF, TF0, TX0, TF1, TH0, and TH1.  `hheval-report/`
+holds `hhEval` journals for the report test.

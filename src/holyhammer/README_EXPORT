@@ -1,24 +1,29 @@
-Exporting HOL4 problems to TPTP formats:
+Exporting HOL4 theories to TPTP
+===============================
 
-NOTE: The dataset exporters below (`hhExportTf0`, `hhExportTf1`,
-`hhExportTh0`, `hhExportTh1`, and `hhExportSexpr`) remain for dataset
-creation only.  They are deprecated for proving; HolyHammer's proving path
-uses the unified problem generator instead.
+These exporters write datasets of whole theories, one problem per theorem:
+bushy problems hold the theorem's recorded dependencies, chainy problems
+everything proved before it.  The hammer itself uses only `hhExportFof`;
+`hhExportTf0`, `hhExportTf1`, `hhExportTh0`, `hhExportTh1`, and
+`hhExportSexpr` serve dataset creation alone.
 
-  load "hhExportTh1"; open hhExportTh1;
-  load "hhExportTf1"; open hhExportTf1;
   load "hhExportFof"; open hhExportFof;
   load "hhExportTf0"; open hhExportTf0;
+  load "hhExportTf1"; open hhExportTf1;
   load "hhExportTh0"; open hhExportTh0;
+  load "hhExportTh1"; open hhExportTh1;
   load "tttUnfold"; tttUnfold.load_sigobj ();
   val thyl = ancestry (current_theory ());
-  th1_export_bushy (HOLDIR ^ "/src/holyhammer/th1_bushy") thyl;
-  th1_export_chainy (HOLDIR ^ "/src/holyhammer/th1_chainy") thyl;
-  tf1_export_bushy (HOLDIR ^ "/src/holyhammer/tf1_bushy") thyl;
-  tf1_export_chainy (HOLDIR ^ "/src/holyhammer/tf1_chainy") thyl;
   fof_export_bushy (HOLDIR ^ "/src/holyhammer/fof_bushy") thyl;
   fof_export_chainy (HOLDIR ^ "/src/holyhammer/fof_chainy") thyl;
   tf0_export_bushy (HOLDIR ^ "/src/holyhammer/tf0_bushy") thyl;
   tf0_export_chainy (HOLDIR ^ "/src/holyhammer/tf0_chainy") thyl;
+  tf1_export_bushy (HOLDIR ^ "/src/holyhammer/tf1_bushy") thyl;
+  tf1_export_chainy (HOLDIR ^ "/src/holyhammer/tf1_chainy") thyl;
   th0_export_bushy (HOLDIR ^ "/src/holyhammer/th0_bushy") thyl;
   th0_export_chainy (HOLDIR ^ "/src/holyhammer/th0_chainy") thyl;
+  th1_export_bushy (HOLDIR ^ "/src/holyhammer/th1_bushy") thyl;
+  th1_export_chainy (HOLDIR ^ "/src/holyhammer/th1_chainy") thyl;
+
+`hhExportSexpr.sexpr_export thyl` writes the theories as S-expressions to
+`src/holyhammer/export_sexpr`.

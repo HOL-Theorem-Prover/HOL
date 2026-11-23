@@ -18,9 +18,9 @@ Libs
 
    1. The hammer sees your own definitions.  Definition equations (and
       every theorem stored in the current theory) are premises like any
-      library theorem.  In the hammer's output they appear as
-      fetch "hh07_induction" "size_def", that is, DB.fetch; in the
-      script we write size_def.
+      library theorem.  The hammer prints size_def by the name that
+      Definition bound; a theorem that is only stored, such as
+      sum_to_compute below, prints as fetch "hh07_induction" "name".
 
    2. The hammer never does induction.  This is the most common reason
       it fails on goals about recursive functions.  The remedy, which the

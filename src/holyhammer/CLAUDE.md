@@ -21,11 +21,11 @@ From this directory (`src/holyhammer/`):
 `selftest.exe` runs every `test_*` section (each a top-level `fun`
 called at the bottom of `selftest.sml`, using `testutils`).  There is
 no per-test flag; comment out the top-level call to isolate a section.
-Sections needing a real prover self-skip when `hhProver.probe` finds
-none (they print `OK`), so a green run without provers installed does
-**not** exercise proof search.  Some sections gate on env vars
-(e.g. `HHEVAL_INTEGRATION_TEST`).  Under the whole-tree build the full
-selftest runs only when `HOLSELFTESTLEVEL` is set (see `Holmakefile`).
+The selftest launches no real prover except in the `hhEval` integration
+section, which runs only with `HHEVAL_INTEGRATION_TEST` set and E
+installed; live proof search is exercised by `smoke.exe` alone.  Under
+the whole-tree build the full selftest runs only when `HOLSELFTESTLEVEL`
+is set (see `Holmakefile`).
 
 Prover-parsing tests are hermetic: they replay recorded prover stdout
 from `test-data/` rather than invoking a binary.  When you change output
@@ -45,11 +45,17 @@ rely on its contents being present or committed.
   Provers are identified by constructor throughout; `prover_name`
   strings appear only at text boundaries (option values, config keys,
   install dirs, journals).
-- **`hhTranslate`, `hhTptpProblem`, `hhExportLib`, and the `hhExport*`
-  dialect writers** (Fof, Tf0/Tf1, Th0/Th1, Sexpr) — HOL term/goal →
-  TPTP dialects (FOF / TFF / THF, mono & poly).
-  `hhExportLib` also drives the bushy/chainy dependency-export machinery
-  shared with dataset generation.
+- **Premise selection: `hhLearn`, `hhMePo`, `hhFactIndex`,
+  `hhStature`** — kNN, MaSh, and MeSh rankings (`hhLearn.rank_filters`),
+  MePo relevance filtering, fact lookup by name, and fact statures.
+- **Problem generation: `hhProblemGen`, `hhTypeEnc`, `hhLamTrans`,
+  `hhMonomorph`, `hhNames`, `hhTptpProblem`** — goal + premises → typed
+  TPTP (`tf0`/`tf1`/`tx0`/`tx0-`/`th0`/`th1`): type encodings, lambda
+  translations, monomorphisation, fresh names, and the TPTP AST/printer.
+- **`hhTranslate`, `hhExportLib`, and the `hhExport*` writers** (Fof,
+  Tf0/Tf1, Th0/Th1, Sexpr) — the legacy FOF exporter the schedule still
+  uses (`hhExportFof`), and the bushy/chainy dataset exporters
+  (`README_EXPORT`).
 - **`hhProver`** — declarative prover table: `config_of` maps each
   `prover` constructor to its `prover_config`, which bundles executable
   discovery, version probing, per-slice command construction,
@@ -63,12 +69,13 @@ rely on its contents being present or committed.
   problem.
 - **`hhSchedule`** — runs slices across cores, emits `event`s, drives
   reconstruction, and returns verified `suggestion`s; stops the search at
-  the timeout, and reconstructs the lists found until `max_proofs` verify,
-  or, past the timeout, one has (an earlier one included).
-- **`hhReconstruct`** — replays the ATP's used axioms as a HOL4 tactic
-  (Metis today) and minimizes.  *This layer is under active rework
-  toward a preplay ladder — check current code before assuming its
-  shape.*
+  the timeout, and reconstructs the lists found until the run's
+  `max_proofs` verify, or, past the timeout, one has (an earlier one
+  included).  `max_proofs` is a parameter of the run, not an option.
+- **`hhPool`** — bounded pool of worker threads (export workers).
+- **`hhReconstruct`** — replays the ATP's used axioms with Metis
+  (preplay, drop-one retries), minimizes, and names the lemmas for the
+  printed call.
 - **`holyHammer`** — user-facing API: `holyhammer : term -> thm`, the
   `hh` tactic, `hh_pb`, and `main_hh` / `main_hh_lemmas` (premise
   selection).  This is the TacticToe integration surface and must keep
@@ -79,8 +86,8 @@ rely on its contents being present or committed.
 
 ## Reused infrastructure (do not rebuild here)
 
-- Premise selection: `src/AI/machine_learning/` — `mlThmData`,
-  `mlFeature`, `mlNearestNeighbor` (features, kNN, TF-IDF).
+- Features, kNN, TF-IDF, and theorem data: `src/AI/machine_learning/` —
+  `mlThmData`, `mlFeature`, `mlNearestNeighbor`.
 - Training/dependency data: kernel `Dep` (`src/prekernel/Dep.sml`).
 - `psMinimize`, `smlTimeout` from the ML/proof-search libraries.
 

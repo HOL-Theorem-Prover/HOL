@@ -111,8 +111,8 @@ QED
    Lesson 4: your own definitions and lemmas
 
    Definitions and theorems in the current theory are premises like any
-   library theorem.  The hammer prints them as fetch "thy" "name"; in the
-   script you can write the name directly.
+   library theorem.  The hammer prints them by the name that Theorem or
+   Definition bound in the script.
    ------------------------------------------------------------------------- *)
 
 Definition palindrome_def:

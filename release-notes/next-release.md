@@ -289,37 +289,26 @@ New theories
 New tools
 ---------
 
--   HOLyHammer now invokes external provers through a declarative registry,
-    without shell scripts.  E, Vampire, and the newly supported
-    Zipperposition form the default prover set.  Pinned provers can be
-    installed with `tools/download-provers`; supported binaries on `PATH`
-    also work.  Executables can be selected through
+-   HOLyHammer now invokes external provers directly, without shell
+    scripts.  E, Vampire, and the newly supported Zipperposition form the
+    default prover set.  Pinned provers can be installed with
+    `tools/download-provers`; supported binaries on `PATH` also work.
+    Executables can be selected through
     `prover.<name>.executable` in the hammer configuration or the
     `HOL4_<PROVER>_EXECUTABLE` environment variables (for E,
     `HOL4_EPROVER_EXECUTABLE`).
 
--   HOLyHammer now runs exclusively through its parallel slice scheduler and
-    returns once `max_proofs` (default 4) reconstruction-verified suggestions
-    are found, or, past the timeout, once one is (also one verified earlier).
-    Its default timeout is now 30 seconds.  Runtime options are set with
-    `hhConfig.hh_set`; `hhConfig.hh_params` reports all effective values and
-    their provenance.  `holyHammer.set_timeout` remains as a deprecated alias
-    for `hhConfig.hh_set ("timeout", ...)`.  The timeout counts from the launch
-    of the provers.  The export of their problem files is finished first and
-    not charged to it, except where the measured policy overlaps the export
-    with the search (the conditions are stated by `export_mode` in
-    `hhSchedule.sml`): there the export counts against the timeout.  The
-    timeout bounds the proof search: the provers are stopped at it (after a
-    short grace period), and minimisation stops at it, but every proof the
-    provers found is reconstructed until the run ends as above, so a call can
-    return after the timeout.  The replay limit (`preplay_timeout`,
-    `hhReconstruct.reconstruction_timeout`) is now 2.5 seconds, up from 1.0.
-    It and `minimize_timeout` limit the CPU time of the thread running the
-    replay, not wall time, so that a replay beside busy provers is not cut
-    short (a replay that does not compute is still stopped after 20 times
-    its limit in wall time, and outside Linux the clock is the lesser of
-    wall time and the process's CPU time); the replay times reported
-    (`t_replay`) are CPU seconds too.
+-   HOLyHammer now runs its provers through a parallel slice scheduler and
+    returns the first proof that Metis replays, printing the `metis_tac`
+    call to paste into a script.  The default timeout is now 30 seconds.  It
+    bounds the proof search; proofs found within it are still
+    reconstructed, so a call can return later.  Options are set with
+    `hhConfig.hh_set`, in a configuration file, or through
+    `HOL4_HAMMER_<OPTION>` environment variables, and
+    `hhConfig.print_params` lists them; `src/holyhammer/README` describes
+    them.  The replay limit (`preplay_timeout`) is now 2.5 seconds, up from
+    1.0, and counts the CPU time of the replaying thread, so that a replay
+    beside busy provers is not cut short.
 
 -   HOLyHammer schedules TPTP formats, type encodings, and lambda
     translations per prover slice.  Besides FOF, it now proves goals
@@ -336,9 +325,7 @@ New tools
     default 24-slice schedule runs 16 kNN slices followed by eight slices
     using these ensemble filters.  The `filter` option accepts `knn`, `mepo`,
     `mash`, `mesh`, and `none`; its empty default retains each slice's tested
-    filter, while a nonempty value overrides the whole schedule.  Premise
-    rankings, exported problems, result-cache keys, and evaluation journals
-    are filter-aware.
+    filter, while a nonempty value overrides the whole schedule.
 
 -   `hhEval` is a resumable HOLyHammer evaluation harness.  `run_eval`
     evaluates experimental conditions (regime, premise selector, single
@@ -359,6 +346,11 @@ New tools
 
 New examples
 ------------
+
+-   `src/holyhammer/examples` is a guided tour of HOLyHammer, replacing
+    the old demo: ten theories of hammered library and case-study goals,
+    an annotated interactive session, and a user guide with tips and a
+    FAQ (`README.md`).
 
 -   The algebra examples now connect fields to the HOL Light-compatible
     ring interface, with inverse laws and a homogeneous-coordinate
@@ -391,7 +383,9 @@ Incompatibilities
     `hhConfig.hh_set ("filter", "none")`.  The race-result reference
     `holyHammer.lemmas_glob` has been removed in favor of `main_hh_lemmas`.
     Z3 is no longer in the default prover set: `z3` remains registered but
-    has no scheduler slices.
+    has no scheduler slices, and it is found only as Z3's TPTP front end,
+    `z3_tptp`.  The prover scripts in `src/holyhammer/provers` have been
+    removed.
 
 -   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
     Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.
@@ -504,6 +498,9 @@ Incompatibilities
 
 Deprecations
 ------------
+
+-   `holyHammer.set_timeout n` is deprecated; use
+    `hhConfig.hh_set ("timeout", Int.toString n)`.
 
 -   `Triviality` has been deprecated and may be removed in the future.
     Please update theorems of the form `Triviality foo` and `Triviality foo[..]` to
