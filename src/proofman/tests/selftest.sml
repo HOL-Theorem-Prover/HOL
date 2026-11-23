@@ -610,12 +610,14 @@ val _ =
       val ctxt = Context.snapshot()
       val st = goalFrag.open_first (goalFrag.new_goal ([], “T ∧ T”))
       val st = goalFrag.expand CONJ_TAC ctxt st
+      (* A HOL_ERR in particular: it is what an enclosing alternative's
+         `mapHandled' turns into that alternative's failure. *)
+      val st' = goalFrag.close_first_prove st
     in
-      case Lib.total goalFrag.close_first_prove st of
-          NONE => OK()
-        | SOME st' =>
-          die (Int.toString (length (goalFrag.top_goals st')) ^ " goals")
-    end
+      die (Int.toString (length (goalFrag.top_goals st')) ^ " goals")
+    end handle HOL_ERR e =>
+                 if top_function_of e = "FIRST_PROVE" then OK()
+                 else die ("raised " ^ format_ERR e)
 
 (* The three things the goal state is made of are also asked for one at
    a time: a client that pins the first two above a scrolling view of
