@@ -23,6 +23,17 @@
    whatever width it likes.  That is what lets a hover render at the
    client's box width rather than at a width compiled in here.
 
+   `HOLmessage.message' is here for a second reason.  `exnMessage'
+   renders an exception's argument with Poly/ML's generic printer, and
+   a `HOL_ERR' carries its text in that field, so with no printer the
+   whole message a HOL error was raised with reads back as
+   `HOL_ERROR {message = ?, origins = ...}'.  The registration used to
+   sit in `src/prekernel/HOLmessage.sml', where it was saved with the
+   heap and so reached every session; it had to move out because
+   `PolyML.addPrettyPrinter' does not exist under Moscow ML, and the
+   two preludes it moved to are exactly what an LSP session does not
+   load.
+
    Each printer forces `PPBackEnd.raw_terminal' for the duration.  The
    LSP session's backend is a colour one -- the goals pane wants ANSI
    escapes -- and those escapes would be garbage in the markdown of a
@@ -42,4 +53,5 @@ val () = PolyML.addPrettyPrinter
            (pp2polypp (raw (Parse.term_pp_with_delimiters Hol_pp.pp_term)));
 val () = PolyML.addPrettyPrinter
            (pp2polypp (raw (Parse.type_pp_with_delimiters Hol_pp.pp_type)));
+val () = PolyML.addPrettyPrinter (pp2polypp (raw HOLmessage.toPretty));
 end;

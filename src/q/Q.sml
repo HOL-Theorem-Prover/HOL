@@ -141,7 +141,7 @@ fun SPEC_THEN q ttac thm (g as (asl,w)) c = let
           val ptmm =
               TermParse.absyn_to_preterm (Parse.get_term_grammar c) a
           open Preterm seqmonad
-          val printers = SOME (term_to_string, type_to_string)
+          val printers = Parse.stdprinters
       in
         fromErr pbty >>~ (fn pty =>
         fromErr ptmm >>~ (fn ptm =>

@@ -222,7 +222,8 @@ signature Parse = sig
   val pp_term : term pprinter
   val pp_type : hol_type pprinter
   val pp_thm : thm pprinter
-  val stdprinters : ((term -> string) * (hol_type -> string)) option
+  val stdprinters :
+      ((term -> HOLmessage.message) * (hol_type -> HOLmessage.message)) option
 
   val pp_type_without_colon   : hol_type pprinter
   val term_pp_with_delimiters : term pprinter -> term pprinter

@@ -79,7 +79,7 @@ ifdef POLY
 # just the INCLUDES naming them, and decides which of them a level
 # builds.  Naming it is naming all of them, and a developer can run the
 # whole suite with one Holmake there.
-SRCTESTDIRS += n-bit/interactive_tests HolRefute/selftest
+SRCTESTDIRS += n-bit/interactive_tests n-bit/threaded_tests HolRefute/selftest
 EXDIRS += RL_Environment
 
 ifneq ($(KERNELID),otknl)

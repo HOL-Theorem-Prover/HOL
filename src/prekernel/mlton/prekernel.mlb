@@ -4,6 +4,8 @@ stubs.sml
 
 ../Globals.sig
 ../Globals.sml
+../HOLmessage.sig
+../HOLmessage.sml
 ../Feedback_dtype.sml
 ../Feedback.sig
 ../Feedback.sml

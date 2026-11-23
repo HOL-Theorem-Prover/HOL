@@ -628,6 +628,43 @@ empty the tally on the first compile of every unchecked session."
     ;; the mouse gets the same string
     (should (equal (get-text-property 3 'help-echo) "x :num"))))
 
+(ert-deftest hol-lsp-message-buffer-annotates-the-whole-message ()
+  "The *HOL Message* buffer holds exactly what the segments cover.
+
+Unlike the goals pane, nothing is stripped from the front of this
+one, so SKIP is 0 and the segment offsets are the buffer's own.  The
+point of the buffer is the annotations: a diagnostic's message is a
+plain string and the protocol has no way to hang a tooltip off a word
+inside one, so a message whose terms can be pointed at has to be
+rendered somewhere the client owns."
+  (with-temp-buffer
+    (hol-lsp-message-mode)
+    ;; `special-mode' leaves the buffer read-only, and putting a text
+    ;; property is a buffer modification too -- which is why the
+    ;; command brackets the whole render, not just the insert.
+    (let ((inhibit-read-only t))
+      (insert "Type error: SUC applied to T")
+      (hol-lsp--apply-segments
+       1 '((:text "Type error: ")
+           (:text "SUC" :kind "const" :name "num$SUC" :ty "num -> num")
+           (:text " applied to ")
+           (:text "T" :kind "const" :name "bool$T" :ty "bool"))
+       0))
+    ;; "Type error: " is 12 chars, so SUC starts at point 13.
+    (should (equal (get-text-property 13 'hol-lsp-doc)
+                   "num$SUC : num -> num"))
+    (should (equal (get-text-property 13 'help-echo)
+                   "num$SUC : num -> num"))
+    (should-not (get-text-property 1 'hol-lsp-doc))
+    ;; " applied to " is 12 more, so T is at 16 + 12 = 28.
+    (should (equal (get-text-property 28 'hol-lsp-doc) "bool$T : bool"))))
+
+(ert-deftest hol-lsp-message-key-does-not-take-a-pinned-one ()
+  "`hol-lsp-show-message' has a key, and it is not one of the three
+`hol-lsp-holmake-keeps-its-key' pins free."
+  (should (eq (lookup-key hol-map "w") 'hol-lsp-show-message))
+  (should-not (lookup-key hol-map "\M-E")))
+
 (ert-deftest hol-lsp-apply-segments-skips-stripped-prefix ()
   "SKIP accounts for the context line the buffer does not show.
 The tags are rendered into the header instead, so the segment stream
