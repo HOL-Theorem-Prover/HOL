@@ -169,10 +169,10 @@ The recommended installation command is:
     tools/download-provers
 
 The end-to-end smoke suite first runs every installed prover, including
-Z3, on a one-step problem.  It then exercises every Phase 2 slice through
-export, proof search, TSTP parse-back, and reconstruction.  It also runs
-cardinality soundness fixtures through the complete 16-slice public `hh`
-schedule:
+Z3, on a one-step problem, and `hh_pb` with E on a library theorem.  It
+then exercises every Phase 2 slice through export, proof search, TSTP
+parse-back, and reconstruction.  It also runs cardinality soundness
+fixtures through the complete 16-slice public `hh` schedule:
 
     cd src/holyhammer
     ../../bin/Holmake smoke.exe

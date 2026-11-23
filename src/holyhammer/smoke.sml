@@ -45,6 +45,42 @@ fun runner_smokes () =
     handle error => (remove (); raise error)
   end
 
+(* Runs the user-facing hh_pb with E on arithmeticTheory.ADD1, and checks
+   that the tactic to use is the last thing printed, after every slice has
+   reported. *)
+fun hh_pb_smoke () =
+  case hhProver.probe (hhProver.config_of hhConfig.Eprover) of
+      NONE => print "hh_pb e: skipped (absent)\n"
+    | SOME _ =>
+        let
+          val root = fresh_output ()
+          val _ = OS.FileSys.mkDir root
+          val output = OS.Path.concat (root, "stdout")
+          val add1 = DB.fetch "arithmetic" "ADD1"
+          fun call () =
+            (ignore (holyHammer.hh_pb root [hhConfig.Eprover]
+               ["arithmeticTheory.ADD1"] (Thm.dest_thm add1));
+             TextIO.flushOut TextIO.stdOut)
+          val printed =
+            (holyHammer.set_timeout 10;
+             TextIO.flushOut TextIO.stdOut;
+             smlRedirect.hide_in_file output call ();
+             hhConfig.hh_unset "timeout";
+             aiLib.readl output)
+            handle error =>
+              (hhConfig.hh_unset "timeout"; hhConfig.remove_tree root;
+               raise error)
+          val _ = hhConfig.remove_tree root
+        in
+          case List.rev printed of
+              tactic :: "Replace `hh_pb` with:" :: _ =>
+                if String.isPrefix "  " tactic andalso
+                   String.isSubstring "ADD1" tactic
+                then print ("hh_pb e:" ^ tactic ^ "\n")
+                else raise Fail ("hh_pb smoke: unexpected tactic " ^ tactic)
+            | _ => raise Fail "hh_pb smoke: no tactic printed last"
+        end
+
 fun status_name (hhEval.Szs szs) = hhProver.szs_name szs
   | status_name hhEval.EvalError = "Error"
   | status_name hhEval.BrokenDeps = "BrokenDeps"
@@ -71,6 +107,7 @@ fun main () =
       handle Feedback.HOL_ERR _ =>
         Feedback.quiet_messages Theory.new_theory "hhSmoke"
     val _ = runner_smokes ()
+    val _ = hh_pb_smoke ()
     val expdir = fresh_output ()
     val entries = hhEval.run_smoke {expdir = expdir, timeout = 30}
       handle error =>
