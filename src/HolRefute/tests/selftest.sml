@@ -1456,6 +1456,30 @@ in
           Counterexample (c :: _) => certifies goal c
         | _ => false
       end)
+
+  (* What a term evaluates to doesn't depend on the terms evaluated
+     before it.  A compset rule is compiled against the compset it was
+     added to, so a copy given the definition of a constant the rule calls
+     doesn't reduce that call: [rf_thy_caller 1] stops at [rf_thy_callee 1]
+     whether or not [rf_thy_callee] was just evaluated. *)
+  val _ = test "evaluation doesn't depend on the terms evaluated before"
+    (fn () =>
+      let
+        val _ = new_definition ("rf_thy_callee_def",
+          ``rf_thy_callee (x : num) = x * 2``)
+        val caller = new_definition ("rf_thy_caller_def",
+          ``rf_thy_caller (x : num) = rf_thy_callee x + 1``)
+        val _ = computeLib.add_funs [caller]
+        fun result () =
+          boolSyntax.rhs (concl (Refute_Cert.eval ``rf_thy_caller 1``))
+        val cold = result ()
+        val _ = Refute_Cert.eval ``rf_thy_callee 1``
+      in
+        aconv cold (result ())
+      end)
+
+  val _ = test "a loaded theory's definitions outside the compset are executable"
+    (fn () => refuted_everywhere ``!x. zoo_thy_outer x < 9``)
 end
 
 val _ = test "an any-goal backend still receives gated instances" (fn () =>
