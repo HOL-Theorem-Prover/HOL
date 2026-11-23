@@ -1570,3 +1570,69 @@ Theorem zoo_hidnw_cases[allow_rebind]:
 Proof
   rw [zoo_hidnw_helper_def] >> metis_tac []
 QED
+
+(* Two orders whose DefnBase presentations define each through the other,
+   as realax's rebound [real_lt] and [real_lte] do: neither presentation is
+   a definition, so a model finder that reads them as one leaves both
+   orders free. *)
+Definition zoo_circ_le_def:
+  zoo_circ_le (x : num) y <=> x <= y
+End
+
+Definition zoo_circ_lt_def:
+  zoo_circ_lt (x : num) y <=> x < y
+End
+
+Theorem zoo_circ_le_presentation:
+  !x y. zoo_circ_le x y <=> ~zoo_circ_lt y x
+Proof
+  simp [zoo_circ_le_def, zoo_circ_lt_def, arithmeticTheory.NOT_LESS]
+QED
+
+Theorem zoo_circ_lt_presentation:
+  !x y. zoo_circ_lt x y <=> ~zoo_circ_le y x
+Proof
+  simp [zoo_circ_le_def, zoo_circ_lt_def, arithmeticTheory.NOT_LESS_EQUAL]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_circ_le_presentation"};
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_circ_lt_presentation"};
+
+(* An inductive predicate presented through an alias of itself.  The
+   model finder sends the predicate as its cases theorem only, so the
+   alias's definition is not on a cycle of what it sends, though the
+   predicate's presentation mentions the alias. *)
+Inductive zoo_cyc_ind:
+  zoo_cyc_ind (0 : num) /\
+  (!n : num. zoo_cyc_ind n ==> zoo_cyc_ind (n + 2))
+End
+
+Definition zoo_cyc_alias_def:
+  zoo_cyc_alias (n : num) <=> zoo_cyc_ind n
+End
+
+Theorem zoo_cyc_ind_presentation:
+  !n : num. zoo_cyc_ind n <=> zoo_cyc_alias n
+Proof
+  simp [zoo_cyc_alias_def]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_cyc_ind_presentation"};
+
+(* A predicate presented through itself: the presentation holds of the
+   true predicate it defines, and also of the false one. *)
+Definition zoo_self_def:
+  zoo_self (b : bool) <=> T
+End
+
+Theorem zoo_self_presentation:
+  !b. zoo_self b <=> zoo_self (~b)
+Proof
+  simp [zoo_self_def]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_self_presentation"};

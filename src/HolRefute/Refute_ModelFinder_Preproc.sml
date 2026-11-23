@@ -2162,7 +2162,9 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
       recurse term []
     end
 
-  fun box_fun_and_pair_in_term context def original =
+  (* [deviation from upstream] [shared] lists the variables of the
+     nondefinitions; see the variable case below. *)
+  fun box_fun_and_pair_in_term context def shared original =
     let
       val original_vars = Term.all_vars original
       fun positive_existential polarity existential =
@@ -2334,7 +2336,23 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
                       definition constraining nothing. *)
                    let val (name, ty) = Term.dest_var candidate
                    in
-                     Term.mk_var (name, MFH.box_type context MFH.InExpr ty)
+                     (* [deviation from upstream] A variable of a definition
+                        that no nondefinition shares is the equation's own
+                        universally quantified variable, and a definition's
+                        quantifiers carry no guard.  Boxed, it would range
+                        only over the box atoms of the scope: the left-hand
+                        side [MAP f (h :: t)] of a list of flat triples
+                        whose [h] needs a [(num, num) pairbox] the scope
+                        lacks then matches no [h], and [MAP f] goes
+                        unconstrained on that list.  Unboxed, it ranges over
+                        every value of its type, and where the body needs a
+                        box the coercion builds it, unknown when it is not
+                        in the scope. *)
+                     if def andalso
+                        not (List.exists (Term.aconv candidate) shared)
+                     then candidate
+                     else
+                       Term.mk_var (name, MFH.box_type context MFH.InExpr ty)
                    end)
         else if Term.is_const candidate then constant candidate
         else candidate
@@ -2410,17 +2428,30 @@ structure Refute_ModelFinder_Preproc :> Refute_ModelFinder_Preproc = struct
           List.foldl (fn (term, table) =>
             add_to_uncurry_table context term table) [] uncurry_terms
         else []
-      fun do_middle definitional term =
+      fun before_box term =
         let
           val binarized =
             if binarize then binarize_nat_and_int_in_term term else term
         in
-          if box then
-            binarized
-            |> uncurry_term uncurry_table
-            |> box_fun_and_pair_in_term context definitional
-          else binarized
+          if box then uncurry_term uncurry_table binarized else binarized
         end
+      (* [deviation from upstream] Binarization and uncurrying retype
+         variables, and [box_fun_and_pair_in_term] tells a shared variable
+         by its type, so the shared ones are read off the nondefinitions as
+         it receives them. *)
+      val shared_variables =
+        if box then
+          List.concat (map (Term.free_vars o before_box)
+            (nondefinitions @
+             (case needs of
+                  SOME terms => map (MFH.unfold_defs_in_term context) terms
+                | NONE => [])))
+        else []
+      fun do_middle definitional term =
+        if box then
+          box_fun_and_pair_in_term context definitional shared_variables
+            (before_box term)
+        else before_box term
       val need_ts =
         case needs of
             SOME terms => map (fn term =>

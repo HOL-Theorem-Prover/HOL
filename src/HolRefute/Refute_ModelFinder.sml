@@ -214,6 +214,13 @@ fun unproved_conditions (context : MFH.mf_context) =
                " not proved " ^ condition))
     (rev (!(#fixpoint_checks context)))
 
+(* [deviation from upstream] The reasons a model is only Potential because
+   a constant's equations are circular (MFH.note_circular_definition). *)
+fun underdetermined_reasons (context : MFH.mf_context) =
+  map (fn constant => "equations of " ^ Parse.term_to_string constant ^
+                      " are circular, not a definition")
+    (rev (!(#underdetermined context)))
+
 fun none_true assignments =
   List.all (fn (_, value) => value <> SOME true) assignments
 
@@ -870,19 +877,26 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val sound = not (#unsound extension)
+        (* [deviation from upstream] A constant whose equations do not
+           determine it (Refute_ModelFinder_HOL.note_circular_definition)
+           is free in the problem, so even a sound problem's model is only
+           Potential. *)
+        val underdetermined = underdetermined_reasons context
+        val sound = not (#unsound extension) andalso null underdetermined
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
         val weakened = !(#whack_weakening context)
         val unproved = unproved_conditions context
-        val reasons = if sound then
+        val reasons = if #unsound extension then
+            "model comes from the liberal, unsound-by-design problem" ::
+            underdetermined
+          else
             authenticity_reasons mf got_all_mono_user_axioms
               no_poly_user_axioms (#codatatypes_ok reconstructed) @
             (if weakened then
                ["formula was semantically weakened by whack"]
              else []) @
-            unproved
-          else ["model comes from the liberal, unsound-by-design problem"]
+            unproved @ underdetermined
         fun discard () = if sound then discarded_sound_model := true else ()
       in
         case MFM.certify
@@ -1065,10 +1079,14 @@ fun run_instance deadline started (config : Refute_Core.config)
                            unsound; only the liberal problems handled above
                            spend it.  A sound problem's model is a real
                            result whatever certainty reconstruction lands
-                           on (quasi-genuine for an inexact encoding,
-                           potential when kernel certification got stuck),
+                           on (quasi-genuine for an inexact encoding),
                            so it is always reported, never discarded for
-                           want of potential budget.  Only a genuine model
+                           want of potential budget.  The exception is a
+                           problem where a constant's equations are
+                           circular: that constant is free, so its
+                           uncertified models may be spurious and each
+                           spends a [max_potential] slot, or is dropped
+                           when none is left.  Only a genuine model
                            spends a [max_genuine] slot, so the search for
                            one carries on past the weaker models it
                            reported.  This diverges from upstream, whose
@@ -1079,21 +1097,51 @@ fun run_instance deadline started (config : Refute_Core.config)
                            [reconstruct] already raises
                            [discarded_sound_model] on each of its own
                            rejection paths. *)
+                        val circular =
+                          not (null (!(#underdetermined context)))
+                        (* With a circular constant a model may spend
+                           either budget, so scan enough models for both,
+                           as the liberal branch does. *)
                         val attempted =
-                          MFS.take_at_most max_genuine conservative
-                        fun harvest kept [] = kept
-                          | harvest kept ((index, bounds) :: models) =
+                          MFS.take_at_most
+                            (if circular then max_potential + max_genuine
+                             else max_genuine)
+                            conservative
+                        fun keep (kept, potential, genuine) cex models =
+                          (keep_counterexample cex;
+                           harvest (cex :: kept, potential, genuine) models)
+                        and harvest state [] = state
+                          | harvest (state as (kept, potential, genuine))
+                                    ((index, bounds) :: models) =
                               let
                                 val _ = check_deadline deadline
                               in
                                 case reconstruct
                                   (List.nth (problems, index)) bounds of
-                                     NONE => harvest kept models
+                                     NONE => harvest state models
                                    | SOME cex =>
-                                       (keep_counterexample cex;
-                                        harvest (cex :: kept) models)
+                                       if certainty_is_genuine
+                                            (#certainty cex) then
+                                         if genuine <= 0 then
+                                           harvest state models
+                                         else
+                                           keep (kept, potential,
+                                                 genuine - 1) cex models
+                                       else if circular then
+                                         (* As in [reconstruct_until_genuine],
+                                            a Genuine model ends the
+                                            potential search. *)
+                                         if potential <= 0 orelse
+                                            genuine < max_genuine then
+                                           harvest state models
+                                         else
+                                           keep (kept, potential - 1,
+                                                 genuine) cex models
+                                       else keep state cex models
                               end
-                        val results = harvest [] attempted
+                        val (results, max_potential, _) =
+                          harvest ([], max_potential, max_genuine)
+                            attempted
                         val genuine_results = List.filter
                           (certainty_is_genuine o #certainty) results
                         val max_genuine = max_genuine - length genuine_results
