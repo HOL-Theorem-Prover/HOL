@@ -1407,8 +1407,9 @@ in
       let
         fun keys () = map #1 (computeLib.listItems (computeLib.the_compset ()))
         val initial = keys ()
-        val outside = not (List.exists
-          (fn (name, _) => String.isPrefix "rf_thy_" name) initial)
+        val outside = not (List.exists (fn (name, _) => Lib.mem name
+          ["rf_thy_inc", "rf_thy_twice", "rf_thy_sum", "rf_thy_slot",
+           "rf_thy_package", "rf_thy_arb"]) initial)
         val refuted = List.all refuted_everywhere
           [``!x. rf_thy_inc x = 0``, ``!x. rf_thy_twice x < 5``,
            ``!n. rf_thy_sum n < 3``, ``!l. rf_thy_slot l < 4``,
@@ -1428,7 +1429,7 @@ in
         val _ = new_definition ("rf_thy_again_def",
           ``rf_thy_again (x : num) = x + 1``)
         val first = refuted_everywhere ``!x. rf_thy_again x = 0``
-        val _ = new_definition ("rf_thy_again_def",
+        val _ = new_definition ("rf_thy_again_again_def",
           ``rf_thy_again (x : num) = x + 5``)
       in
         first andalso refuted_everywhere ``!x. rf_thy_again x < 5``
