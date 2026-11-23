@@ -21,31 +21,31 @@ Libs
    harder, evaluate the goal on a small example.  For
      LENGTH (l1 ++ l2) = LENGTH l1
    EVAL ``LENGTH ([] ++ [0]) = LENGTH ([] : num list)`` returns F, so the
-   intended statement must be something else.  The counterexample also
-   makes a proof of the negation:
+   intended statement must be something else.  The hammer proves the
+   negation:
    ------------------------------------------------------------------------- *)
 
 Theorem length_append_not_left:
   ~!(l1 : num list) l2. LENGTH (l1 ++ l2) = LENGTH l1
 Proof
-  strip_tac >>
-  first_x_assum (qspecl_then [`[]`, `[0]`] mp_tac) >>
-  EVAL_TAC
+  hh
+  (* metis_tac [LENGTH_APPEND, arithmeticTheory.ADD_CLAUSES, LENGTH,
+                cvTheory.SUC_EQ] *)
 QED
 
 (* -------------------------------------------------------------------------
    Failure 2: "ATPs could not find a proof" on a decidable goal
 
-   The midpoint of x < y is below y.  The hammer sometimes finds a
-   seven-lemma proof of this, and sometimes fails.  It is linear real
-   arithmetic, which REAL_ARITH_TAC decides at once.  Likewise
+   A point a third of the way from x to y lies strictly between them.
+   The hammer fails on this.  It is linear real arithmetic, which
+   REAL_ARITH_TAC decides at once.  Likewise
    DECIDE_TAC and intLib.ARITH_TAC for natural numbers and integers,
    tautLib.TAUT_TAC for propositional tautologies, and EVAL_TAC for
    ground computation.
    ------------------------------------------------------------------------- *)
 
-Theorem midpoint_below:
-  x < y ==> (x + y) / 2 < y : real
+Theorem third_between:
+  x < y ==> x < (2 * x + y) / 3 /\ (2 * x + y) / 3 < y : real
 Proof
   REAL_ARITH_TAC
 QED
@@ -66,18 +66,10 @@ QED
 
    A prover found a proof, but Metis could not replay it within
    preplay_timeout (2.5 s by default).  The message lists the facts each
-   prover used:
-
-     ATPs found proofs, but reconstruction failed for:
-     vampire: [pred_setTheory.IMAGE_SURJ, pred_setTheory.IN_IMAGE]
-     e: [pred_setTheory.IMAGE_SURJ, pred_setTheory.IN_IMAGE]
-
-   The facts are correct; Metis just needs help.  metis_tac with the two
-   facts does not finish within 20 seconds, and neither does a larger
-   preplay_timeout.  Rewriting with the equation first, and leaving the
-   rest to Metis, works instantly.  Rule of thumb: rewrite with the
-   listed equations (rw, simp, gvs) and give the remaining facts to
-   metis_tac.
+   prover used; here every list contains the equation IMAGE_SURJ.
+   Rewriting with it first, and leaving the rest to Metis, works
+   instantly.  Rule of thumb: rewrite with the listed equations (rw,
+   simp, gvs) and give the remaining facts to metis_tac.
    ------------------------------------------------------------------------- *)
 
 Theorem surj_iff_image:
@@ -112,38 +104,21 @@ Proof
 QED
 
 (* -------------------------------------------------------------------------
-   Not a failure: a slow call
+   Not a failure: a long proof
 
    Euler's identity for a full turn, from the original HolyHammer demo.
-   Following the demo, the call was made with a 60-second budget:
-
-     hhConfig.hh_set ("timeout", "60");
-
-   Vampire found a proof in 0.4 seconds, using 37 facts about complex
-   numbers, sin and cos.  Replaying the proof in Metis and minimising
-   the list took most of the call's time: every attempt to drop a fact
-   is a Metis replay (bounded by twice the fastest replay so far plus
-   0.2 s, and by minimize_timeout).  Long lists like this one are
-   typical of proofs that unfold definitions (complex_of_real,
-   complex_mul, RE, IM).  If a call is slow, look at the slice
-   timings: when the prover answered early, more time will not change
-   the outcome.  hhConfig.hh_set ("minimize", "false") skips the
-   minimisation, at the price of a longer lemma list.
+   The hammer proves it in a few seconds, but the proof needs eleven
+   facts, among them the definitions complex_of_num, complex_of_real
+   and complex_scalar_rmul.  Long lists like this are typical of proofs
+   that unfold definitions.
    ------------------------------------------------------------------------- *)
-
-val _ = hhConfig.hh_set ("timeout", "60");
 
 Theorem exp_two_pi_i:
   exp (i * (2 * pi)) = 1
 Proof
   hh
-  (* metis_tac [EXP_IMAGINARY, RE, IM, i, pairTheory.FST, pairTheory.SND,
-                REAL_MUL_LID, COS_PERIODIC, REAL_DOUBLE, SIN_PERIODIC_PI,
-                complex_of_real, complex_of_num, SIN_0, COS_0,
-                COMPLEX_SCALAR_MUL_COMM, COMPLEX_SCALAR_LMUL_NEG1,
-                COMPLEX_SCALAR_RMUL_NEG, complex_scalar_lmul, complex_mul,
-                REAL_ADD_RID, REAL_SUB_RZERO, COMPLEX_SCALAR_LMUL_ENTIRE,
-                COMPLEX_MUL_ARG] *)
+  (* metis_tac [EXP_IMAGINARY, complex_scalar_rmul, REAL_MUL_LZERO,
+                complex_of_num, complex_of_real, COMPLEX_MUL_LID,
+                COMPLEX_EXP_0, REAL_MUL_COMM, COMPLEX_MUL_ARG, SIN_PERIODIC,
+                COS_PERIODIC] *)
 QED
-
-val _ = hhConfig.hh_unset "timeout";

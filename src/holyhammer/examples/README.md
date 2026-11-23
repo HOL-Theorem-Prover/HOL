@@ -54,7 +54,7 @@ order; `hh07`-`hh10` build on the lessons of the earlier files.
     pattern matches and `case` expressions before hammering.
   * `hh10_troubleshootingScript.sml`: when the hammer fails.  False
     goals, decidable goals, failed reconstruction, set-builder notation,
-    slow calls.
+    long proofs.
   * `interactive.sml`: an annotated interactive session.  Checking the
     provers, options, explicit premises with `hh_pb`, `debug_dir`.
 
