@@ -589,7 +589,8 @@ val pipelined_max_proofs = 1
 fun in_budget (Exactly t) timeout = timeout = t
   | in_budget (AtLeast t) timeout = timeout >= t
 
-fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
+fun export_mode {pinned, options : hhConfig.hh_options, max_proofs,
+                 schedule_length} =
   if schedule_length = 0 then Blocking EmptySchedule
   else if pinned then Blocking PinnedCaller
   else if Option.isSome (#debug_dir options) then Blocking Debugging
@@ -604,7 +605,7 @@ fun export_mode {pinned, options : hhConfig.hh_options, schedule_length} =
              | SOME (_, budget) =>
                  if not (in_budget budget (#timeout options)) then
                    Blocking UnmeasuredTimeout
-                 else if #max_proofs options <> pipelined_max_proofs then
+                 else if max_proofs <> pipelined_max_proofs then
                    Blocking MoreProofs
                  else Pipelined)
 
@@ -768,7 +769,8 @@ fun warn what error =
   TextIO.output (TextIO.stdErr,
     "HolyHammer " ^ what ^ " failed: " ^ General.exnMessage error ^ "\n")
 
-fun run_with_root share_digests root {options, goal, rankings, progress} =
+fun run_with_root share_digests root
+    {options, max_proofs, goal, rankings, progress} =
   let
     val started = Time.now ()
     val schedule = hhSlice.mk_schedule options
@@ -782,7 +784,7 @@ fun run_with_root share_digests root {options, goal, rankings, progress} =
        pinned, so the answer about the caller is asked here). *)
     val pinned = Context.is_pinned ()
     val pipelined = export_mode
-      {pinned = pinned, options = options,
+      {pinned = pinned, options = options, max_proofs = max_proofs,
        schedule_length = schedule_length} = Pipelined
     (* Everything that must stay on the calling thread comes first: the
        validation of the rankings and, when pipelined, the named fetches
@@ -1398,7 +1400,7 @@ fun run_with_root share_digests root {options, goal, rankings, progress} =
                 (suggestions := suggestion :: !suggestions;
                  Option.app (fn parent => recovered := parent :: !recovered)
                    origin;
-                 (length (!suggestions) >= #max_proofs options,
+                 (length (!suggestions) >= max_proofs,
                   past_soft_with_proof_locked (Time.now ()))))
               val _ = emit (Verified suggestion)
             in

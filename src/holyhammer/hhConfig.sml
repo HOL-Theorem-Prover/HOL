@@ -23,7 +23,6 @@ fun prover_compare (left, right) =
 
 type hh_options =
   {timeout : int,
-   max_proofs : int,
    provers : prover list,
    slices : int,
    cores : int,
@@ -319,18 +318,10 @@ val default_minimize_timeout = 1.0
 val option_specs : option_spec list =
   [{name = "timeout", default = fn () => "30",
     expected = "a positive integer",
-    doc = "wall-clock budget of the proof search in seconds, counted from " ^
-          "the launch of the provers (the export of the problems is " ^
-          "charged to it only where it overlaps the search: see " ^
-          "hhSchedule.export_mode); the proofs found are reconstructed " ^
-          "until max_proofs verify (the run ends whenever that many " ^
-          "have), and past the timeout until one has (also one that " ^
-          "verified earlier), so a call can return after the timeout; " ^
-          "minimisation stops at it",
+    doc = "wall-clock budget of the proof search in seconds, counted " ^
+          "from the launch of the provers; the proofs found are still " ^
+          "reconstructed, so a call can return after it",
     valid = positive_int},
-   {name = "max_proofs", default = fn () => "4",
-    expected = "a positive integer",
-    doc = "maximum number of reconstructed proofs", valid = positive_int},
    {name = "provers", default = fn () => "e vampire zipperposition",
     expected = "a nonempty space-separated list of prover names: " ^
       String.concatWith ", " (map prover_name all_provers),
@@ -607,7 +598,6 @@ fun snapshot_with overrides =
     val _ = List.app (fn (key, _) => ignore (checked_spec "snapshot" key))
       overrides
     val timeout = required "timeout" int_value
-    val max_proofs = required "max_proofs" int_value
     val provers = required "provers" parse_provers
     val configured_slices = required "slices" int_value
     val configured_cores = required "cores" int_value
@@ -637,8 +627,7 @@ fun snapshot_with overrides =
     val debug_dir = required "debug_dir" (SOME o optional_string)
     val verbose = required "verbose" bool_value
   in
-    {timeout = timeout, max_proofs = max_proofs, provers = provers,
-     slices = slices, cores = cores,
+    {timeout = timeout, provers = provers, slices = slices, cores = cores,
      export_workers = export_workers, filter = filter,
      max_facts = max_facts, format = format, type_enc = type_enc,
      lam_trans = lam_trans, mono_iters = mono_iters,

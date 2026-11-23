@@ -225,7 +225,7 @@ fun test_child root =
     val _ = expect "preplay_drop_one is on by default and parsed as a Boolean"
       (drop_one andalso not (#preplay_drop_one options))
     val _ = expect "snapshot parses values and computes slices"
-      (#timeout options = 23 andalso #max_proofs options = 4 andalso
+      (#timeout options = 23 andalso
        #provers options = [Eprover, Vampire, Zipperposition] andalso
        #cores options = 3 andalso #slices options = 72 andalso
        #filter options = "none" andalso #max_facts options = SOME 17 andalso
@@ -249,7 +249,8 @@ fun test_child root =
        has_parameter "lam_trans" "lifting" "set" andalso
        has_parameter "mono_iters" "4" "set" andalso
        has_parameter "mono_instances" "77" "set" andalso
-       has_parameter "max_proofs" "4" "default")
+       not (List.exists (fn (name, _, _) => name = "max_proofs")
+              (hhConfig.hh_params ())))
     val _ = hhConfig.print_params ()
     val _ = holyHammer.set_timeout 19
     val _ = expect "set_timeout updates the runtime option"
@@ -291,14 +292,14 @@ fun test_child root =
        workers_with [("export_workers", "2")] = 2 andalso
        workers_with [("export_workers", "16")] = 3)
     val overridden = hhConfig.snapshot_with
-      [("max_proofs", "2"), ("mono_instances", "9"), ("debug_dir", "")]
+      [("timeout", "7"), ("mono_instances", "9"), ("debug_dir", "")]
     val _ = expect "snapshot overrides leave the runtime settings alone"
-      (#max_proofs overridden = 2 andalso
+      (#timeout overridden = 7 andalso
        #mono_instances overridden = SOME 9 andalso
        #debug_dir overridden = NONE andalso
        hhConfig.hh_get "mono_instances" = "")
     val _ = expect "invalid and unknown snapshot overrides are rejected"
-      (((hhConfig.snapshot_with [("max_proofs", "x")]; false)
+      (((hhConfig.snapshot_with [("timeout", "x")]; false)
           handle Feedback.HOL_ERR _ => true) andalso
        ((hhConfig.snapshot_with [("no_such_option", "1")]; false)
           handle Feedback.HOL_ERR _ => true))
@@ -2478,7 +2479,7 @@ fun test_hhProver () =
 
 fun slice_options provers slices cores timeout filter max_facts
     : hhConfig.hh_options =
-  {timeout = timeout, max_proofs = 4, provers = provers, slices = slices,
+  {timeout = timeout, provers = provers, slices = slices,
    cores = cores,
    export_workers = 1,
    filter = filter, max_facts = max_facts,
@@ -2685,7 +2686,7 @@ fun test_hhSlice () =
        lam_trans = lam_trans, nfacts = 0, filter = "none", extra_opts = [],
        slice_size = 1}
     val triple_options : hhConfig.hh_options =
-      {timeout = 30, max_proofs = 4, provers = [Eprover], slices = 1, cores = 1,
+      {timeout = 30, provers = [Eprover], slices = 1, cores = 1,
       export_workers = 1,
        filter = "knn", max_facts = NONE, format = "tf0",
        type_enc = "mono_native", lam_trans = "lifting", mono_iters = 3,
@@ -2710,7 +2711,7 @@ fun test_hhSlice () =
     fun invalid_triple format type_enc lam_trans =
       let
         val options : hhConfig.hh_options =
-          {timeout = 30, max_proofs = 4, provers = [Eprover], slices = 1,
+          {timeout = 30, provers = [Eprover], slices = 1,
            cores = 1,
            export_workers = 1,
            filter = "knn", max_facts = NONE, format = format,
@@ -2751,7 +2752,7 @@ fun test_hhSlice () =
   end
 
 fun cache_options directory maximum enabled : hhConfig.hh_options =
-  {timeout = 30, max_proofs = 4, provers = [Eprover], slices = 1,
+  {timeout = 30, provers = [Eprover], slices = 1,
    cores = 1,
    export_workers = 1,
    filter = "knn", max_facts = NONE,
@@ -4233,9 +4234,9 @@ fun sleeper_config_sized size prover name parser
 fun sleeper_config prover name parser =
   sleeper_config_sized 1 prover name parser
 
-fun fixture_options provers slices cores timeout max_proofs cache cache_dir
+fun fixture_options provers slices cores timeout cache cache_dir
     debug_dir : hhConfig.hh_options =
-  {timeout = timeout, max_proofs = max_proofs, provers = provers,
+  {timeout = timeout, provers = provers,
    slices = slices, cores = cores,
    export_workers = 1,
    filter = "none", max_facts = NONE,
@@ -4255,7 +4256,7 @@ fun with_fixtures [] f = f ()
 
 fun reconstruction_options {minimize, preplay_drop_one}
     (options : hhConfig.hh_options) : hhConfig.hh_options =
-  {timeout = #timeout options, max_proofs = #max_proofs options,
+  {timeout = #timeout options,
    provers = #provers options, slices = #slices options,
    cores = #cores options,
    export_workers = 1,
@@ -4300,16 +4301,19 @@ fun observe_schedule_event (hhSchedule.SliceStarted slice) =
   | observe_schedule_event (hhSchedule.ScheduleDone reason) =
       "schedule-done|" ^ stop_event_name reason
 
-fun run_schedule_on goal options =
+fun run_schedule_with max_proofs goal options =
   let
     val events = ref ([] : string list)
     val result = hhSchedule.run
-      {options = options, goal = goal, rankings = [("none", [])],
+      {options = options, max_proofs = max_proofs, goal = goal,
+       rankings = [("none", [])],
        progress = SOME (fn event =>
          events := observe_schedule_event event :: !events)}
   in
     (result, List.rev (!events))
   end
+
+fun run_schedule_on goal options = run_schedule_with 1 goal options
 
 fun run_schedule options = run_schedule_on ([], boolSyntax.T) options
 
@@ -4377,11 +4381,11 @@ fun test_schedule_max_proofs parser =
       (fn request =>
          paths := (#problem request, readable (#problem request)) :: !paths)
       parser
-    val options1 = fixture_options [Z3] 2 2 5 1 false "" NONE
-    val options2 = fixture_options [Z3] 2 2 5 2 false "" NONE
+    val options = fixture_options [Z3] 2 2 5 false "" NONE
+    val run_with = fn proofs =>
+      run_schedule_with proofs ([], boolSyntax.T) options
     val ((result1, _), (result2, events2)) =
-      with_fixtures [(Z3, config)] (fn () =>
-        (run_schedule options1, run_schedule options2))
+      with_fixtures [(Z3, config)] (fn () => (run_with 1, run_with 2))
     val lemma_sets = map (#lemmas : hhSchedule.suggestion -> string list)
       (#suggestions result2)
     val _ = expect "scheduler max_proofs one stops after one verification"
@@ -4423,7 +4427,7 @@ fun test_schedule_reconstruction_failure parser =
     val (good_status, good_axioms) =
       parser
         (read_lines (join schedule_fixture_dir "schedule-add1.out"))
-    val options = fixture_options [Z3] 2 1 5 1 false "" NONE
+    val options = fixture_options [Z3] 2 1 5 false "" NONE
     val goal = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
     val (result, events) =
       with_fixtures [(Z3, config)] (fn () => run_schedule_on goal options)
@@ -4458,7 +4462,7 @@ fun test_schedule_without_minimization () =
       (fn _ => (hhProver.SzsTheorem, SOME lemmas))
     val options =
       reconstruction_options {minimize = false, preplay_drop_one = false}
-      (fixture_options [Z3] 1 1 5 1 false "" NONE)
+      (fixture_options [Z3] 1 1 5 false "" NONE)
     val (result, _) =
       with_fixtures [(Z3, config)] (fn () => run_schedule options)
     val _ = expect "scheduler minimize=false preserves the ATP lemma list"
@@ -4486,7 +4490,7 @@ fun test_schedule_drop_one () =
         run_schedule_on goal
           (reconstruction_options
              {minimize = true, preplay_drop_one = preplay_drop_one}
-             (fixture_options [Z3] 1 1 5 1 false "" NONE))))
+             (fixture_options [Z3] 1 1 5 false "" NONE))))
     val plain = run false
     val retried = run true
   in
@@ -4512,7 +4516,7 @@ fun test_schedule_failed_list_once () =
           1)
     val config = printer_config name slices (fn _ => ())
       (fn _ => (hhProver.SzsTheorem, SOME lemmas))
-    val options = fixture_options [Z3] 5 5 20 1 false "" NONE
+    val options = fixture_options [Z3] 5 5 20 false "" NONE
     val (result, events) = with_fixtures [(Z3, config)] (fn () =>
       run_schedule_on ([], ``!n. n + 1 = n``) options)
     val found = List.filter (String.isPrefix "found|") events
@@ -4538,7 +4542,7 @@ fun test_schedule_early_stop parser =
        (Zipperposition, sleeper_config Zipperposition slow2 parser)]
     val cache = join debug "cache"
     val options =
-      fixture_options [Eprover, Vampire, Zipperposition] 3 3 12 1 true cache
+      fixture_options [Eprover, Vampire, Zipperposition] 3 3 12 true cache
         (SOME debug)
     val (result, events) =
       with_fixtures fixtures (fn () => run_schedule options)
@@ -4582,7 +4586,7 @@ fun test_schedule_budget_truncation parser =
     fun note (request : hhProver.run_request) =
       budgets := !budgets @ [#timeout request]
     val config = printer_config name [first, second] note parser
-    val options = fixture_options [Z3] 2 1 4 1 false "" NONE
+    val options = fixture_options [Z3] 2 1 4 false "" NONE
     val (result, _) =
       with_fixtures [(Z3, config)] (fn () => run_schedule options)
     val wanted = Real.ceil (hhSlice.slice_budget 2 options second)
@@ -4605,7 +4609,7 @@ fun test_schedule_cache parser =
     val cache = join root "cache"
     val _ = remove_tree root
     val _ = mkdir root
-    val options = fixture_options [Z3] 1 1 5 1 true cache NONE
+    val options = fixture_options [Z3] 1 1 5 true cache NONE
     fun spawns_of_run () =
       let
         val _ = hhProver.reset_spawn_count ()
@@ -4647,7 +4651,7 @@ fun test_schedule_cancelled_cache parser =
     val name = "hh-schedule-cancelled-cache"
     val slice = fixture_slice Z3 ["1", "e-gave-up.out"] 1
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val options = fixture_options [Z3] 1 1 5 1 true root NONE
+    val options = fixture_options [Z3] 1 1 5 true root NONE
     val config = printer_config name [slice] (fn _ => ()) parser
     val _ = ignore (hhProver.probe config)
   in
@@ -4711,7 +4715,7 @@ fun test_schedule_isolation parser =
            intact := !first_text = String.concat (read_lines path))
         else second_text := String.concat (read_lines path)
       end
-    val options = fixture_options [Z3] 1 1 5 1 false "" NONE
+    val options = fixture_options [Z3] 1 1 5 false "" NONE
     val first_result = ref NONE
     fun overlapping_runs () =
       let
@@ -4746,7 +4750,7 @@ fun test_schedule_timeout parser =
     val name = "hh-schedule-timeout"
     val debug = OS.FileSys.tmpName ()
     val _ = remove_tree debug
-    val options = fixture_options [Z3] 1 1 1 1 false "" (SOME debug)
+    val options = fixture_options [Z3] 1 1 1 false "" (SOME debug)
     val (result, events) =
       with_fixtures [(Z3, sleeper_config Z3 name parser)] (fn () =>
         run_schedule options)
@@ -4769,7 +4773,7 @@ fun test_schedule_filter_rankings parser =
     val slices = [knn, mepo]
     val config = printer_config name slices (fn _ => ()) parser
     val options : hhConfig.hh_options =
-      {timeout = 5, max_proofs = 1, provers = [Z3], slices = 2,
+      {timeout = 5, provers = [Z3], slices = 2,
        cores = 1,
        export_workers = 1,
        filter = "", max_facts = NONE, format = "",
@@ -4785,8 +4789,8 @@ fun test_schedule_filter_rankings parser =
     val _ = clean ()
     fun run_with rankings = with_fixtures [(Z3, config)] (fn () =>
       hhSchedule.run_in root
-        {options = options, goal = ([], boolSyntax.T), rankings = rankings,
-         progress = NONE})
+        {options = options, max_proofs = 1, goal = ([], boolSyntax.T),
+         rankings = rankings, progress = NONE})
     val missing =
       ((ignore (run_with [("knn", ["boolTheory.TRUTH"])]); false)
        handle Fail message =>
@@ -4825,7 +4829,7 @@ fun test_schedule_knn_anchor_export () =
     val schedule = [(e, one), (e, two)]
     val ranking = ["boolTheory.TRUTH", "boolTheory.T_DEF"]
     val options : hhConfig.hh_options =
-      {timeout = 5, max_proofs = 1, provers = [Eprover], slices = 2,
+      {timeout = 5, provers = [Eprover], slices = 2,
        cores = 1,
        export_workers = 1,
        filter = "knn", max_facts = NONE, format = "",
@@ -4886,7 +4890,7 @@ fun test_schedule_mono_cap_export () =
        lam_trans = "lifting", nfacts = length facts, filter = "knn",
        extra_opts = [], slice_size = 1}
     val options : hhConfig.hh_options =
-      {timeout = 5, max_proofs = 1, provers = [Eprover], slices = 1,
+      {timeout = 5, provers = [Eprover], slices = 1,
        cores = 1,
        export_workers = 1,
        filter = "knn", max_facts = NONE, format = "",
@@ -4920,7 +4924,7 @@ fun test_with_problem_dir () =
     val kept_file = join outside "kept"
     val _ = write_file kept_file "kept"
     fun options debug_dir =
-      fixture_options [Eprover] 1 1 5 1 false "" debug_dir
+      fixture_options [Eprover] 1 1 5 false "" debug_dir
     fun populate root =
       let
         val slice_dir = join root "e.knn.fof...32"
@@ -4977,7 +4981,7 @@ fun test_schedule_export_wiring () =
     val e = prover Eprover
     val vampire = prover Vampire
     fun options mono_instances : hhConfig.hh_options =
-      {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+      {timeout = 30, provers = [Eprover], slices = 1,
        cores = 1,
        export_workers = 1,
        filter = "none", max_facts = NONE, format = "", type_enc = "",
@@ -5068,7 +5072,7 @@ fun test_schedule_legacy_sharing () =
     val e = prover Eprover
     val vampire = prover Vampire
     fun options max_facts : hhConfig.hh_options =
-      {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+      {timeout = 30, provers = [Eprover], slices = 1,
        cores = 1,
        export_workers = 1,
        filter = "none", max_facts = max_facts, format = "",
@@ -5270,7 +5274,8 @@ fun test_schedule_deadline_recon sleeper_parser =
          (fixture_options (if sleeping then [Eprover, Vampire] else [Vampire])
             (length slices + (if sleeping then 1 else 0))
             (length slices + (if sleeping then 1 else 0)) 1
-            max_proofs false "" NONE),
+            false "" NONE),
+       max_proofs = max_proofs,
        goal = ([], boolSyntax.T), rankings = [("none", [])],
        progress = SOME progress}
     fun with_setup slices behave f =
@@ -5448,7 +5453,7 @@ struct
   val e = prover Eprover
   val vampire = prover Vampire
   fun options_capped cores workers debug max_facts cap : hhConfig.hh_options =
-    {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+    {timeout = 30, provers = [Eprover], slices = 1,
      cores = cores,
      export_workers = workers,
      filter = "none", max_facts = max_facts, format = "",
@@ -6850,15 +6855,17 @@ fun test_schedule_pipelined parser =
       with_provers_mono gave_up recording note f
     (* A prover that runs for 30 s unless killed. *)
     val sleeper = ["30", "e-gave-up.out"]
+    (* The options of a run and its max_proofs. *)
     fun options_cores cores slices timeout max_proofs debug
-        : hhConfig.hh_options =
-      {timeout = timeout, max_proofs = max_proofs,
+        : hhConfig.hh_options * int =
+      ({timeout = timeout,
        provers = [Eprover, Vampire], slices = slices, cores = cores,
        export_workers = 2, filter = "", max_facts = NONE, format = "",
        type_enc = "", lam_trans = "", mono_iters = 3, mono_instances = NONE,
        minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
        cache = false, cache_dir = "", cache_max_entries = 100,
-       debug_dir = debug, preplay_drop_one = false, verbose = false}
+       debug_dir = debug, preplay_drop_one = false, verbose = false},
+       max_proofs)
     val options = options_cores 8
     val tree = StagedFixture.tree
     val quiet_start = StagedFixture.quiet_start
@@ -6879,7 +6886,7 @@ fun test_schedule_pipelined parser =
     fun is_generated ({kind = hhSchedule.ExportGenerated _, ...} :
                         hhSchedule.work) = true
       | is_generated _ = false
-    fun work_list opts =
+    fun work_list (opts, _) =
       let
         val root = new_root ()
         val works = with_provers gave_up ignore (fn () =>
@@ -6892,7 +6899,7 @@ fun test_schedule_pipelined parser =
       end
     (* The files of the blocking export of the schedule from a counter
        start, and the number of names it drew. *)
-    fun expected opts start =
+    fun expected (opts, _) start =
       let
         val root = new_root ()
         val schedule = with_provers gave_up ignore (fn () =>
@@ -6917,7 +6924,7 @@ fun test_schedule_pipelined parser =
     fun attempt f = (SOME (f ()), NONE) handle exn => (NONE, SOME exn)
     (* Runs run_in on its own thread, bounded by a wait; the result and
        the failure, if any. *)
-    fun run st recording opts rks hooks' wrap start =
+    fun run st recording (opts, max_proofs) rks hooks' wrap start =
       let
         val {root, m, released, events, entered, caller, seen, ...} = st
         fun note (request : hhProver.run_request) =
@@ -6947,7 +6954,8 @@ fun test_schedule_pipelined parser =
                              before_finish = before_finish,
                              before_prepare = tag_prepare} (fn () =>
                    hhSchedule.run_in root
-                     {options = opts, goal = goal, rankings = rks,
+                     {options = opts, max_proofs = max_proofs, goal = goal,
+                      rankings = rks,
                       progress = SOME progress}))))) ;
            monitor_do done_ (fn () => #returned st := true)), [])
         val _ = monitor_until done_ "run_in did not finish"
@@ -7794,7 +7802,8 @@ fun test_schedule_pipelined parser =
             val _ = Thread.fork (fn () =>
               (out := SOME (attempt (fn () =>
                  hhSchedule.run_in root
-                   {options = opts, goal = goal, rankings = rankings,
+                   {options = #1 opts, max_proofs = #2 opts, goal = goal,
+                    rankings = rankings,
                     progress = SOME (fn _ => ())}));
                monitor_do finished (fn () => ())), [])
           in
@@ -7925,14 +7934,15 @@ fun test_export_mode () =
     open hhSchedule
     val plain = hhConfig.snapshot_with [("debug_dir", "")]
     val debug = hhConfig.snapshot_with [("debug_dir", "debug-dir")]
-    fun mode options pinned length =
-      export_mode {pinned = pinned, options = options,
+    fun mode_with proofs options pinned length =
+      export_mode {pinned = pinned, options = options, max_proofs = proofs,
                    schedule_length = length}
+    val mode = mode_with 1
     val forced = with_choice hhSchedule_Test.ForcePipelined
     val blocked = with_choice hhSchedule_Test.ForceBlocking
-    fun varied (cores, timeout, proofs) =
+    fun varied (cores, timeout, _) =
       hhConfig.snapshot_with [("debug_dir", ""), ("cores", cores),
-        ("timeout", timeout), ("max_proofs", proofs)]
+        ("timeout", timeout)]
     val pipelined_cells = [("1", "30", "1"), ("2", "30", "1"),
                            ("3", "30", "1"), ("4", "30", "1"),
                            ("4", "31", "1"), ("4", "60", "1"),
@@ -7950,7 +7960,9 @@ fun test_export_mode () =
                        ("3", "30", "4"), ("4", "30", "4"),
                        ("4", "60", "2")]
     fun all_modes cells m =
-      List.all (fn c => mode (varied c) false 24 = m) cells
+      List.all (fn c as (_, _, proofs) =>
+        mode_with (valOf (Int.fromString proofs)) (varied c) false 24 = m)
+        cells
     fun policy f = with_choice hhSchedule_Test.Policy f
   in
     policy (fn () =>
@@ -7967,11 +7979,11 @@ fun test_export_mode () =
             Blocking UnmeasuredCores);
        expect "export_mode: the other options do not change the choice"
          (mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
-            ("timeout", "30"), ("max_proofs", "1"), ("export_workers", "1"),
+            ("timeout", "30"), ("export_workers", "1"),
             ("slices", "3")]) false 24 = Pipelined andalso
           List.all (fn w =>
             mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
-              ("timeout", "30"), ("max_proofs", "1"),
+              ("timeout", "30"),
               ("export_workers", w)]) false 24 = Pipelined) ["0", "64"])));
     expect "export_mode: the selector forces the pipelined export"
       (forced (fn () =>
@@ -9438,7 +9450,7 @@ fun test_hypothesis_premises () =
     val promoted = hhLearn.rank_filters data goal filters
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val options : hhConfig.hh_options =
-      {timeout = 30, max_proofs = 1, provers = [Eprover], slices = 1,
+      {timeout = 30, provers = [Eprover], slices = 1,
        cores = 1,
        export_workers = 1,
        filter = "none", max_facts = NONE, format = "", type_enc = "",

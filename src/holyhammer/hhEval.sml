@@ -1730,10 +1730,9 @@ fun schedule_stop_name hhSchedule.MaxProofs = "MaxProofs"
   | schedule_stop_name hhSchedule.Interrupted = "Interrupted"
 
 fun schedule_options condition
-    {provers, slices, cores, max_proofs, export_workers} =
+    {provers, slices, cores, max_proofs = _, export_workers} =
   hhConfig.snapshot_with
     [("timeout", Int.toString (#timeout condition)),
-     ("max_proofs", Int.toString max_proofs),
      ("provers",
       String.concatWith " " (map hhConfig.prover_name provers)),
      ("slices", Int.toString slices), ("cores", Int.toString cores),
@@ -1775,9 +1774,8 @@ fun schedule_cell_entry expdir thy (name, thm, tags) facts condition
           if isSome (!first_proof) then () else first_proof := SOME proof
       | progress _ = ()
     val result = hhSchedule.run
-      {options = options, goal = goal,
-       rankings = rankings,
-       progress = SOME progress}
+      {options = options, max_proofs = #max_proofs parameters, goal = goal,
+       rankings = rankings, progress = SOME progress}
     val slices = map (fn (slice, status, elapsed, cached) =>
       {slice = slice, szs = status, time = elapsed,
        cached = cached} : journal_slice) (#slices_run result)
@@ -2240,7 +2238,7 @@ fun smoke_settings timeout =
 fun smoke_options expdir timeout =
   hhConfig.snapshot_with
     (smoke_settings timeout @
-     [("max_proofs", "1"), ("max_facts", ""), ("mono_instances", ""),
+     [("max_facts", ""), ("mono_instances", ""),
       ("debug_dir", join expdir "out")])
 
 (* The format smoke test validates the typed slices.  Select them by
@@ -2308,7 +2306,7 @@ val soundness_fixtures =
 fun soundness_schedule options goal =
   let val schedule = hhSlice.mk_schedule options in
     hhSchedule.run
-      {options = options, goal = ([], goal),
+      {options = options, max_proofs = 1, goal = ([], goal),
        rankings = rankings_for_schedule schedule [], progress = NONE}
   end
 

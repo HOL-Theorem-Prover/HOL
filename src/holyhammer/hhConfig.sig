@@ -10,7 +10,6 @@ sig
 
   type hh_options =
     {timeout : int,
-     max_proofs : int,
      provers : prover list,
      slices : int,
      cores : int,

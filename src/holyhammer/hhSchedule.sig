@@ -141,7 +141,8 @@ sig
     | UnmeasuredTimeout | MoreProofs | Forced
   datatype export_mode = Blocking of blocking_reason | Pipelined
   val export_mode :
-    {pinned : bool, options : hhConfig.hh_options, schedule_length : int} ->
+    {pinned : bool, options : hhConfig.hh_options, max_proofs : int,
+     schedule_length : int} ->
     export_mode
   (* run_in exports the problems of the schedule and then runs it.  With
      the pipelined export chosen by export_mode the rankings are
@@ -216,19 +217,19 @@ sig
      slice is.  A root owned by the caller holds only the files published
      before the stop. *)
   val run_in : string ->
-    {options : hhConfig.hh_options, goal : goal,
+    {options : hhConfig.hh_options, max_proofs : int, goal : goal,
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> result
   (* The temporary problems of a non-debug run are private to the
      scheduler, which shares cache digests across byte copies. The returned
      path refers to a retained directory only in debug mode. *)
   val run_under : string ->
-    {options : hhConfig.hh_options, goal : goal,
+    {options : hhConfig.hh_options, max_proofs : int, goal : goal,
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> string * result
   (* run uses the default parent and discards the problem directory path. *)
   val run :
-    {options : hhConfig.hh_options, goal : goal,
+    {options : hhConfig.hh_options, max_proofs : int, goal : goal,
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> result
 end

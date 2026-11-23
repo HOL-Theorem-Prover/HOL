@@ -52,8 +52,7 @@ val attrib =
 
 fun interactive_options provers =
   hhConfig.snapshot_with
-    [("max_proofs", "1"),
-     ("provers", String.concatWith " " (map hhConfig.prover_name provers))]
+    [("provers", String.concatWith " " (map hhConfig.prover_name provers))]
 
 type unverified = hhProver.slice * string list
 
@@ -117,7 +116,7 @@ fun run_schedule caller parent options rankings goal =
   let
     val found = ref ([] : unverified list)
     val (root, result) = hhSchedule.run_under parent
-      {options = options, goal = goal, rankings = rankings,
+      {options = options, max_proofs = 1, goal = goal, rankings = rankings,
        progress = SOME (progress options found)}
   in
     case #suggestions result of
