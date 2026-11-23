@@ -1,30 +1,26 @@
 structure shortWeierstrassSyntax :> shortWeierstrassSyntax =
 struct
 
-open HolKernel boolSyntax
+open HolKernel
 open shortWeierstrassTheory shortWeierstrassGroupTheory
 
 val ERR = mk_HOL_ERR "shortWeierstrassSyntax"
 val ECInfinity_tm =
   prim_mk_const {Thy = "shortWeierstrass", Name = "ECInfinity"}
-val ECAffine_tm =
-  prim_mk_const {Thy = "shortWeierstrass", Name = "ECAffine"}
-val curve_tm =
-  prim_mk_const {Thy = "shortWeierstrass", Name = "ShortWeierstrassCurve"}
-val points_tm = prim_mk_const {Thy = "shortWeierstrass", Name = "sw_points"}
+val (ECAffine_tm,mk_ECAffine,_,_) =
+  syntax_fns2 "shortWeierstrass" "ECAffine"
+val (_,mk_ShortWeierstrassCurve,_,_) =
+  syntax_fns3 "shortWeierstrass" "ShortWeierstrassCurve"
+val (_,mk_sw_points,_,_) = syntax_fns3 "shortWeierstrass" "sw_points"
 val sw_add_tm =
   prim_mk_const {Thy = "shortWeierstrassGroup", Name = "sw_add"}
-val sw_group_tm =
-  prim_mk_const {Thy = "shortWeierstrassGroup", Name = "sw_group"}
+val (sw_group_tm,mk_sw_group,_,_) =
+  syntax_fns3 "shortWeierstrassGroup" "sw_group"
 
 fun mk_sw_point_type ty =
   mk_thy_type {Thy = "shortWeierstrass", Tyop = "sw_point", Args = [ty]}
 fun mk_ECInfinity ty = inst [alpha |-> ty] ECInfinity_tm
-fun mk_ECAffine (x,y) = list_mk_icomb (ECAffine_tm,[x,y])
-fun mk_ShortWeierstrassCurve (r,a,b) = list_mk_icomb (curve_tm,[r,a,b])
-fun mk_sw_points (r,a,b) = list_mk_icomb (points_tm,[r,a,b])
-fun mk_sw_group (r,a,b) = list_mk_icomb (sw_group_tm,[r,a,b])
-fun mk_sw_add (r,a,b,P,Q) = list_mk_icomb (sw_add_tm,[r,a,b,P,Q])
+fun mk_sw_add (r,a,b,P,Q) = list_mk_icomb sw_add_tm [r,a,b,P,Q]
 fun mk_sw_scalar (r,a,b,P,n) =
   list_mk_comb
     (polynomialSyntax.mk_monoid_exp (mk_sw_group (r,a,b)),[P,n])
