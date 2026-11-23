@@ -11,6 +11,40 @@ fun fresh_output () =
     path
   end
 
+(* Runs every installed prover once, through its own command line, on a
+   one-step problem; an absent prover is reported and skipped. *)
+fun runner_smoke problem prover =
+  let
+    val name = hhConfig.prover_name prover
+    val config = hhProver.config_of prover
+  in
+    case hhProver.probe config of
+        NONE => print ("runner " ^ name ^ ": skipped (absent)\n")
+      | SOME _ =>
+          let
+            val result = hhProver.run config
+              {timeout = 5, problem = problem, extra = [], debug_dir = NONE}
+          in
+            if #szs result = hhProver.SzsTheorem then
+              print ("runner " ^ name ^ ": Theorem\n")
+            else raise Fail ("runner smoke failed for " ^ name ^
+              ": status=" ^ hhProver.szs_name (#szs result))
+          end
+  end
+
+fun runner_smokes () =
+  let
+    val problem = OS.FileSys.tmpName ()
+    val stream = TextIO.openOut problem
+    val _ = TextIO.output (stream,
+      "fof(thm_2Ekeep__name, axiom, p).\nfof(conjecture, conjecture, p).\n")
+    val _ = TextIO.closeOut stream
+    fun remove () = OS.FileSys.remove problem handle OS.SysErr _ => ()
+  in
+    (app (runner_smoke problem) hhConfig.all_provers; remove ())
+    handle error => (remove (); raise error)
+  end
+
 fun status_name (hhEval.Szs szs) = hhProver.szs_name szs
   | status_name hhEval.EvalError = "Error"
   | status_name hhEval.BrokenDeps = "BrokenDeps"
@@ -36,6 +70,7 @@ fun main () =
       (ignore (Theory.current_theory ()); ())
       handle Feedback.HOL_ERR _ =>
         Feedback.quiet_messages Theory.new_theory "hhSmoke"
+    val _ = runner_smokes ()
     val expdir = fresh_output ()
     val entries = hhEval.run_smoke {expdir = expdir, timeout = 30}
       handle error =>

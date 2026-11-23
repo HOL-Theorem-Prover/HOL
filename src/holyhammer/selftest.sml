@@ -367,7 +367,7 @@ fun run_parent () =
     (* the children must not see the caller's prover installations *)
     val clean_env =
       "/usr/bin/env -u HOL4_VAMPIRE_EXECUTABLE" ^
-      " -u HOL4_ZIPPERPOSITION_EXECUTABLE -u HOL4_Z3_EXECUTABLE"
+      " -u HOL4_ZIPPERPOSITION_EXECUTABLE -u HOL4_Z3_TPTP_EXECUTABLE"
     val command =
       clean_env ^ " HOL4_HAMMER_PRIORITY=environment" ^
       " HOL4_HAMMER_MANGLED_KEY=environment" ^
@@ -2465,12 +2465,10 @@ fun test_hhProver () =
       ("zipperposition", ["--input", "tptp", "--output", "tptp",
         "--timeout", "7", "--extra", "problem.p"])
       (#mk_command zipperposition "zipperposition" sample_request)
-    val _ = expect_equal "Z3 legacy command"
-      ("z3", ["-tptp", "DISPLAY_UNSAT_CORE=true",
-        "ELIM_QUANTIFIERS=true", "PULL_NESTED_QUANTIFIERS=true", "-T:7",
-        "--extra", "problem.p"])
-      (#mk_command z3 "z3" sample_request)
-    val _ = expect_equal "Z3 standalone TPTP command"
+    val _ = expect "Z3 is found only as z3_tptp, not as HolSmt's z3"
+      (#exec_names z3 = ["z3_tptp"] andalso
+       #env_var z3 = "HOL4_Z3_TPTP_EXECUTABLE")
+    val _ = expect_equal "Z3 TPTP command"
       ("z3_tptp", ["-c", "-smt.pull_nested_quantifiers:true", "-t:7",
         "--extra", "-file:problem.p"])
       (#mk_command z3 "z3_tptp" sample_request)
@@ -3164,43 +3162,6 @@ fun test_runner () =
   in
     ()
   end
-
-fun write_tiny_problem () =
-  let
-    val path = OS.FileSys.tmpName ()
-    val _ = write_file path
-      "fof(thm_2Ekeep__name, axiom, p).\nfof(conjecture, conjecture, p).\n"
-  in
-    path
-  end
-
-fun test_installed_prover problem config =
-  case hhProver.probe config of
-      NONE => (tprint ("runner smoke " ^ #name config ^ " (skipped: absent)");
-               OK ())
-    | SOME _ =>
-        let
-          val request : hhProver.run_request =
-            {timeout = 5, problem = problem, extra = [],
-             debug_dir = NONE}
-          val result = hhProver.run config request
-        in
-          expect ("runner smoke " ^ #name config)
-            (#szs result = hhProver.SzsTheorem)
-        end
-
-fun test_installed_provers () =
-  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-      SOME _ => ()
-    | NONE =>
-        let
-          val problem = write_tiny_problem ()
-          val _ = List.app (test_installed_prover problem)
-            (map prover [Eprover, Vampire, Zipperposition, Z3])
-          val _ = OS.FileSys.remove problem handle OS.SysErr _ => ()
-        in
-          ()
-        end
 
 fun same_real left right = Real.== (left, right)
 
@@ -4278,7 +4239,6 @@ val _ = test_hhSlice ()
 val _ = test_hhCache ()
 val _ = test_holyHammer_validation ()
 val _ = test_runner ()
-val _ = test_installed_provers ()
 val _ = test_holyHammer_e ()
 
 val schedule_fixture_dir = "test-data"

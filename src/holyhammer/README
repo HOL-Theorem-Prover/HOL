@@ -168,9 +168,11 @@ The recommended installation command is:
 
     tools/download-provers
 
-The end-to-end smoke suite exercises every Phase 2 slice through export,
-proof search, TSTP parse-back, and reconstruction.  It also runs cardinality
-soundness fixtures through the complete 16-slice public `hh` schedule:
+The end-to-end smoke suite first runs every installed prover, including
+Z3, on a one-step problem.  It then exercises every Phase 2 slice through
+export, proof search, TSTP parse-back, and reconstruction.  It also runs
+cardinality soundness fixtures through the complete 16-slice public `hh`
+schedule:
 
     cd src/holyhammer
     ../../bin/Holmake smoke.exe
@@ -178,7 +180,9 @@ soundness fixtures through the complete 16-slice public `hh` schedule:
 
 Alternatively, put a supported binary on `PATH`.  HOLyHammer looks for
 `eprover-ho` or `eprover`, `vampire`, `zipperposition`, and, for the
-schedule-less Z3 entry, `z3_tptp` or `z3`.
+schedule-less Z3 entry, `z3_tptp`: Z3's TPTP front end, built from
+`examples/tptp` in the Z3 sources.  The plain `z3` binary does not read
+TPTP, so HOLyHammer never uses it.
 
 The tested versions are:
 
@@ -200,7 +204,9 @@ environment variables are also supported:
 * `HOL4_EPROVER_EXECUTABLE`;
 * `HOL4_VAMPIRE_EXECUTABLE`;
 * `HOL4_ZIPPERPOSITION_EXECUTABLE`; and
-* `HOL4_Z3_EXECUTABLE`.
+* `HOL4_Z3_TPTP_EXECUTABLE`.
+
+HolSmt's `HOL4_Z3_EXECUTABLE` names an SMT-LIB solver and is not consulted.
 
 Discovery checks configuration, the dedicated environment variable, `PATH`,
 and versioned installation directories under

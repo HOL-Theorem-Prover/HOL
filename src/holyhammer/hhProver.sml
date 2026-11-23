@@ -327,10 +327,7 @@ fun version_between left right text =
             (index_from right text start)
         end
 
-fun z3_version output =
-  case version_after "Z3 version " output of
-      SOME version => SOME version
-    | NONE => version_between "Z3tptp [" "]" output
+fun z3_version output = version_between "Z3tptp [" "]" output
 
 fun same_slice (left : slice) right = left = right
 
@@ -416,16 +413,12 @@ fun zipperposition_command executable {timeout, problem, extra, ...} =
    ["--input", "tptp", "--output", "tptp", "--timeout",
     Int.toString timeout] @ extra @ [problem])
 
+(* Only Z3's TPTP front end (examples/tptp) reads TPTP; the z3 binary
+   itself does not, so it is never a candidate. *)
 fun z3_command executable {timeout, problem, extra, ...} =
-  if String.isSubstring "z3_tptp" (OS.Path.file executable) then
-    (executable,
-     ["-c", "-smt.pull_nested_quantifiers:true",
-      "-t:" ^ Int.toString timeout] @ extra @ ["-file:" ^ problem])
-  else
-    (executable,
-     ["-tptp", "DISPLAY_UNSAT_CORE=true", "ELIM_QUANTIFIERS=true",
-      "PULL_NESTED_QUANTIFIERS=true", "-T:" ^ Int.toString timeout] @
-     extra @ [problem])
+  (executable,
+   ["-c", "-smt.pull_nested_quantifiers:true",
+    "-t:" ^ Int.toString timeout] @ extra @ ["-file:" ^ problem])
 
 val e_config : prover_config =
   {name = hhConfig.prover_name Eprover, exec_names = ["eprover-ho", "eprover"],
@@ -455,8 +448,8 @@ val zipperposition_config : prover_config =
    slices = portfolio_slices Zipperposition, legacy = false}
 
 val z3_config : prover_config =
-  {name = hhConfig.prover_name Z3, exec_names = ["z3_tptp", "z3"],
-   env_var = "HOL4_Z3_EXECUTABLE",
+  {name = hhConfig.prover_name Z3, exec_names = ["z3_tptp"],
+   env_var = "HOL4_Z3_TPTP_EXECUTABLE",
    version_args = ["--version"], parse_version = z3_version,
    tested_versions = ["4.11.2"], supported_formats = ["fof"],
    mk_command = z3_command,
