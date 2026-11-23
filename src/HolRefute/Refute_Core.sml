@@ -1353,9 +1353,18 @@ structure Refute_Core :> Refute_Core = struct
      doesn't hold: those with a theory definition ([defined], with
      [definitions]), whose right sides are followed in turn, and those
      with none ([missing]).  [known] holds the compset's keys, so a
-     constant evaluation already reduces is never unfolded. *)
+     constant evaluation already reduces is never unfolded.  The binders
+     are never unfolded either: [bool] defines [!] as [\P. P = \x. T],
+     which nothing evaluates, and the search handles them itself. *)
   fun definition_closure known terms =
     let
+      val binders =
+        [boolSyntax.universal, boolSyntax.existential, boolSyntax.exists1,
+         boolSyntax.select]
+      fun definition constant =
+        if List.exists (fn binder => Term.same_const binder constant) binders
+        then NONE
+        else theory_definition constant
       fun executable constant =
         Refute_TypeBase.is_constructor constant orelse
         List.exists (fn data => Term.same_const data constant)
@@ -1371,7 +1380,7 @@ structure Refute_Core :> Refute_Core = struct
         else
           let val seen = Redblackset.add (seen, constant_key constant)
           in
-            case theory_definition constant of
+            case definition constant of
               SOME theorem =>
                 List.foldl visit
                   (seen, constant :: defined, theorem :: definitions, missing)

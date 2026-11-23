@@ -4485,8 +4485,10 @@ val _ = mf_group "baseline" I [
   ("function application", ``(f : bool -> num) b = 0``, I, V ExpectGenuine,
    CSome),
   ("TotalDefn equation", ``zoo_total n = 0``, I, V ExpectGenuine, CSome),
+  (* [zoo_height]'s equations are only its theory's definition, which
+     certification evaluates *)
   ("DefnBase equation", ``zoo_height (ZooLeaf n) = SUC n``, I,
-   V ExpectGenuine, CNone),
+   V ExpectGenuine, CSome),
   ("unary natural", ``SUC n = n``, I, V ExpectGenuine, CSome),
   ("unary integer", ``(i : int) + 1 = i``, I, V ExpectGenuine, CSome),
   ("choice spec", ``zoo_spec = 1``, I, V ExpectGenuine, CNone),
