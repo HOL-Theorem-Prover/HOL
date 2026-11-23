@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhTptpProblem.sml                                         *)
 (* DESCRIPTION   : TPTP problem syntax and printer                           *)
-(* AUTHOR        : Lukasz Czajka                                             *)
 (* PORTED FROM   : Isabelle's atp_problem.ML (Jia Meng, Jasmin Blanchette,   *)
 (*                 Martin Desharnais): the TPTP syntax tree, simplified, and *)
 (*                 the printed syntax.  The printer is new.                  *)

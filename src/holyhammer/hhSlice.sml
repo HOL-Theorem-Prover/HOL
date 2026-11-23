@@ -1,7 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhSlice.sml                                               *)
 (* DESCRIPTION   : HolyHammer slice schedule construction                    *)
-(* AUTHOR        : Lukasz Czajka                                             *)
 (* PORTED FROM   : Isabelle's sledgehammer.ML and sledgehammer_prover.ML     *)
 (*                 (Fabian Immler, Makarius, Jasmin Blanchette): the         *)
 (*                 translation of a schedule into slices and the time budget *)
