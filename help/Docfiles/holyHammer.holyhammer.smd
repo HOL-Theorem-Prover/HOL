@@ -1,0 +1,31 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `holyhammer`
+
+``` hol4
+holyHammer.holyhammer : term -> thm
+```
+
+------------------------------------------------------------------------
+
+Proves a closed statement with external automated provers.
+
+`holyhammer tm` proves `tm` as `hh` proves the goal `([], tm)`, and
+prints the `metis_tac` call that proves `tm` in a script.
+
+### Failure
+
+Fails as `hh` does.
+
+### Example
+
+``` hol4
+- load "holyHammer"; open holyHammer;
+- holyhammer ``MEM x l /\ EVERY P l ==> P x``;
+Prove the statement in a script with:
+  metis_tac [listTheory.EVERY_MEM]
+val it = ⊢ MEM x l ∧ EVERY P l ⇒ P x: thm
+```
+
+### See also
+
+[`holyHammer.hh`](#holyHammer.hh).

@@ -1,0 +1,37 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `hh_pb`
+
+``` hol4
+holyHammer.hh_pb : string -> prover list -> string list -> goal -> tactic
+```
+
+------------------------------------------------------------------------
+
+Proves a goal with the given provers from the given premises only.
+
+`hh_pb dir provers premises g` proves the goal `g` as `hh` does, but
+without premise selection: it runs only `provers`, a list of `Eprover`,
+`Vampire`, and `Zipperposition`, on exactly `premises`, fully qualified
+theorem names such as `"listTheory.EVERY_MEM"`. It returns the tactic
+that Metis replayed, and prints it. Its problem files are written below
+the directory `dir` and deleted when it returns. The provers of the list
+that are not installed are skipped.
+
+### Failure
+
+Fails as `hh` does.
+
+### Example
+
+``` hol4
+- load "holyHammer"; open holyHammer;
+- val pb = ([] : term list, ``SUC m = m + 1``);
+- g `SUC m = m + 1`;
+- e (hh_pb (hhConfig.state_dir ()) [Eprover] ["arithmeticTheory.ADD1"] pb);
+Replace `hh_pb` with:
+  metis_tac [arithmeticTheory.ADD1]
+```
+
+### See also
+
+[`holyHammer.hh`](#holyHammer.hh).
