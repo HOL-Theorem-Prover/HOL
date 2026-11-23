@@ -244,6 +244,10 @@ Bugs fixed
 -   The language server's 30-second backstop on a goal-state or try-tactic answer could fail to fire, leaving the server unresponsive to every later request.
     Its single interrupt was caught by the pretty-printing of the answer, which renders as empty on any error, so a rendering that looped ran on unbounded.
     The pretty-printer now lets the interrupt through, and the request answers with a timeout instead.
+
+-   The language server's goal state treated `FIRST_PROVE` like `FIRST`, keeping the first alternative that did not fail even when it left goals.
+    `FIRST_PROVE` runs each alternative as `t THEN NO_TAC`, so on `T /\ T` the goal state after `FIRST_PROVE [conj_tac, simp[]]` showed `conj_tac`'s two goals where HOL proves the theorem, and `FIRST_PROVE [conj_tac]` was not reported as failing.
+    An alternative now counts only if it proves its goal.
     
 -   Loading a theory merged its parents' simpsets, grammars and other ancestry-based data by walking each parent's whole ancestry again and decoding every parent list on the way, once per kind of data.
     Each theory's ancestry is now computed once, from its parents', and kept; loading a theory with 945 ancestors now takes about half the CPU time it did.
