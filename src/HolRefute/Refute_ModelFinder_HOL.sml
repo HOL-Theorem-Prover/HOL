@@ -286,6 +286,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
      fixpoint_checks : (term * string * bool) list ref,
+     (* note_circular_definition's memo and the constants it found
+        circular *)
+     definition_successors : (term, term list) Redblackmap.dict ref,
+     underdetermined : term list ref,
      choice_guard_inserted : bool ref,
      choice_empty_cache : (term * bool) list ref,
      choice_predicate_attempts : int ref,
@@ -1060,19 +1064,23 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       (table_lookup table constant))
     |> Util.distinct_terms
 
+  (* [deviation from upstream] Whether a list of arguments consists of
+     distinct variables; shared by [normalized_rhs_of],
+     [is_variable_equation] and [is_equational_fun_surely_complete]. *)
+  fun distinct_vars [] = true
+    | distinct_vars (variable :: rest) =
+        Term.is_var variable andalso
+        not (List.exists (Term.aconv variable) rest) andalso
+        distinct_vars rest
+
   fun normalized_rhs_of prop =
     let
       val (_, body) = boolSyntax.strip_forall prop
       val (premises, conclusion) = boolSyntax.strip_imp body
       val (left, right) = boolSyntax.dest_eq conclusion
       val (_, arguments) = HolKernel.strip_comb left
-      fun distinct_variables [] = true
-        | distinct_variables (variable :: rest) =
-            Term.is_var variable andalso
-            not (List.exists (Term.aconv variable) rest) andalso
-            distinct_variables rest
     in
-      if null premises andalso distinct_variables arguments then
+      if null premises andalso distinct_vars arguments then
         SOME (Term.list_mk_abs (arguments, right))
       else NONE
     end handle HOL_ERR _ => NONE
@@ -2110,12 +2118,109 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       map (Term.subst substitution) own_cases
     end
 
+  (* [deviation from upstream] Equations taken from the definition tables
+     determine a constant only if they are a definition.  A DefnBase
+     presentation can name a theorem that is not: realax's [real_lt] is
+     presented by the rebound theorem [x < y <=> ~(y <= x)], and
+     [real_lte] is defined as [~(y < x)], so the two equations hold of any
+     relation and leave [<] unconstrained.  A constant whose equations all
+     have distinct variables as arguments, that has no registered
+     induction theorem (a recursive Define has one) and that lies on a
+     cycle of the definitions the back end sends, is recorded in
+     [underdetermined]; a model that depends on it is only Potential.  The
+     equations are still sent: they are theorems. *)
+  fun is_variable_equation equation =
+    let
+      val (_, body) = boolSyntax.strip_forall equation
+      val conclusion = #2 (boolSyntax.strip_imp body)
+    in
+      distinct_vars
+        (#2 (HolKernel.strip_comb (#1 (boolSyntax.dest_eq conclusion))))
+    end handle HOL_ERR _ => false
+
+  (* Whether [constant] reaches itself through the constants of the
+     definitions the back end sends, by way of other constants or by an
+     equation naming its own constant on the right-hand side.  Its other
+     occurrences, on the left or in a premise (Hilbert choice's
+     [P x ==> ~P y ==> $@ P = y ==> $@ P = x]), make no cycle.  A
+     constant's successors are those of what Refute_ModelFinder_Preproc
+     sends or unfolds for it: an inductive predicate's cases theorem, an
+     equational constant's simps (or psimps), a choice specification, or
+     else the one definition [def_of_const] picks (the unfold table before
+     the fallback).  A constant with none of these is sent no definition, only
+     user axioms, which are not definitions, so it has no successors.
+     Constants are compared with their types, since the tables give each
+     instance of a polymorphic constant its own equations.  Each
+     constant's successors are found once per run, in
+     [definition_successors]. *)
+  fun on_definition_cycle
+        (context as {definition_successors, simp_table, psimp_table, ...}
+           : mf_context) constant =
+    let
+      fun sent c =
+        if is_fixpoint_pred_const context c then
+          case_props_for_const context c
+        else if is_raw_equational_fun context c then
+          case def_props_for_const (!simp_table) c of
+              [] => def_props_for_const psimp_table c
+            | simps => simps
+        else if is_choice_spec_fun context c then
+          choice_spec_props_for_const context c
+        else
+          case def_of_const context c of
+              SOME definition => [boolSyntax.mk_eq (c, definition)]
+            | NONE => []
+      fun on_right c prop =
+        case Lib.total boolSyntax.dest_eq
+               (#2 (boolSyntax.strip_imp
+                      (#2 (boolSyntax.strip_forall prop)))) of
+            SOME (_, right) => Lib.can (HolKernel.find_term (Term.aconv c))
+                                 right
+          | NONE => false
+      fun successors c =
+        case Redblackmap.peek (!definition_successors, c) of
+            SOME found => found
+          | NONE =>
+              let
+                val props = sent c
+                val found =
+                  List.concat (map (HolKernel.find_terms Term.is_const) props)
+                  |> List.filter (fn d =>
+                       not (is_built_in_const d) andalso
+                       not (Term.aconv d c))
+                  |> (if List.exists (on_right c) props then cons c else I)
+              in
+                definition_successors :=
+                  Redblackmap.insert (!definition_successors, c, found);
+                found
+              end
+      fun search _ [] = false
+        | search visited (c :: rest) =
+            if Term.aconv c constant then true
+            else if HOLset.member (visited, c) then search visited rest
+            else search (HOLset.add (visited, c)) (successors c @ rest)
+    in
+      search (HOLset.empty Term.compare) (successors constant)
+    end
+    handle HOL_ERR _ => false
+
+  fun note_circular_definition
+        (context as {underdetermined, ...} : mf_context) constant equations =
+    if not (Term.is_const constant) orelse null equations orelse
+       List.exists (Term.same_const constant) (!underdetermined) orelse
+       not (List.all is_variable_equation equations) orelse
+       Option.isSome (DefnBase.lookup_indn constant) orelse
+       not (on_definition_cycle context constant)
+    then equations
+    else (underdetermined := constant :: !underdetermined; equations)
+
   fun equational_fun_axioms
         (context as {simp_table, psimp_table, ...} : mf_context) constant =
     if is_fixpoint_pred_const context constant then
       case_props_for_const context constant
     else
-    case def_props_for_const (!simp_table) constant of
+    note_circular_definition context constant
+    (case def_props_for_const (!simp_table) constant of
         [] =>
           (case def_props_for_const psimp_table constant of
                [] =>
@@ -2130,7 +2235,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                            | NONE => [])
                     | NONE => [])
              | psimps => psimps)
-      | simps => simps
+      | simps => simps)
 
   fun term_mentions_const constant term =
     List.exists (fn candidate =>
@@ -2819,11 +2924,6 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           let
             val (_, body) = boolSyntax.strip_forall equation
             val (premises, conclusion) = boolSyntax.strip_imp body
-            fun distinct_vars [] = true
-              | distinct_vars (variable :: rest) =
-                  Term.is_var variable andalso
-                  not (List.exists (Term.aconv variable) rest) andalso
-                  distinct_vars rest
           in
             null premises andalso
             (case Lib.total boolSyntax.dest_eq conclusion of
@@ -7298,6 +7398,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        ersatz_table = current_ersatz_table (),
        whack_weakening = ref false,
        fixpoint_checks = ref [],
+       definition_successors = ref (Redblackmap.mkDict Term.compare),
+       underdetermined = ref [],
        choice_guard_inserted = ref false,
        choice_empty_cache = ref [],
        choice_predicate_attempts = ref 0,

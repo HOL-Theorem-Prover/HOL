@@ -30,8 +30,8 @@ val lookup_term_postprocessor =
 
 local
   open sortingTheory realTheory ratTheory lbtreeTheory pathTheory
-       llistTheory finite_mapTheory finite_setTheory refuteHarvestTypeTheory
-       refuteHarvestAbsTheory wordsLib stringLib
+       llistTheory finite_mapTheory alistTheory finite_setTheory
+       refuteHarvestTypeTheory refuteHarvestAbsTheory wordsLib stringLib
 in end
 
 (* [hol run] starts with no current theory; [no_theory] keeps that
@@ -3141,6 +3141,76 @@ fun iterator_card (c : counterexample) =
 
 val mf_num2 = mf |> upd_card [(SOME ``:num``, [2]), (NONE, [1])]
 val mf_num3 = mf |> upd_card [(SOME ``:num``, [3]), (NONE, [1])]
+
+(* True statements that once came back Genuine.  The search only has to
+   stay short of Genuine, so a short budget keeps the true goals, which run
+   to it, cheap. *)
+fun never_genuine (Counterexample cexs) = not (List.exists is_genuine cexs)
+  | never_genuine _ = true
+val mf_short = mf |> upd_timeout 10.0
+
+val _ = mf_test "circular presentations are not definitions" (fn () =>
+  refute mf_short
+    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==> zoo_circ_lt x z``
+  |> cex_where (fn c =>
+       case #certainty c of
+           Potential reasons =>
+             List.exists (String.isSubstring
+               "zoo_circ_lt are circular, not a definition") reasons
+         | _ => false) andalso
+  (* Such a model may be spurious, so it spends the potential budget. *)
+  not (isSome (first_cex (refute (mf_short |> upd_max_potential 0)
+    ``!x y z. zoo_circ_lt x y /\ zoo_circ_lt y z ==>
+              zoo_circ_lt x z``))) andalso
+  genuine_certified (refute mf ``!x y. zoo_circ_lt x y``))
+
+(* Unreplayed, a model that leans on a circular presentation says so,
+   whether the presentation names the constant itself or goes through
+   another.  Only what the model finder sends closes a cycle:
+   zoo_cyc_ind is sent as its cases theorem, not the presentation that
+   mentions zoo_cyc_alias. *)
+fun circular_reason name (c : counterexample) =
+  case #certainty c of
+      Potential reasons =>
+        List.exists (String.isSubstring
+          (name ^ " are circular, not a definition")) reasons
+    | _ => false
+val mf_unreplayed = mf_short |> upd_certify false
+val _ = mf_test "only sent equations close a definition cycle" (fn () =>
+  cex_where (circular_reason "zoo_self")
+    (refute mf_unreplayed ``!b. zoo_self b``) andalso
+  not (isSome (first_cex (refute (mf_unreplayed |> upd_max_potential 0)
+    ``!b. zoo_self b``))) andalso
+  (case refute mf_unreplayed ``!n. zoo_cyc_alias n`` of
+       Counterexample cexs =>
+         not (List.exists (circular_reason "zoo_cyc_alias") cexs)
+     | _ => false))
+
+(* A definition's own pattern variable over a pair type stays unboxed: boxed,
+   it ranged over the box atoms only, and with none in scope [MAP f (h::t)]
+   or [EVERY P (h::t)] matched no list of flat tuples. *)
+val _ = mf_test "pair patterns in definitions cover unboxed tuples" (fn () =>
+  List.all (never_genuine o refute mf_short)
+    [``MAP (\p : 'a # num # num. SND (SND p)) [(x, 0, 0)] = [0]``,
+     ``!l : ('a # 'b # num) list.
+          LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [SND (SND (HD l))]``,
+     ``SUM (MAP (\(a : 'a, b : num, n : num, c : bool). n)
+               (TAKE k (REPLICATE m (x, 0n, 0n, F)))) = 0``,
+     ``EVERY (\kv : 'a # num # num.
+               1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l /\
+       MEM x l ==> 1 <= FST (SND x)``,
+     ``EVERY (\kv : 'a # num # num.
+               1 <= FST (SND kv) /\ 1 <= SND (SND kv)) l ==>
+       1 <= FST (case ALOOKUP l k of NONE => (1, 1) | SOME p => p)``] andalso
+  List.all (genuine_certified o refute mf)
+    [``MAP (\p : 'a # num # num. SND (SND p)) (REPLICATE m (x, 0, 1)) =
+       REPLICATE m 0``,
+     ``SUM (MAP (\(a : 'a, b : num, n : num, c : bool). n)
+               (TAKE k (REPLICATE m (x, 0n, 1n, F)))) = 0``,
+     ``!l : ('a # 'b # num) list.
+          LENGTH l = 1 ==> MAP (\(a, b, n). n) l = [0]``,
+     ``EVERY (\kv : 'a # num # num. 1 <= SND (SND kv)) l ==>
+       1 <= FST (case ALOOKUP l k of NONE => (1, 1) | SOME p => p)``])
 
 val _ = mf_test "unregistered typedefs are reported before solving" (fn () =>
   List.all (fn goal =>
