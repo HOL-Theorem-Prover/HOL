@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hh06_realScript.sml                                       *)
 (* DESCRIPTION   : HolyHammer examples: real numbers and analysis            *)
+(* ADAPTED FROM  : Thibault Gauthier's HolyHammer demos.                     *)
 (*                                                                           *)
 (* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
 (* theory is built, so building needs a prover (see README.md).  The         *)
@@ -27,7 +28,6 @@ Libs
    Field and order facts
    ------------------------------------------------------------------------- *)
 
-(* From the original HolyHammer demo. *)
 Theorem halve_double:
   a = b * 2 ==> b = a / 2
 Proof
@@ -197,8 +197,7 @@ QED
    it, and also on the intermediate cos (2 * x) = 2 * (cos x * cos x) - 1.
    Following tip 3 of README.md, split the derivation into steps.  Each
    step is either library knowledge, which the hammer finds, or algebra,
-   which REAL_ARITH_TAC does.  (This example comes from the original
-   HolyHammer demo, which derived it with ten hammer calls.)
+   which REAL_ARITH_TAC does.
    ------------------------------------------------------------------------- *)
 
 (* Library knowledge: the addition formula, with 2 * x = x + x. *)

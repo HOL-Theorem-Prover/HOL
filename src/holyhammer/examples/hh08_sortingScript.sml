@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hh08_sortingScript.sml                                    *)
 (* DESCRIPTION   : HolyHammer examples: case study, insertion sort           *)
+(* ADAPTED FROM  : the insertion sort of CoqHammer's tutorial.               *)
 (*                                                                           *)
 (* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
 (* theory is built, so building needs a prover (see README.md).  The         *)

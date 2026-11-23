@@ -1,6 +1,8 @@
 (* ========================================================================= *)
 (* FILE          : hh03_listScript.sml                                       *)
 (* DESCRIPTION   : HolyHammer examples: lists                                *)
+(* ADAPTED FROM  : CoqHammer's tutorial and tests, and the Sledgehammer      *)
+(*                 user's guide.                                             *)
 (*                                                                           *)
 (* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
 (* theory is built, so building needs a prover (see README.md).  The         *)
@@ -18,18 +20,12 @@ Libs
    libraries (listTheory, rich_listTheory, sortingTheory) contain well over
    two thousand theorems.  Most goals below need one or two of them; the
    point of the hammer is that you do not need to know their names.
-
-   A few examples are adapted from the CoqHammer tutorial and test suite
-   (marked [CoqHammer]) and from the Sledgehammer user's guide (marked
-   [Sledgehammer]), so that the three systems can be compared on the same
-   problems.
    ------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------------
    Append, reverse and length
    ------------------------------------------------------------------------- *)
 
-(* [Sledgehammer] The first example of the Sledgehammer guide. *)
 Theorem singleton_inj:
   [a] = [b] ==> a = b
 Proof
@@ -115,7 +111,6 @@ QED
    Membership and quantifiers over lists
    ------------------------------------------------------------------------- *)
 
-(* [CoqHammer] lem_lst: membership in an append. *)
 Theorem mem_append_every:
   MEM x (l1 ++ l2) /\ EVERY P l1 /\ EVERY P l2 ==> P x
 Proof
@@ -123,7 +118,6 @@ Proof
   (* metis_tac [EVERY_APPEND, EVERY_MEM] *)
 QED
 
-(* [CoqHammer] lem_lst2. *)
 Theorem mem_cons_append:
   MEM z l \/ MEM z l' ==> MEM z (y1::y2::l ++ y3::l')
 Proof
@@ -281,7 +275,6 @@ Proof
   (* metis_tac [PERM_MEM_EQ] *)
 QED
 
-(* [CoqHammer] lem_perm_0 from the hammer tutorial. *)
 Theorem perm_cons_append:
   PERM l1 (y::l2) ==> PERM (x::l1 ++ l3) (x::y::l2 ++ l3)
 Proof
@@ -289,9 +282,9 @@ Proof
   (* metis_tac [PERM_CONS_IFF, PERM_APPEND_IFF] *)
 QED
 
-(* [CoqHammer] lem_perm_1: the same with the two heads swapped.  This
-   needs five lemmas, chained through transitivity; it took Vampire about
-   ten seconds.  Neither simp [] nor metis_tac [] on its own proves it. *)
+(* The same with the two heads swapped.  This needs five lemmas,
+   chained through transitivity; it took Vampire about ten seconds.
+   Neither simp [] nor metis_tac [] on its own proves it. *)
 Theorem perm_cons_append_swap:
   PERM l1 (y::l2) ==> PERM (x::l1 ++ l3) (y::x::l2 ++ l3)
 Proof

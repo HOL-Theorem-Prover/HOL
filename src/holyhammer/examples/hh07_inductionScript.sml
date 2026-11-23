@@ -1,6 +1,8 @@
 (* ========================================================================= *)
 (* FILE          : hh07_inductionScript.sml                                  *)
 (* DESCRIPTION   : HolyHammer examples: your own definitions, and induction  *)
+(* ADAPTED FROM  : Tobias Nipkow's "Programming and Proving in               *)
+(*                 Isabelle/HOL" and Isabelle's Metis_Examples.              *)
 (*                                                                           *)
 (* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
 (* theory is built, so building needs a prover (see README.md).  The         *)

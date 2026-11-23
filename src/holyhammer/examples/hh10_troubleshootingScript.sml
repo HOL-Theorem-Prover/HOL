@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hh10_troubleshootingScript.sml                            *)
 (* DESCRIPTION   : HolyHammer examples: what to do when the hammer fails     *)
+(* ADAPTED FROM  : an example from Thibault Gauthier's HolyHammer demo.      *)
 (*                                                                           *)
 (* Each section starts from a goal on which a plain hammer call failed       *)
 (* and shows what worked instead.  The hh calls are the later hammer         *)
@@ -88,9 +89,10 @@ QED
 (* -------------------------------------------------------------------------
    Failure 4: set-builder notation and big operators
 
-   [Paulson] An example from Lawrence Paulson's "Sledgehammer: some
-   history, some tips".  The hammer fails on the whole statement, and
-   also after rw [EXTENSION]: the goal still contains membership in a
+   Lawrence Paulson's "Sledgehammer: some history, some tips" warns
+   that goals with set comprehensions are hard for the hammer.  This
+   one shows why.  The hammer fails on the whole statement, and also
+   after rw [EXTENSION]: the goal still contains membership in a
    BIGINTER of an IMAGE, which is higher-order.  One more rewrite with
    the membership lemma for that combination (found with
    DB.find "BIGINTER_IMAGE") turns the goal into pure first-order

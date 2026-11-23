@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hh02_arithScript.sml                                      *)
 (* DESCRIPTION   : HolyHammer examples: natural numbers                      *)
+(* ADAPTED FROM  : an example from Thibault Gauthier's HolyHammer demo.      *)
 (*                                                                           *)
 (* Every proof below calls the hammer: each hh runs HolyHammer when the      *)
 (* theory is built, so building needs a prover (see README.md).  The         *)
@@ -31,7 +32,6 @@ Libs
    Rings without negation: subtraction and distributivity
    ------------------------------------------------------------------------- *)
 
-(* From the original HolyHammer demo. *)
 Theorem exp_sub_mul:
   a <= b ==> g ** (b - a) * g ** a = g ** b
 Proof

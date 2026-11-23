@@ -58,6 +58,12 @@ order; `hh07`-`hh10` build on the lessons of the earlier files.
   * `interactive.sml`: an annotated interactive session.  Checking the
     provers, options, explicit premises with `hh_pb`, `debug_dir`.
 
+Some examples are adapted from Thibault Gauthier's original HolyHammer
+demos, CoqHammer's tutorial and tests, the Sledgehammer user's guide,
+Tobias Nipkow's *Programming and Proving in Isabelle/HOL* and
+Isabelle's `Metis_Examples`.  The header of each file names its
+sources.
+
 The theory files call the hammer directly, so building them needs at
 least one prover (see "Setting up" below) and takes a while:
 
@@ -422,6 +428,8 @@ Further reading
     option list.
   * J. C. Blanchette, *Hammering Away: A User's Guide to Sledgehammer
     for Isabelle/HOL*, `https://isabelle.in.tum.de/doc/sledgehammer.pdf`.
+  * T. Nipkow, *Programming and Proving in Isabelle/HOL*,
+    `https://isabelle.in.tum.de/doc/prog-prove.pdf`.
   * L. C. Paulson, *Sledgehammer: some history, some tips*,
     `https://lawrencecpaulson.github.io/2022/04/13/Sledgehammer.html`.
   * Ł. Czajka and C. Kaliszyk, *Hammer for Coq: Automation for
