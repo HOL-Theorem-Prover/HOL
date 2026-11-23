@@ -29,8 +29,8 @@ is checked by the kernel like any other, and it adds no oracle tags.
 Contents
 --------
 
-Start with `hh01`.  The library tours `hh02`-`hh06` can be read in any
-order; `hh07`-`hh10` build on the lessons of the earlier files.
+Start with `hh01`.  The library tours `hh02`-`hh06` and `hh11` can be read
+in any order; `hh07`-`hh10` build on the lessons of the earlier files.
 
   * `hh01_tutorialScript.sml`: first steps.  `holyhammer` and `hh`,
     reading the output, hammering inside a proof, your own definitions
@@ -53,8 +53,10 @@ order; `hh07`-`hh10` build on the lessons of the earlier files.
   * `hh09_queueScript.sml`: case study, a functional queue.  Split
     pattern matches and `case` expressions before hammering.
   * `hh10_troubleshootingScript.sml`: when the hammer fails.  False
-    goals, decidable goals, failed reconstruction, set-builder notation,
-    long proofs.
+    goals, decidable goals, induction, failed reconstruction, set-builder
+    notation.
+  * `hh11_complexScript.sml`: Euler's identity for a full turn, a
+    proof that needs eleven facts.
   * `interactive.sml`: an annotated interactive session.  Checking the
     provers, options, explicit premises with `hh_pb`, `debug_dir`.
 
