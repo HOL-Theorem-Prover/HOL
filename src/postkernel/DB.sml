@@ -185,28 +185,46 @@ local val db_slot : dbmap Context.Data.slot =
       fun lemmas() = lemmas_of (Context.snapshot())
       val put_db = Context.Data.write db_slot
       val upd_db = Context.Data.modify db_slot
+      fun add_bindings thy blist submap =
+          List.foldl (fn ((n,th,info), m) =>
+                         add_to_submap m ((thy,n), (th,info)))
+                     submap blist
+      fun bindl_revtab thy blist tab =
+          List.foldl
+            (fn ((n,th,i), A) =>
+                Termtab.cons_list(concl th,Stored {Thy = thy,Name = n}) A)
+            tab
+            blist
       fun functional_bindl_names thy blist namemap =
           (* used when a theory is loaded from disk *)
           let val submap =
                   case Symtab.lookup namemap thy of
                     NONE => empty_sdata_map
                   | SOME m => m
-              fun foldthis ((n,th,info), m) =
-                  add_to_submap m ((thy,n), (th,info))
-              val submap' = List.foldl foldthis submap blist
           in
-            Symtab.update (thy, submap') namemap
+            Symtab.update (thy, add_bindings thy blist submap) namemap
           end
       fun functional_bindl_revmap thy blist =
-          rev_add thy (fn tab =>
-            List.foldl
-              (fn ((n,th,i), A) =>
-                  Termtab.cons_list(concl th,Stored {Thy = thy,Name = n}) A)
-              tab
-              blist)
+          rev_add thy (bindl_revtab thy blist)
       fun functional_bindl db thy blist =
           db |> updnamemap (functional_bindl_names thy blist)
              |> updrevmap (functional_bindl_revmap thy blist)
+      (* [names] and [rev] are what add_bindings and bindl_revtab make of
+         [blist] from empty tables *)
+      fun functional_bind_shard db thy {names, rev} blist =
+          let
+            fun upd_names nmap =
+                if Symtab.defined nmap thy then
+                  functional_bindl_names thy blist nmap
+                else Symtab.update (thy, names) nmap
+            fun upd_rev (rm : revmap) =
+                if #epoch rm = SOME thy then
+                  functional_bindl_revmap thy blist rm
+                else rev_start thy rev rm
+          in
+            db |> updnamemap upd_names
+               |> updrevmap upd_rev
+          end
 
       fun purge_stale_bindings thyname =
           let
@@ -275,6 +293,11 @@ local val db_slot : dbmap Context.Data.slot =
       val _ = Theory.register_hook("DB", hook)
 in
 fun bindl thy blist = upd_db (fn db => functional_bindl db thy blist)
+type shard = {names : submap, rev : revtab}
+fun shard_of thy blist = {names = add_bindings thy blist empty_sdata_map,
+                          rev = bindl_revtab thy blist Termtab.empty}
+fun bind_shard thy shard blist =
+    upd_db (fn db => functional_bind_shard db thy shard blist)
 fun revlookup th =
     let val {old, recent, ...} = revmap (lemmas())
         val c = concl th

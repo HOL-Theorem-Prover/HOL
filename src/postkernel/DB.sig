@@ -55,6 +55,12 @@ sig
      after thy's types and constants exist; revhead relies on no earlier
      binding mentioning them *)
   val bindl : string -> (string * thm * thminfo) list -> unit
+  (* What bindl thy blist adds for a theory with no bindings yet, made
+     beforehand, and binding it: bind_shard thy (shard_of thy blist)
+     blist does what bindl thy blist does. *)
+  type shard
+  val shard_of : string -> (string * thm * thminfo) list -> shard
+  val bind_shard : string -> shard -> (string * thm * thminfo) list -> unit
 
   (* Derived search functions *)
   val find_consts_thy : string list -> hol_type -> term list
