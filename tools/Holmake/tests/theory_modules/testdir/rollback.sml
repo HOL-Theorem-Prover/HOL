@@ -13,17 +13,7 @@ val _ = not modules orelse
            base_state = OS.Path.concat (Systeml.HOLDIR, "bin/hol.state")}
         orelse fail "no module cache";
 val _ = Meta.theoryModuleWriteLimit := 0;
-fun read path =
-  let val input = HOLFileSys.openIn path
-  in HOLFileSys.inputAll input before HOLFileSys.closeIn input end;
-fun theory_hash thy =
-  let
-    val text = read (thy ^ "Theory.sml")
-    val (_, rest) = Substring.position "hash = \"" (Substring.full text)
-  in
-    Substring.string
-      (Substring.takel (fn c => c <> #"\"") (Substring.triml 8 rest))
-  end;
+use "theory_hash.sml";
 fun raises f = (ignore (f ()); false) handle _ => true;
 
 (* A constant of the current theory clashes with one of moduleA's, so

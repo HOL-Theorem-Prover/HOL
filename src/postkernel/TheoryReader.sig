@@ -22,7 +22,9 @@ sig
   (* Reusing a load: a theory's decoded data, from a load_thydata call
      made through capture_decoded (NONE if it didn't decode a .dat), and
      register_decoded to repeat that load's registration from it, under
-     the theory hash its FooTheory.sml names. *)
+     the theory hash its FooTheory.sml names, unless the data's parents
+     aren't canonical or its references aren't current: then it
+     registers nothing and returns false. *)
   type decoded
   val decoded_tag : decoded MLSYSPortable.persistent_tag
   (* A theory structure's theorem values, in its record's order. *)
@@ -33,7 +35,7 @@ sig
   val decoded_parents : decoded -> string list
   val decoded_theorems : decoded -> (string * Thm.thm * DB_dtype.thminfo) list
   val capture_decoded : ('a -> 'b) -> 'a -> 'b * decoded option
-  val register_decoded : string -> decoded -> unit
+  val register_decoded : string -> decoded -> bool
   (* Whether the other theories' kernel entries the decoded values refer
      to are still the ones they were decoded against: those theories are
      canonical and the entries unchanged. *)

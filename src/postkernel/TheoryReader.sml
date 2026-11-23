@@ -208,18 +208,19 @@ fun capture_decoded f x =
       capture := false; captured := NONE; (result, d)
     end
 
+(* Whether decoded values mean the same here as where they were decoded:
+   their parents are canonical and the other theories' entries they refer
+   to are unchanged. *)
+fun kernel_refs_ok (d as {parents,...} : decoded) =
+    List.all (is_canonical o #1) parents andalso refs_current d
+
 (* The kernel part of load_thydata_from_dat's registration, from decoded
-   values: link the theory under [hash] and add its types and constants,
-   which must get their canonical stamps again since the values carry
-   them, as must its parents, and the other theories' entries the values
-   refer to must be unchanged. *)
-fun register_kernel hash (d as {thyname,parents,new_types,new_consts,...}
-                          : decoded) =
+   values for which kernel_refs_ok holds: link the theory under [hash]
+   and add its types and constants, which must get their canonical stamps
+   again since the values carry them. *)
+fun link_kernel hash ({thyname,parents,new_types,new_consts,...}
+                      : decoded) =
     let
-      val _ = List.all (is_canonical o #1) parents andalso refs_current d
-              orelse
-              raise TheoryReader ("theory " ^ thyname ^
-                                  ": decoded against other kernel entries")
       fun register () =
           let
             val _ = Theory.link_parents (thyname, hash) parents
@@ -238,9 +239,16 @@ fun register_kernel hash (d as {thyname,parents,new_types,new_consts,...}
              | e => raise TheoryReader ("Exception raised: " ^
                                         General.exnMessage e)
 
-(* Repeats load_thydata_from_dat's registration in the same order. *)
+fun register_kernel hash (d as {thyname,...} : decoded) =
+    (kernel_refs_ok d orelse
+     raise TheoryReader ("theory " ^ thyname ^
+                         ": decoded against other kernel entries");
+     link_kernel hash d)
+
+(* Repeats load_thydata_from_dat's registration in the same order, unless
+   kernel_refs_ok fails: then registers nothing and returns false. *)
 fun register_decoded hash d =
-    (register_kernel hash d; ignore (bind_data d))
+    kernel_refs_ok d andalso (link_kernel hash d; ignore (bind_data d); true)
     handle Interrupt => raise Interrupt
          | e as TheoryReader _ => raise e
          | e => raise TheoryReader ("Exception raised: " ^

@@ -65,6 +65,8 @@ fun rollback args =
            hol, "run", "--noconfig", "rollback.sml"];
 val _ = tprint "a failed theory load is rolled back"
 val _ = (rollback ""; OK ());
+val _ = tprint "stale references are refused before registering"
+val _ = (command [hol, "run", "--noconfig", "stale.sml"]; OK ());
 
 val supported = (probe ["abcd"]; OS.FileSys.access ("module-stats", []));
 val _ = if not supported then () else
@@ -140,6 +142,8 @@ val _ = if not supported then () else
             else die ("writer wrote " ^ read "module-stats")
     val _ = tprint "a failed load from a module is rolled back"
     val _ = (rollback "modules"; OK ())
+    val _ = tprint "a module over a non-canonical parent falls back"
+    val _ = (command [hol, "run", "--noconfig", "refused.sml"]; OK ())
     val _ = tprint "module names keep the SHA-1 when libcrypto refuses it"
     (* default properties naming a missing provider make libcrypto's
        SHA1 return NULL *)
@@ -164,5 +168,6 @@ val _ = if not supported then () else
 val _ = clear "modules";
 val _ = clear "written";
 val _ = app remove ["module-stats", "fingerprint", "probe-fingerprint",
-                    "nosha1.cnf"];
+                    "nosha1.cnf", "refusedScratchTheory.sml",
+                    "refusedScratchTheory.sig", "refusedScratchTheory.dat"];
 val _ = command [holmake, "--no-cache", "cleanAll"];
