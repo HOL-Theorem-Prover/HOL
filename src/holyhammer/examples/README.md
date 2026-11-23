@@ -352,12 +352,12 @@ printed `metis_tac` call is an ordinary deterministic tactic.  Re-running
 list, or fail under load, which is why scripts should not call it.
 
 **Why did `metis_tac` with the suggested facts fail when I tried it?**
-Look for `fetch "thy" "name"` in the suggestion and make sure you are in
-the same theory context.  Also check that the short theorem names refer
-to the same theorems in your script as in your session.  Two opened
-theories can export the same name (for example `EXP_ADD` in both
-`arithmeticTheory` and `transcTheory`), and `Ancestors` order decides
-which one wins.  When in doubt, qualify the name.
+Check that the short theorem names refer to the same theorems in your
+script as in your session.  Two opened theories can export the same name
+(for example `EXP_ADD` in both `arithmeticTheory` and `transcTheory`),
+and `Ancestors` order decides which one wins.  When in doubt, qualify
+the name.  A `fetch "thy" "name"` in the suggestion (a stored-only
+theorem such as `foo_ind`) works only inside theory `thy`.
 
 **What does `ContradictoryAxioms` mean?**  The prover found the selected
 premises inconsistent *without* using the goal.  With library theorems
