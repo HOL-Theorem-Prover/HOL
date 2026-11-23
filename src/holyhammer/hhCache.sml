@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hhCache.sml                                               *)
-(* DESCRIPTION   : Persistent HolyHammer prover-result cache                  *)
+(* DESCRIPTION   : Persistent HolyHammer prover-result cache                 *)
+(* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 
 structure hhCache :> hhCache =

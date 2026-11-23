@@ -1,3 +1,12 @@
+(* ========================================================================= *)
+(* FILE          : hhProblemGen.sml                                          *)
+(* DESCRIPTION   : Typed TPTP problem generation                             *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* BASED ON      : Isabelle's atp_problem_generate.ML (Fabian Immler,        *)
+(*                 Makarius, Jasmin Blanchette, Martin Desharnais), for the  *)
+(*                 helper facts and the arity threshold of poly_native.      *)
+(* ========================================================================= *)
+
 structure hhProblemGen :> hhProblemGen =
 struct
 

@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hhSchedule.sml                                            *)
 (* DESCRIPTION   : HolyHammer parallel slice scheduler                       *)
+(* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 
 (* Kept outside the public [hhSchedule] signature so [selftest.sml] can start

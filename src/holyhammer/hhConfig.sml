@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hhConfig.sml                                              *)
 (* DESCRIPTION   : HolyHammer configuration and executable discovery         *)
+(* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 
 structure hhConfig :> hhConfig =

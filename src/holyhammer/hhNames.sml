@@ -1,3 +1,9 @@
+(* ========================================================================= *)
+(* FILE          : hhNames.sml                                               *)
+(* DESCRIPTION   : Supplies of fresh type variables for problem generation   *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* ========================================================================= *)
+
 structure hhNames :> hhNames =
 struct
 

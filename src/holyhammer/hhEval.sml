@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hhEval.sml                                                *)
 (* DESCRIPTION   : HolyHammer evaluation corpus and durable journal          *)
+(* AUTHOR        : Lukasz Czajka                                             *)
 (*
    Schedule cells own [cores] prover processes apiece.  Callers of run_eval
    therefore size ncore to machine_cores div cores_per_cell; the predictable

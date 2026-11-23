@@ -1,3 +1,13 @@
+(* ========================================================================= *)
+(* FILE          : hhLearn.sml                                               *)
+(* DESCRIPTION   : kNN, MaSh, and MeSh premise rankings                      *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* PORTED FROM   : Isabelle's sledgehammer_mash.ML (Jasmin Blanchette,       *)
+(*                 Cezary Kaliszyk): the naive Bayes scoring, the mesh of    *)
+(*                 rankings, and their constants.  The kNN, the features,    *)
+(*                 and the caches are new.                                   *)
+(* ========================================================================= *)
+
 structure hhLearn :> hhLearn =
 struct
 

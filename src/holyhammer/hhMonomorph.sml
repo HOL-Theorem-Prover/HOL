@@ -1,3 +1,12 @@
+(* ========================================================================= *)
+(* FILE          : hhMonomorph.sml                                           *)
+(* DESCRIPTION   : Bounded monomorphisation of premises                      *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* PORTED FROM   : Isabelle's monomorph.ML (Sascha Boehme): the rounds of    *)
+(*                 the instance search, and Sledgehammer's limits on them.   *)
+(*                 The bounded search for instances is new.                  *)
+(* ========================================================================= *)
+
 structure hhMonomorph :> hhMonomorph =
 struct
 

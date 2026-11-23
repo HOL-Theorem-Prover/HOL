@@ -1,3 +1,12 @@
+(* ========================================================================= *)
+(* FILE          : hhMePo.sml                                                *)
+(* DESCRIPTION   : MePo (Meng-Paulson) relevance filter                      *)
+(* AUTHORS       : Jia Meng and Jasmin Blanchette (Isabelle/HOL)             *)
+(* PORTED FROM   : Isabelle's sledgehammer_mepo.ML, faithfully.  The caches  *)
+(*                 of facts and weights and the restriction of a context are *)
+(*                 new.                                                      *)
+(* ========================================================================= *)
+
 structure hhMePo :> hhMePo =
 struct
 

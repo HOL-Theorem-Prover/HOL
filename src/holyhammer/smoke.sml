@@ -1,6 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : smoke.sml                                                 *)
 (* DESCRIPTION   : End-to-end smoke driver for HolyHammer                    *)
+(* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 
 fun fresh_output () =

@@ -1,3 +1,9 @@
+(* ========================================================================= *)
+(* FILE          : hhLamTrans.sml                                            *)
+(* DESCRIPTION   : Lambda translations of the problem generator              *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* ========================================================================= *)
+
 structure hhLamTrans :> hhLamTrans =
 struct
 

@@ -1,3 +1,9 @@
+(* ========================================================================= *)
+(* FILE          : hhStature.sml                                             *)
+(* DESCRIPTION   : Statures of facts for premise selection                   *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* ========================================================================= *)
+
 structure hhStature :> hhStature =
 struct
 

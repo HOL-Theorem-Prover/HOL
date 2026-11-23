@@ -1,3 +1,9 @@
+(* ========================================================================= *)
+(* FILE          : hhFactIndex.sml                                           *)
+(* DESCRIPTION   : Lookup of facts by name                                   *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* ========================================================================= *)
+
 structure hhFactIndex :> hhFactIndex =
 struct
 

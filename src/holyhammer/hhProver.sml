@@ -1,6 +1,11 @@
 (* ========================================================================= *)
 (* FILE          : hhProver.sml                                              *)
 (* DESCRIPTION   : HolyHammer prover configurations and output parsers       *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* BASED ON      : Isabelle's sledgehammer_atp_systems.ML (Fabian Immler,    *)
+(*                 Jasmin Blanchette, Martin Desharnais), for the prover     *)
+(*                 options, the SZS statuses, and the monomorphisation       *)
+(*                 limits.                                                   *)
 (* ========================================================================= *)
 
 structure hhProver :> hhProver =

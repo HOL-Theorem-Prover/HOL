@@ -1,3 +1,13 @@
+(* ========================================================================= *)
+(* FILE          : hhTypeEnc.sml                                             *)
+(* DESCRIPTION   : Type encodings of the problem generator                   *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* BASED ON      : Isabelle's atp_problem_generate.ML (Fabian Immler,        *)
+(*                 Makarius, Jasmin Blanchette, Martin Desharnais), for the  *)
+(*                 type encodings and the monotonicity rule of the ??        *)
+(*                 encodings.                                                *)
+(* ========================================================================= *)
+
 structure hhTypeEnc :> hhTypeEnc =
 struct
 
