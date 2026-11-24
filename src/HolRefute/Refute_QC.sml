@@ -172,8 +172,13 @@ structure Refute_QC :> Refute_QC = struct
             in
               Refute_Core.rebuild_instance
                 {original = #original instance,
+                 (* a representative stands for a statement binder only
+                    where its variable is one *)
                  binders = #binders instance @
-                   map (fn {r, ...} : transport_entry => r) entries,
+                   List.mapPartial (fn {x, r, ...} : transport_entry =>
+                       if Lib.op_mem Term.aconv x (#binders instance)
+                       then SOME r else NONE)
+                     entries,
                  raw_goal = List.foldr boolSyntax.mk_imp body
                    (map transport_guard entries),
                  evals_for = fn _ => evals,

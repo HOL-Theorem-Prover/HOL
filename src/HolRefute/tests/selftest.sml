@@ -1431,9 +1431,12 @@ in
     (fn () => run ["selftest-other-thread"] == NoCounterexample)
   val _ = test "no counterexample resting on a refused fact is Unknown"
     (fn () => unknown_with "refused fact" (run ["selftest-refused-none"]))
+  (* in turn, the refused one first, so its negative is in before the
+     certified Genuine could end the search *)
   val _ = test "a refused negative keeps the other back ends' candidates"
     (fn () =>
-      case run ["selftest-refused-none", "selftest-slow-certified"] of
+      case run_with (upd_sequential true)
+             ["selftest-refused-none", "selftest-slow-certified"] of
           Counterexample (c :: _) =>
             #backend c = "selftest-slow-certified" andalso
             Option.isSome (#cert c)
@@ -1890,6 +1893,39 @@ in
        outer_x_unvalued ``!x:bool -> bool. P ==> ?y. !x:bool. x = y``)
   val _ = mf_test "an inner binder's value is not a polymorphic outer one's"
     (fn () => outer_x_unvalued ``!x:'a. P ==> !x:bool. x``)
+end
+
+(* A binder a definition brings in, with a statement binder's name and
+   type, gives that binder no value: the vacuous [x] stays unvalued, and
+   [y] keeps its own value beside the [y] of [EXISTS_UNIQUE_DEF]. *)
+local
+  val _ = new_definition ("rf_chk_allzero_def",
+    ``rf_chk_allzero = !x:num. x = 0``)
+  fun statement goal =
+    case first_cex (refute mf goal) of
+        SOME c => SOME (#statement c)
+      | NONE => NONE
+in
+  val _ = mf_test "a definition's binder is not a vacuous statement binder"
+    (fn () =>
+       case statement ``!x:num. rf_chk_allzero`` of
+           SOME s =>
+             not (List.exists (fn (binder, _) =>
+                    #1 (Term.dest_var binder) = "x") (#values s)) andalso
+             Lib.mem "no value for x" (#partial s)
+         | NONE => false)
+  val _ = mf_test "a definition's binder leaves a statement binder its value"
+    (fn () =>
+       case statement ``!y:num. y = 1 ==> ?!x:num. x < 2`` of
+           SOME s =>
+             List.exists (fn (binder, value) =>
+                 #1 (Term.dest_var binder) = "y" andalso
+                 Term.aconv value ``1 : num``) (#values s) andalso
+             List.all (fn (binder, value) =>
+                 #1 (Term.dest_var binder) <> "y" orelse
+                 Term.aconv value ``1 : num``) (#values s) andalso
+             null (#partial s)
+         | NONE => false)
 end
 
 (* With type variables merged, a value keyed at the
@@ -3705,6 +3741,18 @@ val _ = test "transport reaches a typedef through its representation"
     refute (transport |> only [Narrowing]) three_goal
     |> cex_where (fn c => is_genuine c andalso uncertified c andalso
                           names_abs c))
+
+(* The inner [x], pulled out from under the vacuous outer one, is
+   transported, but its representative stands for no statement binder. *)
+val _ = test "a transported inner binder gives an outer one no value"
+  (fn () =>
+    case first_cex (refute transport
+           ``!x : zoo_three. P ==> !x : zoo_three. zoo_three_rep x <> 2``) of
+        SOME c =>
+          not (List.exists (fn (binder, _) => #1 (Term.dest_var binder) = "x")
+                 (#values (#statement c))) andalso
+          Lib.mem "no value for x" (#partial (#statement c))
+      | NONE => false)
 
 val _ = test "transport is bounded and sound" (fn () =>
   let
