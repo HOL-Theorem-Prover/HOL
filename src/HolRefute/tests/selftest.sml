@@ -3118,9 +3118,9 @@ val _ = section "model finder"
 
 (* The model finder's own proofs (monotonicity, well-foundedness, the
    fixpoint lemma) run under [tac_timeout] of the calling thread's CPU
-   time, so that a loaded machine doesn't change what they prove.  Each
-   check here holds however loaded the machine is: work that waits uses
-   no CPU, and work that computes is measured by the same clock. *)
+   time, so that a loaded machine doesn't change what they prove.  The
+   checks here don't depend on load: work that waits uses no CPU, and
+   work that computes is measured by the same clock. *)
 (* reached only through the alias below (holdep) *)
 local open Refute_ThreadClock in end
 local
@@ -3142,10 +3142,16 @@ in
 val _ = test "an inner proof that waits runs past its CPU budget" (fn () =>
   within (seconds 0.05) (idle 0.3) ())
 
+(* The watcher sleeps at most the budget left before it reads the clock
+   again, so the work can overrun by up to the budget; the wall backstop
+   (4 s here) would let it compute far longer on a quiet machine. *)
 val _ = test "an inner proof that computes stops at its CPU budget" (fn () =>
-  let val clock = Clock.start () in
-    times_out (fn () => within (seconds 0.2) spin 0) andalso
-    Clock.seconds clock >= 0.2 - Clock.tick
+  let
+    val clock = Clock.start ()
+    val stopped = times_out (fn () => within (seconds 0.2) spin 0)
+    val used = Clock.seconds clock
+  in
+    stopped andalso used >= 0.2 - Clock.tick andalso used < 2.0 * 0.2 + 0.5
   end)
 
 val _ = test "a spent inner budget raises before the work starts" (fn () =>

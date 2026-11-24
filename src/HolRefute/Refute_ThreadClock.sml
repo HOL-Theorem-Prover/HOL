@@ -61,25 +61,29 @@ datatype source = Stat of string * int | Process
 type clock = {started : Time.time, process : Timer.cpu_timer,
               source : source ref}
 
+(* The wall clock starts before the first reading of the ticks and is read
+   after each later one, so that it spans at least the time they do: a
+   reading at 100 ticks a second is then never more than a tick ahead. *)
 fun start_reading file =
   let
+    val started = Time.now ()
+    val process = Timer.startCPUTimer ()
     val source =
       case file of
           SOME name => (Stat (name, stat_ticks name) handle IO.Io _ => Process)
         | NONE => Process
   in
-    {started = Time.now (), process = Timer.startCPUTimer (),
-     source = ref source}
+    {started = started, process = process, source = ref source}
   end
 
 fun start () = start_reading (stat_file ())
 
 fun seconds ({started, process, source} : clock) =
   let
-    val wall = Time.toReal (Time.- (Time.now (), started))
+    fun wall () = Time.toReal (Time.- (Time.now (), started))
     fun process_seconds () =
       let val {usr, sys} = Timer.checkCPUTimer process in
-        Real.min (wall, Time.toReal usr + Time.toReal sys)
+        Real.min (Time.toReal usr + Time.toReal sys, wall ())
       end
   in
     case !source of
@@ -87,11 +91,13 @@ fun seconds ({started, process, source} : clock) =
            is the nearest real to its decimal: 50 ticks are 0.5 *)
         Stat (file, ticks) =>
           (let val reading = real (stat_ticks file - ticks) / 100.0 in
-             if reading > wall + tick
+             if reading > wall () + tick
              then (source := Process; process_seconds ())
              else reading
            end
-           handle IO.Io _ => (source := Process; process_seconds ()))
+           (* a read that fails takes the process clock for this reading
+              only *)
+           handle IO.Io _ => process_seconds ())
       | Process => process_seconds ()
   end
 
