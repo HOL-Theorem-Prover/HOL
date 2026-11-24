@@ -1389,6 +1389,17 @@ local
              (!k. rf_thy_slot (RFThyB k) = rf_thy_inc k)``}
   val _ = new_definition ("rf_thy_package_def",
     ``rf_thy_package = rf_thy_pkg [rf_thy_inc 1] 2``)
+  val _ = Datatype.Datatype
+    `rf_thy_tree = RFTLeaf num | RFTNode rf_thy_forest ;
+     rf_thy_forest = RFTNil | RFTCons rf_thy_tree rf_thy_forest`
+  (* one theorem defines both, each calling the other *)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_tsize_def",
+     rec_axiom = TypeBase.axiom_of ``:rf_thy_tree``,
+     def = ``(rf_thy_tsize (RFTLeaf n) = n) /\
+             (rf_thy_tsize (RFTNode f) = rf_thy_fsize f + 1) /\
+             (rf_thy_fsize RFTNil = 0) /\
+             (rf_thy_fsize (RFTCons t f) = rf_thy_tsize t + rf_thy_fsize f)``}
   val _ = new_definition ("rf_thy_arb_def",
     ``rf_thy_arb (x : num) = x + ARB``)
   val _ = new_definition ("rf_thy_small_def",
@@ -1459,9 +1470,9 @@ in
 
   (* What a term evaluates to doesn't depend on the terms evaluated
      before it: a term evaluates with the theory definitions it reaches
-     and no others, so [rf_thy_caller 1], whose compset rule calls a
-     constant only its theory defines, gives the same result whether or
-     not [rf_thy_callee] was just evaluated. *)
+     and no others, so a goal over [rf_thy_caller], whose compset rule
+     calls a constant only its theory defines, gets the same outcome
+     whether or not a goal over [rf_thy_callee] was just tested. *)
   val _ = test "evaluation doesn't depend on the terms evaluated before"
     (fn () =>
       let
@@ -1469,14 +1480,30 @@ in
           ``rf_thy_callee (x : num) = x * 2``)
         val caller = new_definition ("rf_thy_caller_def",
           ``rf_thy_caller (x : num) = rf_thy_callee x + 1``)
-        val _ = computeLib.add_funs [caller]
-        fun result () =
-          boolSyntax.rhs (concl (Refute_Cert.eval ``rf_thy_caller 1``))
-        val cold = result ()
-        val _ = Refute_Cert.eval ``rf_thy_callee 1``
+        val compute = default_config |> only [Exhaustive] |> quiet
+                        |> upd_substrate Compute |> upd_timeout 3.0
+        fun summary goal =
+          case refute compute goal of
+              Counterexample _ => "counterexample"
+            | NoCounterexample => "none"
+            | Unknown reasons => String.concatWith "; " reasons
+            | _ => "other"
+        val goal = ``!x. rf_thy_caller x = 0``
+        val saved = computeLib.the_compset ()
       in
-        aconv cold (result ())
+        Portable.finally (fn () => computeLib.put_compset saved)
+          (fn () =>
+             let
+               val _ = computeLib.add_funs [caller]
+               val cold = summary goal
+               val _ = refute compute ``!x. rf_thy_callee x = 0``
+             in
+               cold = summary goal
+             end) ()
       end)
+
+  val _ = test "mutually recursive theory definitions are executable"
+    (fn () => refuted_everywhere ``!t. rf_thy_tsize t < 3``)
 
   val _ = test "a loaded theory's definitions outside the compset are executable"
     (fn () => refuted_everywhere ``!x. zoo_thy_outer x < 9``)

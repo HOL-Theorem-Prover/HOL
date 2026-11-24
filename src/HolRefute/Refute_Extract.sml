@@ -1248,9 +1248,8 @@ structure Refute_Extract :> Refute_Extract = struct
           end
       | SOME {thm = DefnBase.OTHER _, ...} =>
           (* The registration is a fact about the constant, never handed
-             on; the definition its theory holds is what the executable
-             gate admitted. *)
-          (case theorem_for_theory constant of
+             on; the constant is read as an unregistered one is. *)
+          (case usable_without_userdef () of
              SOME theorem => theorem
            | NONE => reject ("non-equational definition for " ^
                              kname_text (kname constant)))
@@ -1270,7 +1269,7 @@ structure Refute_Extract :> Refute_Extract = struct
         in
           List.map instantiate names
         end
-    | _ => [constant]
+    | _ => Refute_Core.theory_definition_group constant
 
   fun ensure_definition context constant =
     case lookup_definition context constant of

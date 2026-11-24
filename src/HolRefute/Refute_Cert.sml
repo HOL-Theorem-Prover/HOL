@@ -59,8 +59,10 @@ structure Refute_Cert :> Refute_Cert = struct
      the same value ([computeLib.upd_compset] writes a new one) and no
      theory has changed since (a constant defined again under its old name
      keeps its key); the copy answers a term that reaches the same
-     definitions.  A copy is never changed once made, since other threads
-     may be evaluating in it. *)
+     definitions.  A write into the installed compset's own cells (an
+     unsealed one, after [computeLib.del_funs]) keeps its pointer and is
+     not seen until a theory changes.  A copy is never changed once
+     made, since other threads may be evaluating in it. *)
   local
     type defined =
       {base : computeLib.compset,

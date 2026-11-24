@@ -158,6 +158,9 @@ New features
     The default artifact layout is unchanged.
     See *Artifact layout* in the Description manual.
 
+-   HolRefute's random and exhaustive testing now evaluate constants that only their theory defines, as `new_definition` and `new_recursive_definition` leave them, as its model finder already did.
+    Such constants no longer need to be added to the compset to be tested.
+
 Bugs fixed
 ----------
 
@@ -169,8 +172,6 @@ Bugs fixed
   reports counted reasons when Kodkod problems cannot be assembled.
 
 -   HolRefute now applies polymorphic `upd_box` type patterns to concrete instances.
--   HolRefute's random and exhaustive testing refused a constant defined only in its theory (by `new_definition` or `new_recursive_definition`, and not added to `computeLib.the_compset ()`) as not executable, though its model finder already reads such definitions.
-    These constants, and the ones their definitions use, are now evaluated through their definitions; the global compset is left unchanged.
 -   Omega's model reconstruction no longer fails when eliminating a variable
     leaves a single constrained variable and another unconstrained variable.
 

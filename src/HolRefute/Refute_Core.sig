@@ -153,6 +153,7 @@ signature Refute_Core = sig
   val constant_key : term -> constant_key
   val executable_keys : computeLib.compset -> constant_key Redblackset.set
   val theory_definitions : term -> thm list
+  val theory_definition_group : term -> term list
   val definition_closure : constant_key Redblackset.set -> term list ->
     {defined : term list, definitions : thm list, missing : term list}
   val nonexecutable_constants : term list -> term list

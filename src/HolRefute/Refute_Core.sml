@@ -1372,7 +1372,7 @@ structure Refute_Core :> Refute_Core = struct
      constant to [DefnBase] or the compset.  A recursive definition with
      no termination proof has only its [WFREC] primitive there, which
      nothing evaluates, so none. *)
-  fun theory_definitions constant =
+  fun theory_entries constant =
     let
       val {Name, Thy, ...} = Term.dest_thy_const constant
       val entries =
@@ -1386,19 +1386,56 @@ structure Refute_Core :> Refute_Core = struct
                   (Thm.concl equation)))))) of
           SOME {Name = "WFREC", Thy = "relation", ...} => true
         | _ => false
-      fun own (_, theorem) =
+      fun usable (_, theorem) =
         if not (Theory.uptodate_thm theorem) then NONE
         else
-          case List.filter (fn (key, _) => key = {Name = Name, Thy = Thy})
-                 (DefnBase.defn_eqns theorem
-                  handle DefnBase.nonstdform => []) of
-            [] => NONE
-          | equations =>
-              if List.exists (is_primitive o #2) equations then NONE
-              else SOME (Drule.LIST_CONJ (map #2 equations))
+          let
+            val equations = DefnBase.defn_eqns theorem
+              handle DefnBase.nonstdform => []
+          in
+            if List.exists (fn (key, _) => key = {Name = Name, Thy = Thy})
+                 equations andalso
+               not (List.exists (is_primitive o #2) equations)
+            then SOME equations
+            else NONE
+          end
     in
-      List.mapPartial own entries
+      List.mapPartial usable entries
     end
+
+  fun theory_definitions constant =
+    let val {Name, Thy, ...} = Term.dest_thy_const constant
+    in
+      map (fn equations =>
+             Drule.LIST_CONJ (map #2 (List.filter
+               (fn (key, _) => key = {Name = Name, Thy = Thy}) equations)))
+        (theory_entries constant)
+    end
+
+  (* The constants the theorem behind [theory_definition constant] defines
+     together, at [constant]'s type instance: a
+     [Prim_rec.new_recursive_definition] over a mutually recursive
+     datatype defines several, each calling the others. *)
+  fun theory_definition_group constant =
+    case theory_entries constant of
+      [] => [constant]
+    | entries =>
+        let
+          fun head equation =
+            #1 (boolSyntax.strip_comb (boolSyntax.lhs
+              (#2 (boolSyntax.strip_forall (Thm.concl equation)))))
+          val heads = List.foldl (fn ((_, equation), heads) =>
+              let val h = head equation
+              in
+                if List.exists (Term.same_const h) heads then heads
+                else heads @ [h]
+              end) [] (List.last entries)
+          val generic = valOf (List.find (Term.same_const constant) heads)
+          val theta =
+            Type.match_type (Term.type_of generic) (Term.type_of constant)
+        in
+          map (Term.inst theta) heads
+        end
 
   fun theory_definition constant =
     case theory_definitions constant of
