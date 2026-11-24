@@ -1119,8 +1119,8 @@ fun tyi_to_ssdata tyinfo =
       val tyname = thy ^ "$" ^ tyop
       val {rewrs = rws0, convs} = TypeBasePure.simpls_of tyinfo;
       fun name_of th i =
-          case DB.revlookup th of
-              DB_dtype.Stored {Thy, Name} :: _ => {Thy = Thy, Name = Name}
+          case DB.revhead th of
+              SOME (DB_dtype.Stored {Thy, Name}) => {Thy = Thy, Name = Name}
             | _ => {Thy = "", Name = tyname ^ " simpl. " ^ Int.toString i}
       fun reduce (th, (i,A)) =
           (i + 1, (SOME (name_of th i), th) :: A)
