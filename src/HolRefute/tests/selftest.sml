@@ -1712,8 +1712,8 @@ val _ = mf_test "a caller's codatatype constructor is refused where used"
 (* A datatype's case constant is given case
    semantics, and its constructors are encoded as free and covering the
    type, on the theorems of its TypeBase entry: an entry whose case or
-   injectivity theorem is only assumed caps what the model finder says of
-   a problem that uses them.  The type's own entry is restored. *)
+   injectivity theorem is untrusted caps what the model finder says of a
+   problem that uses them.  The type's own entry is restored. *)
 local
   val _ = Datatype.Datatype `rf_chk_box = RFBox num | RFEmpty`
   val _ = Datatype.Datatype `rf_chk_pick = RFPick bool | RFNone`
@@ -1721,6 +1721,10 @@ local
   val box_info = read "rf_chk_box"
   val pick_info = read "rf_chk_pick"
   fun assumed thm = Thm.ASSUME (Thm.concl thm)
+  (* A hypothesis can't stand in for the case theorem: the replay then
+     certifies the counterexample from trusted theorems alone, so it is
+     rightly not capped.  Only a tagged theorem reaches the replay. *)
+  fun cheated thm = Tactical.prove (Thm.concl thm, cheat)
   fun rewritten case_def one_one info =
     TypeBasePure.mk_datatype_info_no_simpls
       {ax = TypeBasePure.axiom_of0 info,
@@ -1739,9 +1743,9 @@ local
     (TypeBase.write [info];
      Portable.finally (fn () => TypeBase.write [original]) body ())
 in
-  val _ = mf_test "a case constant on an assumed case theorem is capped"
+  val _ = mf_test "a case constant on a cheated case theorem is capped"
     (fn () =>
-       with_entry (rewritten assumed I box_info) box_info (fn () =>
+       with_entry (rewritten cheated I box_info) box_info (fn () =>
          refute mf ``!b. rf_chk_box_CASE b (\n. n) 0 = 0``)
        |> refused_registration "refused fact")
   val _ = mf_test
@@ -1872,7 +1876,10 @@ local
     `rf_chk_ev 0 /\ (!n. rf_chk_od n ==> rf_chk_ev (SUC n)) /\
      (!n. rf_chk_ev n ==> rf_chk_od (SUC n))`
   val _ = Theory.delete_binding "rf_chk_ev_rules"
-  val _ = save_thm ("rf_chk_ev_rules", Thm.ASSUME (concl rules))
+  (* tagged, not assumed: the finder reads a theorem as [hyps ==> concl],
+     and an assumed rules theorem then fails the group's shape, so no
+     group would be cached *)
+  val _ = save_thm ("rf_chk_ev_rules", Tactical.prove (concl rules, cheat))
   val context = Refute_ModelFinder_HOL.make_context (#mf default_config) []
   fun refusals relation = #2 (Refute_Facts.capture (fn () =>
     Refute_ModelFinder_HOL.instantiated_fixpoint_group context relation))
