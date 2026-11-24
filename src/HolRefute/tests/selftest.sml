@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Five deliberate reaches outside the [Refute] signature.  One is a
+(* Six deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -24,6 +24,10 @@ local open Refute_Rat Refute_Real in end
    deadline.  The fifth is [Refute_Cert_Model.certify_portfolio_detailed_rich],
    called by "a failed case split goes on to the next candidate": the
    order in which the model replay tries its candidates is not visible
+   through [Refute].  The sixth is
+   [Refute_ModelFinder_Util.apply_within_budget] with its clock
+   [Refute_ThreadClock], called by the model finder's inner-proof budget
+   tests: the budget is CPU time, which only a loaded machine would show
    through [Refute]. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
@@ -3111,6 +3115,101 @@ val _ = test "print_unused_assms counts inconclusive probes" (fn () =>
 (* ------------------------------------------------------------------- *)
 
 val _ = section "model finder"
+
+(* The model finder's own proofs (monotonicity, well-foundedness, the
+   fixpoint lemma) run under [tac_timeout] of the calling thread's CPU
+   time, so that a loaded machine doesn't change what they prove.  Each
+   check here holds however loaded the machine is: work that waits uses
+   no CPU, and work that computes is measured by the same clock. *)
+(* reached only through the alias below (holdep) *)
+local open Refute_ThreadClock in end
+local
+  val within = Refute_ModelFinder_Util.apply_within_budget
+  structure Clock = Refute_ThreadClock
+  fun seconds s = Time.fromReal s
+  fun idle s () = (OS.Process.sleep (seconds s); true)
+  fun spin n = spin (n + 1) : bool
+  fun spin_for s =
+    let
+      val clock = Clock.start ()
+      fun loop () = Clock.seconds clock >= s orelse loop ()
+    in
+      loop ()
+    end
+  fun times_out f =
+    (ignore (f ()); false) handle Timeout.TIMEOUT _ => true
+in
+val _ = test "an inner proof that waits runs past its CPU budget" (fn () =>
+  within (seconds 0.05) (idle 0.3) ())
+
+val _ = test "an inner proof that computes stops at its CPU budget" (fn () =>
+  let val clock = Clock.start () in
+    times_out (fn () => within (seconds 0.2) spin 0) andalso
+    Clock.seconds clock >= 0.2 - Clock.tick
+  end)
+
+val _ = test "a spent inner budget raises before the work starts" (fn () =>
+  let val started = ref false in
+    times_out (fn () =>
+      within Time.zeroTime (fn () => (started := true; true)) ()) andalso
+    not (!started)
+  end)
+
+(* only Linux reports a thread's CPU time; elsewhere the process's counts *)
+val _ =
+  if not (OS.FileSys.access ("/proc/thread-self", [])) then ()
+  else
+    test "another thread computing doesn't count against an inner proof"
+      (fn () =>
+        let
+          val stop = ref false
+          fun spinner () = if !stop then () else spinner ()
+          val _ = Thread.fork (spinner, [])
+        in
+          (within (seconds 0.05) (idle 0.3) () before stop := true)
+          handle e => (stop := true; raise e)
+        end)
+
+val _ = test "the thread clock falls back to the process clock" (fn () =>
+  let
+    val started = Time.now ()
+    val clocks = [Clock.start_reading NONE,
+                  Clock.start_reading (SOME "/nonexistent/stat")]
+    val _ = spin_for 0.05
+    val used = List.map Clock.seconds clocks
+    val wall = Time.toReal (Time.- (Time.now (), started))
+  in
+    List.all (fn s => s > 0.0 andalso s <= wall) used
+  end)
+
+(* An outer deadline that falls first stops the call, as Timeout.apply's
+   would, and stays the outer call's own: the inner call passes the
+   interrupt on rather than calling it its own timeout. *)
+val _ = test "an outer deadline stops an inner proof first" (fn () =>
+  let val finished = ref false in
+    times_out (fn () =>
+      Timeout.apply (seconds 0.2)
+        (fn () =>
+           (within (seconds 100.0) spin 0
+            handle Timeout.TIMEOUT _ => (finished := true; true))) ()) andalso
+    not (!finished)
+  end)
+
+(* The watcher of a call never interrupts after the call has returned:
+   interruptible work after many calls, some stopped, runs undisturbed. *)
+val _ = test "no interrupt outlives an inner proof" (fn () =>
+  let
+    fun calls 0 = ()
+      | calls n =
+          (ignore (within (seconds 0.01) (fn () => true) ());
+           if n mod 10 = 0 then ignore (times_out (fn () =>
+             within (seconds 0.01) spin 0)) else ();
+           calls (n - 1))
+  in
+    (calls 200; idle 0.2 () andalso spin_for 0.05)
+    handle Interrupt => false
+  end)
+end
 
 val hand_gfp_and_def = TotalDefn.Define
   `hand_gfp_and = fixedPoint$gfp (\X (b:bool). b /\ X b)`

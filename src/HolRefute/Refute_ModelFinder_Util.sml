@@ -256,11 +256,87 @@ structure Refute_ModelFinder_Util :> Refute_ModelFinder_Util = struct
 
   fun plural_s_for_list values = if length values = 1 then "" else "s"
 
-  (* Timeout.apply lets a body beat an already-spent budget, so a
-     non-positive budget raises the deadline's own TIMEOUT up front. *)
+  (* [apply_within_budget budget work argument] runs [work argument] on the
+     calling thread, as Timeout.apply does, but stops it with TIMEOUT once
+     that thread has used [budget] of CPU time, so that a proof needing
+     milliseconds still gets them on a loaded machine.  Work that uses no
+     CPU (blocked on a lock, say) is stopped after [backstop_factor] times
+     [budget] of wall time.
+
+     A watcher thread reads the caller's clock in wall slices of the CPU
+     budget left and interrupts the caller at most once, deciding under
+     [lock] against the caller having finished; the caller marks itself
+     finished with interrupts deferred, so no interrupt lands after the
+     call returns.  As in Timeout.apply, an interrupt this call didn't
+     send (an outer deadline's) is passed on, not turned into TIMEOUT.
+     The watcher is a thread of its own rather than an Event_Timer
+     request because a timer event cannot request another: the timer runs
+     its events under the lock [Event_Timer.request] takes.
+
+     A non-positive budget raises TIMEOUT up front, since the work could
+     otherwise beat an already-spent budget. *)
+  val backstop_factor = 20.0
+
+  datatype watch = Watching | Fired | Finished
+
   fun apply_within_budget budget work argument =
     if Time.<= (budget, Time.zeroTime) then raise Timeout.TIMEOUT budget
-    else Timeout.apply budget work argument
+    else
+      Thread_Attributes.with_attributes Thread_Attributes.no_interrupts
+        (fn caller_attributes =>
+          let
+            val caller = Thread.self ()
+            val started = Time.now ()
+            val limit = Time.toReal budget
+            val backstop =
+              Time.+ (started, Time.fromReal (backstop_factor * limit))
+            val clock = Refute_ThreadClock.start ()
+            val lock = Mutex.mutex ()
+            val wake = ConditionVar.conditionVar ()
+            val state = ref Watching
+            (* with [lock] held *)
+            fun watch () =
+              if !state <> Watching then ()
+              else
+                let
+                  val left = limit - Refute_ThreadClock.seconds clock
+                  val now = Time.now ()
+                in
+                  if left <= 0.0 orelse Time.>= (now, backstop) then
+                    (state := Fired;
+                     Standard_Thread.interrupt_unsynchronized caller)
+                  else
+                    let
+                      (* at least a tick, the clock's resolution *)
+                      val slice = Time.+ (now, Time.fromReal
+                        (Real.max (left, Refute_ThreadClock.tick)))
+                    in
+                      ignore (ConditionVar.waitUntil (wake, lock,
+                        if Time.< (slice, backstop) then slice
+                        else backstop));
+                      watch ()
+                    end
+                end
+            fun watcher () = (Mutex.lock lock; watch (); Mutex.unlock lock)
+            val _ = Thread.fork (watcher,
+                      [Thread.InterruptState Thread.InterruptDefer])
+            val result =
+              Exn.capture (fn () =>
+                Thread_Attributes.with_attributes caller_attributes
+                  (fn _ => work argument)) ()
+            val stop = Time.now ()
+            val _ = Mutex.lock lock
+            val fired = !state = Fired
+            val _ = state := Finished
+            val _ = ConditionVar.signal wake
+            val _ = Mutex.unlock lock
+            val test = Exn.capture Thread_Attributes.expose_interrupt ()
+          in
+            if fired andalso
+               (Exn.is_interrupt_exn result orelse Exn.is_interrupt_exn test)
+            then raise Timeout.TIMEOUT (Time.- (stop, started))
+            else (Exn.release test; Exn.release result)
+          end)
 
   fun flip_polarity Pos = Neg
     | flip_polarity Neg = Pos
