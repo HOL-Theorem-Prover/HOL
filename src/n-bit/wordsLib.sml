@@ -558,7 +558,8 @@ in
         val is_ground = is_ground_fn set
      in
         fn t =>
-          ( List.null (type_vars_in_term t) andalso is_ground t orelse
+          ( (is_ground t handle HOL_ERR _ => false) andalso
+            List.null (type_vars_in_term t) orelse
             raise ERR "WORD_GROUND_CONV"
                       "Term not ground or contains type variables."
           ; cnv t
