@@ -5682,14 +5682,13 @@ val _ = test "a looping srw_ss conversion stops at the step limit" (fn () =>
    deadline. *)
 val _ = test "a candidate's evaluation stops at its step budget" (fn () =>
   let
-    val start = Time.now ()
     val outcome =
       refute (exhaustive |> upd_substrate Compute |> upd_size 1
                          |> upd_timeout 60.0)
              ``n < 2 ==> FUNPOW SUC 100000000 n = 0``
   in
-    is_unknown outcome andalso not (unknown_with "timed out" outcome) andalso
-    Time.toReal (Time.- (Time.now (), start)) < 30.0
+    unknown_with "search space not exhausted" outcome andalso
+    not (unknown_with "timed out" outcome)
   end)
 
 (* ------------------------------------------------------------------- *)

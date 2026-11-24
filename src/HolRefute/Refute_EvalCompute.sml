@@ -27,42 +27,32 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
 
   val steps_left : int ref Thread_Data.var = Thread_Data.var ()
 
-  (* One stopper in [computeLib.stoppers] counts the steps of a thread
-     evaluating under a budget, and hands every other thread's to the
-     stopper it replaced, so evaluation outside the search is unchanged.
-     It is put back if something else has replaced it since. *)
+  (* One stopper, put in [computeLib.stoppers] when this structure loads
+     and never replaced from here, counts the steps of a thread evaluating
+     under a budget and hands every other thread's to the stopper it found
+     there, so evaluation outside the search is unchanged.  A
+     [Lib.with_flag] on [computeLib.stoppers] elsewhere puts its own
+     stopper there for the length of its call: [CBVn_CONV]'s calls this
+     one, [RESTR_EVAL_CONV]'s doesn't, so while one of the latter runs on
+     another thread the steps go uncounted, and counting resumes once it
+     restores this stopper. *)
   local
-    val installed = Synchronized.var "Refute_EvalCompute.stopper"
-      (NONE : (term -> bool) option)
-    fun is_installed (SOME stop) (SOME current) =
-          PolyML.pointerEq (stop, current)
-      | is_installed _ _ = false
+    val previous = !computeLib.stoppers
+    fun stop head =
+      case Thread_Data.get steps_left of
+          SOME left =>
+            if !left <= 0 then raise OutOfSteps
+            else (left := !left - 1; false)
+        | NONE => (case previous of SOME f => f head | NONE => false)
   in
-    fun install_stopper () =
-      Synchronized.change installed (fn ours =>
-        if is_installed ours (!computeLib.stoppers) then ours
-        else
-          let
-            val previous = !computeLib.stoppers
-            fun stop head =
-              case Thread_Data.get steps_left of
-                  SOME left =>
-                    if !left <= 0 then raise OutOfSteps
-                    else (left := !left - 1; false)
-                | NONE =>
-                    (case previous of SOME f => f head | NONE => false)
-          in
-            computeLib.stoppers := SOME stop;
-            SOME stop
-          end)
+    val _ = computeLib.stoppers := SOME stop
   end
 
   fun eval_rhs env tm =
     let val instance = instantiate env tm in
-      (install_stopper ();
-       rhs_of
-         (Thread_Data.setmp steps_left (SOME (ref evaluation_steps))
-            eval instance))
+      rhs_of
+        (Thread_Data.setmp steps_left (SOME (ref evaluation_steps))
+           eval instance)
       handle OutOfSteps => instance
     end
 
