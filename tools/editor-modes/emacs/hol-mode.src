@@ -3431,6 +3431,48 @@ so a slow server never freezes emacs on a keystroke."
                            :cancel-on-input cancel-on-input)
         (error nil)))))
 
+;; ---------------------------------------------------------------------
+;; What the REPL would have said
+;; ---------------------------------------------------------------------
+;; Between declarations there is no goal state, and the pane used to
+;; say so.  `$/hol/declResults' answers the other question a cursor
+;; parked there is asking -- what did the declaration above me come out
+;; as -- and answers it for a whole selection when there is one.
+
+(defun hol-lsp--pos-lc (pos)
+  "LSP `position' object for buffer position POS.
+`character' is a byte offset within the line: the HOL server uses
+UTF-8 position encoding, as `hol-lsp--point-byte-in-line' explains."
+  (save-excursion
+    (goto-char pos)
+    (list :line (1- (line-number-at-pos))
+          :character (hol-lsp--point-byte-in-line))))
+
+(defun hol-lsp--declresults-params ()
+  "Build the `$/hol/declResults' params object.
+The range is the region when there is one and an empty range at point
+otherwise -- which is exactly the distinction the server acts on, so
+it is made here rather than by sending two different requests."
+  (let ((beg (if (use-region-p) (region-beginning) (point)))
+        (end (if (use-region-p) (region-end) (point))))
+    (list :textDocument (list :uri (hol-lsp--path-to-uri buffer-file-name))
+          :range (list :start (hol-lsp--pos-lc beg)
+                       :end (hol-lsp--pos-lc end))
+          :width (hol-lsp--goals-width))))
+
+(defun hol-lsp--query-decls (&optional cancel-on-input)
+  "Send `$/hol/declResults' synchronously; nil on any failure.
+Changes are flushed first for the reason `hol-lsp--query' gives."
+  (let ((server (hol-lsp--server)))
+    (when (and server buffer-file-name)
+      (when (fboundp 'eglot--signal-textDocument/didChange)
+        (ignore-errors (eglot--signal-textDocument/didChange)))
+      (condition-case nil
+          (jsonrpc-request server :$/hol/declResults
+                           (hol-lsp--declresults-params)
+                           :cancel-on-input cancel-on-input)
+        (error nil)))))
+
 (defcustom hol-lsp-eval-buffer-name "*HOL LSP Eval*"
   "Buffer that `hol-lsp-eval-region' appends the server's output to."
   :type 'string
@@ -4004,18 +4046,116 @@ header."
           ;; the window shows its end rather than its start.
           (with-selected-window win (recenter -1)))))))))
 
+(defun hol-lsp--jbool (v)
+  "Whether V, as a JSON value, is true.
+`false' arrives as `:json-false\=', which is not nil in Lisp."
+  (and v (not (eq v :json-false))))
+
+(defun hol-lsp--decls-header (result)
+  "Header-line text for a `$/hol/declResults\=' RESULT.
+What is up here is what the body cannot say for itself: how many
+declarations are on show, how many were dropped, and whether the
+selection cut into a declaration at either end -- that last being the
+difference between a short answer and a wrong one.  `%\=' is doubled
+for the same reason as in `hol-lsp--goals-header\='."
+  (let* ((n (length (append (plist-get result :results) nil)))
+         (omitted (or (plist-get result :omitted) 0))
+         (torn (append (and (hol-lsp--jbool (plist-get result :tornStart))
+                            '("starts"))
+                       (and (hol-lsp--jbool (plist-get result :tornEnd))
+                            '("ends"))))
+         (text (concat
+                (cond ((zerop n) "no declaration value to show")
+                      ((= n 1) "last declaration")
+                      (t (format "%d declarations" n)))
+                (and (> omitted 0)
+                     (format "  (%d earlier omitted)" omitted))
+                (and torn
+                     (concat "  ⚠ selection "
+                             (mapconcat #'identity torn " and ")
+                             " part-way through a declaration"))
+                (and (hol-lsp--pending-p result) "  ⋯ still compiling"))))
+    (replace-regexp-in-string "%" "%%" text)))
+
+(defun hol-lsp--render-decls (result)
+  "Render a `$/hol/declResults\=' RESULT into *HOL Goals\='.
+Deliberately the same buffer as the goal state: it is one pane
+answering one question -- what is the state at the cursor -- and
+between declarations the answer is what the declarations came out as.
+Blank lines separate the declarations; the last one is at the bottom,
+where the goal state\='s current goal also is."
+  (let ((action (hol-lsp--goals-display-action))
+        (header (hol-lsp--decls-header result))
+        (body (mapconcat (lambda (r) (plist-get r :text))
+                         (append (plist-get result :results) nil)
+                         "\n")))
+    (with-current-buffer (get-buffer-create "*HOL Goals*")
+      (let ((inhibit-read-only t))
+        (if (equal (cons header body) hol-lsp--last-render)
+            (display-buffer (current-buffer) action)
+          (erase-buffer)
+          (insert body)
+          (hol-lsp-goals-mode)
+          (setq-local header-line-format header)
+          (setq-local hol-lsp--last-render (cons header body))
+          (goto-char (point-max))
+          (let ((win (display-buffer (current-buffer) action)))
+            (when (window-live-p win)
+              (set-window-point win (point-max))
+              (with-selected-window win (recenter -1)))))))))
+
+(defun hol-lsp--goals-answer (&optional cancel-on-input)
+  "The pane\='s answer for where the cursor (or the region) is.
+Returns (KIND . RESULT) with KIND `goals\=' or `decls\=', or nil.
+
+An active region is a question about declarations, so it is asked
+first; a bare cursor is a question about a proof, so that is.  Either
+way the other is the fallback, which is what lets a region inside one
+proof body still show goals and a cursor after a `QED\=' still show what
+the theorem came out as."
+  (let* ((region (use-region-p))
+         (first (if region
+                    (cons 'decls (hol-lsp--query-decls cancel-on-input))
+                  (cons 'goals (hol-lsp--query cancel-on-input)))))
+    (if (cdr first) first
+      (if region
+          (let ((g (hol-lsp--query cancel-on-input)))
+            (and g (cons 'goals g)))
+        (let ((d (hol-lsp--query-decls cancel-on-input)))
+          (and d (cons 'decls d)))))))
+
+(defun hol-lsp--answer-refused-p (answer)
+  "Whether ANSWER is the server saying \"not yet\" and nothing else.
+For a goal state that is `hol-lsp--refused-p\='; for declaration
+results it is a `pending\=' with nothing in it, which is the same
+thing said about the same compile."
+  (if (eq (car answer) 'decls)
+      (and (hol-lsp--pending-p (cdr answer))
+           (null (append (plist-get (cdr answer) :results) nil)))
+    (hol-lsp--refused-p (cdr answer))))
+
+(defun hol-lsp--render-answer (answer)
+  "Render ANSWER, a (KIND . RESULT) pair from `hol-lsp--goals-answer\='."
+  (if (eq (car answer) 'decls)
+      (hol-lsp--render-decls (cdr answer))
+    (hol-lsp--render-goals (cdr answer))))
+
 (defun hol-lsp-show-goal-state ()
-  "Ask the HOL LSP server for the goal-state at point.
-Sends the custom `$/hol/goalState' request and renders the response
-in a *HOL Goals* buffer.  Reached with \\[hol-show-goals], which
-`hol-print-goal' answers when no server is serving the buffer."
+  "Ask the HOL LSP server what the state at point is.
+Inside a `Proof … QED' body that is the goal state
+(`$/hol/goalState'); between declarations it is what the REPL would
+have printed for the one above (`$/hol/declResults'), and with a
+region active it is that for every declaration the region contains.
+Either way the answer is rendered in a *HOL Goals* buffer.  Reached
+with \\[hol-show-goals], which `hol-print-goal' answers when no server
+is serving the buffer."
   (interactive)
   (unless (hol-lsp--server)
     (user-error "No LSP server for this buffer"))
-  (let ((result (hol-lsp--query)))
-    (cond ((and result (hol-lsp--refused-p result))
+  (let ((answer (hol-lsp--goals-answer)))
+    (cond ((and answer (hol-lsp--answer-refused-p answer))
            (message "HOL: compile in progress — goal state pending"))
-          (result (hol-lsp--render-goals result))
+          (answer (hol-lsp--render-answer answer))
           ;; A blocked buffer has no goal state anywhere in it, and
           ;; saying only "no goal state at point" would send the user
           ;; looking for the fault in their proof.
@@ -4042,15 +4182,15 @@ render on success."
   (setq hol-lsp--goals-timer nil)
   (when (buffer-live-p buf)
     (with-current-buffer buf
-      (let ((result (hol-lsp--query t)))
+      (let ((answer (hol-lsp--goals-answer t)))
         ;; A refusal is silent here: the tick fires on every cursor
         ;; movement, so saying so would fill the echo area for as long
         ;; as the compile runs, and the mode line says it already.
         ;; The pane keeps the last state it was given.  A provisional
         ;; answer is not a refusal -- it has a state in it, and the
         ;; header says it is not settled.
-        (when (and result (not (hol-lsp--refused-p result)))
-          (hol-lsp--render-goals result))))))
+        (when (and answer (not (hol-lsp--answer-refused-p answer)))
+          (hol-lsp--render-answer answer))))))
 
 (defun hol-lsp--goals-schedule ()
   "Post-command hook: reschedule the auto-follow refresh if
