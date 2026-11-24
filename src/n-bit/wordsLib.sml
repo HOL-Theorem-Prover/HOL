@@ -489,7 +489,8 @@ local
                 "<=", ">=", "<", ">"])
 
   fun is_hex_digit_literal t =
-     numSyntax.int_of_term t < 16 handle HOL_ERR _ => false
+     Arbnum.< (numSyntax.dest_numeral t, Arbnum.fromInt 16)
+     handle HOL_ERR _ => false
 
   fun is_bool t = Teq t orelse Feq t
 
