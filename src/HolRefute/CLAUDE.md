@@ -54,12 +54,14 @@ repository.
 - The selftest exercises only the `Refute` signature and the shipped
   theories' ancestry: user-visible outcomes, messages, registrations, and
   what a descendant theory inherits.  Mechanism-level checks (internal
-  modules, counters, serializer goldens) do not belong there.  Two
-  exceptions, both flagged in the file's header:
-  `Refute_ModelFinder_Model.lookup_term_postprocessor`, a registry entry
-  point kept out of the signature for want of a user; and
+  modules, counters, serializer goldens) do not belong there.  The
+  exceptions are listed, each with its reason, in the file's header;
+  among them `Refute_ModelFinder_Model.lookup_term_postprocessor`, a
+  registry entry point kept out of the signature for want of a user;
   `Refute_QC.strategy_run`, because an expired deadline's verdict has no
-  public route that is not decided by the same budget it tests.
+  public route that is not decided by the same budget it tests; and
+  `Refute_Core.normal_conv`, because the shape a goal is normalised to
+  is not visible through `Refute`.
 - The root CLAUDE.md's `--seq=tools/sequences/upto-parallel` pass does not
   reach this directory and adds no signal: it stops before
   `src/parallel_builds`, which is what pulls in HolRefute (POLY-only

@@ -1071,6 +1071,113 @@ structure Refute_Core :> Refute_Core = struct
       in
         Thm.INST [{redex = v, residue = e}] th
       end
+    (* [body = middle], where [body] is a quantifier's matrix: a
+       conjunction (an existential), or an implication from one or the
+       negation of one (a universal), of [equation] and [rest] in any
+       order; [middle] is [equation /\ branch] or [equation ==> branch],
+       with [branch] built from [rest] as [shape]'s [assemble] builds it.
+       Proved by the laws of conjunction alone, in this process. *)
+    fun rearrange existential body equation rest middle =
+      if Term.aconv body middle then Thm.REFL body
+      else
+        let
+          fun reorder conjunction =
+            Drule.EQT_ELIM
+              (Conv.AC_CONV (boolTheory.CONJ_ASSOC, boolTheory.CONJ_COMM)
+                 (boolSyntax.mk_eq
+                    (conjunction,
+                     boolSyntax.mk_conj
+                       (equation, boolSyntax.list_mk_conj rest))))
+          fun clause n th = List.nth (Drule.CONJUNCTS th, n)
+        in
+          if existential then
+            if null rest then
+              (* [equation = equation /\ T] *)
+              Thm.SYM (clause 1 (Thm.SPEC equation boolTheory.AND_CLAUSES))
+            else reorder body
+          else if boolSyntax.is_neg body then
+            if null rest then
+              (* [~equation = (equation ==> F)] *)
+              Thm.SYM (clause 4 (Thm.SPEC equation boolTheory.IMP_CLAUSES))
+            else
+              let
+                val others = boolSyntax.list_mk_conj rest
+              in
+                (* [~(equation /\ others) = (equation ==> ~others)] *)
+                Thm.TRANS
+                  (Thm.AP_TERM boolSyntax.negation
+                     (reorder (boolSyntax.dest_neg body)))
+                  (Thm.TRANS
+                     (clause 0
+                        (Drule.SPECL [equation, others]
+                           boolTheory.DE_MORGAN_THM))
+                     (Thm.SYM
+                        (Drule.SPECL [equation, boolSyntax.mk_neg others]
+                           boolTheory.IMP_DISJ_THM)))
+              end
+          else
+            let
+              val (antecedent, consequent) = boolSyntax.dest_imp body
+            in
+              (* [(equation /\ others ==> c) = (equation ==> others ==> c)] *)
+              Thm.TRANS
+                (Thm.AP_THM
+                   (Thm.AP_TERM boolSyntax.implication (reorder antecedent))
+                   consequent)
+                (Thm.SYM
+                   (Drule.SPECL
+                      [equation, boolSyntax.list_mk_conj rest, consequent]
+                      boolTheory.AND_IMP_INTRO))
+            end
+        end
+    (* [tm = target], where [tm] quantifies [binders] over a matrix
+       holding [equation], [e = C xs], [branch] is the matrix without it
+       and [make branch] is [target].  Proving [tm = target] by cases
+       itself could unwind an argument of [C] by another equation of the
+       matrix ([n = f y] beside [e = C n]) on the left side only, and
+       leave the sides different.  So the split is proved with the branch
+       a variable [P], where [equation] is the only equation to unwind
+       by, and [P] is then instantiated to the branch; [tm] is the
+       instance's left side up to rearranging its matrix ([rearrange]). *)
+    fun prove_case existential binders equation rest branch make e tm
+                   target =
+      let
+        val (connect, quantify, strip) =
+          if existential then
+            (boolSyntax.mk_conj, boolSyntax.list_mk_exists,
+             boolSyntax.strip_exists)
+          else
+            (boolSyntax.mk_imp, boolSyntax.list_mk_forall,
+             boolSyntax.strip_forall)
+        val P = Term.variant (binders @ Term.free_varsl [tm, target])
+          (Term.mk_var ("P", boolSyntax.list_mk_fun
+                               (map Term.type_of binders, Type.bool)))
+        val applied = Term.list_mk_comb (P, binders)
+        val schema =
+          prove_by_cases e (boolSyntax.mk_eq
+            (quantify (binders, connect (equation, applied)), make applied))
+        val instance =
+          Thm.INST [{redex = P, residue = Term.list_mk_abs (binders, branch)}]
+            schema
+        (* Both sides beta-normalised, so a redex [tm] holds already is
+           reduced alike and never told apart from the instance's. *)
+        val normalise = Conv.QCONV (Conv.REDEPTH_CONV Thm.BETA_CONV)
+        val middle = connect (equation, branch)
+        val expected =
+          boolSyntax.mk_eq (quantify (binders, middle), target)
+        val instance =
+          Thm.EQ_MP
+            (Thm.TRANS (normalise (Thm.concl instance))
+               (Thm.SYM (normalise expected)))
+            instance
+        val body = #2 (strip tm)
+        val rearranged =
+          List.foldr (fn (v, th) =>
+              (if existential then Drule.EXISTS_EQ else Drule.FORALL_EQ) v th)
+            (rearrange existential body equation rest middle) binders
+      in
+        Thm.TRANS rearranged instance
+      end
     (* The binders of [tm]'s prefix, its matrix, and how to rebuild a
        branch: [conjuncts] are the matrix's conjuncts that the equation
        is drawn from, [assemble rest] the branch from the others. *)
@@ -1126,20 +1233,25 @@ structure Refute_Core :> Refute_Core = struct
                    (Lib.enumerate 0 conjuncts) of
                  SOME (index, (e, constructor, arguments)) =>
                    let
-                     val (_, rest) = split_at index conjuncts
+                     val (equation, rest) = split_at index conjuncts
                      val others =
                        List.filter (not o is_binder arguments) binders
                      val _ = if List.exists (fixes others) rest
                              then raise Conv.UNCHANGED else ()
-                     val target =
-                       case_term e (constructor, arguments) (assemble rest)
-                         default
-                     (* outside the case, so the prefix stays prenex *)
-                     val target =
-                       if null others then target
-                       else requantify (others, target)
+                     fun make branch =
+                       let
+                         val target =
+                           case_term e (constructor, arguments) branch
+                             default
+                       in
+                         (* outside the case, so the prefix stays prenex *)
+                         if null others then target
+                         else requantify (others, target)
+                       end
+                     val branch = assemble rest
                    in
-                     prove_by_cases e (boolSyntax.mk_eq (tm, target))
+                     prove_case (boolSyntax.is_exists tm) binders equation
+                       rest branch make e tm (make branch)
                    end
                | NONE =>
                    if List.exists (pair_split_equation binders) conjuncts

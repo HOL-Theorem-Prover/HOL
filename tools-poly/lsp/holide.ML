@@ -25,6 +25,11 @@ val compile: bool ref
    REPL does.  Off for buffer elaboration, which binds the whole
    file; `$/eval' turns it on.  See `codeFn'. *)
 val printBindings: bool ref
+(* How deep a value prints before it is elided, for every renderer
+   that shows a binding the way a REPL would -- `printBindings' here
+   and `$/hol/declResults' in the server.  The width is the caller's;
+   the depth is a property of the rendering and the same either way. *)
+val printDepth: int
 
 datatype props =
   PQuote
@@ -57,11 +62,20 @@ val initialize:
        pool cancels and reports against: an edit is attributed to the
        declaration containing it, not to a raw offset. *)
     onDecStarted: int -> unit,
-    (* Called after each outer dec finishes compilation, with the byte
-       offset just past the dec's original-source span (from
-       `HOLSourceAST.decSpan`).  Used by the LSP to take mid-file
-       snapshots for incremental recompile. *)
-    onDecCompleted: int -> unit,
+    (* Called after each outer dec finishes compilation.  `stop` is the
+       byte offset just past the dec's original-source span (from
+       `HOLSourceAST.decSpan`); used by the LSP to take mid-file
+       snapshots for incremental recompile.
+
+       `bindings` is what the dec entered at the SML top level, in the
+       order the compiler reported it -- the same list `printBindings`
+       renders, and so the raw material for showing what a REPL would
+       have printed for this declaration.  Empty for a dec that binds
+       no value (`open`, a bare `;`, a pragma), and for one that failed
+       before it got that far. *)
+    onDecCompleted: {stop: int,
+                     bindings: (string * PolyML.NameSpace.Values.value) list}
+                    -> unit,
     (* Skip `finish` / `emitBuilt` / `onDecCompleted` for decs whose
        source span stops at or before this offset — they're presumed
        already compiled and preserved via a snapshot restored before
@@ -947,6 +961,13 @@ fun initialize {
         (curToken := (i+1, s); SOME (String.sub (s, i)))
       else (curToken := toState (); read2 ())
   val serial = ref 1
+  (* What the declaration being compiled has entered at the SML top
+     level, newest first.  Accumulated across every chunk of one
+     declaration -- a `Theory foo' expands to several -- and handed to
+     `onDecCompleted' when the declaration finishes.  Cleared by the
+     loop, not here, so that the cheat retry's binding joins the failed
+     attempt's rather than replacing a list the loop never saw. *)
+  val decValues = ref ([]: (string * PolyML.NameSpace.Values.value) list)
   fun ptFn NONE = ()
     | ptFn (SOME pt) = ptRef := moveDown (SOME pt) :: !ptRef
   fun codeFn NONE () = ()
@@ -974,6 +995,7 @@ fun initialize {
          `printWithType' renders the whole `val name = value: type'
          line, name included, so there is nothing to put in front of
          it, and `prettyPrint' ends the block with its own newline. *)
+      val () = decValues := List.revAppend (values, !decValues)
       val () = if not (!printBindings) then () else
         app (fn (_, v) =>
               PolyML.prettyPrint (toplevelOut, printWidth)
@@ -1204,11 +1226,12 @@ fun initialize {
         idx := 0; spans := []; curToken := toState ();
         onDecStarted decStart;
         hardError := false;
+        decValues := [];
         finish ();
         if !hardError then retryAsCheat () else ();
         emitBuilt ();
         ptRef := [];
-        onDecCompleted stopByte;
+        onDecCompleted {stop = stopByte, bindings = rev (!decValues)};
         case stopAfter of
             SOME b => if stopByte >= b then () else loop ()
           | NONE => loop ())
