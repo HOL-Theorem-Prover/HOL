@@ -131,9 +131,13 @@ definition or an equation lemma leads back to a visited constant.
 
 The tool prefers `<constant>_def` when its clauses define that constant,
 then other definitions with the same head and inductive `_rules` facts.
-When none is available, it shows definitions mentioning the constant and
-explicitly says they do not define it. Recursive equations take priority
-over `_def_primitive` encodings. Missing definitions are reported.
+A mutual recursion stores its equations once, under a single `_def` name,
+so the tool next takes any stored `_def` theorem with a clause for the
+constant. When none is available, it shows definitions mentioning the
+constant and explicitly says they do not define it. As on export,
+theorems that mention a deleted constant are ignored. Recursive equations
+take priority over `_def_primitive` encodings. Missing definitions are
+reported.
 
 Automatic equation lemmas have names `<constant>_...`, no kernel
 assumptions, and equations with distinct variable arguments and no

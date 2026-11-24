@@ -322,7 +322,8 @@ fun source_location index (n as {Thy, Name}) =
 fun line_of n = case location_of n of SOME (_, l) => l | NONE => 0
 
 (* The stored theorems of a theory, private ones included, in source
-   order. *)
+   order.  As when the theory is exported, theorems mentioning a deleted
+   constant or type are left out, but axioms are kept. *)
 val theory_cache = ref (Redblackmap.mkDict String.compare)
 
 fun theory_data thy =
@@ -336,7 +337,10 @@ fun theory_data thy =
           case Int.compare (line_of n1, line_of n2) of
             EQUAL => String.compare (key n1, key n2)
           | order => order
-        val d = Listsort.sort cmp (map entry (DB.thy thy))
+        fun kept (_, (th, {class, ...} : DB.thminfo)) =
+          class = DB.Axm orelse Theory.uptodate_thm th
+        val d =
+          Listsort.sort cmp (map entry (List.filter kept (DB.thy thy)))
       in
         theory_cache := Redblackmap.insert (!theory_cache, thy, d); d
       end
@@ -358,9 +362,11 @@ fun defined_heads th =
 (* The stored definitions of a constant, and whether they define it: the
    theorem <name>_def if its left-hand sides are headed by the constant,
    then the other definitions of its theory with such a clause, then the
-   rules theorem <name>_rules of an inductive relation; failing all these
-   (e.g. for new_specification), the definitions that mention it, which
-   need not define it.  A recursive
+   rules theorem <name>_rules of an inductive relation; then the stored
+   theorems <other>_def with such a clause, which hold the equations of a
+   mutual recursion for all its constants but the first; failing all
+   these (e.g. for new_specification), the definitions that mention it,
+   which need not define it.  A recursive
    definition's <name>_def holds its equations, which may be a theorem
    derived from a definition stored as <name>_def_primitive (over WFREC)
    or not stored at all; the primitive is shown only without them. *)
@@ -380,6 +386,12 @@ fun definitions_of c =
             not (is_primitive d andalso not (null equations)))
         defs
     val chosen = equations @ others @ named (Name ^ "_rules")
+    val mutual =
+      List.filter
+        (fn d as (m, _, _) =>
+            String.isSuffix "_def" (#Name m) andalso headed d)
+        data
+    val chosen = if null chosen then mutual else chosen
     val mentioning =
       List.filter (fn (_, th, _) => can (find_term (same_const c)) (concl th))
         defs
