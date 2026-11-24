@@ -21,12 +21,16 @@ fun mk_origin s1 s2 loc =
    source_location = loc}
 
 fun origins_of (HOL_ERROR {origins,...}) = origins
-fun message_of (HOL_ERROR {message,...}) = message
+fun rich_message_of (HOL_ERROR {message,...}) = message
+fun message_of (HOL_ERROR {message,...}) = HOLmessage.toString message
 
-fun mk_hol_error s1 s2 loc mesg =
+fun mk_hol_errorm s1 s2 loc mesg =
   HOL_ERROR
     {origins = [mk_origin s1 s2 loc],
      message = mesg}
+
+fun mk_hol_error s1 s2 loc mesg =
+  mk_hol_errorm s1 s2 loc (HOLmessage.txt mesg)
 
 fun wrap_hol_error s f l (HOL_ERROR {origins,message}) =
   HOL_ERROR
@@ -35,12 +39,20 @@ fun wrap_hol_error s f l (HOL_ERROR {origins,message}) =
 
 val empty_hol_error =
   HOL_ERROR
-    {origins = [], message = ""}
+    {origins = [], message = HOLmessage.empty}
+
+(* `hol_error' holds a message, which holds suspensions, so it is no
+   longer an equality type and `err = empty_hol_error' no longer
+   compiles.  This is that test, and it agrees with it on every value
+   the old one could see. *)
+fun is_empty_hol_error (HOL_ERROR {origins = [], message}) =
+      HOLmessage.isEmpty message
+  | is_empty_hol_error _ = false
 
 fun empty_origins_error sfn =
   HOL_ERROR
    {origins = [mk_origin "Feedback" sfn locn.Loc_Unknown],
-    message = "no origin"}
+    message = HOLmessage.txt "no origin"}
 
 val pp_hol_error =
   let open HOLPP
@@ -55,14 +67,14 @@ val pp_hol_error =
                      add_string (locn.toString source_location ^":")]))
   in
   fn (err as HOL_ERROR{origins,message}) =>
-    if err = empty_hol_error then
+    if is_empty_hol_error err then
         add_string "<empty-hol-error>"
      else
         block INCONSISTENT 0
           (pr_list pp_origin [NL] origins @
-           (if message = "" then
+           (if HOLmessage.isEmpty message then
                []
-            else [add_break(1,2), add_string message]))
+            else [add_break(1,2), HOLmessage.toPretty message]))
   end
 
 fun format_hol_error holerr =
@@ -93,6 +105,11 @@ fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
 
 fun mk_HOL_ERR s1 s2 s3 = HOL_ERR (mk_hol_error s1 s2 locn.Loc_Unknown s3)
 
+fun mk_HOL_ERRlocm s1 s2 locn m = HOL_ERR (mk_hol_errorm s1 s2 locn m)
+
+fun mk_HOL_ERRm s1 s2 m =
+  HOL_ERR (mk_hol_errorm s1 s2 locn.Loc_Unknown m)
+
 fun set_top_function fnm (HOL_ERROR {origins,message}) =
   case origins
    of [] => raise HOL_ERR (empty_origins_error "set_top_function")
@@ -102,8 +119,10 @@ fun set_top_function fnm (HOL_ERROR {origins,message}) =
                   origin_function = fnm} :: t,
        message = message}
 
-fun set_message msg (HOL_ERROR {origins,message}) =
+fun set_rich_message msg (HOL_ERROR {origins,message}) =
     HOL_ERROR {origins = origins, message = msg}
+
+fun set_message msg e = set_rich_message (HOLmessage.txt msg) e
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
@@ -212,6 +231,24 @@ fun wrap_exn s f = wrap_exn_loc s f locn.Loc_Unknown
 fun HOL_MESG s =
   if !emit_MESG then !MESG_outstream (!MESG_to_string s) else ()
 
+(* The `m' variants of the four channels take a message rather than a
+   string.  They flatten it for the outstreams, which is all a terminal
+   wants; a consumer that can do more with the values the message holds
+   gets at them through the hook rather than through here.
+
+   A plain ref rather than a `Listener.t', which is the shape this
+   wants: `Listener' is built on `Feedback' (it raises `HOL_ERR'), so
+   naming it here would close a cycle.  The outstreams beside it are
+   refs for the same reason. *)
+val MESG_hook : (HOLmessage.message -> unit) ref = ref (fn _ => ())
+
+fun HOL_MESGm m =
+  (if !emit_MESG then
+     (!MESG_hook m
+      handle Portable.Interrupt => raise Portable.Interrupt | _ => ())
+   else ();
+   HOL_MESG (HOLmessage.toString m))
+
 fun HOL_PROGRESS_MESG (start, finish) f x =
   if !emit_MESG then
     let in
@@ -227,11 +264,15 @@ fun HOL_WARNING s1 s2 s3 =
       !WARNING_outstream (!WARNING_to_string s1 s2 s3)
     else ()
 
+fun HOL_WARNINGm s1 s2 m = HOL_WARNING s1 s2 (HOLmessage.toString m)
+
 fun HOL_WARNINGloc s1 s2 locn s3 =
    HOL_WARNING s1 s2 (locn.toString locn ^ " :\n" ^ s3)
 
 fun HOL_INFO s =
     if !emit_INFO then !INFO_outstream (!INFO_to_string s) else ()
+
+fun HOL_INFOm m = HOL_INFO (HOLmessage.toString m)
 
 (* Route Portable.pprint through HOL_INFO so its output participates
    in the INFO channel rather than escaping straight to OS stdout.
@@ -239,252 +280,5 @@ fun HOL_INFO s =
    call HOL_INFO directly; here we patch its outstream ref now that
    the function exists. *)
 val () = Portable.pprint_outstream := HOL_INFO
-
-(*---------------------------------------------------------------------------*
- * Traces, numeric flags; the higher setting, the more verbose the output.   *
- *---------------------------------------------------------------------------*)
-
-datatype tracefns = TRFP of {get: unit -> int, set: int -> unit}
-fun trfp_set (TRFP {set, ...}) = set
-fun trfp_get (TRFP {get, ...}) = get ()
-
-fun ref2trfp r = TRFP {get = (fn () => !r), set = (fn i => r := i)}
-
-type trace_record = {
-  aliases : string list,
-  value: tracefns,
-  default: int,
-  maximum: int
-}
-
-datatype TI = TR of trace_record | ALIAS of string
-
-val trace_map : TI Symtab.table ref = ref Symtab.empty
-
-fun find_record n =
-  case Symtab.lookup (!trace_map) n of
-      NONE => NONE
-    | SOME (TR tr) => SOME tr
-    | SOME (ALIAS a) => find_record a
-
-val WARN = HOL_WARNING "Feedback"
-
-fun quote s = String.concat ["\"", s, "\""]
-
-local
-   fun err f l = raise ERR f (String.concat l)
-in
-   fun registered_err f nm = err f ["No trace ", quote nm, " is registered"]
-
-   fun bound_check f nm maximum value =
-      if value > maximum
-         then err f ["Trace ", quote nm, " can't be set that high."]
-      else if value < 0
-         then err f ["Trace ", quote nm, " can't be set less than 0."]
-      else ()
-end
-
-fun get_tracefn nm =
-   case find_record nm of
-      NONE => registered_err "get_tracefn" nm
-    | SOME {value = TRFP {get, ...}, ...} => get
-
-fun register_trace0 fnm (nm, r, max) =
-   if !r < 0 orelse max < 0
-      then raise ERR fnm "Can't have trace values less than zero."
-   else
-     let
-       val trfns as TRFP recd = ref2trfp r
-     in
-       case Symtab.lookup (!trace_map) nm of
-           NONE => ()
-         | SOME _ =>
-           WARN fnm ("Replacing a trace with name " ^ quote nm);
-       trace_map := Symtab.update
-                      (nm, TR {value = trfns, default = !r,
-                               aliases = [], maximum = max}) (!trace_map);
-       recd
-     end
-val register_trace = ignore o register_trace0 "register_trace"
-
-fun create_trace {name, max, initial} =
-    let val r = ref initial
-    in
-      register_trace0 "create_trace" (name, r, max)
-    end
-
-fun register_alias_trace {original, alias} =
-  if original = alias then
-    WARN "register_alias_trace" "original and alias are equal; doing nothing"
-  else
-    case find_record original of
-        NONE => raise ERR "register_alias_trace"
-                    ("Original trace: \""^original^"\" doesn't exist")
-      | SOME {aliases,maximum,default,value} =>
-        let
-          val aliases' =
-              if List.exists (fn s => s = alias) aliases then aliases
-              else alias::aliases
-          val recd = {aliases = aliases', maximum = maximum, default = default,
-                     value = value}
-          val record_alias = Symtab.update (original, TR recd) (!trace_map)
-          val mk_alias = Symtab.update (alias, ALIAS original) record_alias
-        in
-          case Symtab.lookup record_alias alias of
-              NONE => ()
-            | SOME (ALIAS a) =>
-                if a = original then ()
-                else WARN "register_alias_trace"
-                          ("Replacing existing alias binding for \""^
-                           alias ^ "\" |-> \"" ^ a ^"\"")
-            | SOME (TR _) =>
-                raise ERR "register_alias_trace"
-                      ("Cannot replace existing genuine trace info for \""^
-                       alias^"\"");
-          trace_map := mk_alias
-        end
-
-fun register_ftrace (nm, (get, set), max) =
-   let
-      val default = get ()
-   in
-      if default < 0 orelse max < 0
-         then raise ERR "register_ftrace"
-                        "Can't have trace values less than zero."
-      else (case Symtab.lookup (!trace_map) nm of
-               NONE => ()
-             | SOME _ => WARN "register_ftrace"
-                              ("Replacing a trace with name " ^ quote nm)
-            ; trace_map :=
-                  Symtab.update
-                     (nm, TR {value = TRFP {get = get, set = set},
-                              default = default, aliases = [],
-                              maximum = max}) (!trace_map))
-   end
-
-fun register_btrace0 fnm (nm, bref) =
-    let
-      fun get() = !bref
-      fun set b = bref := b
-    in
-      case Symtab.lookup (!trace_map) nm of
-          NONE => ()
-        | SOME _ => WARN fnm ("Replacing a trace with name "^ quote nm);
-      trace_map :=
-      Symtab.update
-        (nm,
-         TR {value = TRFP {get = (fn () => if !bref then 1 else 0),
-                           set = (fn i => bref := (i > 0))},
-             default = if !bref then 1 else 0, aliases = [],
-             maximum = 1}) (!trace_map);
-      {set = set, get = get}
-    end
-val register_btrace = ignore o register_btrace0 "register_btrace0"
-
-fun create_btrace (nm, initb) =
-    let val r = ref initb
-    in
-      register_btrace0 "create_btrace" (nm, r)
-    end
-
-datatype trace_elt =  (* for prettyprinting *)
-  TraceElt of
-    {name : string, aliases : string list,
-     trace_level : int, default : int, max : int}
-
-fun pp_trace_elt (TraceElt{name,aliases,trace_level,default,max}) =
-    let open HOLPP
-        val comma_space = [add_string",",add_break(1,0)]
-        fun interval a b =
-            map add_string ["[", Int.toString a, "..", Int.toString b, "]"]
-        val alias_list = pr_list add_string comma_space aliases
-        val name_plus_aliases =
-            if null aliases then
-               add_string name
-            else block CONSISTENT 2
-                   ([add_string name, add_break(0,0), add_string "["]
-                    @ alias_list @ [add_string "]"])
-    in block INCONSISTENT 2
-         [name_plus_aliases, add_string ":", add_break(1,0),
-          add_string (Int.toString trace_level), add_break(1,0),
-          block CONSISTENT 0 (interval 0 max)]
-    end
-
-fun traces () =
-   let
-      fun foldthis (n, ti) acc =
-        case ti of
-            ALIAS _ => acc
-          | TR {value, default = d, maximum, aliases} =>
-            {name = n, aliases = aliases,
-             trace_level = trfp_get value,
-             default = d,
-             max = maximum} :: acc
-   in
-     List.map TraceElt
-        (Symtab.fold_rev foldthis (!trace_map) [])
-   end
-
-fun set_trace nm newvalue =
-   case find_record nm of
-      SOME {value, maximum, ...} =>
-        (bound_check "set_trace" nm maximum newvalue; trfp_set value newvalue)
-    | NONE => registered_err "set_trace" nm
-
-fun reset_trace nm =
-   case find_record nm of
-      SOME {value, default, ...} => trfp_set value default
-    | NONE => registered_err "reset_trace" nm
-
-fun reset_traces () =
-  let
-    fun reset (TR{value,default,...}) = trfp_set value default
-      | reset (ALIAS _) = ()
-  in
-    List.app (reset o #2) (Symtab.dest (!trace_map))
-  end
-
-fun current_trace nm =
-   case find_record nm of
-      SOME {value, ...} => trfp_get value
-    | NONE => registered_err "current_trace" nm
-
-fun with_traces flags f x =
-  let fun update_flag (nm,j) =
-          case find_record nm
-           of NONE => registered_err "with_traces" nm
-            | SOME {value, maximum, ...} =>
-              let val i = trfp_get value
-                  fun reset_value() = trfp_set value i
-              in bound_check "with_traces" nm maximum j;
-                 trfp_set value j;
-                 reset_value end
-      val reset_fns = map update_flag flags
-      fun reset_flags() = List.app (fn f => f()) reset_fns
-      val y = f x handle e => (reset_flags(); Portable.reraise e)
-  in
-     reset_flags(); y
-  end
-
-fun trace flag = with_traces [flag]
-
-val () = register_btrace ("assumptions", Globals.show_assums)
-val () = register_btrace ("numeral types", Globals.show_numeral_types)
-
-val () =
-   let
-      val v = Globals.show_types_verbosely
-      val t = Globals.show_types
-      fun get () = if !v then 2 else if !t then 1 else 0
-      fun set i = if i = 0
-                     then (v := false; t := false)
-                  else if i = 1
-                     then (v := false; t := true)
-                  else (v := true; t := true)
-   in
-      register_ftrace ("types", (get, set), 2)
-   end
-
-val () = register_btrace ("PP.catch_withpp_err", OldPP.catch_withpp_err)
 
 end  (* Feedback *)

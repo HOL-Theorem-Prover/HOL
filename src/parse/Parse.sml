@@ -220,9 +220,9 @@ fun type_pp_with_delimiters ppfn ty =
     open Portable Globals smpp
   in
     mlower (
-      add_string (!type_pp_prefix) >>
-      block CONSISTENT (UTF8.size (!type_pp_prefix)) (lift ppfn ty) >>
-      add_string (!type_pp_suffix)
+      add_string (type_pp.type_pp_prefix()) >>
+      block CONSISTENT (UTF8.size (type_pp.type_pp_prefix())) (lift ppfn ty) >>
+      add_string (type_pp.type_pp_suffix())
     )
   end
 
@@ -317,7 +317,7 @@ fun overload_info_for s = let
                         (Overload.remove_overloaded_form s)
                         (term_grammar())
   val (_,ppfn0) = print_from_grammars (type_grammar(),g)
-  val ppfn = ppfn0 |> Feedback.trace ("types", 1)
+  val ppfn = ppfn0 |> HOLFlags.with_bflags [(HOLFlags.show_types, true)]
   val ppaction = let
     open smpp
   in
@@ -381,9 +381,9 @@ fun term_pp_with_delimiters ppfn tm =
     open Portable Globals smpp
   in
     mlower (
-      add_string (!term_pp_prefix) >>
-      block CONSISTENT (UTF8.size (!term_pp_prefix)) (lift ppfn tm) >>
-      add_string (!term_pp_suffix)
+      add_string (type_pp.term_pp_prefix()) >>
+      block CONSISTENT (UTF8.size (type_pp.term_pp_prefix())) (lift ppfn tm) >>
+      add_string (type_pp.term_pp_suffix())
     )
   end
 
@@ -404,17 +404,17 @@ fun pp_thm th =
           if !Globals.max_print_depth = 0 then add_string " ... "
           else
             let
-              open Globals
-              val (tg,asl,st,sa) = (tag th, hyp th, !show_tags, !show_assums)
+              open HOLFlags
+              val (tg,asl,st,sa) =
+                  (tag th, hyp th, get_bflag show_tags, get_bflag show_assums)
             in
               (if not st andalso not sa andalso null asl then nothing
                else
                  (if st then lift Tag.pp_tag tg else nothing) >>
                  add_break(1,0) >> pp_terms sa asl >> add_break(1,0)) >>
-              add_string (!Globals.thm_pp_prefix) >>
-              block CONSISTENT (UTF8.size (!Globals.thm_pp_prefix))
-                    (prt (concl th)) >>
-              add_string (!Globals.thm_pp_suffix)
+              add_string (type_pp.thm_pp_prefix()) >>
+              block CONSISTENT (UTF8.size (type_pp.thm_pp_prefix()))
+                    (prt (concl th))
             end
         )
   in
@@ -430,13 +430,20 @@ val print_thm = HOL_INFO o thm_to_string
 
 fun absyn_to_preterm a = TermParse.absyn_to_preterm (term_grammar()) a
 
+(* Suspended, not printed: an error that is caught and discarded --
+   which is most of them -- costs an allocation rather than a
+   pretty-print, and one that is shown carries the term to whoever
+   shows it. *)
+val stdprinters = SOME(fn t => HOLmessage.pp (fn () => pp_term t),
+                       fn ty => HOLmessage.pp (fn () => pp_type ty))
+
 fun Preterm q =
   case (q |> Absyn |> absyn_to_preterm) Pretype.Env.empty of
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, pt) => pt
 
 val absyn_to_term =
-    TermParse.absyn_to_term (SOME (term_to_string, type_to_string))
+    TermParse.absyn_to_term stdprinters
 
 
 (*---------------------------------------------------------------------------
@@ -450,9 +457,34 @@ fun Term_in ctxt q =
     absyn_to_term (get_term_grammar ctxt) (Absyn_in ctxt q)
 fun Term q = Term_in (Context.snapshot()) q
 
+(* The leading `(*#loc r c*)' of a quotation fragment, or "".
+
+   A fragment the quote filter wrote starts with one, and it is what
+   gives every token after it a position in the file.  A token written
+   *before* it has none -- the lexer has nothing to rebase it against
+   -- so it is reported as "frag 0 row 0 col 1", which names nothing a
+   reader can go to.  `typedTerm_in' below writes exactly one such
+   token, and the parser can blame it. *)
+fun loc_pragma_of s = let
+  val ss = Substring.dropl Char.isSpace (Substring.full s)
+in
+  if Substring.isPrefix "(*#loc" ss then
+    let val (body, close) = Substring.position "*)" ss
+    in if Substring.isEmpty close then "" else Substring.string body ^ "*)" end
+  else ""
+end
+
 fun typedTerm_in ctxt qtm ty = let
   val tyclose = [ANTIQUOTE (ty_antiq ty), QUOTE ""]
-  fun open_ (QUOTE s) t = QUOTE ("(" ^ s) :: t
+  (* The `(' is HOL's, not the user's, and it goes in ahead of the
+     fragment's own location pragma -- so repeat that pragma in front
+     of it, putting it at the quotation's first character.  Without
+     this an unclosed paren in the body, which leaves this one on the
+     parser's stack, is reported against a fragment offset instead of
+     against the file.  The body's copy of the pragma still follows
+     and still resets the lexer, so nothing inside the quotation
+     moves. *)
+  fun open_ (QUOTE s) t = QUOTE (loc_pragma_of s ^ "(" ^ s) :: t
     | open_ frag      t = QUOTE "(" :: frag :: t
   fun close (QUOTE s)   = QUOTE (s ^ "):") :: tyclose
     | close frag        = frag :: QUOTE "):" :: tyclose
@@ -483,7 +515,6 @@ fun smashErrm m =
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, result) => result
 
-val stdprinters = SOME(term_to_string,type_to_string)
 
 fun ctxt_absyn_to_preterm_in c fvs a =
   TermParse.ctxt_absyn_to_preterm (get_term_grammar c) fvs a
@@ -660,10 +691,6 @@ val els_include_unicode = let
 in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
-
-val unicode_off_but_unicode_act_complaint = ref true
-val _ = register_btrace("Parse.unicode_trace_off_complaints",
-                        unicode_off_but_unicode_act_complaint)
 
 fun make_add_rule gr =
   let
@@ -1110,7 +1137,7 @@ val _ = let
   val rawpp_thm =
       pp_thm
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-        |> trace ("paranoid string literal printing", 1)
+        |> HOLFlags.with_bflags [(Literal.paranoid_string_literals, true)]
   val rawpp_type =
       pp_type
         |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
@@ -1235,6 +1262,19 @@ val TOK = term_grammar.RE o term_grammar.TOK
   in
     put_term_grammar new_grammar
   end
+
+(* ----------------------------------------------------------------------
+    Common flags/traces
+   ---------------------------------------------------------------------- *)
+
+val avoid_unicode = type_pp.avoid_unicode
+val show_types = HOLFlags.show_types
+val show_assums = HOLFlags.show_assums
+
+val ambiguous_grammar_warning = parse_term.ambiguous_grammar_warning
+val notify_on_tyvar_guess = Preterm.notify_on_tyvar_guess
+val show_typecheck_errors = Preterm.show_typecheck_errors
+val show_syntax_errors = parse_term.show_syntax_errors
 
   val _ = Theory.register_hook
               ("Parse.clear_consts_from_grammar",

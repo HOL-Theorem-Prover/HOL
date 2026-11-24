@@ -20,31 +20,12 @@ structure M = mlibMeson; local open mlibMeson in end;
 structure R = mlibResolution; local open mlibResolution in end;
 
 (* ------------------------------------------------------------------------- *)
-(* Aligning trace levels.                                                    *)
+(* Chatting.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-(* mlibMetis trace levels:
-   0: No output
-   1: Status information during proof search
-   2: More status information
-   3: More detailed prover information: slice by slice
-   4: High-level proof search information
-   5: Log of every inference during proof search
-   6: mlibSupport infrastructure such as mlibTermorder *)
-
-val aligned_traces =
-  [{module = "mlibTermorder",  alignment = fn n => n + 5},
-   {module = "mlibModel",      alignment = fn n => n + 5},
-   {module = "mlibRewrite",    alignment = fn n => n + 4},
-   {module = "mlibClause",     alignment = fn n => n + 4},
-   {module = "mlibSolver",     alignment = I},
-   {module = "mlibMeson",      alignment = I},
-   {module = "mlibClauseset",  alignment = I},
-   {module = "mlibSupport",    alignment = I},
-   {module = "mlibResolution", alignment = I}];
-
-val () = trace_level := 1 (* OK *)
-val () = set_traces aligned_traces
+(* The levels each module speaks at are documented where it defines its
+   own `chatting'; the table that used to align them here aligned
+   nothing, because `metisTools' installed its own over the top. *)
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions                                                          *)
@@ -187,11 +168,12 @@ fun prove goal =
       val {thms,hyps} = clauses goal
       val solv = metis' (!settings)
     in
-      refute (initialize solv {limit = !limit, thms = thms, hyps = hyps})
+      refute (initialize solv
+                {limit = !limit, thms = thms, hyps = hyps, chat = 0})
     end;
 
 fun query database =
   initialize M.prolog
-  {thms = axiomatize database, hyps = [], limit = unlimited};
+  {thms = axiomatize database, hyps = [], limit = unlimited, chat = 0};
 
 end

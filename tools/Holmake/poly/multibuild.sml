@@ -26,7 +26,6 @@ fun fupdkey m f k dflt =
 
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
-val loggingdir = ".hol/logs"
 fun K x y = x
 
 fun graph_dirinfo g =
@@ -127,12 +126,16 @@ fun graphbuild optinfo g =
         else s
     fun safetag d t =
         String.map (fn #"/" => #"-" | c => c) (dropthySuffix t)
+    (* Under a layout, <objroot>/logs/<rel> also holds the log
+       directories of rel's subdirectories, so a target named after a
+       subdirectory would collide with it: add a suffix. *)
     fun genLF {tag, dir} =
         let
-          val ldir = dir ++ loggingdir
+          val ldir = HFS_NameMunge.logdir_for dir
           val _ = Holmake_tools.createDirIfNecessary ldir
+          val sfx = if HFS_NameMunge.owned_by_layout dir then ".log" else ""
         in
-          ldir ++ safetag dir tag
+          ldir ++ (safetag dir tag ^ sfx)
         end
 
     (* --- retrying out-of-store failures -------------------------------
@@ -291,10 +294,20 @@ fun graphbuild optinfo g =
 
 
 
+    (* Pass the layout to children, replacing inherited root variables. *)
+    val (layout_env, inherited_env) =
+        case HFS_NameMunge.current_layout () of
+            NONE => ([], Posix.ProcEnv.environ())
+          | SOME {objroot, srcroot} =>
+            (["HOLOBJROOT=" ^ objroot, "HOLSRCROOT=" ^ srcroot],
+             List.filter
+               (fn s => not (String.isPrefix "HOLOBJROOT=" s orelse
+                             String.isPrefix "HOLSRCROOT=" s))
+               (Posix.ProcEnv.environ()))
     val env =
         (if relocbuild then [Systeml.build_after_reloc_envvar^"=1"] else []) @
         (case thmsrc of SOME s => ["HOL_THMSRC="^s] | NONE => []) @
-        Posix.ProcEnv.environ()
+        layout_env @ inherited_env
     fun cline_to_command (s, args) = {executable = s, nm_args = args, env = env}
     fun shell_command s =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
@@ -323,16 +336,33 @@ fun graphbuild optinfo g =
 
        `note_time' runs once per *job*, not once per node: a theory's
        three Theory.{dat,sml,sig} siblings share one BIC_BuildScript
-       command, and `key_of' gives them one key. *)
-    val timed : (string * real) list ref = ref []
+       command, and `key_of' gives them one key; and a recipe of
+       several command lines runs as one job per line.  A key can
+       therefore be timed more than once in a run, and the times are
+       summed -- each of those jobs is part of what the node cost.
+       Accumulating here rather than handing `merge_entries' a list
+       with repeats is what makes that so: it inserts left to right,
+       so repeats would have left the *first* line's time standing
+       and thrown the rest away. *)
+    val timed : (string, real) Binarymap.dict ref =
+        ref (Binarymap.mkDict String.compare)
     fun note_time nI ok t =
         if not ok orelse t = Time.zeroTime then ()
-        else timed := (key_of nI, Time.toReal t) :: !timed
+        else
+          let
+            val k = key_of nI
+            val sofar = case Binarymap.peek (!timed, k) of
+                            NONE => 0.0
+                          | SOME v => v
+          in
+            timed := Binarymap.insert (!timed, k, Time.toReal t + sofar)
+          end
     fun record_times () =
         case project_root of
             NONE => ()
           | SOME r =>
-            target_times.merge_entries {root = r, entries = !timed}
+            target_times.merge_entries
+              {root = r, entries = Binarymap.listItems (!timed)}
 
     fun really_needed nI = #status nI = Pending{needed=true}
     fun b2n true = 1 | b2n false = 0
@@ -668,7 +698,11 @@ fun graphbuild optinfo g =
   in
     do_work(worklist, monitor)
     before (drain_dirreports(); release_all_locks(); oos_report();
-            final_report(); record_times())
+            final_report(); record_times();
+            (* Worth a diagnostic because it is the one measure of the
+               work loop that does not move with the machine: see
+               ProcessMultiplexor's rounds_last_run. *)
+            diag ("work loop rounds: " ^ Int.toString (rounds_last_run())))
   end
 
 end

@@ -738,7 +738,10 @@ in
                                           then a
                                           else failwith ""))) afvs
              val pats0 = map inst_fn vargs
-             val pats = map (Term.subst tmins) pats0
+             (* inst_fn can merge redexes (x:'a and x:'b to x:bool); keep
+                the later maplet, as separate_insts does. *)
+             val pats = map (Term.subst (Lib.subst_keep_last aconv tmins))
+                            pats0
              val vhop' = inst_fn vhop
              val ictm = list_mk_comb (vhop', pats)
              val ni = let
@@ -752,7 +755,9 @@ in
                                                 (if is_var p then p
                                                  else genvar (type_of p))))
                                     pats
-                   val ctm' = Term.subst ginsts ctm
+                   (* Equal arguments repeat a redex; keep the last, so the
+                      shared term is bound by the last of gvs. *)
+                   val ctm' = Term.subst (Lib.subst_keep_last aconv ginsts) ctm
                    val gvs = map #residue ginsts
                    val abstm = list_mk_abs (gvs, ctm')
                    val vinsts = safe_insert (vhop |-> abstm) insts

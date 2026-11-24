@@ -186,6 +186,75 @@ file's own directory -- not a VC root, and not the file itself."
                   '(:theorem "a%b" :step 0 :context nil :error nil))
                  "a%%b — step 0")))
 
+(ert-deftest hol-lsp-jbool-reads-json-false-as-false ()
+  ;; `false' arrives from eglot as `:json-false', which is not nil in
+  ;; Lisp -- so a bare `(plist-get r :tornStart)' is true either way.
+  (should (hol-lsp--jbool t))
+  (should-not (hol-lsp--jbool :json-false))
+  (should-not (hol-lsp--jbool nil)))
+
+(ert-deftest hol-lsp-decls-header-counts-what-is-shown ()
+  (should (string-match-p
+           "last declaration"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "val x = 3: int\n")]
+              :omitted 0 :tornStart :json-false :tornEnd :json-false))))
+  (should (string-match-p
+           "3 declarations"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "a") (:text "b") (:text "c")]
+              :omitted 0 :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-header-says-what-was-dropped ()
+  (should (string-match-p
+           "2 earlier omitted"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "a")] :omitted 2
+              :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-header-warns-about-a-torn-selection ()
+  ;; The one thing the body cannot say for itself, and the difference
+  ;; between a short answer and a wrong one.
+  (let ((both (hol-lsp--decls-header
+               '(:status "ok" :results [(:text "a")] :omitted 0
+                 :tornStart t :tornEnd t))))
+    (should (string-match-p "starts and ends" both))
+    (should (string-match-p "part-way through a declaration" both)))
+  (should (string-match-p
+           "⚠ selection ends part-way"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "a")] :omitted 0
+              :tornStart :json-false :tornEnd t))))
+  (should-not (string-match-p
+               "⚠"
+               (hol-lsp--decls-header
+                '(:status "ok" :results [(:text "a")] :omitted 0
+                  :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-header-escapes-percent ()
+  ;; Same reason as the goal-state header: it is read for mode-line
+  ;; constructs.  Nothing here interpolates user text today, so this
+  ;; pins the guard rather than a symptom.
+  (should-not (string-match-p
+               "[^%]%[^%]"
+               (hol-lsp--decls-header
+                '(:status "ok" :results [] :omitted 0
+                  :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-pending-with-nothing-is-a-refusal ()
+  ;; "Ask again when the compile is done", said about declarations.  A
+  ;; pending that still carries results is an answer, not a refusal.
+  (should (hol-lsp--answer-refused-p
+           '(decls :status "pending" :results [] :omitted 0)))
+  (should-not (hol-lsp--answer-refused-p
+               '(decls :status "pending" :results [(:text "a")]
+                 :omitted 0)))
+  (should-not (hol-lsp--answer-refused-p
+               '(decls :status "ok" :results [(:text "a")] :omitted 0)))
+  ;; And a goal-state answer is still judged by its own rule.
+  (should (hol-lsp--answer-refused-p '(goals :status "pending")))
+  (should-not (hol-lsp--answer-refused-p '(goals :theorem "foo" :step 1))))
+
 (ert-deftest hol-lsp-pending-is-not-a-goal-state ()
   ;; The server answers `{"status":"pending"}' -- with no theorem and
   ;; no step in it -- while the compile has not reached the proof.
@@ -627,6 +696,43 @@ empty the tally on the first compile of every unchecked session."
     (should-not (get-text-property 4 'hol-lsp-doc))
     ;; the mouse gets the same string
     (should (equal (get-text-property 3 'help-echo) "x :num"))))
+
+(ert-deftest hol-lsp-message-buffer-annotates-the-whole-message ()
+  "The *HOL Message* buffer holds exactly what the segments cover.
+
+Unlike the goals pane, nothing is stripped from the front of this
+one, so SKIP is 0 and the segment offsets are the buffer's own.  The
+point of the buffer is the annotations: a diagnostic's message is a
+plain string and the protocol has no way to hang a tooltip off a word
+inside one, so a message whose terms can be pointed at has to be
+rendered somewhere the client owns."
+  (with-temp-buffer
+    (hol-lsp-message-mode)
+    ;; `special-mode' leaves the buffer read-only, and putting a text
+    ;; property is a buffer modification too -- which is why the
+    ;; command brackets the whole render, not just the insert.
+    (let ((inhibit-read-only t))
+      (insert "Type error: SUC applied to T")
+      (hol-lsp--apply-segments
+       1 '((:text "Type error: ")
+           (:text "SUC" :kind "const" :name "num$SUC" :ty "num -> num")
+           (:text " applied to ")
+           (:text "T" :kind "const" :name "bool$T" :ty "bool"))
+       0))
+    ;; "Type error: " is 12 chars, so SUC starts at point 13.
+    (should (equal (get-text-property 13 'hol-lsp-doc)
+                   "num$SUC : num -> num"))
+    (should (equal (get-text-property 13 'help-echo)
+                   "num$SUC : num -> num"))
+    (should-not (get-text-property 1 'hol-lsp-doc))
+    ;; " applied to " is 12 more, so T is at 16 + 12 = 28.
+    (should (equal (get-text-property 28 'hol-lsp-doc) "bool$T : bool"))))
+
+(ert-deftest hol-lsp-message-key-does-not-take-a-pinned-one ()
+  "`hol-lsp-show-message' has a key, and it is not one of the three
+`hol-lsp-holmake-keeps-its-key' pins free."
+  (should (eq (lookup-key hol-map "w") 'hol-lsp-show-message))
+  (should-not (lookup-key hol-map "\M-E")))
 
 (ert-deftest hol-lsp-apply-segments-skips-stripped-prefix ()
   "SKIP accounts for the context line the buffer does not show.

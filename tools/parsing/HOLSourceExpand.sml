@@ -724,7 +724,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val unit = Unit {left = theory_, right = theory_}
     val e = App (mkIdent (theory_, "Theory.export_theory"), unit)
     val e = if not noSigDocs then e else let
-      val set_trace = mkIdent (theory_, "Feedback.set_trace")
+      val set_trace = mkIdent (theory_, "HOLFlags.set_trace")
       val include_docs = mkString (theory_, "TheoryPP.include_html_docs")
       val zero = mkInt (theory_, 0)
       val exclude_docs = mkApp set_trace [include_docs, zero]
@@ -866,7 +866,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val rhs = case bind of
       NONE => mkFail (type_, "Type/Overload missing body")
     | SOME {exp, ...} => expandExp false exp
-    val dec' = valWild type_ (App (mkIdent (type_, name), mkTuple (type_, [id, rhs])))
+    val args = mkTupleTo (type_, expStop rhs, [id, rhs])
+    val dec' = valWild type_ (App (mkIdent (type_, name), args))
     in DecExpansion {orig = dec, result = [dec']} end
   | expandDec _ (dec as HOLSimpleThm {triv, theorem_, id, attrs, bind}) = let
     val fileline = fileline (#1 id)
@@ -875,7 +876,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val rhs = case bind of
       NONE => mkFail (theorem_, "Theorem missing body")
     | SOME {exp, ...} => expandExp false exp
-    val dec' = valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs])))
+    val args = mkTupleTo (theorem_, expStop rhs, [nameAttrs, rhs])
+    val dec' = valPat theorem_ (mkIdent id) (App (e, args))
     in DecExpansion {orig = dec, result = [dec']} end
   | expandDec _ (dec as HOLTheoremDecl {
       triv = _, theorem_, id, attrs = _, colon = _, quote = _,
@@ -938,13 +940,10 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val tac = doProofKvals tacAnchor kvs tac
     val e = mkLocString' (theorem_, "Q.store_thm_at") fileline
     (* Give the synthetic tuple a real stop so the resulting Built
-       parent covers its children.  mkTuple's default (stop = anchor
-       position = theorem_) yields a zero-width parent over tac's
+       parent covers its children.  Anchored at theorem_ at both ends,
+       as mkTuple would leave it, it is a zero-width parent over tac's
        identifiers, blocking hover-navigation inside Proof-QED. *)
-    val tupleStop = expStop tac
-    val args = {args = [nameAttrs, quote, tac], seps = [], stop = tupleStop}
-    val tuple = Tuple {left = theorem_, elems = args, right = NONE, stop = tupleStop}
-    val e = App (e, tuple)
+    val e = App (e, mkTupleTo (theorem_, expStop tac, [nameAttrs, quote, tac]))
     val e = App (e, mkIdent (expStop e, "HOLctxt"))
     val body = valPat theorem_ (mkIdent id) e
     in DecExpansion {orig = dec, result = [

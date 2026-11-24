@@ -19,7 +19,7 @@
 (* this is an -*- sml -*- file *)
 val () = PolyML.print_depth 0;
 
-open HolKernel Parse boolLib proofManagerLib
+open HolKernel HOLFlags Parse boolLib proofManagerLib
 
 (* Install pretty-printers *)
 val _ = let
@@ -98,6 +98,8 @@ val _ = let
   fun pp_seq _ _ (s:'a seq.seq) = HOLPP.add_string "<seq>"
   fun pp_typebase _ _ (tb:TypeBasePure.typeBase) = HOLPP.add_string "<typeBase>"
   fun pp_sexp _ _ (s : HOLsexp.t) = HOLsexp.printer s
+  fun pp_msg _ _ (m : HOLmessage.message) = HOLmessage.toPretty m
+
 in
   (* would like to put these all in a list and List.app over them, but
      unfortunately, they all have different types; can't bind addPrettyPrinter to
@@ -112,6 +114,7 @@ in
   PolyML.addPrettyPrinter pp_termtab;
   PolyML.addPrettyPrinter pp_seq;
   PolyML.addPrettyPrinter pp_sexp;
+  PolyML.addPrettyPrinter pp_msg;
   PolyML.addPrettyPrinter pp_symtab;
   PolyML.addPrettyPrinter pp_typebase;
   PolyML.addPrettyPrinter pp_verdict;
@@ -136,7 +139,7 @@ in
   PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proof);
   PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proofs);
   PolyML.addPrettyPrinter (pp2polypp type_grammar.prettyprint_grammar);
-  PolyML.addPrettyPrinter (pp2polypp Feedback.pp_trace_elt);
+  PolyML.addPrettyPrinter (pp2polypp HOLFlags.pp_trace_elt);
   PolyML.addPrettyPrinter (pp2polypp Feedback.pp_hol_error)
 end
 
@@ -179,7 +182,7 @@ in
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
-    ; Feedback.set_trace "pp_annotations" 1
+    ; HOLFlags.set_bflag (type_pp.annotations, true)
     ; PolyML.use (HOLDIR ++ "tools" ++ "check-intconfig.sml")
     )
 end;

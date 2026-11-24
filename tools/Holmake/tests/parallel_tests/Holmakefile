@@ -37,6 +37,7 @@ DIRNAMES = \
   projfile_undeclared_parent \
   projfile_synthetic \
   pathsquash \
+  progresslines \
   patrule_parse \
   patrule_match \
   patrule_e2e \
@@ -53,7 +54,7 @@ DIRNAMES = \
   gh569_error \
   gh604 \
   gh679 \
-  gh1353 \
+  gh1371 \
   gh1993 \
   gh1993-lib \
   ignore_errors/j1 \
@@ -65,7 +66,8 @@ DIRNAMES = \
   lastmaker_propagation
 
 ifdef POLY
-DIRNAMES += cache_reflink \
+DIRNAMES += buildheap_exe_linkfail \
+            cache_reflink \
             dircolumn \
             cachefetch \
             cachekey_transitive_parent \
@@ -75,6 +77,7 @@ DIRNAMES += cache_reflink \
             dirlock \
             dumpheap \
             errorbudget \
+            gh1353 \
             gh1979 \
             heap-size \
             hollogs \
@@ -82,6 +85,7 @@ DIRNAMES += cache_reflink \
             issue1903 \
             json-strings \
             local_parallelism_limit \
+            objroot \
             placeholder_regroup \
             pollspin \
             projfile_cross_dir_deps \

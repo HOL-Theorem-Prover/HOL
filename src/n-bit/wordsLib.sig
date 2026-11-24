@@ -80,8 +80,8 @@ sig
     val add_word_cast_printer       : unit -> unit
     val remove_word_cast_printer    : unit -> unit
 
-    val guessing_word_lengths       : bool ref
-    val notify_on_word_length_guess : bool ref
+    val guessing_word_lengths       : HOLFlags.bflag
+    val notify_on_word_length_guess : HOLFlags.bflag
     val inst_word_lengths           : term -> term
     val guess_lengths               : unit -> unit
 end

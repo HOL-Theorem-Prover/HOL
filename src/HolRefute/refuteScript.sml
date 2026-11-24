@@ -432,6 +432,16 @@ Proof
   simp [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST]
 QED
 
+(* The two-index form [Refute_Extract] meets in definition bodies: a
+   nested count. *)
+Theorem forall_lt_lt_count_list:
+  (∀i j. i < j ⇒ j < n ⇒ P i j) ⇔
+  EVERY (λj. EVERY (λi. P i j) (COUNT_LIST j)) (COUNT_LIST n)
+Proof
+  simp [listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST] >>
+  metis_tac []
+QED
+
 Theorem bounded_exists_less:
   (∃n. n < e ∧ P n) ⇔ EXISTS P (COUNT_LIST e)
 Proof
@@ -690,6 +700,15 @@ Proof
   simp [finite_mapTheory.FDOM_FINITE]
 QED
 
+(* [FEVERY_FUPDATE] restricts the rest of the map with [DRESTRICT] over a
+   complement, which its chain rule cannot decide; [DOMSUB] is the same
+   map by its definition, and the finite-map compset evaluates it. *)
+Theorem fevery_fupdate_domsub:
+  FEVERY P (f |+ (x, y)) <=> P (x, y) /\ FEVERY P (f \\ x)
+Proof
+  simp [finite_mapTheory.FEVERY_FUPDATE, finite_mapTheory.fmap_domsub]
+QED
+
 (* The [FUPDATE/FEMPTY/FAPPLY/FDOM -> fupdate'/fempty'/fapply'/fdom']
    ersatz rows (Refute_ModelFinder_HOL.sml) redirect fmap's primitives
    through FLOOKUP -- registered as [is_fmap'/abs_fmap']'s rep -- and
@@ -720,3 +739,13 @@ End
 Definition fdom'_def:
   fdom' (fm : 'a |-> 'b) k = (FLOOKUP fm k <> NONE)
 End
+
+(* A pair equation whose binder sits inside a component, [?a. p = (a, f b)], is
+   not a constructor match on [p]; Refute_Core splits it into its projections
+   so that unwinding can substitute [a := FST p]. *)
+Theorem pair_eq_split:
+  ((p = (a, b)) <=> FST p = a /\ SND p = b) /\
+  (((a, b) = p) <=> a = FST p /\ b = SND p)
+Proof
+  Cases_on `p` >> simp [] >> metis_tac []
+QED

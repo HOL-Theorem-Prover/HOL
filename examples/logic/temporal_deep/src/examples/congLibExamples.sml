@@ -14,10 +14,10 @@ open HolKernel boolLib bossLib temporal_deep_simplificationsLib
   congLib prop_logicTheory full_ltlTheory Travrules simpLib Trace
 
 (*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
+HOLFlags.set_bflag (Parse.show_assums, false);
+HOLFlags.set_bflag (Parse.show_assums, true);
+HOLFlags.set_bflag (Parse.show_types, true);
+HOLFlags.set_bflag (Parse.show_types, false);
 quietdec := false;
 *)
 

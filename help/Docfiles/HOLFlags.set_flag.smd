@@ -1,0 +1,27 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_flag`
+
+``` hol4
+HOLFlags.set_flag : flag * int -> unit
+```
+
+------------------------------------------------------------------------
+
+Set an integer-valued flag.
+
+A call to `set_flag (f, i)` sets the flag `f` to `i`. Flags created
+with a maximum of one are better reached through `set_bflag`, which
+presents them as booleans.
+
+### Failure
+
+Fails if `i` is negative, if it exceeds the maximum fixed when the flag
+was created, or if `f` does not name a trace.
+
+### See also
+
+[`HOLFlags`](#HOLFlags),
+[`HOLFlags.get_flag`](#HOLFlags.get_flag),
+[`HOLFlags.set_bflag`](#HOLFlags.set_bflag),
+[`HOLFlags.set_trace`](#HOLFlags.set_trace),
+[`HOLFlags.with_flags`](#HOLFlags.with_flags)

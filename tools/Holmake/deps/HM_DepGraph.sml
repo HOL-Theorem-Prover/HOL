@@ -458,13 +458,25 @@ fun mkneeded tgts g =
       work (Binaryset.empty node_compare) [initial_tgts] g
     end
 
-fun mk_dirneeded d g =
+fun mk_dirneeded report d g =
     let
+      (* A needed target outside d that is not already on disk is lost:
+         --no_prereqs will not build it, so the node is failed here and
+         never dispatched.  Nothing downstream says so -- the monitor
+         only reports jobs it ran, and postmortem's fatal covers just
+         the nodes that have no command -- so say it now, naming the
+         target and why it cannot be made. *)
       fun upd_nI nI =
           if hmdir.compare(#dir nI, d) <> EQUAL then
             case (hm_target.tgtexists_readable (#target nI), #status nI) of
                 (true, Pending _) => setStatus Succeeded nI
-              | (false, Pending {needed}) => setStatus(Failed{needed=needed})nI
+              | (false, Pending {needed}) =>
+                ((if needed then
+                    report ("Needed target " ^ tgt_toString (#target nI) ^
+                            " is missing, and --no_prereqs stops it being\
+                            \ built outside " ^ hmdir.toAbsPath d)
+                  else ());
+                 setStatus(Failed{needed=needed})nI)
               | _ => nI
           else nI
     in

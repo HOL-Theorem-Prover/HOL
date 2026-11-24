@@ -12,6 +12,10 @@ datatype phase = Initial | Bare | Full
 
   fun main () = let
 
+    (* Read the layout before changing directory, so that relative
+       HOLOBJROOT and HOLSRCROOT are resolved against the directory
+       bin/build started in; children get the resolved roots. *)
+    val layout = HFS_NameMunge.current_layout ()
     val _ = startup_check()
     val phase = ref Initial
 
@@ -43,8 +47,15 @@ fun phase_extras () =
 
 fun aug_systeml proc args = let
   open Posix.Process
-  val env' =
-      "SELFTESTLEVEL="^Int.toString selftest_level :: Posix.ProcEnv.environ()
+  fun not_layout s = not (String.isPrefix "HOLOBJROOT=" s orelse
+                         String.isPrefix "HOLSRCROOT=" s)
+  val env0 =
+      case layout of
+          NONE => Posix.ProcEnv.environ()
+        | SOME {objroot, srcroot} =>
+          "HOLOBJROOT=" ^ objroot :: "HOLSRCROOT=" ^ srcroot ::
+          List.filter not_layout (Posix.ProcEnv.environ())
+  val env' = "SELFTESTLEVEL="^Int.toString selftest_level :: env0
 in
   case fork() of
     NONE => (exece(proc,proc::args,env')
@@ -189,7 +200,8 @@ in
 end
 
 (* bin/hol is compiled by configure and by no Holmakefile rule, from
-   tools-poly/hol.ML, the Holmake sources, and tools/parsing (the quote
+   tools-poly/hol.ML, tools-poly/execompile.ML (buildheap --exe), the
+   Holmake sources, and tools/parsing (the quote
    filter is linked in rather than run as bin/unquote; HolLex.sml is
    generated from HolLex by configure).  The sweep above compares those
    sources against bin/Holmake only, so hol can be stale while Holmake
@@ -206,6 +218,7 @@ val _ = let
 in
   if access(hol, [A_READ, A_EXEC]) then
     (check_against hol "tools-poly/hol.ML";
+     check_against hol "tools-poly/execompile.ML";
      app_sml_files (check_against hol)
                    {dirname = fP [HOLDIR, "tools-poly", "Holmake"]};
      app_sml_files (check_against hol)

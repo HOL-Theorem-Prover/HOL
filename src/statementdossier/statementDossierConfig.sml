@@ -76,10 +76,13 @@ fun configuration path value =
     fun snippets field v =
       let val fs = fields field ["input", "output"] v
       in (required fs file "input", required fs file "output") end
-    fun assumptions field v =
+    fun assumption field v =
       let val fs = fields field ["theorem", "prose"] v
       in {theorem = required fs name "theorem",
           prose = required fs file "prose"} end
+    (* a table for one theorem, an array of tables for several *)
+    fun assumptions field (v as TOML.ARRAY _) = array assumption field v
+      | assumptions field v = [assumption field v]
     val selected = required fs (array name) "theorems"
     val _ = if null selected then bad "theorems" "expected a nonempty array"
             else ()
@@ -95,13 +98,13 @@ fun configuration path value =
       source_dirs = default fs source_dirs "source_dirs" [],
       outputs = required fs outputs "outputs",
       snippets = optional fs snippets "snippets",
-      assumptions = optional fs assumptions "assumptions",
+      assumptions = default fs assumptions "assumptions" [],
       supporting = default fs (array name) "supporting" []
     }
     val names = #theorems cfg @ #supporting cfg @ #expand_consts cfg @
       #stop_consts cfg @
       List.concat (map (fn (n, ns) => n :: ns) (#equation_lemmas cfg)) @
-      (case #assumptions cfg of NONE => [] | SOME {theorem, ...} => [theorem])
+      map #theorem (#assumptions cfg)
     val theories = Lib.mk_set
       (default fs (array string) "theories" [] @
        map (fn {Thy, ...} => Thy) names @

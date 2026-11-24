@@ -231,3 +231,228 @@ val _ = deeper_wins_case
 val _ = tprint "[[h4pedant.dir]] deeper override wins (mirror direction)"
 val _ = deeper_wins_case
           { parent_ok = false, child_ok = true, expect_success = true }
+
+(* --- CLI precedence over the project file -------------------------- *)
+
+(* Each case builds a project whose settings would silence a
+   violation, then checks that naming the check on the command line
+   brings it back: a flag written there is the user's last word, in
+   every directory visited. *)
+fun cli_wins_case { toml, file, args, expect_success, msg } =
+    let
+      val root = fresh_dir ()
+      val sub = root ++ "sub"
+      val _ = OS.FileSys.mkDir sub
+      val _ = write_file (sub ++ "a.sml") file
+      val _ = write_file (root ++ "holproject.toml") toml
+      val r = run_h4pedant_in root args
+    in
+      (if OS.Process.isSuccess r = expect_success then OK ()
+       else die ("FAILED: " ^ msg));
+      rm_rf root
+    end
+
+val loose_toml =
+    "holmake = false\n\n\
+    \[h4pedant]\n\
+    \linelen = 80\n\n\
+    \[[h4pedant.dir]]\n\
+    \path = \"sub\"\n\
+    \linelen = 0\n\
+    \unicode_ok = true\n"
+
+val plain_toml = "holmake = false\n\n[h4pedant]\nlinelen = 80\n"
+
+val _ = tprint "per-dir linelen = 0 silences a long line"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml, args = [], expect_success = true,
+      msg = "linelen = 0 override should have silenced the long line" }
+
+val _ = tprint "--linelen=80 overrides a per-dir linelen = 0"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml, args = ["--linelen=80"],
+      expect_success = false,
+      msg = "--linelen should have won over the per-dir override" }
+
+val _ = tprint "--linelen=200 raises the limit the project file set"
+val _ = cli_wins_case {
+      toml = plain_toml, file = long_sml, args = ["--linelen=200"],
+      expect_success = true,
+      msg = "--linelen=200 should have accepted a 95-character line" }
+
+val _ = tprint "--linelen=0 disables the check"
+val _ = cli_wins_case {
+      toml = plain_toml, file = long_sml, args = ["--linelen=0"],
+      expect_success = true,
+      msg = "--linelen=0 should have disabled the check" }
+
+val _ = tprint "--linelen with a non-numeric argument is fatal"
+val _ = cli_wins_case {
+      toml = "holmake = false\n\n[h4pedant]\nlinelen = 0\n",
+      file = "val _ = 0\n", args = ["--linelen=eighty"],
+      expect_success = false,
+      msg = "--linelen=eighty should have been rejected" }
+
+val _ = tprint "--unicode overrides a per-dir unicode_ok = true"
+val _ = cli_wins_case {
+      toml = loose_toml, file = unicode_sml, args = ["--unicode"],
+      expect_success = false,
+      msg = "--unicode should have won over unicode_ok = true" }
+
+(* --- --ignore-project-file ----------------------------------------- *)
+
+(* The flag takes the project file out of the picture entirely:
+   per-directory settings, `exclude` and `include` all stop applying,
+   and what is checked is what the command line says. *)
+val _ = tprint "--ignore-project-file: per-dir settings stop applying"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml, args = ["--ignore-project-file"],
+      expect_success = false,
+      msg = "--ignore-project-file should have ignored linelen = 0" }
+
+val _ = tprint "--ignore-project-file: CLI options still apply"
+val _ = cli_wins_case {
+      toml = loose_toml, file = long_sml,
+      args = ["--ignore-project-file", "--nolinelen"], expect_success = true,
+      msg = "--nolinelen should still have silenced the long line" }
+
+val _ = tprint "--ignore-project-file: an excluded dir is visited"
+val root6 = fresh_dir ()
+val excluded = root6 ++ "excludedsub"
+val _ = OS.FileSys.mkDir excluded
+val _ = write_file (excluded ++ "e.sml") long_sml
+val _ = write_file (root6 ++ "holproject.toml")
+  ("holmake = false\n\n\
+   \[h4pedant]\n\
+   \linelen = 80\n\
+   \exclude = [\"excludedsub\"]\n")
+val rx1 = run_h4pedant_in root6 []
+val _ = if OS.Process.isSuccess rx1 then OK ()
+        else die "FAILED: exclude should have hidden the violation"
+
+val _ = tprint "--ignore-project-file: the exclusion is gone"
+val rx2 = run_h4pedant_in root6 ["--ignore-project-file"]
+val _ = if OS.Process.isSuccess rx2 then
+          die "FAILED: excluded dir should have been scanned"
+        else OK ()
+
+val _ = tprint "--ignore-project-file: named dirs are scanned from anywhere"
+val rx3 = run_h4pedant_in (OS.FileSys.getDir())
+                          ["--ignore-project-file", excluded]
+val _ = if OS.Process.isSuccess rx3 then
+          die "FAILED: the named directory should have been scanned"
+        else OK ()
+val _ = rm_rf root6
+
+(* A directory that isn't there must say so rather than exiting with
+   a bare failure status, which reads as a style violation. *)
+val _ = tprint "a nonexistent scan directory is reported"
+val root7 = fresh_dir ()
+val rx4 = run_h4pedant_in root7
+                          ["--ignore-project-file", root7 ++ "nosuchdir"]
+val _ = if OS.Process.isSuccess rx4 then
+          die "FAILED: a missing directory should fail"
+        else OK ()
+val _ = rm_rf root7
+
+(* --- Holmakefile default-goal check ------------------------------- *)
+
+(* Given no target on the command line, Holmake builds the first
+   explicit non-.PHONY target of the directory's Holmakefile, so a
+   rule written above `all` quietly becomes the whole of what that
+   directory builds.  The check flags exactly that shape: a
+   Holmakefile that declares `all` but does not leave it as the
+   default goal.  A directory with no `all` to demote is not its
+   business, and neither is one with no Holmakefile.
+
+   `linelen = 0` throughout: these fixtures are about the Holmakefile,
+   and the lexical checks have their own cases above. *)
+fun goal_case { hmf, toml_extra, args, expect_success, msg } =
+    let
+      val root = fresh_dir ()
+      val sub = root ++ "sub"
+      val _ = OS.FileSys.mkDir sub
+      val _ = case hmf of
+                  NONE => ()
+                | SOME contents => write_file (sub ++ "Holmakefile") contents
+      val _ = write_file (root ++ "holproject.toml")
+        ("holmake = false\n\
+         \\n\
+         \[h4pedant]\n\
+         \linelen = 0\n" ^ toml_extra)
+      val r = run_h4pedant_in root args
+    in
+      (if OS.Process.isSuccess r = expect_success then OK ()
+       else die ("FAILED: " ^ msg));
+      rm_rf root
+    end
+
+(* `all` first: the shape every library directory is supposed to have. *)
+val _ = tprint "default goal: `all` first is accepted"
+val _ = goal_case {
+      hmf = SOME "all: zzz.uo\n.PHONY: all\n\nzzz.uo: zzz.sml\n\ttouch $@\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "`all` as the first rule should not be flagged" }
+
+(* The regression this whole check exists for. *)
+val _ = tprint "default goal: a rule above `all` is flagged"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = [], expect_success = false,
+      msg = "a rule preceding `all` should be flagged" }
+
+(* No `all` means nothing was demoted; directories organised around
+   link-to-sigobj (src/float, src/update) legitimately look like this. *)
+val _ = tprint "default goal: a Holmakefile with no `all` is accepted"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "a Holmakefile declaring no `all` should not be flagged" }
+
+val _ = tprint "default goal: a directory with no Holmakefile is accepted"
+val _ = goal_case {
+      hmf = NONE, toml_extra = "", args = [], expect_success = true,
+      msg = "a directory without a Holmakefile should not be flagged" }
+
+(* `.PHONY: all` names `all` as a prerequisite, not as a target, so it
+   must not itself become the default goal -- src/postkernel/prooftrace
+   opens with exactly this line. *)
+val _ = tprint "default goal: a leading `.PHONY: all` is not the goal"
+val _ = goal_case {
+      hmf = SOME ".PHONY: all\n\nall: zzz.uo\n\nzzz.uo: zzz.sml\n\ttouch $@\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "`.PHONY: all` above `all` should not count as a rule" }
+
+(* The check parses with HOLBUILD forced on, because that is what a
+   build sets and because link-to-sigobj rules live behind it. *)
+val _ = tprint "default goal: a rule inside `ifdef HOLBUILD` is seen"
+val _ = goal_case {
+      hmf = SOME "ifdef HOLBUILD\nzzz.uo: zzz.sml\n\ttouch $@\nendif\n\
+                 \\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = [], expect_success = false,
+      msg = "a rule above `all` behind ifdef HOLBUILD should be flagged" }
+
+(* Both opt-outs, over the flagged shape. *)
+val _ = tprint "default goal: `default_goal_ok` silences the check"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "\n[[h4pedant.dir]]\n\
+                   \path = \"sub\"\n\
+                   \default_goal_ok = true\n",
+      args = [], expect_success = true,
+      msg = "default_goal_ok = true should silence the check" }
+
+val _ = tprint "default goal: --nodefaultgoal silences the check"
+val _ = goal_case {
+      hmf = SOME "zzz.uo: zzz.sml\n\ttouch $@\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = ["--nodefaultgoal"], expect_success = true,
+      msg = "--nodefaultgoal should silence the check" }
+
+(* Forcing the conditionals open can reach branches a real build never
+   takes, so an unparseable Holmakefile is reported on stderr and
+   passed over rather than failing the run. *)
+val _ = tprint "default goal: an unparseable Holmakefile does not fail"
+val _ = goal_case {
+      hmf = SOME "include no-such-file.mk\n\nall: zzz.uo\n.PHONY: all\n",
+      toml_extra = "", args = [], expect_success = true,
+      msg = "an unparseable Holmakefile should be skipped, not flagged" }

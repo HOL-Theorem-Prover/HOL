@@ -6,8 +6,9 @@ structure Map = OpenTheoryMap.Map
 
 val ERR = Feedback.mk_HOL_ERR "Logging"
 
-val verbosity = ref 0
-val _ = Feedback.register_trace("opentheory logging",verbosity,5)
+val {get = verbosity, ...} =
+    HOLFlags.create_trace ({group = "opentheory", name = "logging"},
+                           {initial = 0, max = 5})
 
 val proof_type = let open Thm fun
  f Axiom_prf = "Axiom"
@@ -388,8 +389,9 @@ val (log_term, log_thm, log_clear,
   in if saved ob then () else let
     val ths = Susp.delay (fn () => (Lib.ppstring Parse.pp_thm th))
     val pt  = proof_type (proof th)
-    val _ = if !verbosity >= 4 then HOL_MESG("Start a "^pt^" proof for "^(Susp.force ths))
-       else if !verbosity >= 3 then HOL_MESG(proof_type (proof th))
+    val _ = if verbosity() >= 4 then
+              HOL_MESG("Start a "^pt^" proof for "^(Susp.force ths))
+       else if verbosity() >= 3 then HOL_MESG(proof_type (proof th))
        else ()
     (*
     val _ = log_comment ("("^pt)
@@ -697,7 +699,9 @@ val (log_term, log_thm, log_clear,
       val _       = log_thm (proveHyp ra (proveHyp ar pth))
       in () end
     | compute_prf _ => raise ERR "log_thm" "disabled in opentheory kernel";
-    val _ = if !verbosity >= 4 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
+    val _ = if verbosity() >= 4 then
+              HOL_MESG("Finish proof for "^(Susp.force ths))
+            else ()
     (*
     val _ = log_comment(pt^")")
     *)
@@ -725,7 +729,7 @@ fun export_thm th = let
       Not_logging => ()
     | Active_logging _ => let
       val _ = log_definitions ()
-      val v = !verbosity >= 1
+      val v = verbosity() >= 1
       val s = Susp.delay (fn () => Lib.ppstring pp_thm th)
       val _ = if v then HOL_MESG("Start logging\n"^(Susp.force s)^"\n") else ()
       val _ = log_thm th

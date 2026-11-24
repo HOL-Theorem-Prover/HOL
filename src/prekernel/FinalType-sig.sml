@@ -2,10 +2,12 @@ signature FinalType =
 sig
 
  eqtype hol_type
+ type bflag
 
  val type_epoch    : unit -> int
  val display_name_of_id : KernelSig.kernelid -> string
  val mk_vartype    : string -> hol_type
+ val vartype_fmt_complaint : bflag
  val gen_tyvar     : unit -> hol_type
  val dest_vartype  : hol_type -> string
  val is_vartype    : hol_type -> bool
@@ -70,6 +72,9 @@ sig
  val prim_mk_new_type : {Thy:string, Tyop:string} -> hol_type list ->
                         hol_type
  val prim_delete_type : {Thy:string, Tyop:string} -> unit
+ (* prim_new_type for a theory read from disk (KernelSig.insert_sealed_type);
+    returns whether the type operator got the canonical epoch *)
+ val prim_load_type : {Thy:string, Tyop:string} -> int -> bool
  val thy_types : string -> (string * int) list
  val del_segment : string -> unit
  val uptodate_type : hol_type -> bool

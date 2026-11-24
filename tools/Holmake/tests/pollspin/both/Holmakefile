@@ -13,9 +13,14 @@ all: hung talky
 # between talky's messages.  Asking instead "has any one job gone
 # quiet?" sees hung for what it is.
 hung:
-	echo starting ; exec 1>&- 2>&- ; sleep 2 ; touch hung
+	echo starting ; exec 1>&- 2>&- ; sleep 2 && touch hung
 
+# chatter.exe is run from its own directory because it is a wrapper
+# that asks hol to load the `chatter' module, and that is looked up
+# relative to the working directory.  `&&' rather than `;' so that a
+# chatter which failed to run cannot leave a touched target behind
+# looking like a build that worked.
 talky:
-	i=0 ; while [ $$i -lt 400 ] ; do echo chat $$i ; i=$$((i+1)) ; sleep 0.005 ; done ; touch talky
+	( cd .. && ./chatter.exe ) && touch talky
 
 EXTRA_CLEANS = hung talky

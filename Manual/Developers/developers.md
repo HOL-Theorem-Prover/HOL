@@ -111,6 +111,15 @@ There are two standard ways to the install a test that can be run by `build`:
     The various tests in that file can be used to insert regression test directories into the big parallel build of all the post-`bossLib` directories.
     Using a test-directory is necessary if the tests need to examine behaviours to do with theory export and loading.
 
+Holmake supports the default directory-local layout and a separate
+artifact root, selected by `objroot` in `holproject.toml`, `--objroot`
+or `HOLOBJROOT` under Poly/ML.  In the latter layout, artifacts live
+under `<objroot>/<kind>/<rel>`, where `<rel>` is the source directory
+relative to the source root.  Use `HFS_NameMunge` to locate artifacts:
+`objdir_for` and `depdir_for` return directories; `HOLtoFS` and `FStoHOL`
+convert between logical and filesystem product paths.
+The regression tests are in `tools/Holmake/tests/objroot`.
+
 ## Kernel Selection
 
 There are currently three kernels that can be built to underlie a HOL installation.
@@ -266,6 +275,7 @@ Unless otherwise noted, they are built by the configuration process.
 `theorytool`
 :   A dependency and definition analysis tool. 
     Running it allows you to dynamically dump `.dat` keys, or output a full hierarchical ancestry graph of the theories using `dot` format *via* the `--thygraph` option.
+    It finds theories kept under a separate artifact root only through `HOLOBJROOT` and `HOLSRCROOT` in the environment, not through `objroot` in the project files.
     The source files are located in `src/portableML/rawtheory/`.
 
 `unquote`
@@ -276,6 +286,7 @@ Unless otherwise noted, they are built by the configuration process.
 `h4pedant`
 :   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
     The directories to scan come from positional command-line arguments or, when none are given, from the `[h4pedant]` section of the enclosing `holproject.toml` (see the *Description* manual); options dictate which requirements are enforced/checked for.
+    An option naming a check (`--linelen=`*n*, `--unicode`/`--unicodeok`, `--defaultgoal`/`--nodefaultgoal`) settles that check in every directory visited, whatever the project file says there, and `--ignore-project-file` ignores the project file entirely — the way to check a directory the project exempts.
     The enforcing of style is done by the `Holmakefile` in `src/portableML/testsrc`.
     The executable is in `tools/h4pedant`.
 
@@ -287,7 +298,7 @@ Unless otherwise noted, they are built by the configuration process.
     They are *not* what the parallel scheduler reads; see `build-times` below.
 
 `build-times` (at a project root) and `.hol/build-logs/target-times`
-:   Cost data for Holmake's parallel scheduler, in child CPU seconds: `<key> <secs>` per line, `#` comments allowed.
+:   Cost data for Holmake's parallel scheduler, in child CPU seconds — user plus system time: `<key> <secs>` per line, `#` comments allowed.
     `Holmake` picks the ready job with the largest sum-of-costs-to-a-sink, so without these it falls back to the order jobs happened to be added to the graph.
 
     `.hol/build-logs/target-times` is the per-project cache, rewritten by every parallel `Holmake` run out of the child-CPU time it already measures for each job.

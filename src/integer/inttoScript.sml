@@ -8,7 +8,7 @@ Libs
   pred_setLib PairRules Defn intLib
 
 
-val _ = set_trace "Unicode" 0;
+val _ = HOLFlags.set_bflag (Parse.avoid_unicode, true);
 val _ = ParseExtras.temp_loose_equality()
 
 (* My habitual abbreviations: *)

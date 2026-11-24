@@ -54,9 +54,21 @@ signature PFTReader = sig
              -> {version: string, ruleset: string,
                  n_ty: int, n_tm: int, n_th: int}
 
+  (* Inspect an immutable input once, then reuse its header/footer across
+     passes. No stream stays open. The file must remain unchanged while this
+     handle is used. read_input still decodes all command bytes. *)
+  type input
+  val inspect : {file: string, binary: bool} -> input
+  val input_info : input -> {version: string, ruleset: string,
+                              n_ty: int, n_tm: int, n_th: int}
+  val read_input : {input: input, format_handler: format_handler,
+                    ruleset_handler: ruleset_handler}
+                   -> {version: string, ruleset: string,
+                       n_ty: int, n_tm: int, n_th: int}
+
   (* Read just the limits (namespace array bounds) from a PFT file
      without processing commands. Useful for pre-allocating arrays
-     before a full read. Seeks to end of file to find the footer. *)
+     before a full read. Reads the file in bounded chunks to find the footer. *)
   val read_limits : {file: string, binary: bool}
                     -> {n_ty: int, n_tm: int, n_th: int}
 

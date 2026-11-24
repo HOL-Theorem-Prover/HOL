@@ -115,4 +115,80 @@ val _ = shouldfail {
       testfn = runtac (METIS_TAC [])
     } ([], mk_imp(c, mk_var("p", bool)))
 
+(* ----------------------------------------------------------------------
+    metis.trace governs how loud metis is.  The prover itself reads a
+    cache of the flag (mlibUseful.trace_level), so a cache that nobody
+    refreshes shows up as dots in the log of every script that calls
+    METIS_TAC -- which is what these tests are here to catch.
+   ---------------------------------------------------------------------- *)
+
+local
+  val tm = “(!x:'a. P x ==> Q x) /\ P a ==> Q a”
+  fun said f =
+    let
+      val buf = ref ([] : string list)
+      val saved = !Feedback.MESG_outstream
+      val () = Feedback.MESG_outstream := (fn s => buf := s :: !buf)
+      fun restore () = Feedback.MESG_outstream := saved
+      val _ = f () handle e => (restore(); raise e)
+    in
+      restore(); String.concat (List.rev (!buf))
+    end
+  fun at n = HOLFlags.set_flag (metisTools.metis_trace, n)
+  fun check nm silent f =
+    let
+      val _ = tprint nm
+      val s = said f
+    in
+      if (s = "") = silent then OK()
+      else if silent then die ("said: " ^ String.toString s)
+      else die "said nothing"
+    end
+  fun tac_on t = runtac t ([], tm)
+  val flagnm = HOLFlags.flag_name metisTools.metis_trace
+in
+val _ = at 0
+val _ = check "METIS_TAC is silent at metis.trace = 0" true
+              (fn () => tac_on (METIS_TAC []))
+val _ = at 1
+val _ = check "METIS_TAC chats at metis.trace = 1" false
+              (fn () => tac_on (METIS_TAC []))
+val _ = check "trace_tac quietens METIS_TAC" true
+              (fn () => tac_on (Tactical.trace_tac (flagnm, 0) (METIS_TAC [])))
+val _ = check "with_flags quietens METIS_PROVE" true
+              (fn () => HOLFlags.with_flags [(metisTools.metis_trace, 0)]
+                                            (METIS_PROVE []) tm)
+val _ = at 0
+end
+
+(* A lemma whose definitional CNF (lemma1) or Skolem constant (lemma2)
+   mentions a type variable that the introduced name's type lacks, used
+   at two instances of that variable: metis_tac must prove the goal
+   without hypotheses, not leave its definitions on the theorem. *)
+local
+  val _ = new_constant ("mlP", “:'a -> bool”)
+  val _ = new_constant ("mlQ", “:'a -> 'b -> bool”)
+  val _ = new_constant ("mlR", “:'a -> bool”)
+  val _ = new_constant ("mlS", “:'a -> bool”)
+  val lemma1 = mk_thm ([], “!x:'a. mlP x /\ mlQ x (ARB:'b) /\ mlR x \/
+                                   ~mlP x /\ ~mlR x /\ ~mlS x”)
+  val goal1 = “!a:'c. mlP a ==> mlQ a (ARB:bool)”
+  val lemma2 = mk_thm ([], “?x:bool. mlQ x (ARB:'b)”)
+  val goal2 = “?x:bool y:bool. mlQ x (ARB:bool) /\ mlQ y (ARB:bool -> bool)”
+  fun test (name, lemma, goal) =
+    let
+      val _ = tprint ("METIS_TAC leaves no definitions (" ^ name ^ ")")
+    in
+      case total TAC_PROOF (([], goal), METIS_TAC [lemma]) of
+        NONE => die "METIS_TAC failed"
+      | SOME th =>
+          if null (hyp th) then OK ()
+          else die ("theorem has hypotheses: " ^
+                    String.concatWith ", " (map term_to_string (hyp th)))
+    end
+in
+  val _ = app test [("definition", lemma1, goal1),
+                    ("Skolem constant", lemma2, goal2)]
+end
+
 val _ = Process.exit Process.success;

@@ -649,14 +649,14 @@ in
     : string * Type.hol_type dict * Term.term dict * Term.term list =
   let
     (* parse the file contents *)
-    val _ = if !Library.trace > 1 then
+    val _ = if Library.trace() > 1 then
         Feedback.HOL_MESG
           ("HolSmtLib: parsing SMT-LIB 2 benchmark file '" ^ path ^ "'")
       else ()
     val instream = TextIO.openIn path
     val get_token = Library.get_token (Library.get_buffered_char instream)
     val result = parse_benchmark get_token
-    val _ = if !Library.trace > 0 then
+    val _ = if Library.trace() > 0 then
         WARNING "parse_file" ("ignoring token '" ^ get_token () ^
           "' (and perhaps others) after benchmark")
           handle Feedback.HOL_ERR _ => ()  (* end of file, as expected *)

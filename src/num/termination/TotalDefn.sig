@@ -63,4 +63,8 @@ sig
    val xDefineSchema  : string -> term quotation -> thm * thm option
    val DefineSchema   : term quotation -> thm
 
+   val allow_schema_definition  : HOLFlags.bflag
+   val auto_tgoal               : HOLFlags.bflag
+   val termination_candidates   : HOLFlags.flag
+
 end

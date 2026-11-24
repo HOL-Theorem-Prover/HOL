@@ -22,8 +22,7 @@ val _ = let
   val _ = tprint "Anthony's pattern-overloading bug"
   val b2n_def = new_definition("b2n_def", ``b2n b = if b then 1 else 0``)
   val _ = overload_on ("foo", ``\(x:num#'a),(y:num#'b). b2n (FST x = FST y)``)
-  val res = trace ("PP.catch_withpp_err", 0) term_to_string ``foo(x,y)``
-            handle Fail _ => ""
+  val res = term_to_string ``foo(x,y)`` handle Fail _ => ""
 in
   if res <> "" then OK() else fail()
 end
@@ -33,6 +32,7 @@ val _ = let
             in
               unicode_off (raw_backend testutils.tpp)
             end
+  val firstbar_tpp = HOLFlags.with_bflags [(term_pp.print_firstcasebar, true)] tpp
 in
   List.app tpp [
     "case e1 of 0 => (case e2 of 0 => 1 | SUC n => n + 1) | SUC m => m * 2",
@@ -42,8 +42,8 @@ in
     \  foo' a b /\\ bar a c /\\ baz a c d /\\ qux f g /\\ foo' f g ==>\n\
     \  a + b * c = 10 * d + e + f + g"
   ] ;
-  trace ("PP.print_firstcasebar", 1) tpp "case e of | 0 => 1 | SUC n => n + 2";
-  trace ("PP.print_firstcasebar", 1) tpp
+  firstbar_tpp "case e of | 0 => 1 | SUC n => n + 2";
+  firstbar_tpp
     "case f e n longvarname of\n\
     \| 0 => superlongvarname * secondsuperlongname + 1\n\
     \| SUC n => n + 2"
@@ -101,7 +101,8 @@ fun good_oneline th =
 fun test msg th =
     (tprint ("one_line_ify on " ^ msg);
      require_msg (check_result good_oneline)
-                 (trace("assumptions", 1) thm_to_string)
+                 (HOLFlags.with_bflags [(Parse.show_assums, true)]
+                                       thm_to_string)
                  (DefnBase.one_line_ify NONE) th)
 val _ = test "cv_sub_def" cvTheory.cv_sub_def
 
@@ -141,3 +142,82 @@ val _ = testdot ``4 + 5 + 9`` ``18``;
 val _ = testdot ``(\x. x + y) 5`` ``5 + y``;
 val _ = testdot ``(\x. x + x + 1) ((\y. y + 10) 4)`` ``29``;
 
+(* ----------------------------------------------------------------------
+    A message sent down the MESG channel keeps its terms
+
+    `src/parse' has the other `Msg' tests, but it is built before
+    `boolTheory' and so has no constants to render; this is the first
+    directory with real ones.
+   ---------------------------------------------------------------------- *)
+
+(* The point of `HOLmessage.message' is that the *reader* picks the
+   back end, so one message serves a terminal and a structured front
+   end alike.  `HOL_MESGm' flattens for `MESG_outstream', which is all
+   a terminal wants, and that flattening runs through
+   `HOLmessage.plain_renderer', which pins `raw_terminal' -- so no
+   choice of `Parse.current_backend' at the call site can reach behind
+   it, and the channel's text can never be the rich rendering.  A
+   consumer that wants what the terms are needs the message itself,
+   which is what `MESG_hook' offers it.
+
+   The term here is built by the real parser and rendered by the real
+   printer, unlike the hand-assembled `pretty' in `src/parse's back
+   end tests.  That is the half that could rot unnoticed: `pp_term'
+   has to be emitting `FV' and `Const' annotations for any of this to
+   carry a type. *)
+local
+  val t = ``x + 1``
+  val m = Msg.^^ (Msg.txt "about ", Msg.tm t)
+  (* One call, both renderings: what the channel got, and what the
+     hook was offered. *)
+  val plain = ref ([] : string list)
+  val seen = ref (NONE : Msg.message option)
+  val () =
+    Lib.with_flag (Feedback.MESG_hook, (fn msg => seen := SOME msg))
+      (fn () =>
+        Lib.with_flag (Feedback.MESG_outstream, (fn s => plain := s :: !plain))
+          (fn () =>
+            Lib.with_flag (Feedback.MESG_to_string, (fn s => s))
+              (fn () => Feedback.HOL_MESGm m) ()) ()) ()
+  val emitted = String.concat (List.rev (!plain))
+  fun segs () = Msg.segments (valOf (!seen))
+  fun find k = List.find (fn {kind, ...} => kind = k) (segs ())
+in
+
+val _ = tprint "HOL_MESGm offers the message, not just its text"
+val _ = case !seen of SOME _ => OK() | NONE => die "the hook saw nothing"
+
+val _ = tprint "the channel's own text stays plain"
+val _ = if emitted = "about x + 1" then OK()
+        else die ("got " ^ String.toString emitted)
+
+val _ = tprint "a term in a MESG renders with its variable's type"
+val _ =
+    case find "fv" of
+        NONE => die ("no free variable marked in " ^
+                     String.concat (map #text (segs ())))
+      | SOME {text, ty, ...} =>
+        if text = "x" andalso String.isSubstring "num" ty then OK()
+        else die ("got " ^ text ^ " : " ^ ty)
+
+val _ = tprint "and with its constant's theory-qualified name and type"
+val _ =
+    case find "const" of
+        NONE => die ("no constant marked in " ^
+                     String.concat (map #text (segs ())))
+      | SOME {name, ty, ...} =>
+        if name = "arithmetic$+" andalso ty = "num -> num -> num" then OK()
+        else die ("got " ^ name ^ " : " ^ ty)
+
+(* Both renderings are of one message, so a consumer that lays the
+   channel's text down and decorates it from the segments can do so by
+   arithmetic rather than by searching the text for the terms. *)
+val _ = tprint "the rich rendering and the channel's text agree"
+val _ =
+    let val rejoined = String.concat (List.map #text (segs ()))
+    in
+      if rejoined = emitted then OK()
+      else die ("segments give " ^ String.toString rejoined ^
+                " but the channel got " ^ String.toString emitted)
+    end
+end

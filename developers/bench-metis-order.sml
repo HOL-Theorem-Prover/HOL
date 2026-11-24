@@ -36,7 +36,7 @@
    goal therefore still search a little differently.  Primitive
    inferences rather than the clock, because a search that went
    differently translates a different proof and the count says so
-   without the timing noise.  `set_trace "metis" 2` adds the seed each
+   without the timing noise.  `set_trace "metis.trace" 2` adds the seed each
    call used: those should not move.
 
    The workload is first-order logic over uninterpreted symbols (`i` for

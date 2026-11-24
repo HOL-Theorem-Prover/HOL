@@ -425,7 +425,7 @@ in
 val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
 fun add_defs_to_EVAL l =
-  if not (!computeLib.auto_import_definitions) then () else
+  if not (computeLib.get_auto_import_definitions()) then () else
     let val has_lhs_SUC = List.exists
               (can (find_term is_suc) o lhs o #2 o strip_forall)
                                       o strip_conj o concl
@@ -449,13 +449,14 @@ end;
 
 val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 
+val {get = chatting, flag = storage_message, ...} =
+    HOLFlags.create_btrace ({group = "Definition",
+                             name = "storage_message"}, true)
 local
-  val chatting = ref true
-  val _ = Feedback.register_btrace("Definition.storage_message", chatting)
 in
 fun been_stored (s,thm) =
   (add_defs_to_EVAL [(s,thm)];
-   if !chatting then
+   if chatting() then
      mesg (if !Globals.interactive then
              "Definition has been stored under " ^ Lib.quote s ^ "\n"
            else
@@ -494,7 +495,7 @@ fun store_at loc (stem,eqs,ind) =
       val ind_bind = indSuffix stem
       fun save x =
          case Theory.oracle_string_of (snd x)
-          of NONE => Feedback.trace ("Theory.save_thm_reporting", 0)
+          of NONE => HOLFlags.with_flags [(Theory.save_thm_reporting, 0)]
                                     (save_thm_at loc) x
            | SOME _ => save_thm_at loc x
       val   _  = save (ind_bind, ind)
@@ -502,7 +503,7 @@ fun store_at loc (stem,eqs,ind) =
       val _ = add_defs_to_EVAL [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
-    if !chatting then
+    if chatting() then
        mesg (if !Globals.interactive then
                String.concat ["Equations stored under ", Lib.quote eqs_bind,
                               ".\nInduction stored under ", Lib.quote ind_bind,
@@ -1791,16 +1792,34 @@ in
   List.exists TypeBase.is_constructor possible_ops
 end
 
-fun unify_error pv1 pv2 = let
+(* Two clauses disagree about the type of a name they share -- all but
+   always the function being defined, which is why the clash surfaces
+   here rather than inside either clause.  `Pretype.unify' can say only
+   which two type operators would not match; this says whose type they
+   are, where each clause is, and what each clause made of it.
+
+   `earlier' is the occurrence already in the table, `later' the one
+   being merged into it.  Types are resolved against the environment as
+   it stands at the failure: unresolved pieces are printed as they are
+   rather than being allowed to raise out of an error handler. *)
+fun unify_error {earlier, later, reason} env = let
   open Preterm
-  val (nm,ty1,l1) = dest_ptvar pv1
-  val (_,ty2,l2) = dest_ptvar pv2
+  val (nm,lty,llocn) = dest_ptvar later
+  val (_, ety,elocn) = dest_ptvar earlier
+  val txt = Msg.txt
+  (* Resolving the pretype can fail and is done here, where the
+     fallback belongs; only the printing is suspended, so the message
+     still carries the type for a reader that wants more than its
+     name. *)
+  fun tymsg ty =
+      Msg.ty (Pretype.toType (Pretype.apply_subst env ty))
+      handle _ => txt "<unresolved>"
 in
-  "Couldn't unify types of head symbol " ^
-  Lib.quote nm ^ " at positions " ^ locn.toShortString l1 ^ " and " ^
-  locn.toShortString l2 ^ " with types " ^
-  type_to_string (Pretype.toType ty1) ^ " and " ^
-  type_to_string (Pretype.toType ty2)
+  Msg.concat
+    [txt "\nClauses give ", txt (Lib.quote nm), txt " different types.\n",
+     txt "  ", txt (locn.toShortString elocn), txt ": ", tymsg ety, txt "\n",
+     txt "  ", txt (locn.toShortString llocn), txt ": ", tymsg lty, txt "\n",
+     txt "  Reason: ", reason, txt "\n"]
 end
 
 fun ptdefn_freevars pt = let
@@ -1823,7 +1842,8 @@ end
 fun defn_absyn_to_term a = let
   val alist = Absyn.strip_conj a
   open errormonad
-  val tycheck = Preterm.typecheck_phase1 (SOME (term_to_string, type_to_string))
+  infix ++?
+  val tycheck = Preterm.typecheck_phase1 (SOME (Msg.tm, Msg.ty))
   val ptsM =
       mmap
         (fn a => absyn_to_preterm a >- (fn ptm => tycheck ptm >> return ptm))
@@ -1834,7 +1854,23 @@ fun defn_absyn_to_term a = let
       (case Symtab.lookup env Name of
            NONE => return (Symtab.update (Name,pv) env)
          | SOME pv' =>
-             Preterm.ptype_of pv' >- (fn pty' => Pretype.unify Ty pty') >>
+             (Preterm.ptype_of pv' >- (fn pty' => Pretype.unify Ty pty')) ++?
+             (* The position the unification carries is where the
+                offending type was forced on a variable, which is a
+                subterm of one of the clauses; keep it.  Only the
+                message needs improving -- unaided it is a bare
+                "couldn't unify these two type operators", with no hint
+                that two clauses are being reconciled at all. *)
+             (fn (tc, l) => fn e =>
+                 let
+                   val why = typecheck_error.errorMessage tc
+                 in
+                   errormonad.Error
+                     (typecheck_error.Misc
+                        (unify_error {earlier = pv', later = pv,
+                                      reason = why} e),
+                      l)
+                 end) >>
              return env)
     | foldthis (_, env) = raise Fail "defn_absyn_to_term: can't happen"
   open Preterm
@@ -1872,7 +1908,7 @@ fun parse_absyn absyn0 = let
   val _ =
       app (ignore o Parse.hide) (nonconstructor_parameter_names @ fn_names)
   fun restore() = temp_set_grammars(type_grammar(), oldg)
-  val quiet = Feedback.trace ("show_typecheck_errors", 0)
+  val quiet = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
   val tm  = quiet defn_absyn_to_term absyn handle e => (restore(); raise e)
 in
   restore();
@@ -1885,39 +1921,53 @@ end;
 (* list is a separate mutually recursive clique.                             *)
 (*---------------------------------------------------------------------------*)
 
-fun parse_quote q =
-  sort_eqns (fst (parse_absyn (Parse.Absyn q)))
-  handle e => raise wrap_exn "Defn" "parse_quote" e;
+fun parse_quote_absyn a =
+  sort_eqns (fst (parse_absyn a))
+  handle e => raise wrap_exn "Defn" "parse_quote" e
+
+fun parse_quote q = parse_quote_absyn (Parse.Absyn q);
 
 local
   val mkstems =
     List.map (fst o dest_var o fst o strip_comb o lhs o snd o strip_forall o
               hd o strip_conj)
 in
-fun Hol_defn stem q =
- (case parse_quote q
+(* Parse the quotation ONCE.  The span these wrap an exception in is
+   the whole quotation's, which means parsing it -- and doing that
+   inside the handler, as this used to, re-runs a parse that is already
+   known to be in trouble.  If the second parse raises, the caller sees
+   *that* exception and the one being wrapped is lost. *)
+fun Hol_defn stem q = let
+  val a = Parse.Absyn q
+in
+ (case parse_quote_absyn a
    of [] => raise ERR "Hol_defn" "no definitions"
     | [eqns] => mk_defn stem eqns
     | eqnsl => raise ERR "Hol_defn"
                          ("multiple definitions: "^
                           String.concatWith ", " (mkstems eqnsl)))
   handle e =>
-  raise wrap_exn_loc "Defn" "Hol_defn"
-           (Absyn.locn_of_absyn (Parse.Absyn q)) e;
+  raise wrap_exn_loc "Defn" "Hol_defn" (Absyn.locn_of_absyn a) e
+end
 
-fun Hol_defns stems q =
- (case parse_quote q
+fun Hol_defns stems q = let
+  val a = Parse.Absyn q
+in
+ (case parse_quote_absyn a
    of [] => raise ERR "Hol_defns" "no definition"
     | eqnl => mk_defns stems eqnl)
-  handle e => raise wrap_exn_loc "Defn" "Hol_defns"
-                 (Absyn.locn_of_absyn (Parse.Absyn q)) e;
+  handle e => raise wrap_exn_loc "Defn" "Hol_defns" (Absyn.locn_of_absyn a) e
+end
 
-  fun Hol_multi_defns q =
-    (case parse_quote q of
+  fun Hol_multi_defns q = let
+    val a = Parse.Absyn q
+  in
+    (case parse_quote_absyn a of
        [] => raise ERR "Hol_multi_defns" "no definition"
       | eqnsl => mk_defns (mkstems eqnsl) eqnsl)
-    handle e => raise wrap_exn_loc "Defn" "Hol_multi_defns"
-                   (Absyn.locn_of_absyn (Parse.Absyn q)) e
+    handle e =>
+      raise wrap_exn_loc "Defn" "Hol_multi_defns" (Absyn.locn_of_absyn a) e
+  end
 end
 
 fun Hol_Rdefn stem Rquote eqs_quote =
@@ -2002,7 +2052,8 @@ fun tgoal_no_defn0 (def,ind) =
     end) handle HOL_ERR _ => raise ERR "tgoal" "";
 
 fun tgoal_no_defn (def,ind) =
-  Lib.with_flag (proofManagerLib.chatting,false) tgoal_no_defn0 (def,ind);
+  HOLFlags.with_bflags [(proofManagerLib.chatting, false)]
+                       tgoal_no_defn0 (def,ind);
 
 fun tgoal0 defn =
    (let val (_, (g,validation)) = tc_obligation defn
@@ -2010,7 +2061,8 @@ fun tgoal0 defn =
          (Manager.new_goalstack g Manager.id_tacm validation)
     end) handle HOL_ERR _ => raise ERR "tgoal" "";
 
-fun tgoal defn = Lib.with_flag (proofManagerLib.chatting,false) tgoal0 defn;
+fun tgoal defn =
+    HOLFlags.with_bflags [(proofManagerLib.chatting, false)] tgoal0 defn;
 
 (*---------------------------------------------------------------------------
      The error handling here is pretty coarse.
@@ -2051,7 +2103,7 @@ fun tprove2 mk_obligation (arg,tactic) =
 fun tprove1 mk_obligation p =
   let
     val (eqns,ind) = tprove2 mk_obligation p
-    val () = if not (!computeLib.auto_import_definitions) then ()
+    val () = if not (computeLib.get_auto_import_definitions()) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
   in

@@ -28,7 +28,8 @@ signature Refute_ModelFinder_HOL = sig
      stem : string,
      members : kname list,
      rules : term list,
-     cases : term list}
+     cases : term list,
+     derived : bool}
 
   type fixpoint_cache = (kname * fixpoint_group option) list
 
@@ -78,6 +79,14 @@ signature Refute_ModelFinder_HOL = sig
      iterator_table : iterator_table,
      ersatz_table : ersatz list,
      whack_weakening : bool ref,
+     (* each condition an encoding of a fixpoint group relies on (cases
+        bodies monotone, least or greatest fixpoint): the group's first
+        member, the condition, and whether it was proved *)
+     fixpoint_checks : (term * string * bool) list ref,
+     (* note_circular_definition's memo and the constants it found
+        circular *)
+     definition_successors : (term, term list) Redblackmap.dict ref,
+     underdetermined : term list ref,
      choice_guard_inserted : bool ref,
      choice_empty_cache : (term * bool) list ref,
      choice_predicate_attempts : int ref,

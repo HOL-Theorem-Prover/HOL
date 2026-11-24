@@ -8,7 +8,8 @@ type tygrammar = type_grammar.grammar
 type absyn = Absyn.absyn
 type preterm = Preterm.preterm
 type 'a quotation = 'a HOLPP.frag list
-type pprinters = ((term -> string) * (hol_type -> string)) option
+type pprinters =
+     ((term -> HOLmessage.message) * (hol_type -> HOLmessage.message)) option
 type 'a in_env = 'a Pretype.in_env
 
 open HolKernel GrammarSpecials
@@ -337,7 +338,7 @@ in
   end
 
   fun trace tinfo (m:'a in_env) : 'a in_env = fn env =>
-    Feedback.trace tinfo m env
+    HOLFlags.trace tinfo m env
 
   fun ctxt_preterm_to_term pprinters tyopt FVs ptm0 : term in_env =
     let
@@ -347,8 +348,9 @@ in
             | SOME ty => Constrained{Ptm=ptm0,Ty=Pretype.fromType ty,
                                      Locn = locn.Loc_None}
     in
-      errormonad.with_flagM (Globals.notify_on_tyvar_guess,false)
-                            (parse_preterm_in_context0 pprinters FVs ptm)
+      errormonad.with_Modifier
+        (HOLFlags.with_bflags [(Preterm.notify_on_tyvar_guess, false)])
+        (parse_preterm_in_context0 pprinters FVs ptm)
     end
 
   fun ctxt_term pprinters g tyg tyopt fvs q = let

@@ -1,6 +1,16 @@
 gh1353.log: doit.sh testd/bugScript.sml
 	$(tee ./doit.sh $(protect $(HOLDIR)/bin/hol.state0) $(protect $(HOLDIR)/bin/Holmake), $@)
 
+# Poly/ML only, and listed as such in parallel_tests: doit.sh hands
+# Holmake a --holstate, which only the Poly/ML command line has, and
+# a bin/hol.state0, which only a Poly/ML build produces.  Run under
+# Moscow ML it would not fail -- it would pass for nothing, because
+# Holmake rejects the unknown option and exits 1, and the test reads
+# any ordinary non-zero exit as "Holmake reported the parse error
+# properly", which is the outcome it is looking for.  The scanner
+# itself is shared, and gh1371 exercises it through unquote under
+# both compilers.
+
 # doit.sh drives Holmake in testd/ -- a subdir build does not visit
 # via parallel_tests INCLUDES.  List its .hol/ tree here so build
 # cleanAll removes it.

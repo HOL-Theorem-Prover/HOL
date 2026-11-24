@@ -27,7 +27,8 @@ One call owns one absolute deadline (default 10 s) consumed by
 preprocessing, admission, every backend and Kodkodi; cleanup may finish
 after it.  Backends run concurrently in a pool local to the call, each
 seeing the whole remainder, unless `upd_sequential true`, which runs them
-by weight and splits the remainder among those not yet started.  Either
+in turn, by weight or in the order an `Only` list gives, each with half of
+the remainder while others wait and the last with the rest.  Either
 way the search stops at `NoCounterexample` or at a counterexample reaching
 the highest certainty any selected backend declares reachable.
 
@@ -58,10 +59,15 @@ Verdicts and trust
 * SETTLED, do not revisit without the owner: Refute trusts Kodkodi exactly
   as Nitpick trusts Kodkod and is never stricter.  A model-finder verdict is
   decided by the encoding (`Refute_ModelFinder_Model.fallback_certainty`),
-  never by whether a certificate was built.  `max_potential` bounds models of
-  the unsound liberal problem only; every model of a sound problem is
-  charged to `max_genuine`.  3948a7bed, 2db19131b and 92c24de7e required a
-  certificate and were reverted.
+  never by whether a certificate was built.  The one exception is a
+  problem where a constant's equations are circular (that constant is left
+  free): its models are Potential, and only a replay that certifies one
+  makes it Genuine.  `max_potential` bounds models of the unsound liberal
+  problem and those uncertified circular-constant models.  Of the other
+  models of a sound problem, a Genuine one spends a `max_genuine` slot and
+  a QuasiGenuine one is reported without spending either budget.
+  3948a7bed, 2db19131b and 92c24de7e required a certificate and were
+  reverted.
 * A polymorphic goal never earns `NoCounterexample` on any engine; a
   counterexample found at a monomorphic proxy stands.  Refuting an
   essential existential over an infinite type is out of reach (as in
@@ -84,11 +90,17 @@ calls back into it rather than reimplementing it) in the same order, so
 changes to generation order must land in both and in the theory together.
 
 Custom generators (`:rat`, `:real`, `Refute_Gen.GenCustom`) run on Compute
-only; `fmap` is a generator family (`register_generator_family`) that
-NativeSML declines by name.  Compute decides `=` between ground
+only.  `fmap` is a generator family (`register_generator_family`); native
+code holds a map as its `FEMPTY`/`FUPDATE` chain and reads it through the
+chain's entries, and sets as membership functions (`{}`, `INSERT`,
+`{ x | P x }`; a comprehension of images is refused by name).  Compute
+decides `=` between ground
 `FEMPTY`-rooted update chains through `Refute_EvalFmap` (the stock compset
-only reduces the identical pair).  Both substrates take every word width
-exhaustively, and width `<= 32` or exactly 64 for random draws.
+only reduces the identical pair).  Both substrates take every word width,
+exhaustively and in random draws.  Past the exhaustive range they add the
+boundary values (`Refute_Eval.word_boundary_values`: the ends of the
+unsigned and signed ranges and each single-bit value), and half of the
+random draws pick one, so a wrap at `2 ** w - 1` shows at any width.
 
 Smart generators (default on) serve exhaustive testing only; random
 testing keeps generate-and-guard plans.  They mode-compile `Hol_reln`
@@ -125,6 +137,17 @@ unfolding, typedef/quotient/codatatype registries, ersatz table), `_Names`,
 `upd_bisim_depth`, `upd_finitize`, `upd_whack`, `upd_need`,
 `upd_tac_timeout` (0.5 s; `0` skips), `upd_format`, `upd_max_potential`,
 `upd_max_genuine`, `upd_merge_type_vars`; `NONE` keys are row fallbacks.
+
+Adaptive scope enumeration materializes one solver batch at a time,
+using `batch_size` (one scope under `debug`). The same cursor resumes
+until exhaustion or the search deadline; the batch size does not cap the
+search. Fixed-bound enumeration retains its 5000-candidate limit.
+
+Problems rejected during assembly for excessive relation arity, table
+size, or insufficient integer bits retain their reasons. Inconclusive
+and deadline results include each distinct reason with its rejection
+count. Successful searches print these summaries at verbosity 2;
+counterexample statistics include `problems_rejected`.
 
 Native carriers: a word of concrete width `w` has exactly `2^w` atoms
 (refused above 1024), `:char` 256; both are exact, never scope-searched,

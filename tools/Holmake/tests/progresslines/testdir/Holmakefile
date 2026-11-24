@@ -1,0 +1,12 @@
+INCLUDES = d1 d2
+
+# Nothing here is compiled, so there is no reason to wait on a HOL
+# heap -- and no heap exists yet where this test runs in a fresh
+# build.
+ifdef POLY
+CLINE_OPTIONS = --poly_not_hol
+endif
+
+.PHONY: all
+all:
+	@true

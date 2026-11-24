@@ -74,7 +74,12 @@ SRCTESTDIRS = \
   finite_maps/theory_tests
 
 ifdef POLY
-SRCTESTDIRS += n-bit/interactive_tests
+# HolRefute's test directories are POLY-only, as the module is.
+# HolRefute/selftest is their master directory: it holds no sources,
+# just the INCLUDES naming them, and decides which of them a level
+# builds.  Naming it is naming all of them, and a developer can run the
+# whole suite with one Holmake there.
+SRCTESTDIRS += n-bit/interactive_tests n-bit/threaded_tests HolRefute/selftest
 EXDIRS += RL_Environment
 
 ifneq ($(KERNELID),otknl)

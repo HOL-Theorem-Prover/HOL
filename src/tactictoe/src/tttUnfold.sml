@@ -1276,7 +1276,8 @@ val unrecordable_theories = ["min", "bool", "coreboolSupport"]
 
 fun ttt_rewrite_thy thy =
   if mem thy unrecordable_theories then () else
-    ttt_rewrite_thy_in_context thy (mk_record_context thy)
+    with_tactictoe_cache (fn () =>
+      ttt_rewrite_thy_in_context thy (mk_record_context thy))
 
 (* -------------------------------------------------------------------------
    Recording (includes rewriting)

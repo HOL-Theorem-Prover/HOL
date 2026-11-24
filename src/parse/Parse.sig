@@ -222,7 +222,8 @@ signature Parse = sig
   val pp_term : term pprinter
   val pp_type : hol_type pprinter
   val pp_thm : thm pprinter
-  val stdprinters : ((term -> string) * (hol_type -> string)) option
+  val stdprinters :
+      ((term -> HOLmessage.message) * (hol_type -> HOLmessage.message)) option
 
   val pp_type_without_colon   : hol_type pprinter
   val term_pp_with_delimiters : term pprinter -> term pprinter
@@ -303,5 +304,14 @@ signature Parse = sig
     structure UChar : UnicodeChars
   end
 
+  (* common parse/pp flags *)
+  val avoid_unicode : HOLFlags.bflag
+  val show_types : HOLFlags.bflag
+  val show_assums : HOLFlags.bflag
+
+  val ambiguous_grammar_warning : HOLFlags.flag
+  val notify_on_tyvar_guess : HOLFlags.bflag
+  val show_typecheck_errors : HOLFlags.bflag
+  val show_syntax_errors : HOLFlags.bflag
 
 end

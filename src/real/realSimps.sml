@@ -1006,8 +1006,15 @@ val Rthms = [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)]
 val giveexp = REWR_CONV POW_1'
 fun mulrelnorm0 R Rthms solver0 stk t =
     let
+      (* `dest_binop' takes its exception by value, so this is built
+         on every call, not only on the failing ones -- and this runs
+         inside a simplifier conversion.  A message suspends the term
+         instead of printing it. *)
+      val op ^^ = Msg.^^
+      infix 6 ^^
       val mkERR = mk_HOL_ERR "realSimps" "mulrelnorm"
-      val (l,r) = dest_binop R (mkERR ("Not a " ^ term_to_string R)) t
+      val mkERRm = mk_HOL_ERRm "realSimps" "mulrelnorm"
+      val (l,r) = dest_binop R (mkERRm (Msg.txt "Not a " ^^ Msg.tm R)) t
       val sorted_cbases = Listsort.sort (inv_img_cmp #1 litcompare) o
                           map mul_termbase o strip_mult
       val ls = sorted_cbases l

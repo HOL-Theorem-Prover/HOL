@@ -2,15 +2,23 @@ signature target_times =
 sig
 
   (* Cost data for the parallel scheduler, in child CPU seconds --
-     what `ProcessMultiplexor' measures for each job it runs, and hands
-     to that job's `update'.  Holmake records every job it runs,
-     theories included; `Theory.sml' still reports and logs its own
-     proof times, but nothing here reads them.
+     user plus system time, as `ProcessMultiplexor' measures it for
+     each job it runs and hands to that job's `update'.  System time is
+     counted because a HOL child spends a real share of its cost
+     mapping its heap and faulting pages in, and a target that only
+     copies files spends almost all of it there.
+
+     Holmake records every job it runs, theories included;
+     `Theory.sml' still reports and logs its own proof times (also
+     user plus system), but nothing here reads them.
 
      Two sources, presented as one map:
 
-       * <root>/.hol/build-logs/target-times, the project's own cache,
-         rewritten by every parallel Holmake run in that project;
+       * the project's cache, build-logs/target-times under
+         HFS_NameMunge.project_state_dir root (<root>/.hol by default;
+         under a layout, objroot when root is srcroot and
+         objroot/projects/<rel> for a project below it), updated by
+         parallel builds;
        * zero or more committed *seed* files, which a project ships so
          that a fresh checkout -- where no cache exists yet -- still
          schedules well.  `HMProject.build_times_files' finds them.
@@ -48,10 +56,18 @@ sig
      `find_best_runnable_pred' ties on node id. *)
   val cost : map -> string -> real
 
-  (* Merge `entries` into <root>/.hol/build-logs/target-times,
-     last-observed wins, preserving entries this run did not touch.
-     Creates the directory if needed.  I/O errors are swallowed with a
-     note on stdErr; a failed merge never derails the build.
+  (* Merge `entries` into the project's build-logs/target-times,
+     this run's value winning over the cache's, and preserving entries
+     this run did not touch.  Creates the directory if needed.  I/O
+     errors are swallowed with a note on stdErr; a failed merge never
+     derails the build.
+
+     `entries` is read left to right, so a key appearing twice in it
+     keeps the *later* pair and silently drops the earlier one.  A
+     caller that measures one key more than once -- as a multi-command
+     recipe does, one job per command line, all sharing a key -- must
+     therefore combine its own measurements before calling; see
+     `note_time' in multibuild.sml, which sums them.
 
      Writes the cache and only the cache -- never a seed, and never
      seed values that came back through `load'. *)

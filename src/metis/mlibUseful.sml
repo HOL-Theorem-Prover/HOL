@@ -63,25 +63,26 @@ in
   fun timed_many f a = several 0 0.0 f a
 end;
 
-val trace_level = ref 1;
+(* How loud to be.
 
-val traces : {module : string, alignment : int -> int} list ref = ref [];
+   The level in force is a value, carried by whatever the caller is
+   already carrying -- a `resolution`, a `clause`, a solver's `form` --
+   and ultimately read off the goal's context by `metisTools`.  It used
+   to be a `ref` here, consulted through a lookup in a table of module
+   alignments: every guard in the prover paid for that, a few hundred
+   thousand times per second of proof search.
 
-fun add_trace t = traces := t :: !traces
-fun set_traces ts = traces := ts
+   Each module fixes its alignment when it defines its own `chatting`,
+   with `~1` for the modules whose output HOL never aligned, which
+   therefore speak only at `MAX_LEVEL`.  Passing the level in makes a
+   guard an integer comparison, which is what it should always have
+   been. *)
 
-local
-  val MAX = 10;
-  fun query m l =
-    let val t = List.find (fn {module, ...} => module = m) (!traces)
-    in case t of NONE => MAX | SOME {alignment, ...} => alignment l
-    end;
-in
-  fun tracing {module = m, level = l} =
-    let val t = !trace_level
-    in 0 < t andalso (MAX <= t orelse MAX <= l orelse query m l <= t)
-    end;
-end;
+val MAX_LEVEL = 10;
+
+fun chatting_at offset level l =
+  MAX_LEVEL <= level orelse
+  (0 <= offset andalso l + offset <= level);
 
 val trace = Lib.say;
 

@@ -1,7 +1,7 @@
 app load ["bossLib","Q"];
 open bossLib; infix 8 by;
 
-show_assums := true;
+HOLFlags.set_bflag (Parse.show_assums, true);
 
 fun defn def_bind tm =
  Tfl.nested_function

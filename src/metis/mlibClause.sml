@@ -32,9 +32,8 @@ val formula_subst = mlibSubst.formula_subst;
 (* Chatting                                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val module = "mlibClause";
-val _ = add_trace {module = module, alignment = I}
-fun chatting l = tracing {module = module, level = l};
+(* HOL aligns this module's output four levels in. *)
+val chatting = chatting_at 4;
 fun chat s = (trace s; true)
 
 (* ------------------------------------------------------------------------- *)
@@ -45,7 +44,8 @@ type parameters =
   {term_order       : bool,
    literal_order    : bool,
    order_stickiness : int,
-   termorder_parm   : mlibTermorder.parameters};
+   termorder_parm   : mlibTermorder.parameters,
+   chat             : int};  (* how loud: per call, not tuning *)
 
 type 'a parmupdate = ('a -> 'a) -> parameters -> parameters;
 
@@ -53,42 +53,55 @@ val defaults =
   {term_order       = true,
    literal_order    = false,
    order_stickiness = 0,
-   termorder_parm   = T.defaults};
+   termorder_parm   = T.defaults,
+   chat             = 0};
 
 fun update_term_order f (parm : parameters) : parameters =
   let
     val {term_order = t, literal_order = l,
-         order_stickiness = s, termorder_parm = x} = parm
+         order_stickiness = s, termorder_parm = x, chat = c} = parm
   in
     {term_order = f t, literal_order = l,
-     order_stickiness = s, termorder_parm = x}
+     order_stickiness = s, termorder_parm = x, chat = c}
   end;
 
 fun update_literal_order f (parm : parameters) : parameters =
   let
     val {term_order = t, literal_order = l,
-         order_stickiness = s, termorder_parm = x} = parm
+         order_stickiness = s, termorder_parm = x, chat = c} = parm
   in
     {term_order = t, literal_order = f l,
-     order_stickiness = s, termorder_parm = x}
+     order_stickiness = s, termorder_parm = x, chat = c}
   end;
 
 fun update_order_stickiness f (parm : parameters) : parameters =
   let
     val {term_order = t, literal_order = l,
-         order_stickiness = s, termorder_parm = x} = parm
+         order_stickiness = s, termorder_parm = x, chat = c} = parm
   in
     {term_order = t, literal_order = l,
-     order_stickiness = f s, termorder_parm = x}
+     order_stickiness = f s, termorder_parm = x, chat = c}
   end;
 
 fun update_termorder_parm f (parm : parameters) : parameters =
   let
     val {term_order = t, literal_order = l,
-         order_stickiness = s, termorder_parm = x} = parm
+         order_stickiness = s, termorder_parm = x, chat = c} = parm
   in
     {term_order = t, literal_order = l,
-     order_stickiness = s, termorder_parm = f x}
+     order_stickiness = s, termorder_parm = f x, chat = c}
+  end;
+
+(* The termorder's own level moves with it: `mlibTermorder' is reached
+   only through the parameters a clause carries. *)
+fun update_chat f (parm : parameters) : parameters =
+  let
+    val {term_order = t, literal_order = l,
+         order_stickiness = s, termorder_parm = x, chat = c} = parm
+    val c = f c
+  in
+    {term_order = t, literal_order = l, order_stickiness = s,
+     termorder_parm = T.update_chat (K c) x, chat = c}
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -189,7 +202,7 @@ fun constraint_consistent (p : parameters) to =
   case T.consistent to of
     SOME to => if #order_stickiness p <= 1 then no_constraints p else to
   | NONE =>
-    (chatting 1 andalso
+    (chatting (#chat p) 1 andalso
      chat ("merge_orderings: resulting termorder is inconsistent:\n" ^
            PP.pp_to_string (!LINE_LENGTH) T.pp_termorder to);
      raise Error "consistent: inconsistent orderings");
@@ -216,6 +229,9 @@ and derivation =
 fun mk_clause p th = CL (p, new_id (), th, no_constraints p, Axiom);
 
 fun dest_clause (CL (p,i,th,to,_)) = {parm = p, id = i, thm = th, order = to};
+
+(* How loud the search this clause belongs to was asked to be. *)
+fun chat_level (CL ({chat,...},_,_,_,_)) = chat;
 
 fun derivation (CL (_,_,_,_,d)) = d;
 
@@ -366,8 +382,9 @@ fun subsumes (cl as CL (_,_,th,c,_)) (cl' as CL (_,_,th',c',_)) =
 
 datatype rewrs = REWR of parameters * mlibRewrite.rewrs;
 
-fun empty (parm as {termorder_parm = p, ...}) =
-  REWR (parm, mlibRewrite.empty (mlibTermorder.compare (mlibTermorder.empty p)));
+fun empty (parm as {termorder_parm = p, chat, ...}) =
+  REWR (parm, mlibRewrite.empty chat
+                (mlibTermorder.compare (mlibTermorder.empty p)));
 
 fun size (REWR (_,r)) = mlibRewrite.size r;
 
@@ -460,8 +477,8 @@ local
   fun GEN_REWRITE _ (REWR ({term_order = false, ...}, _)) cl = cl
     | GEN_REWRITE ord (REWR (_,rw)) cl = rewrite0 ord rw cl;
 in
-  fun REWRITE rws cl =
-    if not (chatting 1) then GEN_REWRITE true rws cl else
+  fun REWRITE (rws as REWR (p,_)) cl =
+    if not (chatting (#chat p) 1) then GEN_REWRITE true rws cl else
       let
         val res = GEN_REWRITE true rws cl
         val _ = literals cl <> literals res andalso chat
@@ -472,8 +489,8 @@ in
       end
       handle Error _ => raise Bug "mlibClause.REWRITE: shouldn't fail";
 
-  fun QREWRITE rws cl =
-    if not (chatting 1) then GEN_REWRITE false rws cl else
+  fun QREWRITE (rws as REWR (p,_)) cl =
+    if not (chatting (#chat p) 1) then GEN_REWRITE false rws cl else
       let
         val res = GEN_REWRITE false rws cl
         val _ = literals cl <> literals res andalso chat
@@ -640,8 +657,8 @@ local
     end
     handle Error _ => raise Bug "mlibClause.FACTOR: shouldn't fail";
 in
-  fun FACTOR cl =
-    if not (chatting 1) then FACTOR' cl else
+  fun FACTOR (cl as CL (p,_,_,_,_)) =
+    if not (chatting (#chat p) 1) then FACTOR' cl else
       let
         val res = FACTOR' cl
         val _ = not (null res) andalso chat
@@ -669,8 +686,8 @@ local
       CL (p, new_id (), th, c, mlibResolution (cl1,cl2))
     end;
 in
-  fun RESOLVE arg1 arg2 =
-    if not (chatting 1) then RESOLVE' arg1 arg2 else
+  fun RESOLVE (arg1 as (CL (p,_,_,_,_), _)) arg2 =
+    if not (chatting (#chat p) 1) then RESOLVE' arg1 arg2 else
       let
         fun p res = chat
           ("\nRESOLVE:\n" ^
@@ -718,8 +735,8 @@ local
       CL (p, new_id (), th, c, Paramodulation (cl1,cl2))
     end;
 in
-  fun PARAMODULATE arg1 arg2 =
-    if not (chatting 1) then PARAMODULATE' arg1 arg2 else
+  fun PARAMODULATE (arg1 as (CL (p,_,_,_,_), _, _)) arg2 =
+    if not (chatting (#chat p) 1) then PARAMODULATE' arg1 arg2 else
       let
         fun p res = chat
           ("\nPARAMODULATE:\n" ^

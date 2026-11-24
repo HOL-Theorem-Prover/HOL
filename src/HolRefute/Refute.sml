@@ -45,9 +45,8 @@ structure Refute :> Refute = struct
      shape as an abstract type, generalized to fire for every concrete
      instance of the fmap type operator.  Unlike :rat/:real, this yields an
      ordinary GenDatatype (exhaustive = false, since the key type is
-     generally infinite); only Compute can produce fmap candidates today
-     (NativeSML rejects every registered generator, see Refute_Extract's
-     [validate_type]).
+     generally infinite).  Both substrates generate fmap candidates from
+     it; NativeSML reads a chain through its entries.
      FEMPTY |+ (1,2) |+ (1,3) and FEMPTY |+ (1,3) denote the same map, so
      an FUPDATE chain has no unique syntactic form.  [canonical_fmap_chain]
      removes an update iff a later update in the same chain has an [aconv]

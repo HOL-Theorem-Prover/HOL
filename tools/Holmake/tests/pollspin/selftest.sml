@@ -10,25 +10,23 @@
    will busy-wait unless it notices.  Under a CPU rlimit, as in
    tools/Holmake/tests/gh1353, that gets Holmake killed.
 
-   Measuring this needs pairs of builds, never a single absolute
-   figure: what a build costs also counts Holmake's startup and
-   whatever else the machine is doing, which on a slow or loaded one
-   can exceed any threshold worth setting with nothing having spun.
-   Only the difference between a build that provokes the condition
-   and one that does not is evidence.
+   What this measures is how many times the loop went round, which
+   Holmake reports under its `multibuild' diagnostic.  Earlier
+   versions of this test compared the CPU of a provoking build against
+   a control, and that was a mistake: what a build costs in seconds
+   depends on the machine and on what else it is doing, and on a busy
+   one the difference between two runs of the *same* build was as
+   large as the difference the test was looking for.  It failed
+   repeatedly on builds that were behaving perfectly.  A count of
+   rounds does not move with any of that.  Measured here, a spin runs
+   to about a million rounds against a few hundred when the loop is
+   idling properly -- three orders of magnitude, with nothing to tune.
 
-   Two pairs, because two different things protect the loop:
-
-     spinner/ vs quiet/   one job, which hangs up its pipes or does
-                          not.  The loop has nothing else to attend
-                          to, so its idleness is plain.
-
-     both/ vs talky/      a hung-up job beside a chatty one.  This is
-                          the shape of a real build, and the one a
-                          per-round view of idleness gets wrong: the
-                          chatty job keeps every round looking
-                          productive while the hung-up one spins the
-                          loop in between. *)
+   spinner/ is one job that closes its pipes and stays alive, the
+   plain form of the problem.  both/ puts that job beside a chatty one
+   and is the case a per-round view of idleness gets wrong: the chatty
+   job keeps every round looking productive while the hung-up one
+   spins the loop in between. *)
 
 open testutils
 
@@ -36,81 +34,86 @@ val op++ = OS.Path.concat
 val Holmake = Globals.HOLDIR ++ "bin" ++ "Holmake"
 val testdir = OS.FileSys.getDir()
 
-fun run_in dir args =
-    let val saved = OS.FileSys.getDir()
-        val _ = OS.FileSys.chDir dir
-        val r = Systeml.systeml (Holmake :: args)
+(* A healthy build of either shape runs to a few hundred rounds; a
+   spinning one to roughly a million.  Anywhere in between would do. *)
+val max_rounds = 5000
+
+(* The recipes sleep for two seconds.  A build that comes back sooner
+   did not run one, and then there is nothing to count. *)
+val min_wall = 1.5
+
+fun output_of dir args =
+    let
+      val tmp = OS.FileSys.tmpName()
+      val cmd = String.concat
+                  ["(cd ", testdir ++ dir, " && ", Holmake,
+                   " ", args, " --dbg=multibuild) > ", tmp, " 2>&1"]
+      val res = Systeml.system_ps cmd
+      val strm = TextIO.openIn tmp
+      val content = TextIO.inputAll strm
+      val _ = TextIO.closeIn strm
+      val _ = OS.FileSys.remove tmp handle OS.SysErr _ => ()
     in
-      OS.FileSys.chDir saved; r
+      (res, content)
     end
 
-(* CPU burned by children of this process, which is what running
-   Holmake adds to. *)
-fun child_cpu () =
-    let val {cutime, cstime, ...} = Posix.ProcEnv.times()
-    in Time.+(cutime, cstime) end
+(* Holmake prints "work loop rounds: n" once per build it drives. *)
+val marker = "work loop rounds: "
+fun rounds_in s =
+    let
+      fun digits i =
+          let
+            val j = ref i
+            fun more () = !j < size s andalso
+                          Char.isDigit (String.sub(s, !j))
+          in
+            while more () do j := !j + 1;
+            Int.fromString (String.substring(s, i, !j - i))
+          end
+      fun search i =
+          if i + size marker > size s then NONE
+          else if String.isPrefix marker (String.extract(s, i, NONE)) then
+            digits (i + size marker)
+          else search (i + 1)
+    in
+      search 0
+    end
 
 val products = ["hung", "talky"]
 
-(* Returns (cpu, wall), or NONE if the build failed. *)
-fun measure (dir, args) =
+fun check what (dir, args) =
     let
+      val _ = tprint ("work loop idles rather than spins: " ^ what)
       val d = testdir ++ dir
       fun cleanup () =
           List.app (fn f => OS.FileSys.remove (d ++ f)
                             handle OS.SysErr _ => ())
                    products
       val _ = cleanup()
-      val cpu0 = child_cpu()
       val wall0 = Time.now()
-      val result = run_in d args
-      val wall = Time.-(Time.now(), wall0)
-      val cpu = Time.-(child_cpu(), cpu0)
+      val (res, out) = output_of dir args
+      val wall = Time.toReal (Time.-(Time.now(), wall0))
       val _ = cleanup()
     in
-      if OS.Process.isSuccess result then SOME (cpu, wall) else NONE
-    end
-
-val secs = Time.toReal
-fun fmt t = Real.fmt (StringCvt.FIX (SOME 2)) (secs t) ^ "s"
-
-(* Both recipes take about two seconds, so a spin costs about that
-   much CPU.  Three quarters of a second of excess is clear of the
-   noise between two builds and well under what a spin would show. *)
-val allowed = 0.75
-
-fun compare what (provoking, control) =
-    let
-      val _ = tprint ("work loop idles rather than spins: " ^ what)
-    in
-      case (measure control, measure provoking) of
-          (NONE, _) => die ("FAILED: the " ^ #1 control ^ "/ control\
-                            \ build failed")
-        | (_, NONE) => die ("FAILED: the " ^ #1 provoking ^ "/ build\
-                            \ failed")
-        | (SOME (ccpu, cwall), SOME (pcpu, pwall)) =>
-          let
-            val report =
-                #1 provoking ^ "/ " ^ fmt pcpu ^ " CPU over " ^
-                fmt pwall ^ ", " ^ #1 control ^ "/ " ^ fmt ccpu ^
-                " CPU over " ^ fmt cwall
-            (* The positive control: every recipe here sleeps for two
-               seconds, so a build that came back sooner did not run
-               it, and neither measurement means anything. *)
-            val ran = secs cwall >= 1.5 andalso secs pwall >= 1.5
-            val excess = Time.-(pcpu, ccpu)
-          in
-            if not ran then
-              die ("FAILED: a build finished too quickly for its recipe\
-                   \ to have run; " ^ report)
-            else if secs excess > allowed then
-              die ("FAILED: hanging up the pipes cost an extra " ^
-                   fmt excess ^ " of CPU: the work loop is\
-                   \ busy-waiting (" ^ report ^ ")")
+      if not (OS.Process.isSuccess res) then
+        die ("FAILED: the " ^ dir ^ "/ build failed\n" ^ out)
+      else if wall < min_wall then
+        die ("FAILED: " ^ dir ^ "/ finished in " ^
+             Real.fmt (StringCvt.FIX (SOME 2)) wall ^
+             "s, too quickly for its recipe to have run")
+      else
+        case rounds_in out of
+            NONE =>
+            die ("FAILED: Holmake reported no round count; the test\
+                 \ cannot pass without one.  Has the `multibuild'\
+                 \ diagnostic moved?\n" ^ out)
+          | SOME n =>
+            if n > max_rounds then
+              die ("FAILED: the work loop went round " ^ Int.toString n ^
+                   " times, against " ^ Int.toString max_rounds ^
+                   " allowed: it is busy-waiting")
             else OK()
-          end
     end
 
-val _ = compare "one job" (("spinner", []), ("quiet", []))
-val _ = compare "beside a chatty job"
-                (("both", ["-j2"]), ("talky", ["-j2"]))
+val _ = check "one job" ("spinner", "")
+val _ = check "beside a chatty job" ("both", "-j2")

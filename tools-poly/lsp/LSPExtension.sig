@@ -420,6 +420,37 @@ val restoreCompileSnap: (compileSnap -> unit) ref
    tools-poly/hol.ML. *)
 val theorySealed: (string -> bool) ref
 
+(* What a HOL exception says about itself: where in the file it blames,
+   and the message HOL itself would print for it.  `server.ML' is
+   compiled before HOL exists and so cannot name `Feedback' or `locn';
+   this is the seam, filled in by `lsp/error_locn_init.ML'.
+
+   The range is a pair of 0-origin line/column positions counting
+   BYTES -- `locn.LocA' coordinates, the ones a `(*#loc*)' pragma
+   speaks -- and the end names the last character, not the one after
+   it.  Widening it belongs on the far side of the conversion, on the
+   byte offset: a region whose last character ends a line has an end
+   column past that line, and a column past a line clamps back onto
+   it.  Converting to the client's units is the caller's job too, as
+   the note on `fromLineColBytes' above requires.
+
+   `range = NONE' means the exception carries no usable file position,
+   which is the answer for everything that is not a located `HOL_ERR'.
+   `message = NONE' asks the caller to keep whatever rendering it
+   already had.  The default says both, so a server whose init files
+   did not load behaves exactly as it did before this hook existed.
+
+   `segments' is the same message again, rendered through the back end
+   that says in data what a terminal says in colour: which spans of it
+   are constants and which are free variables, and their types.  A
+   diagnostic's `message' is a plain string and the protocol gives no
+   way to put anything else there, so this is how the types of the
+   terms an error talks about reach a client -- see `$/hol/message'
+   and the hover in `server.ML'.  Empty when the message holds no HOL
+   values, which is the common case and costs nothing to notice. *)
+val exnReport: (exn -> {range: rangeLC option, message: string option,
+                        segments: pp_segment list}) ref
+
 (* ----------------------------------------------------------------------
    Deferred proofs — Phase A of the LSP's proof replay.
 

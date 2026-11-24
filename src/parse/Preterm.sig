@@ -40,7 +40,8 @@ sig
      report errors. *)
 
   val typecheck_phase1 :
-    ((term -> string) * (hol_type -> string)) option -> preterm -> unit errM
+    ((term -> HOLmessage.message) * (hol_type -> HOLmessage.message)) option ->
+    preterm -> unit errM
 
   (* performs overloading resolution, possibly guessing overloads if
      this is both allowed by Globals.guessing_overloads and required by
@@ -67,10 +68,14 @@ sig
 
   (* essentially the composition of all four of the above *)
   val typecheck:
-    ((term -> string) * (hol_type -> string)) option -> preterm -> term errM
+    ((term -> HOLmessage.message) * (hol_type -> HOLmessage.message)) option ->
+    preterm -> term errM
   val typecheckS : preterm -> term seqM
 
   val typecheck_listener : (preterm * Pretype.Env.t) Listener.t
-  val last_tcerror : (tcheck_error * locn.locn) option ref
+  val notify_on_tyvar_guess : HOLFlags.bflag
+  val guess_tyvars          : HOLFlags.bflag
+  val guess_overloads       : HOLFlags.bflag
+  val show_typecheck_errors : HOLFlags.bflag
 
 end

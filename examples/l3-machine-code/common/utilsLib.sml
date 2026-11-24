@@ -471,8 +471,10 @@ fun SRW_RULE thms = Conv.CONV_RULE (SRW_CONV thms)
 val SET_RULE = Conv.CONV_RULE SET_CONV
 val o_RULE = REWRITE_RULE [combinTheory.o_THM]
 
-fun qm l = Feedback.trace ("metis", 0) (metisLib.METIS_PROVE l)
-fun qm_tac l = Tactical.trace_tac ("metis", 0) (metisLib.METIS_TAC l)
+fun qm l = HOLFlags.with_flags [(metisTools.metis_trace, 0)] (metisLib.METIS_PROVE l)
+fun qm_tac l =
+   Tactical.trace_tac (HOLFlags.flag_name metisTools.metis_trace, 0)
+      (metisLib.METIS_TAC l)
 
 (* ---------------------------- *)
 

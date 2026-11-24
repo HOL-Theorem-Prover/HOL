@@ -13,11 +13,12 @@ val assert = simple_assert;
 (* Debugging.                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val trace_level = ref 0;
-val _ = Feedback.register_trace ("ho_basicTools", trace_level, 10);
-fun trace l s = if l > !trace_level then () else say (s ^ "\n");
+val {get = trace_level, ...} =
+    HOLFlags.create_trace ({group = "ho_basicTools", name = "trace"},
+                           {initial = 0, max = 10});
+fun trace l s = if l > trace_level() then () else say (s ^ "\n");
 fun trace_x l s f x =
-  if l > !trace_level then () else say (s ^ ":\n" ^ f x ^ "\n");
+  if l > trace_level() then () else say (s ^ ":\n" ^ f x ^ "\n");
 fun trace_CONV l s tm = (trace_x l s term_to_string tm; QCONV ALL_CONV tm);
 
 (* ------------------------------------------------------------------------- *)

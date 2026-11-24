@@ -75,14 +75,14 @@ struct
       makeUpdateWJ (from, from', to)
     end z
     fun updateWL z = let
-      fun from current_jobs current_state genjob last_cutime worklimit =
+      fun from current_jobs current_state genjob last_ccpu worklimit =
         {current_state = current_state, current_jobs = current_jobs,
-         worklimit = worklimit, genjob = genjob, last_cutime = last_cutime}
-      fun from' worklimit last_cutime genjob current_state current_jobs =
+         worklimit = worklimit, genjob = genjob, last_ccpu = last_ccpu}
+      fun from' worklimit last_ccpu genjob current_state current_jobs =
         {current_state = current_state, current_jobs = current_jobs,
-         worklimit = worklimit, genjob = genjob, last_cutime = last_cutime}
-      fun to f {current_jobs, current_state, genjob, last_cutime, worklimit} =
-        f current_jobs current_state genjob last_cutime worklimit
+         worklimit = worklimit, genjob = genjob, last_ccpu = last_ccpu}
+      fun to f {current_jobs, current_state, genjob, last_ccpu, worklimit} =
+        f current_jobs current_state genjob last_ccpu worklimit
     in
       makeUpdateWL (from, from', to)
     end z
@@ -118,7 +118,7 @@ struct
     current_jobs : (jobkey, 'a working_job) Binarymap.dict,
     current_state : 'a,
     worklimit : int,
-    last_cutime : Time.time,
+    last_ccpu : Time.time,
     genjob : sched_ctxt -> 'a -> 'a genjob_result
   }
 
@@ -135,12 +135,30 @@ struct
                     handle Option => raise Fail "Can't poll instream"
     end
 
-  fun cutime_delta wl (com : unit -> unit) =
+  (* What a child cost us: its user time *and* its system time.  `times'
+     reports the two separately, and counting only `cutime' dropped
+     everything a HOL child spends mapping its heap, faulting pages in
+     and doing I/O -- measured at 16-37% of a bare `bin/hol' start, and
+     very nearly the whole cost of a target that only copies or waits.
+
+     Both fields are cumulative over *waited-for* children, so a child
+     still running contributes nothing to either.  That is what makes
+     the difference across a single `waitpid' exactly that child's own
+     cost, including any descendants it waited for itself -- which is
+     how a recipe that runs a nested Holmake comes out right. *)
+  fun child_cpu () =
+      let
+        val {cutime, cstime, ...} = Posix.ProcEnv.times()
+      in
+        Time.+(cutime, cstime)
+      end
+
+  fun child_cpu_delta wl (com : unit -> unit) =
       let
         val _ = com()
-        val {cutime = t,...} = Posix.ProcEnv.times()
+        val t = child_cpu ()
       in
-        (Time.-(t,#last_cutime wl), updateWL wl (U #last_cutime t) $$)
+        (Time.-(t,#last_ccpu wl), updateWL wl (U #last_ccpu t) $$)
       end
 
   fun workjob_polls (wj : 'a working_job) =
@@ -155,7 +173,7 @@ struct
     {current_jobs = Binarymap.mkDict jobkey_compare,
      genjob = #genjob provider,
      current_state = #initial provider,
-     last_cutime = #cutime (Posix.ProcEnv.times()),
+     last_ccpu = child_cpu (),
      worklimit = worklimit}
 
   fun fupdjob k f (wl : 'a worklist) : 'a worklist =
@@ -328,7 +346,7 @@ struct
       val cjs = #current_jobs wl
       val job = Binarymap.find (cjs, jk)
       val pid = #pid job
-      val (ct,wl) = cutime_delta wl
+      val (ct,wl) = child_cpu_delta wl
                                  (fn () =>
                                      (kill (K_PROC pid, Posix.Signal.kill);
                                       ignore (waitpid(W_CHILD pid, []))))
@@ -401,6 +419,26 @@ struct
   val idle_grace = Time.fromMilliseconds 10
   val busy_cap = Time.fromMilliseconds 10
 
+  (* How many rounds a stretch may run before it is padded whatever
+     the clock says.  Leaving the grace purely a matter of elapsed
+     time let the loop spin as fast as it liked inside it: ten
+     milliseconds is four and a half thousand rounds of poll and
+     waitpid, which costs nothing much where syscalls are cheap and a
+     great deal where they are not.  A job that is merely finishing
+     needs a round or two -- a healthy two-second build takes about
+     twenty in total -- so a cap well above that is free, and it
+     bounds the stretch by work done rather than by how fast the
+     machine happens to be.  The allowance belongs to the stretch, so
+     it is spent once and refilled only when something is actually
+     heard from; refilling it after each pad would hand out another
+     fifty free rounds between every pair of sleeps. *)
+  val free_rounds = 50
+
+  (* Sleeping for less than a millisecond is not possible -- the
+     underlying wait takes whole milliseconds -- so a pad worth
+     applying is at least that. *)
+  val min_pad = Time.fromMilliseconds 1
+
   fun tmax (t1, t2) = if Time.<(t1, t2) then t2 else t1
   fun tmin (t1, t2) = if Time.<(t1, t2) then t1 else t2
 
@@ -411,12 +449,12 @@ struct
         Time.zeroTime
         (#current_jobs wl)
 
-  fun pad_round roundstart silence others_active =
-      if Time.<(silence, idle_grace) then ()
+  fun pad_round roundstart silence others_active free =
+      if Time.<(silence, idle_grace) andalso free < free_rounds then ()
       else
         let
           val cap = if others_active then busy_cap else poll_interval
-          val want = tmin (silence, cap)
+          val want = tmax (min_pad, tmin (silence, cap))
           val now = Time.now()
           val spent = Time.-(now, roundstart)
         in
@@ -424,9 +462,14 @@ struct
           else ()
         end
 
+  (* See the comment on rounds_last_run in the signature. *)
+  val round_count = ref 0
+  fun rounds_last_run () = !round_count
+
   fun do_work (wl0 : 'a worklist, monitorfn) =
     let
       open Posix.Process
+      val _ = round_count := 0
       val (cmds, wl1) = fill_workq monitorfn ([], wl0)
       fun monitor msg cmds =
         case monitorfn msg of
@@ -442,8 +485,8 @@ struct
         end
       fun exitstatus wj status (cs, wl) =
         let
-          val {cutime,...} = Posix.ProcEnv.times()
-          val elapsed_t = Time.-(cutime, #last_cutime wl)
+          val ccpu = child_cpu ()
+          val cputime_t = Time.-(ccpu, #last_ccpu wl)
           (* The child has been waitpid'd, so its pipes' writer ends are
              closed by the kernel.  Any buffered output the child produced
              between the last poll round and the moment of exit is still in
@@ -466,14 +509,14 @@ struct
           val cs = drain OUT (#out wj) cs
           val cs = drain ERR (#err wj) cs
           val (newstate, jres) =
-              #update wj (#current_state wl, status = W_EXITED, elapsed_t)
-          val msg = Terminated (wjkey wj, status, elapsed_t, jres)
+              #update wj (#current_state wl, status = W_EXITED, cputime_t)
+          val msg = Terminated (wjkey wj, status, cputime_t, jres)
           val cs' = monitor msg cs
           val _ = TextIO.closeIn (#out wj)
           val _ = TextIO.closeIn (#err wj)
           val wl' = updateWL wl
                              (U #current_state newstate)
-                             (U #last_cutime cutime) $$
+                             (U #last_ccpu ccpu) $$
         in
           (cs', wl')
         end
@@ -500,10 +543,14 @@ struct
                           (#current_jobs wl)
         end
 
-      fun loop (cmds, wl : 'a worklist) : 'a =
+      (* `free' counts the rounds since anything was last heard from;
+         see free_rounds. *)
+      fun loop free (cmds, wl : 'a worklist) : 'a =
         if Binarymap.numItems (#current_jobs wl) = 0 then #current_state wl
         else
           let
+            val _ = round_count := !round_count + 1
+            val njobs0 = Binarymap.numItems (#current_jobs wl)
             val roundstart = Time.now()
             val polls = worklist_polls wl
             val active = OS.IO.poll(map #1 polls, SOME poll_interval)
@@ -546,14 +593,18 @@ struct
                 List.foldl foldthis ((cmds,wl), []) active
             val (cmds, wl) = workloop didio (cmds, wl)
             val wl = execute_cmds monitorfn cmds wl
+            val heard = not (null didio) orelse
+                        Binarymap.numItems (#current_jobs wl) <> njobs0
             val _ = pad_round roundstart
                               (longest_silence (Time.now()) wl)
                               (not (null didio))
+                              free
           in
-            loop (fill_workq monitorfn ([], wl))
+            loop (if heard then 0 else free + 1)
+                 (fill_workq monitorfn ([], wl))
           end
     in
-      loop (cmds, wl1)
+      loop 0 (cmds, wl1)
     end
 
   fun fupdAlist k f [] = raise Fail "updAlist: No element with given key"

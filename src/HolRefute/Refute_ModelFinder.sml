@@ -84,7 +84,7 @@ fun format_bool_function value =
             case (at boolSyntax.F, at boolSyntax.T) of
                 (SOME at_false, SOME at_true) =>
                   let val arrow =
-                    if Feedback.get_tracefn "PP.avoid_unicode" () = 1 then
+                    if HOLFlags.get_bflag Parse.avoid_unicode then
                       "|->"
                     else
                       "↦"
@@ -205,6 +205,22 @@ fun ground_types context binarize terms =
 fun free_variables terms =
   Util.distinct_terms (List.concat (map Term.free_vars_lr terms))
 
+(* One reason per encoding condition a group's encoding relied on and
+   that was not proved (MFH.record_check). *)
+fun unproved_conditions (context : MFH.mf_context) =
+  List.mapPartial (fn (member, condition, proved) =>
+    if proved then NONE
+    else SOME ("cases of " ^ Parse.term_to_string member ^
+               " not proved " ^ condition))
+    (rev (!(#fixpoint_checks context)))
+
+(* [deviation from upstream] The reasons a model is only Potential because
+   a constant's equations are circular (MFH.note_circular_definition). *)
+fun underdetermined_reasons (context : MFH.mf_context) =
+  map (fn constant => "equations of " ^ Parse.term_to_string constant ^
+                      " are circular, not a definition")
+    (rev (!(#underdetermined context)))
+
 fun none_true assignments =
   List.all (fn (_, value) => value <> SOME true) assignments
 
@@ -307,7 +323,7 @@ fun solver_arguments deadline solver =
 
 fun problem_for_scope deadline (mf : Refute_Core.mf_config)
       all_types solver free_names nonsel_names nondef_us def_us need_us
-      unsound scope =
+      reject_problem unsound scope =
   let
     val effective_total_consts =
       Option.getOpt (#total_consts mf, exact_totality all_types scope)
@@ -326,7 +342,9 @@ fun problem_for_scope deadline (mf : Refute_Core.mf_config)
        def_us = def_us,
        need_us = need_us}
   in
-    MFK.assemble_problem params unsound scope
+    SOME (MFK.assemble_problem params unsound scope)
+    handle Util.TOO_LARGE reason => (reject_problem reason; NONE)
+         | Util.TOO_SMALL reason => (reject_problem reason; NONE)
   end
 
 fun metadata (_, metadata : MFK.problem_metadata) = metadata
@@ -596,6 +614,7 @@ fun abandoned_mono_verdict report exn =
 
 fun run_instance deadline started (config : Refute_Core.config)
       incremental solver (initial_max_potential, initial_max_genuine)
+      reject_problem
       (instance : Refute_Core.instance) =
   let
     val _ = check_deadline deadline
@@ -757,7 +776,7 @@ fun run_instance deadline started (config : Refute_Core.config)
         | SOME cursor =>
             let
               val {scopes, done, stopped, skipped = newly_skipped} =
-                MFS.scope_cursor_batch_with_stop cursor MFS.max_scopes
+                MFS.scope_cursor_batch_with_stop cursor batch_size
                   (fn () => Refute_Core.search_expired config)
               val _ = skipped := !skipped + newly_skipped
               val _ = scopes_emitted := !scopes_emitted + length scopes
@@ -858,17 +877,26 @@ fun run_instance deadline started (config : Refute_Core.config)
            nonsel_names = #nonsel_names extension,
            rel_table = #rel_table extension,
            bounds = bounds}
-        val sound = not (#unsound extension)
+        (* [deviation from upstream] A constant whose equations do not
+           determine it (Refute_ModelFinder_HOL.note_circular_definition)
+           is free in the problem, so even a sound problem's model is only
+           Potential. *)
+        val underdetermined = underdetermined_reasons context
+        val sound = not (#unsound extension) andalso null underdetermined
         val scope_has_codatatype =
           List.exists #co (#data_types (#scope extension))
         val weakened = !(#whack_weakening context)
-        val reasons = if sound then
+        val unproved = unproved_conditions context
+        val reasons = if #unsound extension then
+            "model comes from the liberal, unsound-by-design problem" ::
+            underdetermined
+          else
             authenticity_reasons mf got_all_mono_user_axioms
               no_poly_user_axioms (#codatatypes_ok reconstructed) @
             (if weakened then
                ["formula was semantically weakened by whack"]
-             else [])
-          else ["model comes from the liberal, unsound-by-design problem"]
+             else []) @
+            unproved @ underdetermined
         fun discard () = if sound then discarded_sound_model := true else ()
       in
         case MFM.certify
@@ -881,7 +909,8 @@ fun run_instance deadline started (config : Refute_Core.config)
            replay_hints = replay_hints,
            cex = make_base problem,
            sound = sound,
-           genuine_means_genuine = genuine_formula andalso not weakened,
+           genuine_means_genuine = genuine_formula andalso not weakened
+             andalso null unproved,
            reasons = reasons,
            deadline = SOME deadline} of
             MFM.Drop => (discard (); NONE)
@@ -1050,10 +1079,14 @@ fun run_instance deadline started (config : Refute_Core.config)
                            unsound; only the liberal problems handled above
                            spend it.  A sound problem's model is a real
                            result whatever certainty reconstruction lands
-                           on (quasi-genuine for an inexact encoding,
-                           potential when kernel certification got stuck),
+                           on (quasi-genuine for an inexact encoding),
                            so it is always reported, never discarded for
-                           want of potential budget.  Only a genuine model
+                           want of potential budget.  The exception is a
+                           problem where a constant's equations are
+                           circular: that constant is free, so its
+                           uncertified models may be spurious and each
+                           spends a [max_potential] slot, or is dropped
+                           when none is left.  Only a genuine model
                            spends a [max_genuine] slot, so the search for
                            one carries on past the weaker models it
                            reported.  This diverges from upstream, whose
@@ -1064,21 +1097,51 @@ fun run_instance deadline started (config : Refute_Core.config)
                            [reconstruct] already raises
                            [discarded_sound_model] on each of its own
                            rejection paths. *)
+                        val circular =
+                          not (null (!(#underdetermined context)))
+                        (* With a circular constant a model may spend
+                           either budget, so scan enough models for both,
+                           as the liberal branch does. *)
                         val attempted =
-                          MFS.take_at_most max_genuine conservative
-                        fun harvest kept [] = kept
-                          | harvest kept ((index, bounds) :: models) =
+                          MFS.take_at_most
+                            (if circular then max_potential + max_genuine
+                             else max_genuine)
+                            conservative
+                        fun keep (kept, potential, genuine) cex models =
+                          (keep_counterexample cex;
+                           harvest (cex :: kept, potential, genuine) models)
+                        and harvest state [] = state
+                          | harvest (state as (kept, potential, genuine))
+                                    ((index, bounds) :: models) =
                               let
                                 val _ = check_deadline deadline
                               in
                                 case reconstruct
                                   (List.nth (problems, index)) bounds of
-                                     NONE => harvest kept models
+                                     NONE => harvest state models
                                    | SOME cex =>
-                                       (keep_counterexample cex;
-                                        harvest (cex :: kept) models)
+                                       if certainty_is_genuine
+                                            (#certainty cex) then
+                                         if genuine <= 0 then
+                                           harvest state models
+                                         else
+                                           keep (kept, potential,
+                                                 genuine - 1) cex models
+                                       else if circular then
+                                         (* As in [reconstruct_until_genuine],
+                                            a Genuine model ends the
+                                            potential search. *)
+                                         if potential <= 0 orelse
+                                            genuine < max_genuine then
+                                           harvest state models
+                                         else
+                                           keep (kept, potential - 1,
+                                                 genuine) cex models
+                                       else keep state cex models
                               end
-                        val results = harvest [] attempted
+                        val (results, max_potential, _) =
+                          harvest ([], max_potential, max_genuine)
+                            attempted
                         val genuine_results = List.filter
                           (certainty_is_genuine o #certainty) results
                         val max_genuine = max_genuine - length genuine_results
@@ -1139,7 +1202,7 @@ fun run_instance deadline started (config : Refute_Core.config)
           in
             case problem_for_scope deadline mf all_types solver
                 free_names nonsel_names nondef_us def_us need_us
-                unsound scope of
+                reject_problem unsound scope of
                 NONE => (kept, unknown + 1)
               | SOME problem =>
                   if rich_member problem (!generated_problems) then
@@ -1196,7 +1259,7 @@ fun run_instance deadline started (config : Refute_Core.config)
 
     fun run_batches state =
       case next_scope_batch () of
-          NONE => state
+          NONE => (potential_only_warning (); state)
         | SOME (batch, last) =>
             let
               val _ = batch_count := !batch_count + 1
@@ -1324,6 +1387,12 @@ fun run_instance deadline started (config : Refute_Core.config)
               (accounting_reason
                  "formula was semantically weakened by whack" ::
                !error_reasons)
+          (* An encoding whose condition was not proved approximates
+             nothing, so no search through it says the goal holds. *)
+          else if not (null (unproved_conditions context)) andalso null cexs
+          then
+            Refute_Core.Unknown
+              (unproved_conditions context @ !error_reasons)
           (* An untouched budget means the search delivered nothing, except
              when a sound problem yielded a model too weak to spend a
              genuine slot.  Such a model is still a result and must be
@@ -1374,14 +1443,14 @@ fun run_instance deadline started (config : Refute_Core.config)
           else
             Refute_Core.Unknown
               (accounting_reason "kodkod timed out" ::
-               frontier_reason () @ skipped_reason ())
+               frontier_reason () @ skipped_reason () @ !error_reasons)
       in
         (finalize (!last_donno) outcome, remaining (!latest_state))
       end
   end
   handle RESTART_AFTER_HARVEST =>
     run_instance deadline started config incremental solver
-      (initial_max_potential, initial_max_genuine) instance
+      (initial_max_potential, initial_max_genuine) reject_problem instance
 
 fun kodkod_certainty_ceiling (config : Refute_Core.config) instances =
   let
@@ -1429,6 +1498,42 @@ fun run_body config instances =
     val typedef_reason = #1 (harvest_guard
       (List.concat (map (fn (instance : Refute_Core.instance) =>
         #original instance :: #evals instance) ordered)))
+    val rejections = ref ([] : ((string * string) * int) list)
+
+    fun reject_problem reason =
+      let
+        fun count [] = [(reason, 1)]
+          | count ((previous, n) :: rest) =
+              if previous = reason then (previous, n + 1) :: rest
+              else (previous, n) :: count rest
+      in
+        rejections := count (!rejections)
+      end
+
+    fun rejection_reasons () = map (fn ((location, message), count) =>
+      Int.toString count ^ " problem" ^ (if count = 1 then "" else "s") ^
+      " rejected: " ^ message ^ " (" ^ location ^ ")") (!rejections)
+
+    fun report_rejections result =
+      let
+        val reasons = rejection_reasons ()
+        val count = List.foldl (fn ((_, n), total) => total + n) 0
+          (!rejections)
+        fun with_rejections (cex : Refute_Core.counterexample) =
+          replace_stats (#stats cex @ [("problems_rejected", count)]) cex
+      in
+        case result of
+            Refute_Core.Unknown more =>
+              Refute_Core.Unknown
+                (List.foldl Refute_Core.add_reason more reasons)
+          | Refute_Core.Counterexample cexs =>
+              Refute_Core.Counterexample (map with_rejections cexs)
+          | Refute_Core.Model models =>
+              Refute_Core.Model (map with_rejections models)
+          | other => other
+      end
+    val _ = Refute_Core.set_backend_diagnostics rejection_reasons
+      report_rejections
 
     fun search [] cexs reasons all_none _ =
           if not (null cexs) then Refute_Core.Counterexample cexs
@@ -1438,15 +1543,18 @@ fun run_body config instances =
              else reasons)
       | search (instance :: rest) cexs reasons all_none budget =
           if Time.now () >= deadline then
-            if null cexs then Refute_Core.Unknown ["kodkod timed out"]
+            if null cexs then
+              Refute_Core.Unknown ("kodkod timed out" :: reasons)
             else Refute_Core.Counterexample cexs
           else
             let
               val (result, next_budget) =
                 run_instance deadline started config incremental solver
-                  budget instance
+                  budget reject_problem instance
                 handle Util.NOT_SUPPORTED reason =>
                   (Refute_Core.Unknown [reason], budget)
+                     | Timeout.TIMEOUT _ =>
+                  (Refute_Core.Unknown ["kodkod timed out"], budget)
               val (max_potential, max_genuine) = next_budget
             in
               case result of
@@ -1469,10 +1577,10 @@ fun run_body config instances =
                     search rest cexs (reasons @ more) false next_budget
             end
   in
-    case typedef_reason of
+    report_rejections (case typedef_reason of
         SOME reason => Refute_Core.Unknown [reason]
       | NONE => search ordered [] [] (not (null ordered))
-          (initial_max_potential, initial_max_genuine)
+          (initial_max_potential, initial_max_genuine))
   end
 
 fun run config instances =

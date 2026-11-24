@@ -162,17 +162,63 @@ fun example_spec self reflect : (unit,int,int) smlParallel.extspec =
       read_result = #read_result base }
   end
 
+(* Each test below spawns two `bin/hol run' children, so a deadline
+   here measures HOL startup rather than the behaviour under test.
+   That cost moves by an order of magnitude with load -- 0.8s idle
+   against 15s under contention, measured on nine cores -- so a fixed
+   budget either races the machine or stops meaning anything.  Time one
+   healthy round trip and take multiples of it.  The absolute figure is
+   only a hang detector: far above anything a merely busy machine
+   reaches, so reaching it says the boss is stuck rather than slow. *)
+val worker_hang_budget = 300.0
+
+val (healthy_workers, worker_roundtrip) =
+  (let
+     val (r,t) = aiLib.add_time
+       (smlTimeout.timeout worker_hang_budget
+          (fn () => smlParallel.parmap_queue_extern 2
+                      smlParallel.examplespec () [1,2])) ()
+   in
+     (SOME r, t)
+   end
+   handle Interrupt => raise Interrupt
+        | _ => (NONE, worker_hang_budget))
+
+val _ = check "parallel boss collects results from external workers"
+  (healthy_workers = SOME [2,4])
+
+fun worker_budget multiple =
+  Real.min (Real.max (multiple * worker_roundtrip, 30.0), worker_hang_budget)
+
+fun secs r = Real.fmt (StringCvt.FIX (SOME 1)) r ^ "s"
+
+(* NONE passes; SOME says what went wrong, so a missed deadline reports
+   itself rather than arriving as a bare FAILED. *)
+fun check_reason msg NONE = (tprint msg; OK ())
+  | check_reason msg (SOME r) = (tprint msg; die ("FAILED: " ^ r))
+
+fun boss_reports phase spec =
+  let val budget = worker_budget 10.0 in
+    ((smlTimeout.timeout budget
+        (fn () => ignore
+          (smlParallel.parmap_queue_extern 2 spec () [1,2])) () ;
+      SOME "the boss returned without reporting a dead worker")
+     handle smlTimeout.FunctionTimeout =>
+              SOME ("the boss reported nothing within " ^ secs budget)
+          | e =>
+              let val m = Feedback.exn_to_string e in
+                if String.isSubstring "external worker" m andalso
+                   String.isSubstring phase m
+                then NONE
+                else SOME ("unexpected exception: " ^ m)
+              end)
+  end
+
 val dead_worker_spec = example_spec "smlParallel.examplespec"
   "raise Fail \"worker startup selftest\""
 
-val _ = check "parallel boss detects terminated worker"
-  ((smlTimeout.timeout 10.0
-      (fn () => ignore
-        (smlParallel.parmap_queue_extern 2 dead_worker_spec () [1,2])) () ;
-    false)
-   handle e =>
-     String.isSubstring "external worker" (exnMessage e) andalso
-     String.isSubstring "startup" (exnMessage e))
+val _ = check_reason "parallel boss detects terminated worker"
+  (boss_reports "startup" dead_worker_spec)
 
 val dead_job_self = String.concat
   ["(let val e = smlParallel.examplespec in ",
@@ -187,41 +233,57 @@ val dead_job_self = String.concat
 
 val dead_job_spec = example_spec dead_job_self "()"
 
-val _ = check "parallel boss detects worker termination during job"
-  ((smlTimeout.timeout 10.0
-      (fn () => ignore
-        (smlParallel.parmap_queue_extern 2 dead_job_spec () [1,2])) () ;
-    false)
-   handle e =>
-     String.isSubstring "external worker" (exnMessage e) andalso
-     String.isSubstring "during job" (exnMessage e))
+val _ = check_reason "parallel boss detects worker termination during job"
+  (boss_reports "during job" dead_job_spec)
 
+(* The job announces itself before sleeping.  Without that marker the
+   test passes whenever the workers are too slow to reach the job at
+   all: the boss is still waiting, the deadline fires, and no finished
+   marker appears -- for want of a worker rather than because one was
+   killed.  The interrupt is timed off a healthy round trip but stays
+   well inside the sleep, so a slow machine still interrupts a worker
+   that is sleeping rather than one that has already finished. *)
 val cancelled_job_marker = cache_dir ^ "-cancelled-worker-finished"
+val cancelled_job_started = cache_dir ^ "-cancelled-worker-started"
+val cancelled_job_sleep = 90.0
+val cancel_budget = Real.min (Real.max (3.0 * worker_roundtrip, 8.0), 45.0)
 val cancelled_job_self = String.concat
   ["(let val e = smlParallel.examplespec in ",
    "{self_dir = #self_dir e, self = #self e, ",
    "parallel_dir = #parallel_dir e, ",
    "reflect_globals = #reflect_globals e, ",
    "function = (fn () => fn (_ : int) => ",
-   "(OS.Process.sleep (Time.fromSeconds 20); aiLib.writel ",
+   "(aiLib.writel ", Portable.mlquote cancelled_job_started,
+   " [\"started\"]; ",
+   "OS.Process.sleep (Time.fromReal ", Real.toString cancelled_job_sleep,
+   "); aiLib.writel ",
    Portable.mlquote cancelled_job_marker, " [\"finished\"]; 0)), ",
    "write_param = #write_param e, read_param = #read_param e, ",
    "write_arg = #write_arg e, read_arg = #read_arg e, ",
    "write_result = #write_result e, read_result = #read_result e} end)"]
 val cancelled_job_spec = example_spec cancelled_job_self "()"
 
-val _ = aiLib.remove_file cancelled_job_marker
+val _ = app aiLib.remove_file [cancelled_job_started, cancelled_job_marker]
+val cancelled_at = Time.now ()
 val cancelled_parallel_call =
-  ((smlTimeout.timeout 5.0
+  ((smlTimeout.timeout cancel_budget
       (fn () => ignore (smlParallel.parmap_queue_extern 2
         cancelled_job_spec () [1,2])) () ;
-    false)
-   handle smlTimeout.FunctionTimeout => true | _ => false)
+    SOME "the boss returned instead of being interrupted")
+   handle smlTimeout.FunctionTimeout => NONE
+        | e => SOME ("unexpected exception: " ^ exnMessage e))
 val _ = OS.Process.sleep (Time.fromReal 0.25)
-val _ = check "interrupting parallel boss terminates external workers"
-  (cancelled_parallel_call andalso
-   not (OS.FileSys.access (cancelled_job_marker, [])))
-val _ = aiLib.remove_file cancelled_job_marker
+val cancelled_worker_outcome =
+  (case cancelled_parallel_call of
+       SOME reason => SOME reason
+     | NONE =>
+         if not (OS.FileSys.access (cancelled_job_started, [])) then
+           SOME ("no worker reached its job within " ^ secs cancel_budget)
+         else if OS.FileSys.access (cancelled_job_marker, []) then
+           SOME "a worker finished its job despite the interrupt"
+         else NONE)
+val _ = check_reason "interrupting parallel boss terminates external workers"
+  cancelled_worker_outcome
 
 val _ = check "tacticToe public API type-checks"
   (let
@@ -566,7 +628,8 @@ fun rewrite_record_raw thy =
     val tttsml =
       tactictoe_scratch_dir_of () ^ "/scripts/" ^
       OS.Path.base scriptorg ^ "_ttt.sml"
-    val _ = smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml
+    val _ = with_tactictoe_cache (fn () =>
+      smlExecScripts.exec_tttrecord_in_dir (OS.Path.dir scriptorg) tttsml)
   in
     tactictoe_dir_of () ^ "/log/scripts/" ^ thy
   end
@@ -574,6 +637,13 @@ fun rewrite_record_raw thy =
 val regression_script =
   (tprint "record rewriter regression tactic data";
    read_file (rewrite_record_raw "ttt_regression") before OK ())
+
+fun in_scratch dir sub = aiLib.exists_file (dir ^ "/sml_inspection/" ^ sub)
+val _ = check "rewriting and recording keep to the TacticToe scratch dir"
+  (List.all
+     (fn sub => not (in_scratch (!aiLib.scratch_dir) sub) andalso
+                in_scratch (tactictoe_scratch_dir_of ()) sub)
+     ["open", "buildheap/buildheap_ttt_regressionScript_ttt"])
 
 val regression_data = read_file (tacdata_file "ttt_regression")
 val regression_info =
@@ -680,3 +750,22 @@ val _ = proves "demo example: linear arithmetic"
 
 val _ = proves "demo example: constant map is replicate"
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``
+
+(* A worker that survived the interrupt far above would have woken from
+   its sleep by now and written its marker.  Checking here rather than
+   straight after the interrupt costs nothing: the recording and proof
+   tests in between take far longer than the sleep. *)
+val _ =
+  let
+    val left = cancelled_job_sleep + 1.0 -
+               Time.toReal (Time.- (Time.now (), cancelled_at))
+  in
+    if left > 0.0 then OS.Process.sleep (Time.fromReal left) else ()
+  end
+
+val _ = check_reason "interrupted external workers stay dead"
+  (if OS.FileSys.access (cancelled_job_marker, []) then
+     SOME "a worker woke from its job after the boss was interrupted"
+   else NONE)
+
+val _ = app aiLib.remove_file [cancelled_job_started, cancelled_job_marker]

@@ -7,21 +7,30 @@ sig
 
     val pp_hol_error      : hol_error -> HOLPP.pretty
     val mk_hol_error      : string -> string -> locn.locn -> string -> hol_error
+    val mk_hol_errorm     : string -> string -> locn.locn ->
+                            HOLmessage.message -> hol_error
     val wrap_hol_error    : string -> string -> locn.locn -> hol_error ->
                             hol_error
     val empty_hol_error   : hol_error
+    (* `hol_error' is not an equality type: see Feedback.sml *)
+    val is_empty_hol_error : hol_error -> bool
     val top_structure_of  : hol_error -> string
     val top_function_of   : hol_error -> string
     val top_location_of   : hol_error -> locn.locn
     val origins_of        : hol_error -> origin list
     val message_of        : hol_error -> string
+    val rich_message_of   : hol_error -> HOLmessage.message
     val set_message       : string -> hol_error -> hol_error
+    val set_rich_message  : HOLmessage.message -> hol_error -> hol_error
     val set_top_function  : string -> hol_error -> hol_error
 
     exception HOL_ERR of hol_error
 
     val mk_HOL_ERR        : string -> string -> string -> exn
     val mk_HOL_ERRloc     : string -> string -> locn.locn -> string -> exn
+    val mk_HOL_ERRm       : string -> string -> HOLmessage.message -> exn
+    val mk_HOL_ERRlocm    : string -> string -> locn.locn ->
+                            HOLmessage.message -> exn
 
     val render_exn        : exn -> 'a
     val wrap_exn          : string -> string -> exn -> exn
@@ -60,35 +69,27 @@ sig
     val fail              : unit -> 'a
     val failwith          : string -> 'a
     val HOL_MESG          : string -> unit
+    val HOL_MESGm         : HOLmessage.message -> unit
+    (* Offered the message `HOL_MESGm' was called with, before it is
+       flattened for `MESG_outstream'.  A terminal wants the text and
+       gets it unchanged; a consumer that can do something with the
+       values the message holds -- the types of the terms it names,
+       say -- needs the message itself, because `toString' renders
+       through `HOLmessage.plain_renderer', which pins a raw back end,
+       and no choice of `Parse.current_backend' at the call site can
+       get behind that.
+
+       Called only when `emit_MESG' is set, so a hook sees exactly the
+       messages the channel carries.  A hook that raises is ignored
+       (an interrupt excepted): this runs while something is being
+       reported, and must not become the thing that goes wrong.  See
+       `developers/discussion/rich-messages.md'. *)
+    val MESG_hook         : (HOLmessage.message -> unit) ref
     val HOL_PROGRESS_MESG : string * string -> ('a -> 'b) -> 'a -> 'b
     val HOL_WARNING       : string -> string -> string -> unit
+    val HOL_WARNINGm      : string -> string -> HOLmessage.message -> unit
     val HOL_WARNINGloc    : string -> string -> locn.locn -> string -> unit
     val HOL_INFO          : string -> unit
-
-    datatype trace_elt =
-       TraceElt of
-         {name : string, aliases : string list,
-          trace_level : int, default : int, max : int}
-
-    val pp_trace_elt      : trace_elt -> HOLPP.pretty
-    val traces            : unit -> trace_elt list
-    val register_trace    : (string * int ref * int) -> unit
-    val create_trace      : {name:string,initial:int,max:int} ->
-                            {get : unit -> int, set : int -> unit}
-
-    val register_alias_trace : {original:string,alias:string} -> unit
-    val register_ftrace   : (string * ((unit -> int) * (int -> unit)) * int)
-                             -> unit
-    val register_btrace   : (string * bool ref) -> unit
-    val create_btrace     : string * bool ->
-                            {get : unit -> bool, set : bool -> unit}
-
-    val current_trace     : string -> int
-    val get_tracefn       : string -> unit -> int
-    val set_trace         : string -> int -> unit
-    val reset_trace       : string -> unit
-    val reset_traces      : unit -> unit
-    val trace             : string * int -> ('a -> 'b) -> 'a -> 'b
-    val with_traces       : (string * int) list -> ('a -> 'b) -> 'a -> 'b
+    val HOL_INFOm         : HOLmessage.message -> unit
 
 end

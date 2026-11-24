@@ -5,14 +5,27 @@ repository.
 
 ## Build & test
 
-- Plain `Holmake` in this directory builds the module (boss-onwards band).
-  Poly/ML only; the tree build skips this directory on other MLs.
-- `HOLSELFTESTLEVEL=1 Holmake` also builds `tests/` and `loading_tests/`
-  and runs their selftests.  The main selftest output tees to
-  `tests/holrefute-selftest.log`.
-- `HOLSELFTESTLEVEL=2 Holmake` adds the level-2 suites and `theory_tests/`.
-- `Holmake build-tests build-loading-tests` builds the test artifacts
-  without running the selftests when `HOLSELFTESTLEVEL` is unset.
+- Plain `Holmake` in this directory builds the module, and only the
+  module (boss-onwards band).  Poly/ML only; the tree build skips this
+  directory on other MLs.
+- The suites live in their own directories, reached through `selftest/`,
+  which
+  holds no sources -- just the INCLUDES naming `tests/`, the four
+  `loading_tests/*/` and, at level 2, `theory_tests/`.
+  `src/parallel_builds/core/Holmakefile` names `HolRefute/selftest` in
+  `SRCTESTDIRS`, so the tree scans them all into one graph.
+- `HOLSELFTESTLEVEL=2 Holmake` in `selftest/` runs the whole suite; the
+  level decides whether `theory_tests/` is among them.
+- Or build one suite in its own directory: `HOLSELFTESTLEVEL=1 Holmake`
+  in `tests/` builds the fixtures and runs the selftest, teeing the
+  output to `tests/holrefute-selftest.log`, and level 2 adds the
+  level-2 suites.  Likewise in each `loading_tests/*/`, and in
+  `theory_tests/` at level 2.
+- Nothing here cleans before it builds.  The recursive `theory-tests`
+  recipe used to run `Holmake -C theory_tests clean` first, to make the
+  residue checks re-run every time; that is the caller's decision, not a
+  Holmakefile's, and `theory_tests/` now rebuilds on the same terms as
+  every other directory.  To force the checks, clean there and build.
 - After building the tests, `tests/selftest.exe` reruns the selftest from
   inside `tests/`.  `HOLSELFTESTLEVEL=2 ./selftest.exe` there enables the
   level-2 suites (cross-substrate conformance, narrowing table, corpus,
@@ -20,11 +33,11 @@ repository.
   with `diemode := Remember` — there is no finer per-test selection.
 - `tests/` holds everything test-only: `selftest.sml` and the fixture
   theories it loads (`refuteTableZoo`, `refuteUnused`,
-  `refuteHarvestType`, `refuteHarvestAbs`).  It is a child directory
-  with `INCLUDES = ..` and `--no_prereqs`, driven by a recursive
-  `Holmake -C`, because a parent may not INCLUDE its own subdirectory.
-  Fixture theories stay out of the global sigobj namespace by living
-  here.
+  `refuteHarvestType`, `refuteHarvestAbs`).  It carries `INCLUDES = ..`
+  — the dependency has to run child-to-parent, because a parent may not
+  INCLUDE its own subdirectory — and the tree reaches it the other way,
+  through `selftest/`.  Fixture theories stay out of the global sigobj
+  namespace by living here.
 - `loading_tests/persistence/` builds exported structural registrations,
   then imports them in separate processes with both Refute loading orders.
   Its unexported controls and unnamed typedef proofs prevent harvesting
@@ -35,8 +48,9 @@ repository.
   Validation and lazy replay belong in `Refute_ModelFinder_HOL`.  Keep the
   ancestry merge hook free of registration locks, search and callbacks.
 - Interactive session: start `bin/hol`, then run `load "Refute"`.
-- Quality gate: `HOLSELFTESTLEVEL=2 Holmake` here.  Level 2 is not optional —
-  cross-substrate conformance and the acceptance tables only run there.
+- Quality gate: `HOLSELFTESTLEVEL=2 Holmake` in `selftest/`.  Level 2 is
+  not optional — cross-substrate conformance and the acceptance tables
+  only run there.
 - The selftest exercises only the `Refute` signature and the shipped
   theories' ancestry: user-visible outcomes, messages, registrations, and
   what a descendant theory inherits.  Mechanism-level checks (internal
@@ -89,8 +103,10 @@ repository.
   and never "fix" a test expecting `Genuine, cert = NONE` from kodkod.  See
   README; 3948a7bed and 2db19131b did this and were reverted, as was
   92c24de7e, which did it as a budget.  `max_potential` bounds models whose
-  *encoding* is unsound, so only liberal problems spend it; every model of a
-  sound problem is charged to `max_genuine`.
+  *encoding* is unsound: those of liberal problems, and those of a problem
+  where a constant's equations are circular (they leave it free), which
+  are Potential unless replay certifies them.  Every other model of a
+  sound problem is charged to `max_genuine` (QuasiGenuine spends neither).
 - Substrate selection: `Auto` falls through inapplicable substrates
   (NativeSML, then Compute); an explicitly selected substrate never falls
   through — inapplicability reports `Unknown`.
@@ -165,4 +181,4 @@ repository.
   quote a scope, model or runtime figure in example prose.
   `NoCounterexample` can also come from exhaustive QC or narrowing when a
   finite generator space is completely covered (`examples/README`).
-- Quality gate: `HOLSELFTESTLEVEL=2 Holmake` in `src/HolRefute/`.
+- Quality gate: `HOLSELFTESTLEVEL=2 Holmake` in `src/HolRefute/selftest/`.

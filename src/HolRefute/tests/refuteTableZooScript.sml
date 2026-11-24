@@ -1,6 +1,6 @@
 Theory refuteTableZoo
 Ancestors
-  refute ltree itreeTau fixedPoint
+  refute ltree itreeTau fixedPoint rich_list
 Libs
   TotalDefn Refute_ModelFinder_Names Refute_Core quotient Omega
 
@@ -1283,6 +1283,48 @@ Inductive zoo_hotel_pinned:
            zoo_hotel_pinned s r g)
 End
 
+(* Bounded quantifiers inside a definition's body, as a program's
+   well-formedness predicates have them.  The extractor has to rewrite
+   them into list searches: neither [!x. MEM x l ==> P x] nor the two-index
+   [!i j. i < j /\ j < LENGTH l ==> P i j] is a function equality it can
+   execute.  No compute rules: the selftest supplies the list forms below,
+   so that the executability gate and the certifier see executable
+   equations while extraction reads the quantified ones. *)
+Definition zoo_all_small_def[nocompute]:
+  zoo_all_small (l : num list) <=> !x. MEM x l ==> x < 3
+End
+
+Definition zoo_sorted_def[nocompute]:
+  zoo_sorted (l : num list) <=>
+    !i j. i < j /\ j < LENGTH l ==> EL i l <= EL j l
+End
+
+Definition zoo_pairs_bounded_def[nocompute]:
+  zoo_pairs_bounded (l : num list) (m : num list) <=>
+    !x y. MEM x l /\ MEM y m ==> x + y < 4
+End
+
+Theorem zoo_all_small_compute:
+  zoo_all_small l <=> EVERY (\x. x < 3) l
+Proof
+  simp [zoo_all_small_def, listTheory.EVERY_MEM]
+QED
+
+Theorem zoo_sorted_compute:
+  zoo_sorted l <=>
+    EVERY (\j. EVERY (\i. EL i l <= EL j l) (COUNT_LIST j))
+          (COUNT_LIST (LENGTH l))
+Proof
+  simp [zoo_sorted_def, listTheory.EVERY_MEM, rich_listTheory.MEM_COUNT_LIST]
+  >> metis_tac []
+QED
+
+Theorem zoo_pairs_bounded_compute:
+  zoo_pairs_bounded l m <=> EVERY (\x. EVERY (\y. x + y < 4) m) l
+Proof
+  simp [zoo_pairs_bounded_def, listTheory.EVERY_MEM] >> metis_tac []
+QED
+
 (* Point-free relative to its own type, though not relative to its
    pattern: the equation binds two formals, but [strip_fun] on
    [(num -> num) -> num -> (num -> num)] peels the trailing arrow too,
@@ -1379,3 +1421,218 @@ QED
 val zoo_opaque_spec =
   new_specification
     ("zoo_opaque_spec", ["zoo_opaque", "zoo_seed"], zoo_opaque_exists);
+
+(* Sets inside definitions: the executable gate admits only goal constants
+   the compset knows, and the set constants are membership predicates to
+   the extractor, so a goal reaches them through a definition. *)
+Definition zoo_in_small_def:
+  zoo_in_small (x : num) <=> x IN {y | y < 3}
+End
+
+Definition zoo_in_either_def:
+  zoo_in_either (x : num) a b <=> x IN a INSERT b INSERT {}
+End
+
+Definition zoo_in_empty_def:
+  zoo_in_empty (x : num) <=> x IN {}
+End
+
+Definition zoo_in_shifted_def:
+  zoo_in_shifted (x : num) <=> x IN {y + 1 | y < 3}
+End
+
+Definition zoo_restrict_small_def:
+  zoo_restrict_small (f : num |-> num) = DRESTRICT f {x | x < 2}
+End
+
+Definition zoo_restrict_to_def:
+  zoo_restrict_to (f : num |-> num) k = DRESTRICT f {k}
+End
+
+(* Predicates whose theorems a theory rebinds to valid ones of another
+   shape.  [zoo_rb_yes]'s cases become [p <=> p], which every predicate
+   satisfies; [zoo_rb_down]'s rules are not well-founded, its rebound
+   cases are; [zoo_rb_ev]'s rules become [p n ==> p n]; [zoo_rb_nm]'s
+   cases become a body that is not monotone. *)
+Inductive zoo_rb_yes:
+  !n : num. n < 2 ==> zoo_rb_yes n
+End
+
+Theorem zoo_rb_yes_cases[allow_rebind]:
+  !n. zoo_rb_yes n <=> zoo_rb_yes n
+Proof
+  rw []
+QED
+
+Inductive zoo_rb_down:
+  zoo_rb_down (0 : num) /\ (!n. zoo_rb_down (n + 1) ==> zoo_rb_down n)
+End
+
+Theorem zoo_rb_down_cases[allow_rebind]:
+  !n. zoo_rb_down n <=> n = 0
+Proof
+  simp [EQ_IMP_THM, zoo_rb_down_rules] >> Induct_on `zoo_rb_down` >>
+  simp []
+QED
+
+Inductive zoo_rb_ev:
+  zoo_rb_ev (0 : num) /\ (!n. zoo_rb_ev n ==> zoo_rb_ev (n + 2))
+End
+
+Theorem zoo_rb_ev_rules[allow_rebind]:
+  !n. zoo_rb_ev n ==> zoo_rb_ev n
+Proof
+  rw []
+QED
+
+Inductive zoo_rb_nm:
+  !n : num. n < 2 ==> zoo_rb_nm n
+End
+
+Theorem zoo_rb_nm_cases[allow_rebind]:
+  !n. zoo_rb_nm n <=> n < 2 /\ ~zoo_rb_nm 2
+Proof
+  simp [zoo_rb_nm_cases]
+QED
+
+(* [zoo_rb_sub]'s rebound cases state its recursion as an argument
+   equation, [b = zoo_rb_sub T], which negation satisfies too. *)
+Inductive zoo_rb_sub:
+  !b. b ==> zoo_rb_sub b
+End
+
+Theorem zoo_rb_sub_cases[allow_rebind]:
+  !b. zoo_rb_sub b <=> b = zoo_rb_sub T
+Proof
+  simp [zoo_rb_sub_cases]
+QED
+
+(* [zoo_rb_nest]'s rebound cases recurse inside a recursive call's
+   argument, [zoo_rb_nest (if zoo_rb_nest n then 0 else 1)], which
+   [n = 0] satisfies too. *)
+Inductive zoo_rb_nest:
+  !n : num. n <> 1 ==> zoo_rb_nest n
+End
+
+Theorem zoo_rb_nest_cases[allow_rebind]:
+  !n. zoo_rb_nest n <=>
+      n = 0 \/ 1 < n /\ zoo_rb_nest (if zoo_rb_nest n then 0 else 1)
+Proof
+  simp [zoo_rb_nest_cases] >> Cases_on `n = 0` >> simp []
+QED
+
+(* Predicates with rebound cases theorems that reach the predicate
+   through a later definition, so the recursion hides behind the helper:
+   [zoo_hid] (well-founded on its face), [zoo_hid2] (two definitions
+   deep) and [zoo_hidnw] (not well-founded, an empty least fixpoint). *)
+Inductive zoo_hid:
+  !n : num. n < 5 ==> zoo_hid n
+End
+
+Definition zoo_hid_helper_def:
+  zoo_hid_helper (n : num) = zoo_hid n
+End
+
+Theorem zoo_hid_cases[allow_rebind]:
+  !n. zoo_hid n <=> zoo_hid_helper n
+Proof
+  simp [zoo_hid_helper_def]
+QED
+
+Inductive zoo_hid2:
+  !n : num. n < 5 ==> zoo_hid2 n
+End
+
+Definition zoo_hid2_inner_def:
+  zoo_hid2_inner (n : num) = zoo_hid2 n
+End
+
+Definition zoo_hid2_outer_def:
+  zoo_hid2_outer (n : num) = zoo_hid2_inner n
+End
+
+Theorem zoo_hid2_cases[allow_rebind]:
+  !n. zoo_hid2 n <=> zoo_hid2_outer n
+Proof
+  simp [zoo_hid2_outer_def, zoo_hid2_inner_def]
+QED
+
+Inductive zoo_hidnw:
+  !n : num. n < 2 /\ zoo_hidnw n ==> zoo_hidnw n
+End
+
+Definition zoo_hidnw_helper_def:
+  zoo_hidnw_helper (n : num) = zoo_hidnw n
+End
+
+Theorem zoo_hidnw_cases[allow_rebind]:
+  !n. zoo_hidnw n <=> n < 2 /\ zoo_hidnw n \/ zoo_hidnw_helper n
+Proof
+  rw [zoo_hidnw_helper_def] >> metis_tac []
+QED
+
+(* Two orders whose DefnBase presentations define each through the other,
+   as realax's rebound [real_lt] and [real_lte] do: neither presentation is
+   a definition, so a model finder that reads them as one leaves both
+   orders free. *)
+Definition zoo_circ_le_def:
+  zoo_circ_le (x : num) y <=> x <= y
+End
+
+Definition zoo_circ_lt_def:
+  zoo_circ_lt (x : num) y <=> x < y
+End
+
+Theorem zoo_circ_le_presentation:
+  !x y. zoo_circ_le x y <=> ~zoo_circ_lt y x
+Proof
+  simp [zoo_circ_le_def, zoo_circ_lt_def, arithmeticTheory.NOT_LESS]
+QED
+
+Theorem zoo_circ_lt_presentation:
+  !x y. zoo_circ_lt x y <=> ~zoo_circ_le y x
+Proof
+  simp [zoo_circ_le_def, zoo_circ_lt_def, arithmeticTheory.NOT_LESS_EQUAL]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_circ_le_presentation"};
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_circ_lt_presentation"};
+
+(* An inductive predicate presented through an alias of itself.  The
+   model finder sends the predicate as its cases theorem only, so the
+   alias's definition is not on a cycle of what it sends, though the
+   predicate's presentation mentions the alias. *)
+Inductive zoo_cyc_ind:
+  zoo_cyc_ind (0 : num) /\
+  (!n : num. zoo_cyc_ind n ==> zoo_cyc_ind (n + 2))
+End
+
+Definition zoo_cyc_alias_def:
+  zoo_cyc_alias (n : num) <=> zoo_cyc_ind n
+End
+
+Theorem zoo_cyc_ind_presentation:
+  !n : num. zoo_cyc_ind n <=> zoo_cyc_alias n
+Proof
+  simp [zoo_cyc_alias_def]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_cyc_ind_presentation"};
+
+(* A predicate presented through itself: the presentation holds of the
+   true predicate it defines, and also of the false one. *)
+Definition zoo_self_def:
+  zoo_self (b : bool) <=> T
+End
+
+Theorem zoo_self_presentation:
+  !b. zoo_self b <=> zoo_self (~b)
+Proof
+  simp [zoo_self_def]
+QED
+
+val _ = DefnBase.register_defn
+          {tag = "user", thmname = "zoo_self_presentation"};

@@ -31,7 +31,7 @@ Never fails. A `redex` that is not a variable is simply ignored.
 ### Example
 
 ``` hol4
->> show_types := true;
+>> HOLFlags.set_bflag (Parse.show_types, true);
 
 >> inst [alpha |-> Type`:num`] (Term`(x:'a) = (x:'a)`)
 
@@ -43,4 +43,4 @@ Never fails. A `redex` that is not a variable is simply ignored.
 ### See also
 
 [`Type.type_subst`](#Type.type_subst), [`Lib.|->`](#Lib..GZKQ4)
->>__ show_types := false;
+>>__ HOLFlags.set_bflag (Parse.show_types, false);

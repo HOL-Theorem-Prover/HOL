@@ -4,6 +4,7 @@
 *Theory.html
 *Theory.dat
 *.dumpedheap
+*.cachekey
 !Theory.sig
 !Theory.sml
 *.uo
