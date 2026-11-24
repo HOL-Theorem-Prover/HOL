@@ -1,6 +1,6 @@
 Theory refute
 Ancestors
-  sorting words frac finite_map listRange
+  sorting words frac finite_map finite_set listRange
 Libs
   EnumType
 
@@ -749,3 +749,36 @@ Theorem pair_eq_split:
 Proof
   Cases_on `p` >> simp [] >> metis_tac []
 QED
+
+(* Finite sets on the compute substrate are fEMPTY/fINSERT chains, as
+   generated (Refute_EvalFset).  The set operations finite_set lacks a
+   chain rule for, and the step deciding an equality between two
+   chains. *)
+Theorem fset_chain_fDELETE:
+  fDELETE a (fINSERT b s) =
+    if a = b then fDELETE a s else fINSERT b (fDELETE a s)
+Proof
+  rw [finite_setTheory.EXTENSION] >> metis_tac []
+QED
+
+Theorem fset_chain_fBIGUNION:
+  fBIGUNION fEMPTY = fEMPTY /\
+  fBIGUNION (fINSERT s ss) = fUNION s (fBIGUNION ss)
+Proof
+  rw [finite_setTheory.EXTENSION, finite_setTheory.IN_BIGUNION] >>
+  metis_tac []
+QED
+
+Theorem fset_chain_fset_ABS:
+  fset_ABS [] = fEMPTY /\
+  fset_ABS (h :: t) = fINSERT h (fset_ABS t)
+Proof
+  rw [finite_setTheory.EXTENSION, finite_setTheory.fIN_fset_ABS]
+QED
+
+Theorem fset_chain_eq:
+  fINSERT a s = t <=> fIN a t /\ fDELETE a s = fDELETE a t
+Proof
+  rw [finite_setTheory.EXTENSION] >> metis_tac []
+QED
+

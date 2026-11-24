@@ -78,6 +78,14 @@ structure Refute :> Refute = struct
     {tyop = {Thy = "finite_map", Tyop = "fmap"},
      constructors = [finite_mapSyntax.fempty_tm, finite_mapSyntax.fupdate_tm],
      canonical = SOME canonical_fmap_chain}
+  (* Finite sets the same way, from fEMPTY and fINSERT, which
+     Refute_EvalFset makes the compset leave as they are. *)
+  val () = Refute_EvalFset.register ()
+  val () = Refute_Gen.register_generator_family
+    {tyop = {Thy = "finite_set", Tyop = "fset"},
+     constructors = [Term.prim_mk_const {Thy = "finite_set", Name = "fEMPTY"},
+                     Term.prim_mk_const {Thy = "finite_set", Name = "fINSERT"}],
+     canonical = SOME Refute_EvalFset.canonical_chain}
 
   fun apply_updates updates config =
     List.foldl (fn (update, current) => update current) config updates
