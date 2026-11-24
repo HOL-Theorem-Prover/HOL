@@ -1413,28 +1413,42 @@ structure Refute_Core :> Refute_Core = struct
     end
 
   (* The constants the theorem behind [theory_definition constant] defines
-     together, at [constant]'s type instance: a
+     together with [constant], at its type instance: those that call it
+     and that it calls, through that theorem's equations.  A
      [Prim_rec.new_recursive_definition] over a mutually recursive
-     datatype defines several, each calling the others. *)
+     datatype defines several at once; one that neither calls the other
+     is compiled on its own. *)
   fun theory_definition_group constant =
     case theory_entries constant of
       [] => [constant]
     | entries =>
         let
+          val equations =
+            map (#2 o boolSyntax.strip_forall o Thm.concl o #2)
+              (List.last entries)
           fun head equation =
-            #1 (boolSyntax.strip_comb (boolSyntax.lhs
-              (#2 (boolSyntax.strip_forall (Thm.concl equation)))))
-          val heads = List.foldl (fn ((_, equation), heads) =>
-              let val h = head equation
-              in
-                if List.exists (Term.same_const h) heads then heads
-                else heads @ [h]
-              end) [] (List.last entries)
+            #1 (boolSyntax.strip_comb (boolSyntax.lhs equation))
+          fun member c = List.exists (Term.same_const c)
+          val heads = List.foldl (fn (equation, heads) =>
+              if member (head equation) heads then heads
+              else heads @ [head equation]) [] equations
+          fun calls c =
+            List.filter (fn h => List.exists (fn equation =>
+                Term.same_const c (head equation) andalso
+                Lib.can (HolKernel.find_term (Term.same_const h))
+                  (boolSyntax.rhs equation)) equations) heads
+          fun reach seen [] = seen
+            | reach seen (c :: rest) =
+                if member c seen then reach seen rest
+                else reach (c :: seen) (calls c @ rest)
           val generic = valOf (List.find (Term.same_const constant) heads)
+          val called = reach [] [generic]
+          val group = List.filter (fn h =>
+              member h called andalso member generic (reach [] [h])) heads
           val theta =
             Type.match_type (Term.type_of generic) (Term.type_of constant)
         in
-          map (Term.inst theta) heads
+          map (Term.inst theta) group
         end
 
   fun theory_definition constant =

@@ -1400,6 +1400,14 @@ local
              (rf_thy_tsize (RFTNode f) = rf_thy_fsize f + 1) /\
              (rf_thy_fsize RFTNil = 0) /\
              (rf_thy_fsize (RFTCons t f) = rf_thy_tsize t + rf_thy_fsize f)``}
+  (* one theorem defines both, and only the second calls the first *)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_tleaf_def",
+     rec_axiom = TypeBase.axiom_of ``:rf_thy_tree``,
+     def = ``(rf_thy_tleaf (RFTLeaf n) = n) /\
+             (rf_thy_tleaf (RFTNode f) = 0) /\
+             (rf_thy_fbad RFTNil = @m : num. 0 < m) /\
+             (rf_thy_fbad (RFTCons t f) = rf_thy_tleaf t + rf_thy_fbad f)``}
   val _ = new_definition ("rf_thy_arb_def",
     ``rf_thy_arb (x : num) = x + ARB``)
   val _ = new_definition ("rf_thy_small_def",
@@ -1414,8 +1422,11 @@ local
       case refute cfg goal of
           Counterexample (c :: _) => certifies goal c
         | _ => false) configs
+  (* the tests over all four configurations *)
+  fun matrix_test name pred =
+    if selftest_level >= 2 then test name pred else ()
 in
-  val _ = test "theory definitions outside the compset are executable"
+  val _ = matrix_test "theory definitions outside the compset are executable"
     (fn () =>
       let
         fun keys () = map #1 (computeLib.listItems (computeLib.the_compset ()))
@@ -1436,7 +1447,8 @@ in
 
   (* A constant defined again under its old name keeps its key: what was
      kept for the first definition must not answer for the second. *)
-  val _ = test "a constant defined again evaluates by its new definition"
+  val _ = matrix_test
+    "a constant defined again evaluates by its new definition"
     (fn () =>
       let
         val _ = new_definition ("rf_thy_again_def",
@@ -1502,10 +1514,16 @@ in
              end) ()
       end)
 
-  val _ = test "mutually recursive theory definitions are executable"
+  val _ = matrix_test "mutually recursive theory definitions are executable"
     (fn () => refuted_everywhere ``!t. rf_thy_tsize t < 3``)
 
-  val _ = test "a loaded theory's definitions outside the compset are executable"
+  (* [rf_thy_tleaf] doesn't call [rf_thy_fbad], defined beside it, so
+     isn't compiled with it: [rf_thy_fbad] can't be, since it chooses *)
+  val _ = matrix_test "a definition's non-executable sibling is left out"
+    (fn () => refuted_everywhere ``!t. rf_thy_tleaf t < 2``)
+
+  val _ = matrix_test
+    "a loaded theory's definitions outside the compset are executable"
     (fn () => refuted_everywhere ``!x. zoo_thy_outer x < 9``)
 end
 
