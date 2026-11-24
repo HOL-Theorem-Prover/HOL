@@ -1932,7 +1932,9 @@ end
 
 (* A binder a definition brings in, with a statement binder's name and
    type, gives that binder no value: the vacuous [x] stays unvalued, and
-   [y] keeps its own value beside the [y] of [EXISTS_UNIQUE_DEF]. *)
+   [y] keeps its own value beside the [y] of [EXISTS_UNIQUE_DEF].  A
+   vacuous outer binder, which the instance drops, leaves the binders
+   after it traced to their values. *)
 local
   val _ = new_definition ("rf_chk_allzero_def",
     ``rf_chk_allzero = !x:num. x = 0``)
@@ -1948,6 +1950,16 @@ in
              not (List.exists (fn (binder, _) =>
                     #1 (Term.dest_var binder) = "x") (#values s)) andalso
              Lib.mem "no value for x" (#partial s)
+         | NONE => false)
+  val _ = mf_test "a vacuous outer binder leaves the next binder its value"
+    (fn () =>
+       case statement ``!x:num. !y:num. y < 2`` of
+           SOME s =>
+             List.exists (fn (binder, _) =>
+                 #1 (Term.dest_var binder) = "y") (#values s) andalso
+             not (List.exists (fn (binder, _) =>
+                    #1 (Term.dest_var binder) = "x") (#values s)) andalso
+             not (List.exists (String.isPrefix "value of y") (#partial s))
          | NONE => false)
   val _ = mf_test "a definition's binder leaves a statement binder its value"
     (fn () =>

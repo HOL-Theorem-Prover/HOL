@@ -1278,6 +1278,12 @@ structure Refute_Core :> Refute_Core = struct
                     in
                       (boolSyntax.mk_forall (marker, marked), pair :: pairs)
                     end
+                  (* a vacuous [!] that is not a statement binder (the
+                     instance drops it) is stepped over, so the binders
+                     after it are still traced *)
+                  else if not (Term.free_in variable body) then
+                    let val (marked, pairs) = mark expected body
+                    in (boolSyntax.mk_forall (variable, marked), pairs) end
                   else (tm, [])
               | NONE =>
                   case Lib.total boolSyntax.dest_imp_only tm of
