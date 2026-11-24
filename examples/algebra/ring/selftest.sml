@@ -80,6 +80,8 @@ val _ = List.app (rule_test RING_RULE) [
     ==> x = ring_add r y (ring_sub r x y)”)
       ];
 
+val _ = new_theory "scratch";
+
 val _ =
   rule_test
     (fn tm => prove (tm,

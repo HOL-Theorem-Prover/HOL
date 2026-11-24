@@ -2,6 +2,7 @@ open HolKernel boolLib testutils;
 open polynomialCertificateTheory fieldInstancesTheory polyModuloRingTheory
      polyRingTheory;
 
+val _ = new_theory "scratch";
 val failures = ref 0;
 val _ = diemode := Remember failures;
 

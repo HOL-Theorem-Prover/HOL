@@ -3,6 +3,7 @@ open shortWeierstrassTheory shortWeierstrassGroupTheory
      shortWeierstrassSmallTheory ellipticCertificatesTheory
      fieldInstancesTheory ellipticCertificateFixturesTheory;
 
+val _ = new_theory "scratch";
 val failures = ref 0;
 val _ = diemode := Remember failures;
 
