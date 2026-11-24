@@ -169,6 +169,8 @@ Bugs fixed
   reports counted reasons when Kodkod problems cannot be assembled.
 
 -   HolRefute now applies polymorphic `upd_box` type patterns to concrete instances.
+-   HolRefute left a quantifier whose body has a constructor equation on a free variable in place, instead of turning it into a case split on that variable, when another equation of the body fixes one of the constructor's arguments, *e.g.*, `∃n b xs. a0 = UBox n b ∧ n = LENGTH xs ∧ P xs`.
+    It now splits such a quantifier too.
 -   Omega's model reconstruction no longer fails when eliminating a variable
     leaves a single constrained variable and another unconstrained variable.
 
