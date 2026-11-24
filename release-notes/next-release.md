@@ -158,9 +158,6 @@ New features
     The default artifact layout is unchanged.
     See *Artifact layout* in the Description manual.
 
--   HolRefute's random and exhaustive testing now evaluate constants that only their theory defines, as `new_definition` and `new_recursive_definition` leave them, as its model finder already did.
-    Such constants no longer need to be added to the compset to be tested.
-
 Bugs fixed
 ----------
 
