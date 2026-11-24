@@ -1456,6 +1456,49 @@ structure Refute_Core :> Refute_Core = struct
       [] => NONE
     | definitions => SOME (List.last definitions)
 
+  (* [theory_definition] normalized, kept per constant until a theory
+     changes.  Finding a constant's definition reads every definition of
+     its theory ([theory_entries]), a quarter of a second on a large one,
+     and evaluation asks for the same constants for every candidate
+     ([Refute_Cert.default_compset]).  What is kept depends only on the
+     constant's name and theory and on the theories.  A lookup that began
+     before a theory changed is not stored. *)
+  local
+    type table =
+      {generation : unit ref,
+       entries : (constant_key, thm option) Redblackmap.dict}
+    fun empty () : table =
+      {generation = ref (),
+       entries = Redblackmap.mkDict
+         (Portable.pair_compare (String.compare, String.compare))}
+    val table = Synchronized.var "Refute_Core.normalized_definition"
+      (empty ())
+    val _ = Theory.register_hook ("Refute_Core.normalized_definition",
+      fn _ => Synchronized.change table (fn _ => empty ()))
+  in
+    fun normalized_definition constant =
+      let
+        val key = constant_key constant
+        val {generation, entries} = Synchronized.value table
+      in
+        case Redblackmap.peek (entries, key) of
+          SOME definition => definition
+        | NONE =>
+            let
+              val definition =
+                Option.map normalize_definition (theory_definition constant)
+            in
+              Synchronized.change table (fn current : table =>
+                if #generation current = generation then
+                  {generation = generation,
+                   entries =
+                     Redblackmap.insert (#entries current, key, definition)}
+                else current);
+              definition
+            end
+      end
+  end
+
   (* The constants [terms] reach that [known]
      doesn't hold: those with a theory definition ([defined], with
      [definitions]), whose right sides are followed in turn, and those
@@ -1474,7 +1517,7 @@ structure Refute_Core :> Refute_Core = struct
       fun definition constant =
         if List.exists (fn binder => Term.same_const binder constant) binders
         then NONE
-        else Option.map normalize_definition (theory_definition constant)
+        else normalized_definition constant
       fun executable constant =
         Refute_TypeBase.is_constructor constant orelse
         List.exists (fn data => Term.same_const data constant)
