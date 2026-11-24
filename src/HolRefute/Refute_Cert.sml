@@ -52,22 +52,24 @@ structure Refute_Cert :> Refute_Cert = struct
   (* A term reaching constants only their theories define
      ([new_definition] leaves them out of the compset, see
      [Refute_Core.definition_closure]) evaluates in a copy of
-     [the_compset ()] given their definitions; the caller's compset is
-     never written.  The copy is kept for the next term while
-     [the_compset ()] is the same value ([computeLib.upd_compset] writes a
-     new one) and no theory has changed since (a constant defined again
-     under its old name keeps its key), with [known]: the copy's keys and
-     the constants found without a definition, so a term walks only what
-     is new.  A copy is replaced, never changed, since other threads may be
-     evaluating in it. *)
+     [the_compset ()] given the definitions that term reaches, and no
+     others, so what a term evaluates to never depends on the terms
+     evaluated before it; the caller's compset is never written.  The
+     compset's keys and the last copy are kept while [the_compset ()] is
+     the same value ([computeLib.upd_compset] writes a new one) and no
+     theory has changed since (a constant defined again under its old name
+     keeps its key); the copy answers a term that reaches the same
+     definitions.  A copy is never changed once made, since other threads
+     may be evaluating in it. *)
   local
     type defined =
       {base : computeLib.compset,
        known : Refute_Core.constant_key Redblackset.set,
+       defined : Refute_Core.constant_key list,
        compset : computeLib.compset}
     val cache = Synchronized.var "Refute_Cert.defined" (NONE : defined option)
     fun fresh base =
-      {base = base, known = Refute_Core.executable_keys base,
+      {base = base, known = Refute_Core.executable_keys base, defined = [],
        compset = base}
     (* As [Defn] does for the compset: evaluation meets numerals, never
        [SUC n], so an equation with [SUC] in a pattern is restated over
@@ -85,33 +87,25 @@ structure Refute_Cert :> Refute_Cert = struct
     fun default_compset tm =
       let
         val base = computeLib.the_compset ()
-        val (cached, current) =
+        val cached =
           case Synchronized.value cache of
             SOME (cached as {base = cached_base, ...}) =>
-              if PolyML.pointerEq (cached_base, base) then (cached, true)
-              else (fresh base, false)
-          | NONE => (fresh base, false)
-        val {defined, definitions, missing} =
+              if PolyML.pointerEq (cached_base, base) then cached
+              else fresh base
+          | NONE => fresh base
+        val {defined, definitions, ...} =
           Refute_Core.definition_closure (#known cached) [tm]
+        val keys = map Refute_Core.constant_key defined
+        val compset =
+          if keys = #defined cached then #compset cached
+          else if null definitions then base
+          else computeLib.add_thms (map numeral_patterns definitions)
+                 (computeLib.copy base)
       in
-        if null defined andalso null missing then
-          (if current then ()
-           else Synchronized.change cache (fn _ => SOME cached);
-           #compset cached)
-        else
-          let
-            val compset =
-              if null definitions then #compset cached
-              else computeLib.add_thms (map numeral_patterns definitions)
-                     (computeLib.copy (#compset cached))
-            val known = List.foldl (fn (constant, keys) =>
-              Redblackset.add (keys, Refute_Core.constant_key constant))
-              (#known cached) (defined @ missing)
-          in
-            Synchronized.change cache (fn _ =>
-              SOME {base = base, known = known, compset = compset});
-            compset
-          end
+        Synchronized.change cache (fn _ =>
+          SOME {base = base, known = #known cached, defined = keys,
+                compset = compset});
+        compset
       end
   end
 

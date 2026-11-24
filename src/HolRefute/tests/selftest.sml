@@ -1458,10 +1458,10 @@ in
       end)
 
   (* What a term evaluates to doesn't depend on the terms evaluated
-     before it.  A compset rule is compiled against the compset it was
-     added to, so a copy given the definition of a constant the rule calls
-     doesn't reduce that call: [rf_thy_caller 1] stops at [rf_thy_callee 1]
-     whether or not [rf_thy_callee] was just evaluated. *)
+     before it: a term evaluates with the theory definitions it reaches
+     and no others, so [rf_thy_caller 1], whose compset rule calls a
+     constant only its theory defines, gives the same result whether or
+     not [rf_thy_callee] was just evaluated. *)
   val _ = test "evaluation doesn't depend on the terms evaluated before"
     (fn () =>
       let
