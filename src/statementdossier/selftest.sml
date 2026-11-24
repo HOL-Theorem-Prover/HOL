@@ -458,11 +458,13 @@ val _ = check "Reader view retains genuine kernel assumptions"
   (contains (read markdown_path) "hidden" andalso
    contains (read markdown_path) "1 assumption(s)")
 
-(* A mutual recursion's equations are stored once, as mut_even_def; the
-   definitions of its constants over a union function mention a deleted
-   constant, so exporting the theory drops them. *)
-val _ = Define `(mut_even 0 = T) /\ (mut_even (SUC n) = mut_odd n) /\
-                (mut_odd 0 = F) /\ (mut_odd (SUC n) = mut_even n)`
+(* A mutual recursion's equations are stored once, under the name it is
+   given; the definitions of its constants over a union function mention
+   a deleted constant, so exporting the theory drops them. *)
+Definition mutual_def:
+  (mut_even 0 = T) /\ (mut_even (SUC n) = mut_odd n) /\
+  (mut_odd 0 = F) /\ (mut_odd (SUC n) = mut_even n)
+End
 val _ = save_thm ("mutual_result", REFL ``mut_odd n``)
 val _ = run (basic ["mutual_result"])
 fun entry_of text name =
@@ -470,11 +472,12 @@ fun entry_of text name =
     val start = "id=\"def-dossierTest-" ^ name ^ "\""
     val (_, rest) = Substring.position start (Substring.full text)
     val rest = Substring.triml (size start) rest
-    val (body, _) = Substring.position "id=\"def-" rest
-  in Substring.string body end
-val _ = check "Later constants of a mutual recursion show its equations"
+    fun upto mark s = #1 (Substring.position mark s)
+  in Substring.string (upto "<h2" (upto "id=\"def-" rest)) end
+val _ = check "Each constant of a mutual recursion shows its equations"
   (List.all
-     (fn name => contains (entry_of (read html_path) name) "mut_even_def")
+     (fn name =>
+        contains (entry_of (read html_path) name) "<code>mutual_def</code>")
      ["mut_even", "mut_odd"])
 
 val _ = List.app OS.FileSys.remove

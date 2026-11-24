@@ -363,8 +363,8 @@ fun defined_heads th =
    theorem <name>_def if its left-hand sides are headed by the constant,
    then the other definitions of its theory with such a clause, then the
    rules theorem <name>_rules of an inductive relation; then the stored
-   theorems <other>_def with such a clause, which hold the equations of a
-   mutual recursion for all its constants but the first; failing all
+   theorems <other>_def with such a clause, under one of which a mutual
+   recursion stores the equations of all its constants; failing all
    these (e.g. for new_specification), the definitions that mention it,
    which need not define it.  A recursive
    definition's <name>_def holds its equations, which may be a theorem
