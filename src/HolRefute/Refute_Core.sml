@@ -1293,8 +1293,10 @@ structure Refute_Core :> Refute_Core = struct
 
   (* [{}] is a value, as a datatype constructor is, so the compset keys
      no rule on it.  [INSERT] has [INSERT_CONV], and [FEMPTY]/[FUPDATE]
-     are family constructors. *)
-  val data_constants = [pred_setSyntax.empty_tm]
+     are family constructors.  Integers are built from [&] the same way:
+     [&n] over a numeral is a literal the integer rules evaluate, and
+     native code compiles [&] as the identity ([Refute_Extract]). *)
+  val data_constants = [pred_setSyntax.empty_tm, intSyntax.int_injection]
 
   fun nonexecutable_constants terms =
     let
