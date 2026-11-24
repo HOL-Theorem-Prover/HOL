@@ -1462,6 +1462,25 @@ in
         first andalso refuted_everywhere ``!x. rf_thy_again x = x + 1``
       end)
 
+  (* Restoring a context fires no theory hook: what was kept for a later
+     definition must not answer for the restored one. *)
+  val _ = matrix_test
+    "a restored context evaluates by its own definition"
+    (fn () => registration_context (fn () =>
+      let
+        val _ = new_definition ("rf_thy_restored_def",
+          ``rf_thy_restored (x : num) = x + 1``)
+        val first = refuted_everywhere ``!x. rf_thy_restored x = 0``
+        val earlier = Context.snapshot ()
+        val _ = new_definition ("rf_thy_restored_again_def",
+          ``rf_thy_restored (x : num) = x + 5``)
+        val second = refuted_everywhere ``!x. rf_thy_restored x = x + 1``
+        val _ = Context.restore earlier
+      in
+        first andalso second andalso
+        refuted_everywhere ``!x. rf_thy_restored x = x + 5``
+      end))
+
   (* The definitions a term needs are collected through every call, not
      only those an earlier goal left behind: a fresh chain, its outermost
      constant evaluated first. *)

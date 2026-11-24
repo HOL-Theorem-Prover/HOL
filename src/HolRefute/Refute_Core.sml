@@ -1456,46 +1456,56 @@ structure Refute_Core :> Refute_Core = struct
       [] => NONE
     | definitions => SOME (List.last definitions)
 
-  (* [theory_definition] normalized, kept per constant until a theory
-     changes.  Finding a constant's definition reads every definition of
-     its theory ([theory_entries]), a quarter of a second on a large one,
+  (* [theory_definition] and its normalization, kept per constant until a
+     theory changes.  Finding a constant's definition reads every definition
+     of its theory ([theory_entries]), a quarter of a second on a large one,
      and evaluation asks for the same constants for every candidate
-     ([Refute_Cert.default_compset]).  What is kept depends only on the
-     constant's name and theory and on the theories.  A lookup that began
-     before a theory changed is not stored. *)
+     ([Refute_Cert.default_compset]).  The definition depends only on the
+     constant's name and theory and on the theories, so it is session state: a
+     restored context brings back the entries made in it, and a pinned proof's
+     entries stay in its pin.  Normalizing also reads the implicit rewrites,
+     so a normalized theorem is reused only under the same set, and is redone
+     from the stored one otherwise.  A lookup that began before a theory
+     changed is not stored. *)
   local
+    type entry =
+      {stored : thm option, rewrites : thm list, normalized : thm option}
     type table =
       {generation : unit ref,
-       entries : (constant_key, thm option) Redblackmap.dict}
+       entries : (constant_key, entry) Redblackmap.dict}
     fun empty () : table =
       {generation = ref (),
        entries = Redblackmap.mkDict
          (Portable.pair_compare (String.compare, String.compare))}
-    val table = Synchronized.var "Refute_Core.normalized_definition"
-      (empty ())
+    val table = Refute_Session.state "theory_definitions" (empty ())
     val _ = Theory.register_hook ("Refute_Core.normalized_definition",
-      fn _ => Synchronized.change table (fn _ => empty ()))
+      fn _ => Refute_Session.publish table (fn _ => empty ()))
   in
     fun normalized_definition constant =
       let
         val key = constant_key constant
-        val {generation, entries} = Synchronized.value table
+        val {generation, entries} = Refute_Session.read table
+        val rewrites = Ho_Rewrite.implicit_rewrites ()
+        fun keep stored =
+          let
+            val normalized = Option.map normalize_definition stored
+            val entry =
+              {stored = stored, rewrites = rewrites, normalized = normalized}
+          in
+            Refute_Session.update table (fn current : table =>
+              if #generation current = generation then
+                {generation = generation,
+                 entries = Redblackmap.insert (#entries current, key, entry)}
+              else current);
+            normalized
+          end
       in
         case Redblackmap.peek (entries, key) of
-          SOME definition => definition
-        | NONE =>
-            let
-              val definition =
-                Option.map normalize_definition (theory_definition constant)
-            in
-              Synchronized.change table (fn current : table =>
-                if #generation current = generation then
-                  {generation = generation,
-                   entries =
-                     Redblackmap.insert (#entries current, key, definition)}
-                else current);
-              definition
-            end
+          SOME (entry : entry) =>
+            if PolyML.pointerEq (#rewrites entry, rewrites) then
+              #normalized entry
+            else keep (#stored entry)
+        | NONE => keep (theory_definition constant)
       end
   end
 
