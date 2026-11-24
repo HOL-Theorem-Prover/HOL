@@ -1457,7 +1457,7 @@ in
         val _ = new_definition ("rf_thy_again_again_def",
           ``rf_thy_again (x : num) = x + 5``)
       in
-        first andalso refuted_everywhere ``!x. rf_thy_again x < 5``
+        first andalso refuted_everywhere ``!x. rf_thy_again x = x + 1``
       end)
 
   (* The definitions a term needs are collected through every call, not
@@ -1508,9 +1508,13 @@ in
              let
                val _ = computeLib.add_funs [caller]
                val cold = summary goal
-               val _ = refute compute ``!x. rf_thy_callee x = 0``
+               val callee = ``!x. rf_thy_callee x = 0``
+               val callee_refuted =
+                 case refute compute callee of
+                   Counterexample (c :: _) => certifies callee c
+                 | _ => false
              in
-               cold = summary goal
+               callee_refuted andalso cold = summary goal
              end) ()
       end)
 
@@ -1521,6 +1525,36 @@ in
      isn't compiled with it: [rf_thy_fbad] can't be, since it chooses *)
   val _ = matrix_test "a definition's non-executable sibling is left out"
     (fn () => refuted_everywhere ``!t. rf_thy_tleaf t < 2``)
+
+  (* A non-equational specification registers a fact about the constant
+     ([DefnBase.OTHER]), not its equations: the constant is read as an
+     unregistered one is, here by its compset rule. *)
+  val _ = test "a constant registered by a fact runs by its compset rule"
+    (fn () =>
+      let
+        val spec = new_specification ("rf_thy_oth_def", ["rf_thy_oth"],
+          prove (``?f. !x : num. x <= f x /\ f x <= x``,
+                 Q.EXISTS_TAC `\x. x` THEN BETA_TAC THEN
+                 REWRITE_TAC [arithmeticTheory.LESS_EQ_REFL]))
+        val rule = prove (``!x. rf_thy_oth x = x``,
+          GEN_TAC THEN MATCH_MP_TAC arithmeticTheory.LESS_EQUAL_ANTISYM THEN
+          REWRITE_TAC [spec])
+        val other =
+          case DefnBase.lookup_userdef ``rf_thy_oth`` of
+            SOME {thm = DefnBase.OTHER _, ...} => true
+          | _ => false
+        val goal = ``!x. rf_thy_oth x < 3``
+        val saved = computeLib.the_compset ()
+      in
+        other andalso
+        Portable.finally (fn () => computeLib.put_compset saved)
+          (fn () =>
+             (computeLib.add_funs [rule];
+              case refute (default_config |> only [Exhaustive] |> quiet
+                             |> upd_substrate NativeSML) goal of
+                Counterexample (c :: _) => certifies goal c
+              | _ => false)) ()
+      end)
 
   val _ = matrix_test
     "a loaded theory's definitions outside the compset are executable"
