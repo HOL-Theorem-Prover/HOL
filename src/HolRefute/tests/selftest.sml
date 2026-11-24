@@ -1363,18 +1363,23 @@ local
        (Refute_Facts.check refused;
         named "selftest-light-quasi"
           (answer_as (QuasiGenuine ["stub"]) NONE))))
-  (* a clean negative that ends the search, and a back end that has
-     published a certified candidate and reads a refused fact only once
-     it is stopped, after that negative has won *)
+  (* a clean negative that ends the search once the other back end has
+     published, and a back end that has published a certified candidate
+     and reads a refused fact only once it is stopped, after that
+     negative has won; the long sleep is only where it is stopped *)
+  val late_published = Synchronized.var "late_published" false
   val _ = register_backend (stub "selftest-quick-none" 10 enabled
     (fn _ => fn _ =>
-       (OS.Process.sleep (Time.fromReal 0.2); NoCounterexample)))
+       (Synchronized.guarded_access late_published
+          (fn true => SOME ((), false) | false => NONE);
+        NoCounterexample)))
   val _ = register_backend (stub "selftest-late-refusal" 60 enabled
     (fn _ => fn _ =>
        ((case named "selftest-late-refusal" (answer (SOME refutation)) of
              Counterexample cexs => Refute_Core.publish_counterexamples cexs
            | _ => ());
-        OS.Process.sleep (Time.fromReal 4.0);
+        Synchronized.change late_published (fn _ => true);
+        OS.Process.sleep (Time.fromReal 60.0);
         NoCounterexample)
        handle Interrupt => (Refute_Facts.check refused; raise Interrupt)))
   fun run_with update names =
