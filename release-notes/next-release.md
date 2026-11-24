@@ -169,6 +169,8 @@ Bugs fixed
   reports counted reasons when Kodkod problems cannot be assembled.
 
 -   HolRefute now applies polymorphic `upd_box` type patterns to concrete instances.
+-   HolRefute's random and exhaustive testing refused a constant defined only in its theory (by `new_definition` or `new_recursive_definition`, and not added to `computeLib.the_compset ()`) as not executable, though its model finder already reads such definitions.
+    These constants, and the ones their definitions use, are now evaluated through their definitions; the global compset is left unchanged.
 -   Omega's model reconstruction no longer fails when eliminating a variable
     leaves a single constrained variable and another unconstrained variable.
 
