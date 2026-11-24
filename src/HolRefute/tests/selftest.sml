@@ -1849,6 +1849,79 @@ val _ = test "partial function and product witnesses" (fn () =>
                                           (pairSyntax.dest_pair v |> #1))))
            | _ => false))
 
+(* A bounded universal whose body keeps a binder is not made a list
+   search: [EVERY (\x. ?y. P x y) l] traps the existential where no
+   prenexing reaches it, and its extraction met [@]; so does [?!y]. *)
+val _ = test "an existential under a bounded implication is refuted"
+  (fn () =>
+    List.all (fn goal =>
+      List.all (fn cfg =>
+        refute cfg goal |> single_cex_where (fn c =>
+          is_genuine c andalso certifies goal c))
+        [narrowing, nar])
+      [``!x : num. x < 5 ==> ?y. y + 1 = x``,
+       ``!z : num. z = 3 ==> !x : num. x < 5 ==> ?y. y + 1 = x``,
+       ``!x : num. x < 5 ==> ?!y. y + 1 = x``,
+       ``!n : num. n < 5 ==> ?b : bool. if b then n = 0 else n = 1``,
+       ``!x : num. x < 5 ==> ?y : word8. w2n y + 1 = x``] andalso
+    List.all (fn goal =>
+      List.all (fn cfg => not_refuted (refute (cfg |> upd_timeout 3.0) goal))
+        [narrowing, nar])
+      [``!x : num. 0 < x ==> ?y. y + 1 = x``,
+       ``!z : num. z = 3 ==> !x : num. x < 5 ==> 0 < x ==> ?y. y + 1 = x``,
+       ``!x : num. 0 < x ==> ?!y. y + 1 = x``,
+       ``!n : num. n < 5 ==> ?b : bool. if b then n < 3 else 2 < n``]
+    andalso
+    (* nested where no prefix strips it, a bounded universal whose body
+       has a binder over an enumerable type is a list search for
+       exhaustive search *)
+    let
+      val goal = ``!p : bool. p =
+        !n : num. n < 5 ==> ?b : bool. if b then n = 0 else n = 1``
+    in
+      refute exhaustive goal |> single_cex_where (fn c =>
+        is_genuine c andalso certifies goal c)
+    end)
+
+(* A record holding a function is finitized as a product of its fields,
+   so narrowing generates it, as a binder, as an existential, and as a
+   function's range or domain.  A field the search never looked at is
+   the irrelevant marker, a free variable named [_]. *)
+val _ = Datatype.Datatype
+  `rg_account = <| rg_nonce : num; rg_flag : bool;
+                   rg_store : rg_enum -> num |>`
+
+val _ = test "records with a function field are narrowed" (fn () =>
+  let
+    val nonce = ``!a : rg_account. a.rg_nonce = 0``
+    val store = ``!a : rg_account. a.rg_store RGRed = 0``
+    val ranged =
+      ``!f : rg_enum -> rg_account. (f RGRed).rg_store RGBlue = 0``
+    val exists = ``!x : num. x < 3 ==> ?a : rg_account. a.rg_nonce + 1 = x``
+    val domain = ``!(g : rg_account -> bool) a. g a``
+    val owner = ``!(own : rg_enum -> rg_account -> bool) a. own RGRed a``
+    val true_goals =
+      [``!a : rg_account. (a with rg_nonce := 1).rg_store = a.rg_store``,
+       ``!x : num. 0 < x ==> ?a : rg_account. a.rg_nonce + 1 = x``,
+       ``!(g : rg_account -> num) a b. a = b ==> g a = g b``]
+    fun irrelevant tm =
+      List.exists (fn v => #1 (Term.dest_var v) = "_") (Term.free_vars tm)
+    fun refuted cfg goal =
+      refute cfg goal |> single_cex_where (fn c =>
+        is_genuine c andalso certifies goal c)
+  in
+    List.all (fn cfg =>
+      (refute cfg nonce |> single_cex_where (fn c =>
+         is_genuine c andalso certifies nonce c andalso
+         (case #bindings c of [(_, v)] => irrelevant v | _ => false))) andalso
+      refuted cfg store andalso refuted cfg ranged andalso
+      refuted cfg exists andalso refuted cfg domain andalso
+      refuted cfg owner andalso
+      List.all (fn goal => not_refuted (refute (cfg |> upd_timeout 3.0) goal))
+        true_goals)
+      [narrowing, nar]
+  end)
+
 val _ = test "function witnesses are updates and lambdas" (fn () =>
   refute (nar |> upd_size 2) ``(f : bool -> bool) F = f T``
     |> single_cex_where (fn c =>

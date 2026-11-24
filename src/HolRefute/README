@@ -119,7 +119,10 @@ variables take fcp numerals from `upd_widths`.  `upd_use_subtype true`
 transports a typedef-typed variable to its guarded representation (never
 certifies).  `upd_finite_functions true` (default) gives narrowing
 function inputs as `ffun` update chains, or `cfun` constants for a
-function-typed domain.
+domain that finitization changes (a function type, or a record holding
+a function).  A non-recursive single-constructor type (a record) whose
+fields hold functions is narrowed as a balanced product of its
+finitized fields and rebuilt by its constructor.
 
 Model finder
 ------------

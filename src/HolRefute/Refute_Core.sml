@@ -793,11 +793,13 @@ structure Refute_Core :> Refute_Core = struct
 
   fun strip_outer_forall_body tm = #2 (boolSyntax.strip_forall tm)
 
-  (* Three consumers: [Refute_Cert.eval_original] uses this list
-     directly; [Refute_Cert.normalize_to_pnf] and [Refute_Core.normalize]
-     reach it only via [normal_conv] below.  Ablating any one
-     consumer, or [normal_rewrites] alone, is not decisive; only disabling
-     entries here cuts all three. *)
+  (* [Refute_Cert.eval_original] and [Refute_Extract.definition_body_conv]
+     use this list directly; [Refute_Cert.normalize_to_pnf],
+     [Refute_Core.normalize] and [rebuild_instance] reach it only via
+     [bounded_conv] in [normal_pass] below, never among the prenex
+     rewrites.  Ablating any
+     one consumer is not decisive; only disabling entries here cuts them
+     all. *)
   val bounded_rewrites =
     [ refuteTheory.bounded_forall_less,
       refuteTheory.bounded_exists_less,
@@ -838,8 +840,6 @@ structure Refute_Core :> Refute_Core = struct
       optionTheory.SOME_11 ] @
     Drule.CONJUNCTS boolTheory.PULL_EXISTS @
     Drule.CONJUNCTS boolTheory.PULL_FORALL
-
-  val normal_rewrites = prenex_rewrites @ bounded_rewrites
 
   fun has_bounded_quantifier tm =
     let
@@ -1173,26 +1173,20 @@ structure Refute_Core :> Refute_Core = struct
                    constructor_unwind_ss))
       [pairTheory.PAIR_EQ, optionTheory.SOME_11]
 
-  (* The quantifiers are pulled into the prefix first, so that none is
-     left inside a case split the unwinding makes; one under a
-     disjunction is not pulled out, so it stays in the branch.  The
-     unwinding comes before [bounded_rewrites], so that a bounded
-     existential whose bound is not its first conjunct is unwound rather
-     than turned into a list search over its bound. *)
-  fun normal_pass tm =
-    Conv.EVERY_CONV
-      [Ho_Rewrite.REWRITE_CONV prenex_rewrites,
-       Conv.STRIP_BINDER_CONV (SOME boolSyntax.universal) unwind_conv,
-       (* built per call, so that implicit rewrites registered
-          after this module loaded count *)
-       Ho_Rewrite.REWRITE_CONV normal_rewrites] tm
-
-  val normal_conv = Conv.QCONV (Conv.REPEATC (Conv.CHANGED_CONV normal_pass))
-
-  fun normalize tm =
-    #2 (boolSyntax.dest_eq (Thm.concl (normal_conv tm)))
-    handle Interrupt => raise Interrupt
-         | _ => tm
+  fun has_unexpanded_binder tm =
+    if boolSyntax.is_forall tm orelse boolSyntax.is_exists tm orelse
+       boolSyntax.is_select tm then
+      true
+    else if Term.is_abs tm then
+      has_unexpanded_binder (Term.body tm)
+    else if Term.is_comb tm then
+      let
+        val (left, right) = Term.dest_comb tm
+      in
+        has_unexpanded_binder left orelse has_unexpanded_binder right
+      end
+    else
+      false
 
   fun expand_quantifiers tm =
     let
@@ -1241,20 +1235,69 @@ structure Refute_Core :> Refute_Core = struct
       expand tm
     end
 
-  fun has_unexpanded_binder tm =
-    if boolSyntax.is_forall tm orelse boolSyntax.is_exists tm orelse
-       boolSyntax.is_select tm then
-      true
-    else if Term.is_abs tm then
-      has_unexpanded_binder (Term.body tm)
-    else if Term.is_comb tm then
-      let
-        val (left, right) = Term.dest_comb tm
-      in
-        has_unexpanded_binder left orelse has_unexpanded_binder right
-      end
-    else
-      false
+  (* A bounded quantifier becomes a list search only when its body is
+     left with no binder that [visible] still shows:
+     [EVERY (\x. ?y:num. P x y) l] traps [?y] where no prenexing reaches
+     it, and its extraction meets [@].  Bottom-up, so that an inner bound
+     is expanded before the guard looks at the outer one.
+     [has_unexpanded_binder] looks through [?!]'s abstraction, so [?!] is
+     refused on its own. *)
+  fun bounded_conv visible =
+    let
+      val rewrite = Ho_Rewrite.GEN_REWRITE_CONV Lib.I bounded_rewrites
+    in
+      fn tm =>
+        let
+          val th = rewrite tm
+          val body = boolSyntax.rhs (Thm.concl th)
+        in
+          if has_unexpanded_binder (visible body) orelse
+             Lib.can (HolKernel.find_term boolSyntax.is_exists1) body
+          then
+            raise Feedback.mk_HOL_ERR "Refute_Core" "bounded_conv"
+              "the body keeps a binder"
+          else th
+        end
+    end
+
+  (* The quantifiers are pulled into the prefix first, so that none is
+     left inside a case split the unwinding makes; one under a
+     disjunction is not pulled out, so it stays in the branch.  The
+     unwinding comes before [bounded_conv], so that a bounded existential
+     whose bound is not its first conjunct is unwound rather than turned
+     into a list search over its bound.  The bounded rewrites run once
+     the antecedents are folded, and again after the prenexing the
+     unwinding may have enabled. *)
+  fun normal_pass visible tm =
+    let
+      val bounded = Conv.QCONV (Conv.DEPTH_CONV (bounded_conv visible))
+    in
+      Conv.EVERY_CONV
+        [Ho_Rewrite.REWRITE_CONV prenex_rewrites,
+         Conv.STRIP_BINDER_CONV (SOME boolSyntax.universal) unwind_conv,
+         bounded,
+         (* built per call, so that implicit rewrites registered
+            after this module loaded count *)
+         Ho_Rewrite.REWRITE_CONV prenex_rewrites,
+         bounded] tm
+    end
+
+  (* Narrowing and the certificates search a prenex form, so no binder
+     may stay inside a list search.  An instance's goal, which exhaustive
+     and random search test, keeps a list search whose binders
+     [expand_quantifiers] enumerates ([EVERY (\x. ?b:bool. P x b) l]), as
+     [rebuild_instance] expands them. *)
+  fun normal_conv_with visible =
+    Conv.QCONV (Conv.REPEATC (Conv.CHANGED_CONV (normal_pass visible)))
+  val normal_conv = normal_conv_with Lib.I
+  val instance_conv = normal_conv_with expand_quantifiers
+
+  fun normalize_with conv tm =
+    #2 (boolSyntax.dest_eq (Thm.concl (conv tm)))
+    handle Interrupt => raise Interrupt
+         | _ => tm
+
+  val normalize = normalize_with normal_conv
 
   (* Optional literal support returns the constants that still need an
      evaluator; SOME [] denotes an already-decided value. *)
@@ -1396,7 +1439,7 @@ structure Refute_Core :> Refute_Core = struct
   fun rebuild_instance {original, raw_goal, evals_for, card, transport} =
     let
       val goal = expand_quantifiers
-        (strip_outer_forall_body (normalize raw_goal))
+        (strip_outer_forall_body (normalize_with instance_conv raw_goal))
       val evals = evals_for goal
     in
       {original = original, goal = goal,

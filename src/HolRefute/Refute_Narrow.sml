@@ -1018,17 +1018,58 @@ structure Refute_Narrow :> Refute_Narrow = struct
 
   fun is_product_type ty = Option.isSome (Lib.total pairSyntax.dest_prod ty)
 
+  (* A record (one constructor, not recursive, not a pair) holding a
+     function is finitized as a balanced product of its fields, so that
+     the depth narrowing spends reaching a field grows with the logarithm
+     of their number. *)
+  fun record_fields ty =
+    if is_product_type ty then NONE
+    else
+      (case Refute_Gen.spec_of ty of
+           Refute_Gen.GenDatatype
+             {constrs = [(constructor, fields as _ :: _)],
+              exhaustive = true, recursive = [flags], ...} =>
+             if List.exists Lib.I flags then NONE
+             else SOME (constructor, fields)
+         | _ => NONE)
+      handle Refute_Gen.NoGenerator _ => NONE
+
+  fun halves values = Lib.split_after (length values div 2) values
+
+  fun balanced_product [ty] = ty
+    | balanced_product tys =
+        let val (left, right) = halves tys
+        in pairSyntax.mk_prod (balanced_product left, balanced_product right)
+        end
+
+  (* A function is described by a constant (cfun) rather than a table of
+     points (ffun) when its domain is a function or changes under
+     finitization, as a record holding a function does: a point of that
+     domain cannot be generated. *)
   fun finitize_type ty =
     case Lib.total Type.dom_rng ty of
         SOME (domain, range) =>
-          if is_function_type domain then cfun_type (finitize_type range)
+          if constant_domain domain then cfun_type (finitize_type range)
           else ffun_type domain (finitize_type range)
       | NONE =>
           (case Lib.total pairSyntax.dest_prod ty of
                SOME (left, right) =>
                  pairSyntax.mk_prod
                    (finitize_type left, finitize_type right)
-             | NONE => ty)
+             | NONE =>
+                 case record_fields ty of
+                     NONE => ty
+                   | SOME (_, fields) =>
+                       let val finitized = map finitize_type fields
+                       in
+                         if ListPair.allEq (Lib.uncurry Util.same_type)
+                              (fields, finitized)
+                         then ty
+                         else balanced_product finitized
+                       end)
+  and constant_domain domain =
+    is_function_type domain orelse
+    not (Util.same_type (finitize_type domain) domain)
 
   fun mk_eval_ffun domain range =
     Term.mk_thy_const
@@ -1044,8 +1085,10 @@ structure Refute_Narrow :> Refute_Narrow = struct
      directly under the prefix, and under products, become ffun/cfun
      descriptions that [body] observes through eval_ffun/eval_cfun;
      products are mapped componentwise, as in upstream's map_prod branch.
-     As upstream, a function type nested under any other type constructor
-     is left alone; [shape_of] then refuses it at GenFun. *)
+     A record holding a function becomes a product of its fields
+     ([record_fields]).  As upstream, a function type nested under any
+     other type constructor is left alone; [shape_of] then refuses it at
+     GenFun. *)
   fun finitize_functions (prefix, body) =
     let
       fun transform ty =
@@ -1054,10 +1097,10 @@ structure Refute_Narrow :> Refute_Narrow = struct
               let
                 val (range_ty, restore_range) = transform range
                 val description_ty =
-                  if is_function_type domain then cfun_type range_ty
+                  if constant_domain domain then cfun_type range_ty
                   else ffun_type domain range_ty
                 val evaluator =
-                  if is_function_type domain then
+                  if constant_domain domain then
                     mk_eval_cfun domain range_ty
                   else
                     mk_eval_ffun domain range_ty
@@ -1088,7 +1131,30 @@ structure Refute_Narrow :> Refute_Narrow = struct
                   (pairSyntax.mk_prod (left_ty, right_ty), restore)
                 end
               else
-                (ty, fn value => value)
+                case record_fields ty of
+                    NONE => (ty, fn value => value)
+                  | SOME (constructor, fields) =>
+                      let
+                        val transformed = map transform fields
+                        fun project [(_, restore)] description =
+                              [restore description]
+                          | project entries description =
+                              let val (left, right) = halves entries
+                              in
+                                project left (pairSyntax.mk_fst description) @
+                                project right (pairSyntax.mk_snd description)
+                              end
+                      in
+                        if ListPair.allEq
+                             (fn (field, (field_ty, _)) =>
+                                Util.same_type field field_ty)
+                             (fields, transformed)
+                        then (ty, fn value => value)
+                        else
+                          (balanced_product (map #1 transformed),
+                           fn description => Term.list_mk_comb
+                             (constructor, project transformed description))
+                      end
 
       fun prepare ((quantifier, variable), avoid) =
         let
@@ -1153,7 +1219,7 @@ structure Refute_Narrow :> Refute_Narrow = struct
       case Lib.total Type.dom_rng original_ty of
           SOME (domain, range) =>
             let
-              val higher_order = is_function_type domain
+              val higher_order = constant_domain domain
               val constant_name =
                 if higher_order then "CConstant" else "FConstant"
               fun constant_function constant =
@@ -1193,7 +1259,46 @@ structure Refute_Narrow :> Refute_Narrow = struct
               else
                 malformed_value original_ty value
             else
-              value
+              case record_fields original_ty of
+                  NONE => value
+                | SOME (constructor, fields) =>
+                    if Util.same_type (finitize_type original_ty) original_ty
+                    then value
+                    else
+                      let
+                        (* An interior node of the product the search never
+                           refined stands for every field below it. *)
+                        fun field_values [ty] current =
+                              [eval_finite_functions_as ty current]
+                          | field_values tys current =
+                              if Refute_ModelFinder_Names.is_irrelevant_marker
+                                   current
+                              then
+                                map Refute_ModelFinder_Names.irrelevant_marker
+                                  tys
+                              else if Term.is_var current then
+                                let
+                                  val name = Lib.fst (Term.dest_var current)
+                                in
+                                  Lib.mapi (fn index => fn ty =>
+                                    Term.mk_var
+                                      (name ^ "_" ^ Int.toString index, ty))
+                                    tys
+                                end
+                              else if pairSyntax.is_pair current then
+                                let
+                                  val (left_tys, right_tys) = halves tys
+                                  val (left, right) =
+                                    pairSyntax.dest_pair current
+                                in
+                                  field_values left_tys left @
+                                  field_values right_tys right
+                                end
+                              else malformed_value original_ty value
+                      in
+                        Term.list_mk_comb
+                          (constructor, field_values fields value)
+                      end
 
   fun contains_existentials prefix =
     List.exists (fn (Refute_Eval.Exists, _) => true | _ => false) prefix
