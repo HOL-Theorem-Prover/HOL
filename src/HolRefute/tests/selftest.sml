@@ -1408,6 +1408,8 @@ local
              (rf_thy_tleaf (RFTNode f) = 0) /\
              (rf_thy_fbad RFTNil = @m : num. 0 < m) /\
              (rf_thy_fbad (RFTCons t f) = rf_thy_tleaf t + rf_thy_fbad f)``}
+  val _ = new_definition ("rf_thy_opt_def",
+    ``rf_thy_opt (x : num) = SOME (x + 1)``)
   val _ = new_definition ("rf_thy_arb_def",
     ``rf_thy_arb (x : num) = x + ARB``)
   val _ = new_definition ("rf_thy_small_def",
@@ -1517,6 +1519,11 @@ in
                callee_refuted andalso cold = summary goal
              end) ()
       end)
+
+  (* a premise equating a call with a constructor splits on the call's
+     value, rebuilt with the definition it reaches *)
+  val _ = matrix_test "a split on a theory definition's value is rebuilt"
+    (fn () => refuted_everywhere ``!x n. rf_thy_opt x = SOME n ==> n < 3``)
 
   val _ = matrix_test "mutually recursive theory definitions are executable"
     (fn () => refuted_everywhere ``!t. rf_thy_tsize t < 3``)
