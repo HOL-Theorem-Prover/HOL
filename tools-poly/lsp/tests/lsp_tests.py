@@ -4354,6 +4354,207 @@ def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
         c.close()
 
 
+def _send_declresults(c, req_id, uri, start, end, timeout=20):
+    """Ask `$/hol/declResults' over the range START..END, each a
+    (line, character) pair, and return the reply or None.  A cursor is
+    an empty range, so pass the same pair twice.  Budget as
+    `_send_goalstate': a server that is going to answer does so in
+    milliseconds."""
+    c.send({"jsonrpc":"2.0","id":req_id,
+            "method":"$/hol/declResults",
+            "params":{"textDocument":{"uri":uri},
+                      "range":{"start":{"line":start[0],
+                                        "character":start[1]},
+                               "end":{"line":end[0], "character":end[1]}}}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    return c.wait_until(got, timeout)
+
+
+def _declresults_texts(reply):
+    """The `text' of each result in REPLY, or None if there is no
+    result object at all."""
+    r = reply.get("result")
+    if r is None: return None
+    return [x.get("text", "") for x in r.get("results", [])]
+
+
+# The file every `declResults' test but the cap one opens.  Lines are
+# numbered in the comments because every assertion below is a position
+# in it, and a position argued from a line count nobody can see is the
+# kind of test that passes for the wrong reason.
+_DECLRESULTS_SRC = (
+    "Theory declresults\n"          # 0
+    "Ancestors arithmetic\n"        # 1
+    "\n"                            # 2
+    "val x = 3;\n"                  # 3
+    "val y = 5;\n"                  # 4
+    "\n"                            # 5
+    "val z = 10;\n"                 # 6
+    "\n"                            # 7
+    "Theorem truth:\n"              # 8
+    "  T\n"                         # 9
+    "Proof\n"                       # 10
+    "  rw[]\n"                      # 11
+    "QED\n"                         # 12
+    "\n")                           # 13
+
+
+def test_declResults_cursor_sees_the_last_declaration():
+    """A cursor between declarations answers with what the REPL would
+    have printed for the one above it -- walking past the `;' that
+    immediately precedes it, which binds nothing."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_cursor.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Blank line 5, between `val y = 5;' and `val z = 10;'.
+        r = _send_declresults(c, 301, uri, (5, 0), (5, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("y" in texts[0] and "5" in texts[0]
+                    and "int" in texts[0],
+                    f"the REPL line for `val y = 5' ({texts[0]!r})")
+        # And not the one below it, which has not run at this point.
+        assert_true("10" not in texts[0],
+                    f"not the declaration below ({texts[0]!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_after_QED_shows_the_theorem():
+    """A theorem is a top-level declaration like any other: just after
+    its `QED' the answer is `val name = |- ... : thm'."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_qed.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 13, the blank line after `QED'.
+        r = _send_declresults(c, 311, uri, (13, 0), (13, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("truth" in texts[0] and "thm" in texts[0],
+                    f"the theorem's own REPL line ({texts[0]!r})")
+        assert_true("T" in texts[0], f"and its statement ({texts[0]!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_inside_a_declaration_is_null():
+    """A cursor in a declaration's interior is editing it, not asking
+    about it.  Same rule as a selection within one declaration."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_inside.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 3 is `val x = 3;'; character 5 is inside the binding.
+        r = _send_declresults(c, 321, uri, (3, 5), (3, 5))
+        assert_eq(r.get("result"), None, "cursor inside a declaration")
+        # And a selection of a subexpression -- the `3' -- says nothing
+        # either, rather than reporting itself torn at both ends.
+        r2 = _send_declresults(c, 322, uri, (3, 8), (3, 9))
+        assert_eq(r2.get("result"), None, "selection inside one declaration")
+        # The positive half, in the same file and the same server: a
+        # test that only ever asserts `null' passes just as well with
+        # the whole feature taken out.  Line 5 is the blank between
+        # `val y' and `val z', one byte past the interior above.
+        r3 = _send_declresults(c, 323, uri, (5, 0), (5, 0))
+        assert_true(_declresults_texts(r3),
+                    f"and the cursor between declarations does answer ({r3!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_selection_covers_each_declaration():
+    """A selection spanning whole declarations answers for all of them,
+    in source order."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_sel.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Start of line 3 (`val x') to start of line 7, which takes in
+        # `val x', `val y' and `val z' whole and tears neither end.
+        r = _send_declresults(c, 331, uri, (3, 0), (7, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 3,
+                    f"three declarations answered ({r!r})")
+        assert_true("x" in texts[0] and "y" in texts[1]
+                    and "z" in texts[2],
+                    f"in source order ({texts!r})")
+        assert_eq(r["result"].get("tornStart"), False, "start not torn")
+        assert_eq(r["result"].get("tornEnd"), False, "end not torn")
+        assert_eq(r["result"].get("omitted"), 0, "nothing omitted")
+    finally:
+        c.close()
+
+
+def test_declResults_reports_a_torn_selection():
+    """A selection that starts part-way through a declaration says so,
+    and answers for the whole ones it does contain."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_torn.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # From inside `val x = 3' (line 3, character 4) to the start of
+        # line 6, so `val y' is whole and `val x' is cut into.
+        r = _send_declresults(c, 341, uri, (3, 4), (6, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None, f"an answer came ({r!r})")
+        assert_eq(r["result"].get("tornStart"), True, "torn at the start")
+        assert_eq(r["result"].get("tornEnd"), False, "not torn at the end")
+        assert_true(len(texts) == 1 and "y" in texts[0],
+                    f"only the whole declaration ({texts!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_caps_at_ten_keeping_the_later_ones():
+    """Twelve declarations selected answer with the last ten, and the
+    reply says two were dropped."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_cap.sml"
+        src = ("Theory declresults_cap\n"
+               "Ancestors arithmetic\n"
+               "\n")
+        for i in range(1, 13):
+            src += "val v%d = %d\n" % (i, i)
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 3 is `val v1'; line 15 is just past `val v12'.
+        r = _send_declresults(c, 351, uri, (3, 0), (15, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 10,
+                    f"ten declarations answered ({r!r})")
+        assert_eq(r["result"].get("omitted"), 2, "two dropped")
+        assert_true("v3" in texts[0], f"starting at the third ({texts[0]!r})")
+        assert_true("v12" in texts[-1], f"ending at the last ({texts[-1]!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_outside_proof():
     """Slice B: cursor outside any `Proof … QED` block returns null."""
     c = Client("/tmp")
@@ -13694,6 +13895,18 @@ TESTS = [
     ("eval_is_logged", test_eval_is_logged),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
+    ("declResults_cursor_sees_the_last_declaration",
+                                     test_declResults_cursor_sees_the_last_declaration),
+    ("declResults_after_QED_shows_the_theorem",
+                                     test_declResults_after_QED_shows_the_theorem),
+    ("declResults_inside_a_declaration_is_null",
+                                     test_declResults_inside_a_declaration_is_null),
+    ("declResults_selection_covers_each_declaration",
+                                     test_declResults_selection_covers_each_declaration),
+    ("declResults_reports_a_torn_selection",
+                                     test_declResults_reports_a_torn_selection),
+    ("declResults_caps_at_ten_keeping_the_later_ones",
+                                     test_declResults_caps_at_ten_keeping_the_later_ones),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
                                      test_goalState_between_two_theorems),
