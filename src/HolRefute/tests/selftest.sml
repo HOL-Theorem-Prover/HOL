@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Five deliberate reaches outside the [Refute] signature.  One is a
+(* Six deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -24,7 +24,10 @@ local open Refute_Rat Refute_Real in end
    deadline.  The fifth is [Refute_Cert_Model.certify_portfolio_detailed_rich],
    called by "a failed case split goes on to the next candidate": the
    order in which the model replay tries its candidates is not visible
-   through [Refute]. *)
+   through [Refute].  The sixth is [Refute_Core.normal_conv], called by
+   "a constructor equation beside a binder equation is unwound": the
+   shape a goal is normalised to before the backends see it is not
+   visible through [Refute]. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
 
@@ -1626,7 +1629,8 @@ end
 (* A binder fixed by the constructor equation and by another equation of
    the matrix ([n = LENGTH xs]): proving the case split could unwind it
    by the latter on one side only, and the proof failed, leaving the
-   constructor equation in place.  Each shape is checked: either
+   constructor equation in place: the result must split on [a0] and
+   keep no equation on it.  Each shape is checked: either
    orientation, an implication and a negation (under a disjunction, as
    [normal_conv] strips the outer universals), binders the equation
    leaves quantified, and nothing else. *)
@@ -1638,9 +1642,15 @@ val _ = test "a constructor equation beside a binder equation is unwound"
       val a0 = mk_var ("a0", ``:ubox``)
       fun equation_on_a0 t =
         is_eq t andalso (aconv (lhs t) a0 orelse aconv (rhs t) a0)
+      fun case_on_a0 t =
+        TypeBase.is_case t andalso aconv (#1 (TypeBase.strip_case t)) a0
       fun unwound tm =
-        not (can (find_term equation_on_a0)
-                 (rhs (concl (Refute_Core.normal_conv tm))))
+        let
+          val normal = rhs (concl (Refute_Core.normal_conv tm))
+        in
+          not (can (find_term equation_on_a0) normal) andalso
+          can (find_term case_on_a0) normal
+        end
       val goals =
         [``?n b xs. a0 = UBox n b /\ a1 = SOME xs /\ n = LENGTH xs /\
                     (b <=> NULL xs) /\ 0 < n``,
