@@ -29,7 +29,7 @@ val printBindings: bool ref
    that shows a binding the way a REPL would -- `printBindings' here
    and `$/hol/declResults' in the server.  The width is the caller's;
    the depth is a property of the rendering and the same either way. *)
-val printDepth: int
+val printDepth: FixedInt.int
 
 datatype props =
   PQuote
