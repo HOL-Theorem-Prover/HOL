@@ -1623,6 +1623,39 @@ in
                          (a, x + 1)) /\ a < 3``))
 end
 
+(* A binder fixed by the constructor equation and by another equation of
+   the matrix ([n = LENGTH xs]): proving the case split could unwind it
+   by the latter on one side only, and the proof failed, leaving the
+   constructor equation in place.  Each shape is checked: either
+   orientation, an implication and a negation (under a disjunction, as
+   [normal_conv] strips the outer universals), binders the equation
+   leaves quantified, and nothing else. *)
+val _ = Datatype.Datatype `ubox = UBox num bool | UNone`
+
+val _ = test "a constructor equation beside a binder equation is unwound"
+  (fn () =>
+    let
+      val a0 = mk_var ("a0", ``:ubox``)
+      fun equation_on_a0 t =
+        is_eq t andalso (aconv (lhs t) a0 orelse aconv (rhs t) a0)
+      fun unwound tm =
+        not (can (find_term equation_on_a0)
+                 (rhs (concl (Refute_Core.normal_conv tm))))
+      val goals =
+        [``?n b xs. a0 = UBox n b /\ a1 = SOME xs /\ n = LENGTH xs /\
+                    (b <=> NULL xs) /\ 0 < n``,
+         ``?n b xs. a0 = UBox n b /\ a1 = SOME xs /\ LENGTH xs = n /\
+                    (NULL xs <=> b) /\ 0 < n``,
+         ``c \/ !n b xs. a0 = UBox n b /\ a1 = SOME xs /\
+                         n = LENGTH xs /\ (b <=> NULL xs) ==> 0 < n``,
+         ``c \/ !n b xs. ~(a0 = UBox n b /\ a1 = SOME xs /\
+                           n = LENGTH xs /\ 0 < n)``,
+         ``?n b k. k < n /\ a0 = UBox n b /\ EVEN k``,
+         ``?n b. a0 = UBox n b``]
+    in
+      List.all unwound goals
+    end)
+
 (* ------------------------------------------------------------------- *)
 (* Random backend                                                      *)
 (* ------------------------------------------------------------------- *)
