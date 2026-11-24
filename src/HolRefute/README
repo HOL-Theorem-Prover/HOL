@@ -81,13 +81,14 @@ Verdicts and trust
   Nitpick); the `real` ersatz is rational-valued.
 * Checked facts: every theorem whose conclusion becomes part of a problem
   (definitions, compset and normalizer rewrites, cases and induction
-  theorems, registered descriptors and ersatz rows, and every theorem of
-  a `TypeBase` entry whose constructors, case constant, cases,
-  induction, record or size an engine reads) goes through
-  `Refute_Facts`.  One with a hypothesis or a tag other than `DISK_THM`
-  is refused when a problem uses it (the model finder's tables, read
-  whole, hold a refusal until a problem looks the proposition up), and so
-  are an ersatz, frac type, backend or QC substrate registered by the user
+  theorems, registered descriptors and ersatz rows, and the theorems of a
+  `TypeBase` entry whose constructors, case constant, cases, induction,
+  record or size an engine reads, all but its simplification set, whose
+  rewrites reach a problem only through `srw_ss` with their own tags)
+  goes through `Refute_Facts`.  One with a hypothesis or a tag other than
+  `DISK_THM` is refused when a problem uses it (the model finder's tables,
+  read whole, hold a refusal until a problem looks the proposition up), and
+  so are an ersatz, frac type, backend or QC substrate registered by the user
   rather than the library (the library's trust goes only to the names it
   defines, at their first registration; `register_test_backend` trusts a
   test stub), and a codatatype registered without a witness unless it is

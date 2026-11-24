@@ -1363,6 +1363,20 @@ local
        (Refute_Facts.check refused;
         named "selftest-light-quasi"
           (answer_as (QuasiGenuine ["stub"]) NONE))))
+  (* a clean negative that ends the search, and a back end that has
+     published a certified candidate and reads a refused fact only once
+     it is stopped, after that negative has won *)
+  val _ = register_backend (stub "selftest-quick-none" 10 enabled
+    (fn _ => fn _ =>
+       (OS.Process.sleep (Time.fromReal 0.2); NoCounterexample)))
+  val _ = register_backend (stub "selftest-late-refusal" 60 enabled
+    (fn _ => fn _ =>
+       ((case named "selftest-late-refusal" (answer (SOME refutation)) of
+             Counterexample cexs => Refute_Core.publish_counterexamples cexs
+           | _ => ());
+        OS.Process.sleep (Time.fromReal 4.0);
+        NoCounterexample)
+       handle Interrupt => (Refute_Facts.check refused; raise Interrupt)))
   fun run_with update names =
     with_enabled [enabled] (fn () =>
       with_global_thread_count 2 (fn () =>
@@ -1439,6 +1453,14 @@ in
              ["selftest-refused-none", "selftest-slow-certified"] of
           Counterexample (c :: _) =>
             #backend c = "selftest-slow-certified" andalso
+            Option.isSome (#cert c)
+        | _ => false)
+  (* together: the negative wins before the other back end refuses *)
+  val _ = test "a refusal after a winning negative keeps the candidates"
+    (fn () =>
+      case run ["selftest-quick-none", "selftest-late-refusal"] of
+          Counterexample (c :: _) =>
+            #backend c = "selftest-late-refusal" andalso
             Option.isSome (#cert c)
         | _ => false)
 end
@@ -1690,15 +1712,15 @@ val _ = mf_test "a caller's codatatype constructor is refused where used"
 (* A datatype's case constant is given case
    semantics, and its constructors are encoded as free and covering the
    type, on the theorems of its TypeBase entry: an entry whose case or
-   injectivity theorem is cheated caps what the model finder says of a
-   problem that uses them.  The type's own entry is restored. *)
+   injectivity theorem is only assumed caps what the model finder says of
+   a problem that uses them.  The type's own entry is restored. *)
 local
   val _ = Datatype.Datatype `rf_chk_box = RFBox num | RFEmpty`
   val _ = Datatype.Datatype `rf_chk_pick = RFPick bool | RFNone`
   fun read tyop = valOf (TypeBase.read {Thy = current_theory (), Tyop = tyop})
   val box_info = read "rf_chk_box"
   val pick_info = read "rf_chk_pick"
-  fun cheated thm = Tactical.prove (Thm.concl thm, cheat)
+  fun assumed thm = Thm.ASSUME (Thm.concl thm)
   fun rewritten case_def one_one info =
     TypeBasePure.mk_datatype_info_no_simpls
       {ax = TypeBasePure.axiom_of0 info,
@@ -1717,14 +1739,15 @@ local
     (TypeBase.write [info];
      Portable.finally (fn () => TypeBase.write [original]) body ())
 in
-  val _ = mf_test "a case constant on a cheated case theorem is capped"
+  val _ = mf_test "a case constant on an assumed case theorem is capped"
     (fn () =>
-       with_entry (rewritten cheated I box_info) box_info (fn () =>
+       with_entry (rewritten assumed I box_info) box_info (fn () =>
          refute mf ``!b. rf_chk_box_CASE b (\n. n) 0 = 0``)
        |> refused_registration "refused fact")
-  val _ = mf_test "constructors on a cheated injectivity theorem settle nothing"
+  val _ = mf_test
+    "constructors on an assumed injectivity theorem settle nothing"
     (fn () =>
-       with_entry (rewritten I cheated pick_info) pick_info (fn () =>
+       with_entry (rewritten I assumed pick_info) pick_info (fn () =>
          refute mf
            ``!f. (!b. f b = RFPick b) ==> f T <> f F``)
        |> unknown_with "refused fact")
@@ -1732,9 +1755,9 @@ end
 
 (* An entry with no injectivity or distinctness
    theorem makes its constructors free on its case theorem alone, from
-   which they are read: a cheated one caps a problem that uses them, in
+   which they are read: an assumed one caps a problem that uses them, in
    the model finder and in an extracted evaluation, which builds them as
-   a free datatype.  Here the cheated case theorem says [rf_chk_par],
+   a free datatype.  Here the assumed case theorem says [rf_chk_par],
    which is not injective, is the constructor. *)
 local
   val _ = Datatype.Datatype `rf_chk_two = RFZero | RFOne`
@@ -1743,8 +1766,8 @@ local
   val _ = new_constant ("rf_chk_par_case", ``:rf_chk_two -> (num -> 'a) -> 'a``)
   val two_info =
     valOf (TypeBase.read {Thy = current_theory (), Tyop = "rf_chk_two"})
-  val case_def = Tactical.prove
-    (``!n (f:num -> 'a). rf_chk_par_case (rf_chk_par n) f = f n``, cheat)
+  val case_def = Thm.ASSUME
+    ``!n (f:num -> 'a). rf_chk_par_case (rf_chk_par n) f = f n``
   val nchotomy = Tactical.prove (``!t. ?n. t = rf_chk_par n``,
     bossLib.Cases THENL [Q.EXISTS_TAC `0`, Q.EXISTS_TAC `1`] THEN
     bossLib.rw_tac bossLib.arith_ss [par_def])
@@ -1763,11 +1786,11 @@ local
     (TypeBase.write [par_info];
      Portable.finally (fn () => TypeBase.write [two_info]) body ())
 in
-  val _ = mf_test "constructors on a cheated case theorem alone are capped"
+  val _ = mf_test "constructors on an assumed case theorem alone are capped"
     (fn () =>
        with_par (fn () => refute mf ``rf_chk_par 0 = rf_chk_par 2``)
        |> refused_registration "refused fact")
-  val _ = test "extracted constructors on a cheated case theorem are capped"
+  val _ = test "extracted constructors on an assumed case theorem are capped"
     (fn () =>
        List.all (fn config =>
          with_par (fn () =>
@@ -1777,7 +1800,7 @@ end
 
 (* Constructors and case expressions are read
    from a type operator's entry at its generic type, which an entry for
-   the instance in the goal does not replace: a cheated generic entry
+   the instance in the goal does not replace: an assumed generic entry
    caps an extracted evaluation at the instance.  The generic entry is
    restored; the instance entry stays. *)
 local
@@ -1785,16 +1808,16 @@ local
   val pbox_info =
     valOf (TypeBase.read {Thy = current_theory (), Tyop = "rf_chk_pbox"})
   val nchotomy = TypeBasePure.nchotomy_of pbox_info
-  val cheated_info = TypeBasePure.put_nchotomy
-    (Tactical.prove (Thm.concl nchotomy, cheat)) pbox_info
+  val assumed_info = TypeBasePure.put_nchotomy
+    (Thm.ASSUME (Thm.concl nchotomy)) pbox_info
   val bool_pbox = ``:bool rf_chk_pbox``
   val instance_info = TypeBasePure.mk_nondatatype_info (bool_pbox,
     {nchotomy = SOME (Thm.INST_TYPE [Type.alpha |-> Type.bool] nchotomy),
      induction = NONE, size = NONE, encode = NONE})
   val goal = ``!b. rf_chk_pbox_CASE (RFPBox b) (\m. m) F = b``
 in
-  val _ = test "a cheated generic entry caps a goal at an instance" (fn () =>
-    (TypeBase.write [instance_info, cheated_info];
+  val _ = test "an assumed generic entry caps a goal at an instance" (fn () =>
+    (TypeBase.write [instance_info, assumed_info];
      Portable.finally (fn () => TypeBase.write [pbox_info])
        (fn () =>
           isSome (TypeBase.fetch bool_pbox) andalso
@@ -1805,7 +1828,7 @@ in
 end
 
 (* A generator reads a datatype's constructors
-   from its case theorem: a cheated one that leaves a constructor out
+   from its case theorem: an assumed one that leaves a constructor out
    makes a search that misses it, so the search settles nothing, and the
    generator is not kept for a later call on the type's own entry. *)
 local
@@ -1814,9 +1837,9 @@ local
     valOf (TypeBase.read {Thy = current_theory (), Tyop = "rf_chk_three"})
   val _ = new_constant ("rf_chk_three2_case",
     ``:rf_chk_three -> 'a -> 'a -> 'a``)
-  val case_def = Tactical.prove
-    (``(!a b. rf_chk_three2_case RFC1 a b = (a:'a)) /\
-       (!a b. rf_chk_three2_case RFC2 a b = (b:'a))``, cheat)
+  val case_def = Thm.ASSUME
+    ``(!a b. rf_chk_three2_case RFC1 a b = (a:'a)) /\
+      (!a b. rf_chk_three2_case RFC2 a b = (b:'a))``
   val two_of_three = TypeBasePure.mk_datatype_info_no_simpls
     {ax = TypeBasePure.axiom_of0 three_info,
      induction = TypeBasePure.induction_of0 three_info,
@@ -1830,7 +1853,7 @@ local
      accessors = [], updates = [], destructors = [], recognizers = []}
   val goal = ``!x. x <> RFC3``
 in
-  val _ = test "a generator on a cheated case theorem is refused, not kept"
+  val _ = test "a generator on an assumed case theorem is refused, not kept"
     (fn () =>
        unknown_with "refused fact"
          (TypeBase.write [two_of_three];
@@ -1849,7 +1872,7 @@ local
     `rf_chk_ev 0 /\ (!n. rf_chk_od n ==> rf_chk_ev (SUC n)) /\
      (!n. rf_chk_ev n ==> rf_chk_od (SUC n))`
   val _ = Theory.delete_binding "rf_chk_ev_rules"
-  val _ = save_thm ("rf_chk_ev_rules", Tactical.prove (concl rules, cheat))
+  val _ = save_thm ("rf_chk_ev_rules", Thm.ASSUME (concl rules))
   val context = Refute_ModelFinder_HOL.make_context (#mf default_config) []
   fun refusals relation = #2 (Refute_Facts.capture (fn () =>
     Refute_ModelFinder_HOL.instantiated_fixpoint_group context relation))
@@ -2683,7 +2706,7 @@ val _ = test "narrowing refutes char and string goals" (fn () =>
 val _ = test "narrowing publishes a dependent interval"
   (fn () =>
     refute narrowing ``!i : num. lo <= i /\ i < LENGTH l ==> EL i l <= k``
-    |> cex_where is_genuine)
+    |> cex_where (fn c => is_genuine c andalso not (uncertified c)))
 
 (* A two-column case matrix with a wildcard, as a case expression and as
    equations, where [Define] expands the wildcard into one equation per

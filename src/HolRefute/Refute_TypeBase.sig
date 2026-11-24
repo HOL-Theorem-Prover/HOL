@@ -9,11 +9,14 @@ signature Refute_TypeBase = sig
   (* [fetch] without the check, for a classification only *)
   val peek : Type.hol_type -> TypeBasePure.tyinfo option
   val elts : unit -> TypeBasePure.tyinfo list
-  (* Every theorem an entry holds, each through the checked point
-     (Refute_Facts): the recursion and induction theorems, the case,
-     case congruence, case equality, case elimination and cases
-     theorems, injectivity and distinctness, size and encoding,
-     destructors, recognizers, and a record's accessors and updates. *)
+  (* The theorems of an entry's structure and semantics, each through
+     the checked point (Refute_Facts): the recursion and induction
+     theorems, the case, case congruence, case equality, case
+     elimination and cases theorems, injectivity and distinctness, size
+     and encoding, destructors, recognizers, and a record's accessors
+     and updates.  Not its simplification set ([simpls_of]): those
+     rewrites reach a problem only through [srw_ss], with their own
+     tags. *)
   val entry_theorems : TypeBasePure.tyinfo -> Thm.thm list
   val check_entry : TypeBasePure.tyinfo -> unit
   val constructors_of : Type.hol_type -> Term.term list
