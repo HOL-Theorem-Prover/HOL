@@ -294,10 +294,8 @@ fun pigeonhole count =
       (variables, boolSyntax.list_mk_conj (pairs variables))
   end
 
-fun matrix_slice prover format type_enc lam_trans nfacts : hhProver.slice =
-  {prover = prover, format = format, type_enc = type_enc,
-   lam_trans = lam_trans, nfacts = nfacts, filter = "none", extra_opts = [],
-   slice_size = 1}
+fun matrix_slice prover format type_enc lam_trans nfacts =
+  hhProver.mk_slice prover (format, type_enc, lam_trans) "none" nfacts
 
 (* The complete typed-slice encoding matrix.  The final three rows are the
    table triples that the portfolio's substitutions replaced (see

@@ -2526,6 +2526,14 @@ fun test_hhProver () =
 
 val default_provers = [Eprover, Vampire, Zipperposition]
 
+val mk_slice = hhProver.mk_slice
+
+(* A legacy FOF slice. *)
+fun legacy prover filter nfacts = mk_slice prover ("fof", "", "") filter nfacts
+
+(* E's slice of a translation triple, over the unfiltered facts. *)
+fun encoded triple = mk_slice Eprover triple "none" 0
+
 (* The options of a test: these defaults, changed by the settings given
    (of two settings of a field, the later wins). *)
 datatype setting =
@@ -2751,10 +2759,6 @@ fun test_hhSlice () =
          real_close 30.0 (b 65 budget_options large_slice) andalso
          real_close 0.0 (b 0 budget_options first_slice)
       end)
-    fun slice_of format type_enc lam_trans : hhProver.slice =
-      {prover = Eprover, format = format, type_enc = type_enc,
-       lam_trans = lam_trans, nfacts = 0, filter = "none", extra_opts = [],
-       slice_size = 1}
     fun triple_schedule triple =
       hhSlice.mk_schedule (hh_options [Filter "knn", Encoding triple])
     val _ = expect "slice construction accepts a supported full triple"
@@ -2764,11 +2768,13 @@ fun test_hhSlice () =
                          #lam_trans slice = "lifting"
          | _ => false)
     val _ = expect "slice encodings dispatch on the parsed type encoding"
-      (hhSlice.encoding_of (slice_of "fof" "" "") = hhSlice.Legacy andalso
-       (case hhSlice.encoding_of (slice_of "fof" "mono_guards" "combs") of
+      (hhSlice.encoding_of (encoded ("fof", "", "")) = hhSlice.Legacy
+       andalso
+       (case hhSlice.encoding_of (encoded ("fof", "mono_guards", "combs")) of
             hhSlice.Generated {lam_trans, ...} => lam_trans = hhLamTrans.Combs
           | hhSlice.Legacy => false) andalso
-       ((ignore (hhSlice.encoding_of (slice_of "fof" "" "lifting")); false)
+       ((ignore (hhSlice.encoding_of (encoded ("fof", "", "lifting")));
+         false)
         handle Fail _ => true))
     fun invalid_triple triple =
       (ignore (triple_schedule triple); false) handle Fail _ => true
@@ -2778,9 +2784,7 @@ fun test_hhSlice () =
        invalid_triple ("tf0", "mono_native", ""))
     fun filter_test_config filter : hhProver.prover_config =
       let
-        val slice : hhProver.slice =
-          {prover = Z3, format = "fof", type_enc = "", lam_trans = "",
-           nfacts = 1, filter = filter, extra_opts = [], slice_size = 1}
+        val slice = legacy Z3 filter 1
       in
         {name = "selftest-filter", exec_names = [], env_var = "",
          version_args = [], parse_version = fn _ => NONE,
@@ -4125,9 +4129,7 @@ fun test_schedule_knn_anchor_export () =
   let
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val e = prover Eprover
-    fun slice nfacts : hhProver.slice =
-      {prover = Eprover, format = "fof", type_enc = "", lam_trans = "",
-       nfacts = nfacts, filter = "knn", extra_opts = [], slice_size = 1}
+    fun slice nfacts = legacy Eprover "knn" nfacts
     val one = slice 1
     val two = slice 2
     val schedule = [(e, one), (e, two)]
@@ -4179,10 +4181,8 @@ fun test_schedule_mono_cap_export () =
        legacy = legacy}
     val facts = ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND",
                  "REVERSE_APPEND"]
-    val slice : hhProver.slice =
-      {prover = Eprover, format = "tx0-", type_enc = "mono_native_fool",
-       lam_trans = "lifting", nfacts = length facts, filter = "knn",
-       extra_opts = [], slice_size = 1}
+    val slice = mk_slice Eprover ("tx0-", "mono_native_fool", "lifting")
+      "knn" (length facts)
     val options = hh_options [Timeout 5, Filter "knn"]
     val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = LENGTH (REVERSE [1; 2n])``)
     val _ = hhSchedule.export_problems root options goal
@@ -4266,10 +4266,7 @@ fun test_schedule_export_wiring () =
     val e = prover Eprover
     val vampire = prover Vampire
     fun options cap = hh_options [MonoInstances cap]
-    fun slice type_enc lam_trans : hhProver.slice =
-      {prover = Eprover, format = "fof", type_enc = type_enc,
-       lam_trans = lam_trans, nfacts = 0, filter = "none",
-       extra_opts = [], slice_size = 1}
+    fun slice type_enc lam_trans = encoded ("fof", type_enc, lam_trans)
     val legacy = slice "" ""
     val lifting = slice "mono_guards" "lifting"
     val combs = slice "mono_guards" "combs"
@@ -4308,10 +4305,8 @@ fun test_schedule_export_wiring () =
     val _ = expect "explicit mono-instance option beats the prover config cap"
       (contains "mono_instances=77"
         (String.concat (aiLib.bare_readl lifting_path)))
-    fun mono_slice prover : hhProver.slice =
-      {prover = prover, format = "th0", type_enc = "mono_native_higher",
-       lam_trans = "keep_lams", nfacts = 0, filter = "none",
-       extra_opts = [], slice_size = 1}
+    fun mono_slice prover =
+      mk_slice prover ("th0", "mono_native_higher", "keep_lams") "none" 0
     val e_mono = mono_slice Eprover
     val vampire_mono = mono_slice Vampire
     val _ = hhSchedule.export_problems root (options NONE) goal [("none", [])]
@@ -4349,9 +4344,6 @@ fun test_schedule_legacy_sharing () =
     val e = prover Eprover
     val vampire = prover Vampire
     fun options max_facts = hh_options [MaxFacts max_facts]
-    fun slice prover filter nfacts : hhProver.slice =
-      {prover = prover, format = "fof", type_enc = "", lam_trans = "",
-       nfacts = nfacts, filter = filter, extra_opts = [], slice_size = 1}
     fun names facts = map (fn fact => "listTheory." ^ fact) facts
     val ranking = names ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND",
                          "REVERSE_APPEND"]
@@ -4384,11 +4376,11 @@ fun test_schedule_legacy_sharing () =
         (remove_tree dir; result)
       end
     (* kNN occurs under several slice keys, one selection (length 4). *)
-    val knn_a = slice Eprover "knn" 3
-    val knn_b = slice Vampire "knn" 3
-    val knn_c = slice Eprover "knn" 4
-    val knn_long = slice Vampire "knn" 100
-    val mepo = slice Eprover "mepo" 4
+    val knn_a = legacy Eprover "knn" 3
+    val knn_b = legacy Vampire "knn" 3
+    val knn_c = legacy Eprover "knn" 4
+    val knn_long = legacy Vampire "knn" 100
+    val mepo = legacy Eprover "mepo" 4
     val _ = run (options NONE) [("knn", ranking), ("mepo", other_ranking)]
       [(e, knn_a), (vampire, knn_b), (e, knn_c), (vampire, knn_long),
        (e, mepo)]
@@ -4407,8 +4399,8 @@ fun test_schedule_legacy_sharing () =
        OS.FileSys.fileSize (hhSchedule.problem_path root knn_b) =
          Position.fromInt (String.size (text knn_a)))
     (* filter none: the whole ranking, up to the optional cap. *)
-    val none_a = slice Eprover "none" 0
-    val none_b = slice Vampire "none" 7
+    val none_a = legacy Eprover "none" 0
+    val none_b = legacy Vampire "none" 7
     val _ = run (options NONE) [("none", ranking)]
       [(e, none_a), (vampire, none_b)]
     val _ = expect "filter none shares the whole ranking"
@@ -4721,13 +4713,8 @@ structure StagedFixture =
 struct
   val e = prover Eprover
   val vampire = prover Vampire
-  fun legacy prover filter nfacts : hhProver.slice =
-    {prover = prover, format = "fof", type_enc = "", lam_trans = "",
-     nfacts = nfacts, filter = filter, extra_opts = [], slice_size = 1}
-  fun generated prover filter nfacts : hhProver.slice =
-    {prover = prover, format = "tx0-", type_enc = "mono_native_fool",
-     lam_trans = "lifting", nfacts = nfacts, filter = filter,
-     extra_opts = [], slice_size = 1}
+  fun generated prover filter nfacts =
+    mk_slice prover ("tx0-", "mono_native_fool", "lifting") filter nfacts
   val ranking = map (fn fact => "listTheory." ^ fact)
     ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND"]
   val bad_ranking = ranking @ ["listTheory.NO_SUCH_THEOREM"]
@@ -5367,17 +5354,14 @@ fun test_schedule_pool () =
        ("combin", "I_THM"), ("combin", "S_THM"), ("list", "FOLDL"),
        ("combin", "o_DEF"), ("combin", "S_DEF")]
     val rankings = [("knn", pool_ranking)]
-    fun gen format type_enc lam_trans : hhProver.slice =
-      {prover = Eprover, format = format, type_enc = type_enc,
-       lam_trans = lam_trans, nfacts = 11, filter = "knn", extra_opts = [],
-       slice_size = 1}
+    fun gen triple = mk_slice Eprover triple "knn" 11
     val schedule =
-      [(e, gen "tf0" "mono_native" "combs"),
+      [(e, gen ("tf0", "mono_native", "combs")),
        (e, legacy Eprover "knn" 4),
-       (e, gen "tf1" "poly_native" "combs"),
-       (vampire, gen "th1" "poly_native" "combs_and_lifting"),
+       (e, gen ("tf1", "poly_native", "combs")),
+       (vampire, gen ("th1", "poly_native", "combs_and_lifting")),
        (vampire, legacy Vampire "knn" 6),
-       (e, gen "fof" "mono_guards??" "combs")]
+       (e, gen ("fof", "mono_guards??", "combs"))]
     val jobs = [0, 2, 3, 5]
     (* The generated jobs, consecutive (no legacy item between them). *)
     val consecutive = map (fn index => List.nth (schedule, index)) jobs
@@ -5542,10 +5526,8 @@ fun test_schedule_pool () =
        fails there, and only after the worker thread of index 2 has
        returned.  The earliest failing index (2) is raised, the prefix is
        published and nothing else. *)
-    val later_filter : hhProver.slice =
-      {prover = Eprover, format = "tf0", type_enc = "mono_native",
-       lam_trans = "combs", nfacts = 7, filter = "mepo", extra_opts = [],
-       slice_size = 1}
+    val later_filter =
+      mk_slice Eprover ("tf0", "mono_native", "combs") "mepo" 7
     val failing_schedule =
       List.take (schedule, 3) @ [(e, later_filter)] @ List.drop (schedule, 4)
     val failing_rankings = rankings @ [("mepo", bad_ranking)]
@@ -7378,11 +7360,8 @@ fun test_hypothesis_premises () =
     val promoted = hhLearn.rank_filters data goal filters
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val options = hh_options []
-    fun slice type_enc lam_trans : hhProver.slice =
-      {prover = Eprover, format = "fof", type_enc = type_enc,
-       lam_trans = lam_trans, nfacts = 0, filter = "none",
-       extra_opts = [], slice_size = 1}
-    val slices = [slice "" "", slice "mono_guards" "lifting"]
+    val slices =
+      [encoded ("fof", "", ""), encoded ("fof", "mono_guards", "lifting")]
     fun export ranking =
       (hhSchedule.export_problems root options goal [("none", ranking)]
          (map (fn s => (prover Eprover, s)) slices);

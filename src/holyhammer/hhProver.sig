@@ -47,6 +47,9 @@ sig
      legacy : bool}
 
   val same_slice : slice -> slice -> bool
+  (* mk_slice prover (format, type_enc, lam_trans) filter nfacts: the
+     slice without extra options, of size 1. *)
+  val mk_slice : prover -> string * string * string -> string -> int -> slice
   (* Wall-clock slack past a requested time limit: a prover process is
      killed this long after its own limit, and the scheduler extends its
      deadlines by the same amount. *)

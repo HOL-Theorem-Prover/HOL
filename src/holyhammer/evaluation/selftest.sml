@@ -552,10 +552,8 @@ fun test_hhEval root =
     val collision_engine = hhEval.Sched
       {provers = [Z3], slices = 1, cores = 1, max_proofs = 1,
        export_workers = 1}
-    fun collision_slice filter : hhProver.slice =
-      {prover = Z3, format = "fof", type_enc = "",
-       lam_trans = "", nfacts = 77, filter = filter,
-       extra_opts = [], slice_size = 1}
+    fun collision_slice filter =
+      hhProver.mk_slice Z3 ("fof", "", "") filter 77
     fun collision_entry thm filter recon : hhEval.journal_entry =
       let
         val slice = collision_slice filter
