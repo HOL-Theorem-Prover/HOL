@@ -3810,10 +3810,10 @@ fun reconstruct_timed minimize timeout deadline lemmas goal =
   let
     val started = Time.now ()
     val result =
-      SOME (smlRedirect.hidef (hhReconstruct.hh_reconstruct_with
+      SOME (hhReconstruct.hh_reconstruct_with
         {minimize = minimize, preplay_timeout = timeout,
          minimize_timeout = timeout, minimize_deadline = deadline}
-        lemmas) goal)
+        lemmas goal)
       handle Interrupt => raise Interrupt | Feedback.HOL_ERR _ => NONE
   in
     (result, Time.toReal (Time.- (Time.now (), started)))
@@ -4767,8 +4767,7 @@ fun test_schedule_knn_anchor_export () =
     val _ = List.app (fn path => OS.FileSys.remove path handle _ => ())
       [expected_one, expected_two]
     val _ = List.app mkdir [expected_one, expected_two]
-    fun named count = smlRedirect.hidef mlThmData.thml_of_namel
-      (List.take (ranking, count))
+    fun named count = mlThmData.thml_of_namel (List.take (ranking, count))
     val _ = hhExportFof.fof_export_pb expected_one
       (boolSyntax.T, named 1)
     val _ = hhExportFof.fof_export_pb expected_two
@@ -4824,8 +4823,8 @@ fun test_schedule_mono_cap_export () =
        cache_max_entries = 100, debug_dir = NONE,
        preplay_drop_one = false, verbose = false}
     val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = LENGTH (REVERSE [1; 2n])``)
-    val _ = smlRedirect.hidef (hhSchedule.export_problems root options goal
-      [("knn", map (fn fact => "listTheory." ^ fact) facts)])
+    val _ = hhSchedule.export_problems root options goal
+      [("knn", map (fn fact => "listTheory." ^ fact) facts)]
       [(small_cap, slice)]
     val problem =
       String.concat (read_lines (hhSchedule.problem_path root slice))
@@ -5021,8 +5020,8 @@ fun test_schedule_legacy_sharing () =
          (copied := !copied + 1; copy_bytes := !copy_bytes + bytes)}
     fun run options rankings schedule =
       (generated := 0; copied := 0; copy_bytes := 0;
-       smlRedirect.hidef (hhSchedule.export_problems_observed observer root
-         options goal rankings) schedule)
+       hhSchedule.export_problems_observed observer root options goal
+         rankings schedule)
     fun text slice =
       String.concat (read_lines (hhSchedule.problem_path root slice))
     fun direct ranking count =
@@ -5030,8 +5029,7 @@ fun test_schedule_legacy_sharing () =
         val dir = OS.FileSys.tmpName ()
         val _ = OS.FileSys.remove dir
         val _ = mkdir dir
-        val named = smlRedirect.hidef mlThmData.thml_of_namel
-          (aiLib.first_n count ranking)
+        val named = mlThmData.thml_of_namel (aiLib.first_n count ranking)
         val _ = hhExportFof.fof_export_pb dir
           (boolSyntax.list_mk_imp goal,
            List.filter (null o Thm.hyp o #2) named)
@@ -5402,7 +5400,6 @@ struct
   val bad_ranking = ranking @ ["listTheory.NO_SUCH_THEOREM"]
   val goal : Term.term list * Term.term =
     ([], ``LENGTH ([1] ++ [] ++ [2]) = 3n``)
-  fun quiet f = smlRedirect.hidef f ()
   fun root_files root =
     List.concat (map (fn directory =>
       map (fn name => join directory name)
@@ -5462,8 +5459,8 @@ fun test_schedule_staged () =
       ((hhSchedule.ordered_work root (options NONE) [] schedule; false)
        handle Fail _ => true)
     val _ = expect "export_problems rejects a missing ranking up front"
-      (((quiet (fn () => hhSchedule.export_problems root (options NONE)
-          goal [] schedule)); false) handle Fail _ => true andalso
+      ((hhSchedule.export_problems root (options NONE) goal [] schedule;
+        false) handle Fail _ => true andalso
        null (list_directory root))
     (* run_staged over fake stages: failures at every stage and index.
        failing lists the (stage, index) pairs that raise; boom builds the
@@ -5582,8 +5579,8 @@ fun test_schedule_staged () =
     val failing = [(e, legacy Eprover "knn" 2), (e, generated Eprover "knn" 2),
                    (vampire, generated Vampire "knn" 4),
                    (vampire, legacy Vampire "knn" 4)]
-    val raised = (quiet (fn () => hhSchedule.export_problems root
-      (options NONE) goal bad_rank failing); false)
+    val raised = (hhSchedule.export_problems root
+      (options NONE) goal bad_rank failing; false)
       handle Feedback.HOL_ERR _ => true
     val _ = expect "a fetch failure publishes the prefix and nothing else"
       (raised andalso
@@ -5602,8 +5599,8 @@ fun test_schedule_staged () =
     val _ = hhConfig.ensure_dir (OS.Path.dir blocked)
     val _ = mkdir blocked
     val _ = write_file (join blocked "occupied") "x"
-    val raised = (quiet (fn () => hhSchedule.export_problems root
-      (options NONE) goal [("knn", ranking)] failing); false)
+    val raised = (hhSchedule.export_problems root
+      (options NONE) goal [("knn", ranking)] failing; false)
       handle OS.SysErr _ => true
     val _ = expect "a failing commit publishes the prefix and leaves no temp"
       (raised andalso
@@ -5618,9 +5615,9 @@ fun test_schedule_staged () =
     val _ = remove_tree root
     (* A legacy failure before the first write leaves no staging file. *)
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val raised = (quiet (fn () => hhSchedule.export_problems root
+    val raised = (hhSchedule.export_problems root
       (options NONE) ([], ``\x:num. x``) [("knn", ranking)]
-      [(e, legacy Eprover "knn" 2)]); false) handle Feedback.HOL_ERR _ => true
+      [(e, legacy Eprover "knn" 2)]; false) handle Feedback.HOL_ERR _ => true
     val _ = expect "a failing legacy export leaves no staged or final file"
       (raised andalso null (root_files root))
     val file = join root "direct"
@@ -5636,8 +5633,8 @@ fun test_schedule_staged () =
     val raised = (hhSchedule.with_problem_dir parent (options NONE)
       (fn root =>
         (seen := root;
-         quiet (fn () => hhSchedule.export_problems root (options NONE)
-           goal bad_rank failing))); false) handle Feedback.HOL_ERR _ => true
+         hhSchedule.export_problems root (options NONE)
+           goal bad_rank failing)); false) handle Feedback.HOL_ERR _ => true
     val _ = expect "with_problem_dir removes the root after a failed export"
       (raised andalso !seen <> "" andalso not (is_dir (!seen)) andalso
        null (list_directory parent))
@@ -6110,9 +6107,9 @@ fun test_schedule_pool () =
         val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
         val _ = advance_to start
         val first = counter ()
-        val _ = quiet (fn () => using hooks silent
+        val _ = using hooks silent
           root (options_capped 8 workers NONE NONE (#cap fx)) (#goal fx)
-          (#rankings fx) (#schedule fx))
+          (#rankings fx) (#schedule fx)
         val used = counter () - first - 1
         val files = tree root
       in
@@ -6263,7 +6260,7 @@ fun test_schedule_pool () =
         rankings_list sched
     fun raw_export hooks = raw_export_on schedule hooks
     fun run_export hooks observer workers root rankings_list =
-      quiet (fn () => raw_export hooks observer workers root rankings_list)
+      raw_export hooks observer workers root rankings_list
     (* A fork wrapper that signals, through a monitor, when the function of
        the n-th started thread has returned (the job's outcome is then
        recorded and its slot freed). *)
@@ -6303,11 +6300,11 @@ fun test_schedule_pool () =
            copied = fn _ => ()}
         fun fail_two index = if index = 2 then raise failure else ()
         val outcome =
-          (quiet (fn () => using
+          (using
              {fork = fork, before_finish = fail_two} observer root
              (options_with 8 4 NONE NONE) pool_goal
              [("knn", pool_ranking), ("mepo", bad_ranking)]
-             failing_schedule); "ok")
+             failing_schedule; "ok")
           handle Fail text => text | Feedback.HOL_ERR _ => "prepare"
       in
         expect label
@@ -6332,11 +6329,11 @@ fun test_schedule_pool () =
       let
         val (fork, threads) = recording_fork (fn start => start)
         val outcome =
-          (quiet (fn () => using
+          (using
              {fork = fork, before_finish = fn _ => ()} silent root
              (options_with 8 4 NONE NONE) pool_goal
              [("knn", pool_ranking), ("mepo", bad_ranking)]
-             failing_schedule); "ok")
+             failing_schedule; "ok")
           handle Feedback.HOL_ERR _ => "prepare"
       in
         expect "pool: a prepare error publishes the prefix and stops workers"
@@ -6395,9 +6392,9 @@ fun test_schedule_pool () =
         val result = ref NONE
         val caller = Thread.fork (fn () =>
           result := SOME (Exn.capture (fn () =>
-            quiet (fn () => raw_export_on consecutive
+            raw_export_on consecutive
               {fork = fork, before_finish = gate} silent 4 root
-              [("knn", pool_ranking)])) ()), [])
+              [("knn", pool_ranking)]) ()), [])
         val _ = arrived_count 4
         val _ = Thread.interrupt caller
         val _ = await_exits "caller did not exit" (fn () => [caller])
@@ -6425,20 +6422,19 @@ fun test_schedule_pool () =
         val result = ref NONE
         val caller = Thread.fork (fn () =>
           result := SOME (Exn.capture (fn () =>
-            quiet (fn () =>
-              let
-                val _ = hhSchedule_Test.after_submit := (fn index =>
-                  if index = 2 then
-                    monitor_do submitted (fn () => third_submitted := true)
-                  else ())
-                val outcome = Exn.capture (fn () =>
-                  using {fork = fork, before_finish = gate}
-                    silent root (options_with 8 2 NONE NONE) pool_goal
-                    [("knn", pool_ranking)] consecutive) ()
-              in
-                (hhSchedule_Test.after_submit := old_after;
-                 Exn.release outcome)
-              end)) ()), [])
+            let
+              val _ = hhSchedule_Test.after_submit := (fn index =>
+                if index = 2 then
+                  monitor_do submitted (fn () => third_submitted := true)
+                else ())
+              val outcome = Exn.capture (fn () =>
+                using {fork = fork, before_finish = gate}
+                  silent root (options_with 8 2 NONE NONE) pool_goal
+                  [("knn", pool_ranking)] consecutive) ()
+            in
+              (hhSchedule_Test.after_submit := old_after;
+               Exn.release outcome)
+            end) ()), [])
         val _ = arrived_count 2
         val _ = monitor_until submitted "the third job was not submitted"
           (fn () => !third_submitted)
@@ -6462,29 +6458,22 @@ fun test_schedule_pool () =
            two invocations cannot change the order of the names. *)
         val concurrent_start = quiet_start ()
         val _ = advance_to concurrent_start
-        (* Both invocations run under one redirection of the output (the
-           redirection is a process-global stack, so two threads must not
-           push and pop their own), and the second starts after the first
-           has read its hooks and finishes, restoring them, before the first
-           is released and restores its own. *)
-        val _ = quiet (fn () =>
-          let
-            val caller = Thread.fork (fn () =>
-              first := SOME (Exn.capture (fn () =>
-                raw_export_on consecutive
-                  {fork = hhPool.default_fork, before_finish = gate}
-                  silent 4 first_root [("knn", pool_ranking)]) ()), [])
-            (* Four consecutive generated jobs on four workers: the fourth
-               arrival implies that every prepare of the first invocation
-               is done and its caller is awaiting the first job. *)
-            val _ = arrived_count 4
-            val _ = second_outcome := Exn.capture (fn () =>
-              raw_export plain silent 3 second_root
-                [("knn", pool_ranking)]) ()
-            val _ = release ()
-          in
-            await_exits "caller did not exit" (fn () => [caller])
-          end)
+        (* The second starts after the first has read its hooks and
+           finishes, restoring them, before the first is released and
+           restores its own. *)
+        val caller = Thread.fork (fn () =>
+          first := SOME (Exn.capture (fn () =>
+            raw_export_on consecutive
+              {fork = hhPool.default_fork, before_finish = gate}
+              silent 4 first_root [("knn", pool_ranking)]) ()), [])
+        (* Four consecutive generated jobs on four workers: the fourth
+           arrival implies that every prepare of the first invocation is
+           done and its caller is awaiting the first job. *)
+        val _ = arrived_count 4
+        val _ = second_outcome := Exn.capture (fn () =>
+          raw_export plain silent 3 second_root [("knn", pool_ranking)]) ()
+        val _ = release ()
+        val _ = await_exits "caller did not exit" (fn () => [caller])
         fun complete root sched =
           List.all (fn (_, slice) => OS.FileSys.access
             (hhSchedule.problem_path root slice, [])) sched andalso
@@ -6587,8 +6576,8 @@ fun test_schedule_pool () =
                 val ranking = #2 (valOf (List.find (fn (name, _) =>
                   name = #filter slice) (#rankings fx)))
                 val named = List.filter (null o Thm.hyp o #2)
-                  (smlRedirect.hidef mlThmData.thml_of_namel
-                     (aiLib.first_n (#nfacts slice) ranking))
+                  (mlThmData.thml_of_namel
+                    (aiLib.first_n (#nfacts slice) ranking))
                 val options =
                   {format = format, type_enc = type_enc,
                    lam_trans = lam_trans, mono_iters = 3,
@@ -6621,10 +6610,10 @@ fun test_schedule_pool () =
             raise hhProblemGen.Lambda_survived (["conjecture"], survivor)
           else ()
         val outcome =
-          (quiet (fn () => using
+          (using
              {fork = hhPool.default_fork, before_finish = fail_two}
              observer root (options_with 8 workers NONE NONE) pool_goal
-             [("knn", pool_ranking)] schedule); "ok")
+             [("knn", pool_ranking)] schedule; "ok")
           handle Fail text => text
       in
         expect ("pool: a tail failure, " ^ Int.toString workers ^
@@ -6636,9 +6625,9 @@ fun test_schedule_pool () =
            not (present root 5) andalso no_temporaries root andalso
            !prepares = Int.min (6, 3 + workers))
       end)) [2, 4]
-    (* Nothing is written to the output by a worker: the output of a
-       pooled export under hidef is that of the inline one (the caller
-       alone prints nothing either), whichever thread would print. *)
+    (* Nothing is written to the output, by a worker or by the caller:
+       the captured output of a pooled export is empty, as is that of the
+       inline one. *)
     val _ =
       let
         fun output_of workers =
@@ -6666,9 +6655,9 @@ fun test_schedule_pool () =
         val outcome = (hhSchedule.with_problem_dir parent
           (options_with 8 workers debug NONE) (fn root =>
             (seen := root;
-             quiet (fn () => using plain silent
+             using plain silent
                root (options_with 8 workers debug NONE) pool_goal
-               rankings_list schedule))); "ok")
+               rankings_list schedule)); "ok")
           handle Feedback.HOL_ERR _ => "prepare"
       in (outcome, !seen) end
     val _ =

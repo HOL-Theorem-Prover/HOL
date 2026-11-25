@@ -520,8 +520,7 @@ fun lazy_named rankings =
         | NONE =>
             let
               val selected = first_n count (ranking_for rankings filter)
-              val named = premises_of
-                (smlRedirect.hidef mlThmData.thml_of_namel selected)
+              val named = premises_of (mlThmData.thml_of_namel selected)
             in
               named_memo := (key, named) :: !named_memo;
               named
@@ -957,13 +956,12 @@ fun run_with_root share_digests root
                  final replay. *)
               val ({stac, tac, t_replay}, t_recon) =
                 add_time
-                  (smlRedirect.hidef
-                    (reconstruct_with
-                      {minimize = #minimize options,
-                       preplay_timeout = #preplay_timeout options,
-                       minimize_timeout = #minimize_timeout options,
-                       minimize_deadline = SOME deadline}
-                      lemmas))
+                  (reconstruct_with
+                    {minimize = #minimize options,
+                     preplay_timeout = #preplay_timeout options,
+                     minimize_timeout = #minimize_timeout options,
+                     minimize_deadline = SOME deadline}
+                    lemmas)
                   goal
               val suggestion : suggestion =
                 {stac = stac, tac = tac, lemmas = lemmas,

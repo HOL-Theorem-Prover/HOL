@@ -146,7 +146,7 @@ val add_cthy_time = ref 0.0
 val add_namespace_time = ref 0.0
 val thmdata_tfidf_time = ref 0.0
 
-fun create_thmdata () =
+fun quiet_create_thmdata () =
   let
     val thy = current_theory ()
     val thyl = ancestry thy
@@ -158,11 +158,16 @@ fun create_thmdata () =
     val acc2 = total_time add_cthy_time add_thmfea_from_thy (thy,acc1)
     val (thmfea3,symfreq3,_) = total_time add_namespace_time
       add_namespacethm acc2
-    val n = int_to_string (length thmfea3)
   in
-    print_endline ("Loading " ^ n ^ " theorems");
     (total_time thmdata_tfidf_time
      (learn_tfidf_symfreq_nofilter (length thmfea3)) symfreq3, thmfea3)
+  end
+
+fun create_thmdata () =
+  let val thmdata = quiet_create_thmdata () in
+    print_endline
+      ("Loading " ^ int_to_string (length (snd thmdata)) ^ " theorems");
+    thmdata
   end
 
 (* -------------------------------------------------------------------------

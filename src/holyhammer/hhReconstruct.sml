@@ -10,8 +10,7 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel Dep Tag boolLib aiLib smlExecute smlTimeout smlRedirect
-  mlThmData
+open HolKernel Dep Tag boolLib aiLib smlExecute smlTimeout mlThmData
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
@@ -52,9 +51,13 @@ type reconstruction = {stac : string, tac : tactic, t_replay : real}
 
 (* Compiles stac and runs it on g with the limit t.  Returns the tactic
    and the replay time, both in CPU seconds of the replay's thread, when
-   it proves g. *)
+   it proves g.  The tactic, which is also the one hh replays, sets the
+   Metis trace to 0 in the context it runs in, so that it prints nothing,
+   whatever the trace of the session. *)
 fun replay t stac g =
-  let val tac = tactic_of_sml 1.0 stac in
+  let
+    val tac = Tactical.trace_tac ("metis.trace", 0) (tactic_of_sml 1.0 stac)
+  in
     case timeout_tactic t tac g of
         SOME ([], time) => SOME (tac, time)
       | _ => NONE

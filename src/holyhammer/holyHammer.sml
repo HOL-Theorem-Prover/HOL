@@ -9,7 +9,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread aiLib smlRedirect mlFeature mlThmData
+open HolKernel boolLib Thread aiLib mlFeature mlThmData
   mlNearestNeighbor
 
 val ERR = mk_HOL_ERR "holyHammer"
@@ -172,7 +172,7 @@ fun hh_suggestion goal =
   if not (has_boolty_goal goal) then
     raise ERR "hh_goal" "a term is not of type bool"
   else
-    let val thmdata = hidef create_thmdata () in
+    let val thmdata = quiet_create_thmdata () in
       main_hh_result "main_hh" (workdir ()) thmdata goal
     end
 
@@ -180,11 +180,10 @@ fun hh_goal goal = #tac (hh_suggestion goal)
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
 
-(* hidef has to span the context application, which runs the replay *)
 fun hh goal ctxt =
   let
     val suggestion = hh_suggestion goal
-    val result = hidef (#tac suggestion goal) ctxt
+    val result = #tac suggestion goal ctxt
   in
     announce "Replace `hh` with:" suggestion;
     result
@@ -193,7 +192,7 @@ fun hh goal ctxt =
 fun holyhammer tm =
   let
     val suggestion = hh_suggestion ([], tm)
-    val thm = hidef TAC_PROOF (([], tm), #tac suggestion)
+    val thm = TAC_PROOF (([], tm), #tac suggestion)
   in
     announce "Prove the statement in a script with:" suggestion;
     thm
