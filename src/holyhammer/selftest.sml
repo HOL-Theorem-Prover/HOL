@@ -2,16 +2,6 @@ open testutils hhTestLib
 
 datatype prover = datatype hhProver.prover
 
-(* This quotation is deliberately compiled after hhLamTrans is linked.  A
-   compile-time combin-theory dependency used to install its surface grammar
-   in HolyHammer sessions (b7fca5c48); this ordinary source fixture must
-   retain the ambient grammar. *)
-val grammar_pollution_fixture : Term.term = ``(\x : 'a. x) y = y``
-val _ =
-  (tprint "hhLamTrans does not pollute the term grammar";
-   if boolSyntax.is_eq grammar_pollution_fixture then OK ()
-   else die "FAILED: hhLamTrans grammar fixture")
-
 val is_dir = hhConfig.is_dir
 val mkdir = hhConfig.ensure_dir
 val remove_tree = hhConfig.remove_tree
@@ -414,6 +404,16 @@ val _ =
        check_stdout "at the end of the child";
        aiLib.write_file (join root child_done) "";
        OS.Process.exit OS.Process.success)
+
+(* This quotation is deliberately compiled after hhLamTrans is linked.  A
+   compile-time combin-theory dependency used to install its surface grammar
+   in HolyHammer sessions (b7fca5c48); this ordinary source fixture must
+   retain the ambient grammar. *)
+val grammar_pollution_fixture : Term.term = ``(\x : 'a. x) y = y``
+val _ =
+  (tprint "hhLamTrans does not pollute the term grammar";
+   if boolSyntax.is_eq grammar_pollution_fixture then OK ()
+   else die "FAILED: hhLamTrans grammar fixture")
 
 fun test_hhTptpProblem () =
   let
