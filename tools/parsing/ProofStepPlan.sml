@@ -94,9 +94,15 @@ and planTactic tactic =
     | First alternatives =>
         [Choice {source = sourceAnnotation tactic,
                  alternatives = map planTactic alternatives}]
+    (* FIRST_PROVE runs each alternative as t THEN NO_TAC, so an alternative
+       that leaves goals fails and the next one runs. *)
     | FirstProve alternatives =>
         [Choice {source = sourceAnnotation tactic,
-                 alternatives = map planTactic alternatives}]
+                 alternatives =
+                   map (fn alternative =>
+                          [Select {selector = SelectFirst, mode = SelectSolve,
+                                   body = planTactic alternative}])
+                       alternatives}]
     | MapEvery (_, []) => [tacticLeaf tactic]
     | MapEvery (function, arguments) =>
         map (fn argument => tacticLeaf (MapEvery (function, [argument]))) arguments

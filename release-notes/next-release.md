@@ -301,6 +301,10 @@ New tools
 New examples
 ------------
 
+-   Added short-Weierstrass elliptic-curve groups, torsion, morphisms and
+    cardinality results, with certified finite-field arithmetic and concrete
+    secp256k1, P-256, BN254 and BLS12-381 instances.
+
 -   The algebra examples now connect fields to the HOL Light-compatible
     ring interface, with inverse laws and a homogeneous-coordinate
     denominator-clearing example checked by `ringLib.RING_TAC`.

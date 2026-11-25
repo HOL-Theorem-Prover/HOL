@@ -338,6 +338,7 @@ fun cv_rep_case_for from_def = let
   *)
   val lemma = prove(goal,
     Cases
+    \\ once_rewrite_tac [oneTheory.one]
     \\ rewrite_tac [inj,dist]
     \\ rewrite_tac [cv_rep_alt]
     \\ rpt strip_tac

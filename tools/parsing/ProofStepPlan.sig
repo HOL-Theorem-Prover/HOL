@@ -31,7 +31,10 @@ sig
      Thus the TacticParse encoding of REVERSE t as t THEN_LT REVERSE_LT is
      kept as one source-level tactic leaf.  In contrast, literal MAP_EVERY and
      MAP_FIRST argument lists are expanded into their explicit applications:
-     a sequence for MAP_EVERY and a tactic Choice for MAP_FIRST. *)
+     a sequence for MAP_EVERY and a tactic Choice for MAP_FIRST.
+     FIRST and FIRST_PROVE are both a tactic Choice, but each FIRST_PROVE
+     alternative is a first-goal Select in solve mode: one that leaves goals
+     fails, and the next alternative runs. *)
   val fromTactic : 'a TacticParse.tac_expr -> 'a plan
 
   datatype path_component =
