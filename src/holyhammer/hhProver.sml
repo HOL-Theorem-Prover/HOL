@@ -378,9 +378,12 @@ val portfolio =
    mk_slice Eprover ("tx0-", "mono_native_fool", "combs_and_lifting") "knn"
      1024,
    mk_slice Vampire ("tx0", "mono_native_fool", "combs") "knn" 512,
-   (* Substitution: Zipperposition 2.1 rejects FOF guard proxy helpers as
-      a prop/individual type clash.  Its legacy FOF/32 candidate parses;
-      this is a parser-equivalence correction. *)
+   (* Substitution for FOF/mono_guards??: Zipperposition 2.1 rejected
+      those problems with a unification error, as their guard axioms
+      applied symbols to all their HOL arguments, more than the rest of
+      the problem did.  Guard axioms now use the problem's arities and
+      Zipperposition accepts the problems, but the slice stays legacy
+      FOF/32 until the portfolio is re-evaluated. *)
    mk_slice Zipperposition legacy_fof "knn" 32,
 
    mk_slice Vampire legacy_fof "mesh" 96,
