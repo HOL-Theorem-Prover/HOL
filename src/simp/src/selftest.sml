@@ -794,7 +794,55 @@ in
          ([p], q) [mk_disj(mk_neg p, q)];
   gives "A rewrite bundle's bound is shared across calls"
         (SIMP_CONV bundled_ss [] THENC SIMP_CONV bundled_ss []) TTp
-        “T /\ p”
+        “T /\ p”;
+  let
+    val a = ASSUME “(fa:'a -> 'a) x = y”
+    and b = ASSUME “(fb:'a -> 'a) x = z”
+    val av = ASSUME “(fv:'a -> 'a) x = y”
+    val ab_ss = pureSimps.pure_ss ++ rewrites [CONJ a b]
+    fun handle_of th ss =
+        valOf (List.find (fn h => concl (#2 (source_rewrite h)) ~~ concl th)
+                         (rewrite_source_handles ss))
+    val (once_ss, once_ths) =
+        prepare_rewrite_arguments pureSimps.pure_ss [Once a]
+    val bundle = prepare_rewrite_bundle once_ss once_ths
+    val h = hd (#2 (hd (rewrite_bundle_rules bundle)))
+    val viewed_ss = install_rewrite_bundle bundle [(h, av)] once_ss
+    val faxfvx = “P ((fa:'a -> 'a) x) ((fv:'a -> 'a) x) : bool”
+  in
+    tprint "A rewrite view shares its handle's uses";
+    require_msg
+      (check_result
+         (fn th => tmem (rhs (concl th))
+                        [“P (y:'a) ((fv:'a -> 'a) x) : bool”,
+                         “P ((fa:'a -> 'a) x) (y:'a) : bool”]))
+      thm_to_string (SIMP_CONV viewed_ss []) faxfvx;
+    gives "A suspended rewrite source no longer rewrites"
+          (SIMP_CONV (suspend_rewrite_sources [handle_of a ab_ss] ab_ss) [])
+          “Q ((fa:'a -> 'a) x) ((fb:'a -> 'a) x) : bool”
+          “Q ((fa:'a -> 'a) x) (z:'a) : bool”;
+    tprint "Rewrite source handles survive rebuilding the simpset";
+    require (check_result I)
+      (fn ss =>
+          let val rebuilt = remove_ssfrags ["drop"]
+                              (ss ++ name_ss "drop" (rewrites [av]))
+          in
+            ListPair.allEq same_rewrite_source
+              (rewrite_source_handles ss, rewrite_source_handles rebuilt)
+          end) ab_ss;
+    tprint "rewrite_context_changes reports an added conversion's key";
+    require (check_result I)
+      (fn ss =>
+          let
+            val fv_ss = std_conv_ss {name = "fv", conv = NO_CONV,
+                                     pats = [“(fv:'a -> 'a) x”]}
+            val {keys, rebuild, ...} =
+                rewrite_context_changes (ss, ss ++ fv_ss)
+          in
+            not rebuild andalso
+            List.exists (fn (_, k) => k ~~ “(fv:'a -> 'a) x”) keys
+          end) ab_ss
+  end
 end
 
 val _ = exit_count0 failcount

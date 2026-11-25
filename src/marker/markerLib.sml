@@ -709,47 +709,44 @@ fun marker_head tm = if is_comb tm then marker_head (rator tm) else tm
 
 fun has_marker_head marker th = same_const marker (marker_head (concl th))
 
+fun dest_wrapper th =
+    case dest_Req0 th of
+        SOME p => SOME (DReq0 p)
+      | NONE =>
+        case dest_ReqD th of
+            SOME p => SOME (DReqD p)
+          | NONE => Option.map DBounded (total BoundedRewrites.DEST_BOUNDED th)
+
 fun dest_directive th =
-    let
-      fun wrapper () =
-          case dest_Req0 th of
-              SOME p => SOME (DReq0 p)
-            | NONE =>
-              case dest_ReqD th of
-                  SOME p => SOME (DReqD p)
-                | NONE => Option.map DBounded
-                                     (total BoundedRewrites.DEST_BOUNDED th)
-    in
-      case wrapper () of
-          SOME d => SOME d
-        | NONE =>
-          let
-            val c = concl th
-            val head = marker_head c
-          in
-            if same_const AC_tm head then SOME (DAC (unAC th))
-            else if same_const Cong_tm head then SOME (DCong (unCong th))
-            else if same_const Split_tm head then SOME (DSplit (destSplit th))
-            else if aconv c NoAsms_t then SOME DNoAsms
-            else if same_const IgnAsm_t head then
-              SOME (DIgnAsm (#1 (dest_var (rand c))))
-            else if same_const boolSyntax.equality head then
-              if is_abbr th then SOME (DAbbr (dest_abbr th))
-              else Option.map DLabel (total dest_label_ref th)
-            else if same_const Excl_t head then Option.map DExcl (destExcl th)
-            else if same_const ExclSF_t head then
-              Option.map DExclSF (destExclSF th)
-            else if same_const FRAG_t head then Option.map DFRAG (destFRAG th)
-            else if same_const ExclX_t head then
-              Option.map DExclX (destExclX th)
-            else NONE
-          end
-    end
+    case dest_wrapper th of
+        SOME d => SOME d
+      | NONE =>
+        let
+          val c = concl th
+          val head = marker_head c
+        in
+          if same_const AC_tm head then SOME (DAC (unAC th))
+          else if same_const Cong_tm head then SOME (DCong (unCong th))
+          else if same_const Split_tm head then SOME (DSplit (destSplit th))
+          else if aconv c NoAsms_t then SOME DNoAsms
+          else if same_const IgnAsm_t head then
+            SOME (DIgnAsm (#1 (dest_var (rand c))))
+          else if same_const boolSyntax.equality head then
+            if is_abbr th then SOME (DAbbr (dest_abbr th))
+            else Option.map DLabel (total dest_label_ref th)
+          else if same_const Excl_t head then Option.map DExcl (destExcl th)
+          else if same_const ExclSF_t head then
+            Option.map DExclSF (destExclSF th)
+          else if same_const FRAG_t head then Option.map DFRAG (destFRAG th)
+          else if same_const ExclX_t head then
+            Option.map DExclX (destExclX th)
+          else NONE
+        end
 
 val is_directive = Option.isSome o dest_directive
 
 fun strip_wrappers th =
-    case dest_directive th of
+    case dest_wrapper th of
         SOME (DReq0 p) => strip_wrappers p
       | SOME (DReqD p) => strip_wrappers p
       | SOME (DBounded (p,_)) => strip_wrappers p

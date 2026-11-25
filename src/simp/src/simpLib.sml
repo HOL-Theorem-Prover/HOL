@@ -1479,11 +1479,10 @@ fun resolve_exclusion {pending} ss original =
                   SOME name =>
                     let
                       val candidates = ["split " ^ name,"split_asm " ^ name]
-                      val matches =
-                        List.filter (split_display_exists ss) candidates
                     in
-                      if null matches then no_target original
-                      else SOME (ExcludeSplits matches)
+                      if List.exists (split_display_exists ss) candidates
+                      then SOME (ExcludeSplits candidates)
+                      else no_target original
                     end
                 | NONE =>
                   case strip_namespace "case:" original of
@@ -1576,7 +1575,12 @@ fun mk_tactic_solver (name,tac) =
                      SOME ctxt => Tactical.TAC_PROOF_in ctxt (g,tac)
                    | NONE => TAC_PROOF (g,tac)
       in
-        Lib.itlist PROVE_HYP context_thms th
+        (* Only the context theorems used, so that unused ones do not
+           bring their hypotheses *)
+        Lib.itlist (fn c => fn th =>
+                       if HOLset.member (hypset th, concl c)
+                       then PROVE_HYP c th else th)
+                   context_thms th
       end
   in
     {name=name,solve=solve}
@@ -2427,10 +2431,17 @@ fun clear_rules (SS s) =
         strategy = strategy}
   end
 
+(* Whether a simpset has decision procedures, solvers or a subgoaler,
+   which may use any context theorem *)
+fun reads_context (SS {dprocs,strategy,...}) =
+  not (null dprocs) orelse isSome (#subgoaler strategy) orelse
+  not (null (#unsafe_solvers strategy)) orelse
+  not (null (#safe_solvers strategy))
+
 (* Conversion identities survive replay; deletions affect their keys too. *)
 fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
   if Portable.pointer_eq (old_ss,current_ss) then
-    {keys=[], rebuild=false, context_sensitive=not (null (#dprocs old))}
+    {keys=[], rebuild=false, context_sensitive=reads_context old_ss}
   else
   let
     val same_history = Portable.pointer_eq (#history old,#history current)
@@ -2610,8 +2621,8 @@ fun rewrite_context_changes (old_ss as SS old,current_ss as SS current) =
       views_changed ()
   in
     {keys=List.mapPartial #2 changed, rebuild=rebuild,
-     context_sensitive=not (null (#dprocs old) andalso
-                            null (#dprocs current))}
+     context_sensitive=reads_context old_ss orelse
+                       reads_context current_ss}
   end
 
 (*---------------------------------------------------------------------------*)
@@ -3149,16 +3160,6 @@ fun reconcile_hyps asl th =
     Lib.itlist ADD_ASSUM asl (Lib.itlist replace_hyp hypotheses th)
   end
 
-(* Adds supplied theorems to the decision procedures' contexts, as
-   Traverse.TRAVERSE does for its theorems *)
-fun prime_dprocs [] xdata = xdata
-  | prime_dprocs ths
-      (({limit,rewriters,dprocs,travrules,relation},config)
-         : Traverse.xtraverse_data) =
-      ({limit=limit, rewriters=rewriters,
-        dprocs=map (Traverse.addctxt ths) dprocs, travrules=travrules,
-        relation=relation}, config)
-
 fun simp_conv_with_xdata traversal xdata reducer_context solver_context =
   TRY_CONV
     (SIMP_QCONV_WITH_XDATA traversal xdata reducer_context solver_context)
@@ -3208,10 +3209,10 @@ fun looper_tac ss =
     fun enabled (LooperEntry {kind=OrdinaryLooper,...}) = true
       | enabled entry =
           not (Binaryset.member (#excl_loopers s,looper_display entry))
-    (* An UNCHANGED raised before context application declines this looper. *)
-    fun apply (LooperEntry {apply,...}) g =
-      apply ss g
-      handle Conv.UNCHANGED => NO_TAC g
+    (* A looper raising UNCHANGED declines the goal *)
+    fun apply (LooperEntry {apply,...}) g ctxt =
+      apply ss g ctxt
+      handle Conv.UNCHANGED => NO_TAC g ctxt
   in
     first_tactic enabled apply (#loopers s)
   end
@@ -3248,7 +3249,7 @@ fun gen_simp_tac_with_rounds rounds traversal
             let
               val (invocation_ss,context_thms) =
                 process_asm_tags invocation tagged_thms
-              val xdata = prime_dprocs context (xdata_of invocation_ss)
+              val xdata = xdata_of invocation_ss
               val rewr_tac =
                 CONV_TAC
                   (simp_conv_with_xdata traversal xdata
@@ -3705,9 +3706,8 @@ fun gen_global_simp_tac_with_bound traversal bound mode
                    fun build () =
                      let
                        val data =
-                         prime_dprocs bound_context
-                           (xtraversedata_for_ss_prepared
-                              traversal invocation_ss prepared)
+                         xtraversedata_for_ss_prepared
+                           traversal invocation_ss prepared
                      in
                        traversal_cache := SOME (invocation_ss,data);
                        data

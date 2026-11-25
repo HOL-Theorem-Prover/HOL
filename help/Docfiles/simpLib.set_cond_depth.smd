@@ -13,7 +13,8 @@ Sets the side-condition depth limit of a simpset.
 A conditional rewrite is not applied if its side conditions, together
 with those already being solved, number more than the limit. If no limit
 is set, the current value of `Cond_rewr.stack_limit` (initially 4) is
-used.
+used. Rewrites with other relations, added with
+`simpLib.add_relsimp`, are not limited.
 
 ### Failure
 

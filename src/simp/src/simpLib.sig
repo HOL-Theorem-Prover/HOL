@@ -187,9 +187,9 @@ sig
      holds if anything else changed that affects simplification (limit,
      settings, decision procedures, congruence rules, aliases, rewrite
      makers, conversions without a pattern).  context_sensitive holds if
-     either has decision procedures, whose results may depend on any
-     context theorem.  Changes to rewrites are found by comparing
-     rewrite_source_handles. *)
+     either has decision procedures, solvers or a subgoaler, whose
+     results may depend on any context theorem.  Changes to rewrites are
+     found by comparing rewrite_source_handles. *)
   val rewrite_context_changes : simpset * simpset ->
     {keys : (term list * term) list, rebuild : bool,
      context_sensitive : bool}
@@ -289,7 +289,8 @@ sig
       Traverse.NORMALIZE_ARGUMENTS does.  Each conversion starts the
       simpset's bounded rewrites with their full allowance, and restores
       their counts afterwards.  may_reduce_arguments t is false only if
-      no argument of t can be simplified; it is always true if the
+      no argument of t can be simplified by the simpset alone, ignoring
+      the theorems later given to arguments; it is always true if the
       simpset has decision procedures, congruence rules or relations. *)
    val prepare_child_first : Traverse.child_first_policy -> simpset ->
      {normalize : thm list -> conv,
