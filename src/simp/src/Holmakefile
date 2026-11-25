@@ -42,7 +42,8 @@ selftest.exe: selftest.uo boolSimps.uo Cond_rewr.uo simpLib.uo
 # (cf. num/arith's GenRelNorm).  Holdep does not see functor applications,
 # and with an explicit command, sigobj imports must be listed too.
 congLibFn.ui congLibFn.uo: congLibFn.sml Trace.uo Opening.uo Travrules.uo \
-              Cond_rewr.uo Traverse.uo $(dprot $(SIGOBJ)/liteLib.ui)
+              Cond_rewr.uo Traverse.uo $(dprot $(SIGOBJ)/liteLib.ui) \
+              $(dprot $(SIGOBJ)/markerLib.ui)
 	$(HOLMOSMLC) -toplevel -c $(protect $(SIGOBJ)/Overlay.ui) $<
 
 # congExtLib.sig includes the congLibFn signature (cf. parse's Overload.ui)
@@ -52,6 +53,10 @@ congExtLib.ui: congExtLib.sig congLibFn.uo TraverseExt.ui simpExtLib.ui \
 
 congExtLib.uo: congExtLib.sml congExtLib.ui congLibFn.uo TraverseExt.uo \
                simpExtLib.uo
+	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Overlay.ui) congLibFn.ui $<
+
+# congLib.sig includes the congLibFn signature, as congExtLib.sig does
+congLib.ui: congLib.sig congLibFn.uo Traverse.ui simpLib.ui
 	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Overlay.ui) congLibFn.ui $<
 
 CONGLIB_SIGOBJ = liteLib computeLib
