@@ -321,6 +321,21 @@ struct
     (ignore (Type.dom_rng ty); true) handle HOL_ERR _ => false
   fun dom_rng ty = SOME (Type.dom_rng ty) handle HOL_ERR _ => NONE
 
+  (* The first [arity] domains of a function type and the type that
+     remains: the argument and result types of a symbol applied to
+     [arity] arguments. *)
+  fun split_fun arity ty =
+    let
+      fun consume 0 ty domains = (List.rev domains, ty)
+        | consume count ty domains =
+            (case dom_rng ty of
+                 SOME (domain, range) =>
+                   consume (count - 1) range (domain :: domains)
+               | NONE => fail "symbol arity exceeds its HOL function type")
+    in
+      consume arity ty []
+    end
+
   fun term_head tm = fst (strip_comb tm)
   fun is_generated_var tm =
     is_var tm andalso
@@ -1034,16 +1049,10 @@ struct
         case encoding of
             hhTypeEnc.Native {poly = true, ...} => generic_proxy_type head
           | _ => type_of head
-      fun consume 0 ty domains = (List.rev domains, ty)
-        | consume count ty domains =
-            (case dom_rng ty of
-                 SOME (domain, range) =>
-                   consume (count - 1) range (domain :: domains)
-               | NONE => fail "symbol arity exceeds its HOL function type")
       val (domains, result) =
         case encoding of
             hhTypeEnc.Native {higher = false, ...} =>
-              consume arity full_type []
+              split_fun arity full_type
           | _ => strip_fun full_type
       val ty =
         List.foldr (fn (domain, range) =>
@@ -1088,9 +1097,11 @@ struct
                 (map (#mangle symbols) distinct))
     end
 
-  fun gsy_line (symbols : symbols) encoding needs head =
+  (* The guard axiom of a symbol applied to [arity] arguments, the arity
+     of all its occurrences: it guards the type that remains. *)
+  fun gsy_line (symbols : symbols) encoding needs arity head =
     let
-      val (domains, result) = strip_fun (type_of head)
+      val (domains, result) = split_fun arity (type_of head)
     in
       if not (guarded_type encoding needs result) then NONE
       else
@@ -1412,18 +1423,21 @@ struct
       val all_types =
         if typed orelse guarded then distinct_formula_types all_formulas
         else []
+      (* First-orderization applies every occurrence of a symbol to the
+         same number of arguments; declarations and guard axioms use it.
+         A higher encoding applies a symbol to any number. *)
+      val head_arities =
+        case encoding of
+            hhTypeEnc.Native {higher = true, ...} =>
+              Redblackmap.mkDict Term.compare
+          | _ => List.foldl head_arities_formula
+              (Redblackmap.mkDict Term.compare) all_formulas
+      fun head_arity head =
+        Option.getOpt (Redblackmap.peek (head_arities, head), 0)
       val decls =
         if not typed then []
         else
           let
-            val head_arities =
-              case encoding of
-                  hhTypeEnc.Native {higher = false, ...} =>
-                    List.foldl head_arities_formula
-                      (Redblackmap.mkDict Term.compare) all_formulas
-                | _ => Redblackmap.mkDict Term.compare
-            fun head_arity head =
-              Option.getOpt (Redblackmap.peek (head_arities, head), 0)
             val sym_decls = map (fn head => hhTptpProblem.SymDecl
               (aiLib.escape "sy." ^ #head symbols head,
                #head symbols head,
@@ -1488,7 +1502,9 @@ struct
             app_decls @ value_decls @ pp_decls
           end
       val gsy = if guarded then
-        List.mapPartial (gsy_line symbols encoding needs) declaration_heads
+        List.mapPartial (fn head =>
+          gsy_line symbols encoding needs (head_arity head) head)
+          declaration_heads
         else []
       val guard_types =
         List.filter (guarded_type encoding needs) all_types

@@ -1208,6 +1208,51 @@ fun test_hhTranslate_lifted_axioms () =
 
 val _ = test_hhTranslate_lifted_axioms ()
 
+(* An arity checker for first-order (FOF and TFF) problems: every symbol
+   is applied to one number of arguments, type arguments included, and a
+   declared symbol to the number its type declares.  Zipperposition
+   rejects a symbol at two arities; E reads it as two symbols. *)
+fun symbol_arity_errors (problem : hhTptpProblem.problem) =
+  let
+    open hhTptpProblem
+    fun declared_arity (TyPi (vars, ty)) = length vars + declared_arity ty
+      | declared_arity (TyFun (_, range)) = 1 + declared_arity range
+      | declared_arity _ = 0
+    val errors = ref ([] : string list)
+    fun error message = errors := message :: !errors
+    val arities = ref (Redblackmap.mkDict String.compare)
+    fun record symbol arity =
+      case Redblackmap.peek (!arities, symbol) of
+          NONE => arities := Redblackmap.insert (!arities, symbol, arity)
+        | SOME old =>
+            if old = arity then ()
+            else error (symbol ^ " at arities " ^ Int.toString old ^
+                        " and " ^ Int.toString arity)
+    fun term bound (Tm ((symbol, tys), args)) =
+          (if Lib.mem symbol bound then
+             (if null tys andalso null args then ()
+              else error ("applied variable " ^ symbol))
+           else record symbol (length tys + length args);
+           List.app (term bound) args)
+      | term _ (TmAbs _) = error "lambda in a first-order format"
+    fun formula bound (Quant (_, vars, body)) =
+          formula (map #1 vars @ bound) body
+      | formula bound (TyQuant (_, _, body)) = formula bound body
+      | formula bound (Conn (_, bodies)) = List.app (formula bound) bodies
+      | formula bound (Atom tm) = term bound tm
+    fun line (SymDecl (_, symbol, ty)) = record symbol (declared_arity ty)
+      | line (FormLine (_, _, body)) = formula [] body
+      | line (TypeDecl _) = ()
+  in
+    List.app (List.app line o #2) problem;
+    List.rev (!errors)
+  end
+
+fun expect_one_arity label errors =
+  (tprint ("hhProblemGen gives each symbol one arity: " ^ label);
+   if null errors then OK ()
+   else die ("FAILED: " ^ String.concatWith "; " errors))
+
 fun test_hhProblemGen () =
   let
     open boolSyntax hhTptpProblem hhProblemGen
@@ -1353,13 +1398,20 @@ fun test_hhProblemGen () =
         {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
          lam_trans = hhLamTrans.Lifting, mono_iters = 3, mono_instances = 100}
         proxy_order_input) = ["not", "eq"])
+    (* The arity errors of every first-order problem this section
+       generates. *)
+    val arity_errors = ref ([] : string list)
+    fun checked (THF _) generated = generated
+      | checked _ generated =
+          (arity_errors := !arity_errors @ symbol_arity_errors generated;
+           generated)
     fun problem format encoding terms =
       string_of_problem format "hhProblemGen pass 6--8"
-        (generate_problem
+        (checked format (generate_problem
           {format = format, type_enc = hhTypeEnc.of_string encoding,
            lam_trans = hhLamTrans.Lifting, mono_iters = 3,
            mono_instances = 100}
-          terms)
+          terms))
     fun occurrences needle text =
       let
         fun loop haystack count =
@@ -1620,10 +1672,10 @@ fun test_hhProblemGen () =
     val poly_quantifier_use = Term.mk_var ("poly_quantifier_use",
       Type.mk_type ("fun", [Term.type_of poly_universal, Type.bool]))
     val combs_all = string_of_problem tf0 "combs pool"
-      (generate_problem
+      (checked tf0 (generate_problem
         {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
          lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = 100}
-        (input (Term.mk_comb (poly_quantifier_use, poly_universal))))
+        (input (Term.mk_comb (poly_quantifier_use, poly_universal)))))
     (* A rigid type variable keeps the proxy laws at its function types
        (pxy.all at several types) and EQ_EXT at app's types, all through
        the pool of the main problem. *)
@@ -1677,10 +1729,10 @@ fun test_hhProblemGen () =
       (render memo higher_export_options changed_facts =
        render (fresh_memo ()) higher_export_options changed_facts)
     val comb_problem = string_of_problem tf0 "combin helpers"
-      (generate_problem
+      (checked tf0 (generate_problem
         {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
          lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = 100}
-        (input lambda))
+        (input lambda)))
     val _ = expect "hhProblemGen fetches combinator helpers only for combs"
       (String.isSubstring "help_2Ecombin_2EI" comb_problem andalso
        not (String.isSubstring "help_2Ecombin_2EI" mono_native))
@@ -1736,10 +1788,9 @@ fun test_hhProblemGen () =
           {format = format, type_enc = hhTypeEnc.of_string encoding,
            lam_trans = hhLamTrans.mode_of_string mode, mono_iters = 3,
            mono_instances = instances}
-        val temporary = OS.FileSys.tmpName ()
-        val _ = export_pb options temporary exported
-        val actual = String.concat (read_lines temporary)
-        val _ = OS.FileSys.remove temporary
+        val generated = checked format
+          (force_tail (prepare_pb (new_export_memo ()) options exported))
+        val actual = format_pb options generated
         val path = join "test-data/problems" name
       in
         expect_equal ("hhProblemGen golden " ^ name)
@@ -1799,6 +1850,13 @@ fun test_hhProblemGen () =
          "fof(sy_2Efixture, axiom, p).",
          "fof(gsy_2Efixture, axiom, p).",
          "fof(wit_2Efixture, axiom, p)."])
+    fun f_of args = Atom (Tm (("f", []), args))
+    val unary_and_binary = [("S", [FormLine ("a", Axiom, Quant (true,
+      [("X", NONE)], Conn (And, [f_of [Tm (("X", []), [])],
+        f_of [Tm (("X", []), []), Tm (("c", []), [])]])))])]
+    val _ = expect "hhProblemGen arity checker finds a symbol at two arities"
+      (symbol_arity_errors unary_and_binary = ["f at arities 1 and 2"])
+    val _ = expect_one_arity "goldens and section problems" (!arity_errors)
   in
     ()
   end
@@ -2040,7 +2098,8 @@ fun test_hhProblemGen_declaration_names () =
     List.app check [("tf0", "mono_native"), ("tf1", "poly_native")];
     expect "hhProblemGen escapes gsy line names once"
       (not (null gsy_symbols) andalso
-       List.all (fn symbol => Lib.mem symbol words) gsy_symbols)
+       List.all (fn symbol => Lib.mem symbol words) gsy_symbols);
+    expect_one_arity "fof LENGTH" (symbol_arity_errors guards)
   end
 
 val _ = test_hhProblemGen_declaration_names ()
@@ -2078,11 +2137,11 @@ fun test_hhProblemGen_bounded_names () =
     (* FOF has no declarations: read the guard predicates and witness
        constants off the printed problem. *)
     val fof = hhTptpProblem.FOF
-    val fof_text = string_of_problem fof "bounded names"
-      (hhProblemGen.generate_problem
-        {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
-         lam_trans = hhLamTrans.Lifting, mono_iters = 3,
-         mono_instances = 100} {conjecture = goal, facts = []})
+    val fof_problem = hhProblemGen.generate_problem
+      {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
+       lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+       mono_instances = 100} {conjecture = goal, facts = []}
+    val fof_text = string_of_problem fof "bounded names" fof_problem
     val guard_symbols = List.filter (fn word =>
         String.isPrefix "gd_2E" word orelse String.isPrefix "wit_2E" word)
       (String.tokens (fn c => not (Char.isAlphaNum c orelse c = #"_"))
@@ -2092,7 +2151,8 @@ fun test_hhProblemGen_bounded_names () =
     expect "hhProblemGen bounds guard and witness names in fof"
       (List.exists (String.isPrefix "gd_2E") guard_symbols andalso
        List.exists (String.isPrefix "wit_2E") guard_symbols andalso
-       List.all (fn symbol => size symbol <= 80) guard_symbols)
+       List.all (fn symbol => size symbol <= 80) guard_symbols);
+    expect_one_arity "fof nested lists" (symbol_arity_errors fof_problem)
   end
 
 val _ = test_hhProblemGen_bounded_names ()
