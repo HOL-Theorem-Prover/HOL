@@ -62,65 +62,19 @@ struct
   (* Do not open the combin theory: doing so changes the session grammar.
      Constants are looked up only when combs is selected.  HOL4 calls the B
      combinator "o"; it has B's defining equation o f g x = f (g x). *)
-  (* boolSyntax.mk_ucomb and gen_tyvarify draw their fresh type variables
-     from the global counter, which the pipelined export must not (see
-     hhNames); these are the same functions with the draws taken from a
-     supply (with the global supply the same terms, drawn in the same
-     order).  The unification itself is boolSyntax.type_unify. *)
-  fun gen_tyvarify names tm =
-    Term.inst
-      (map (fn ty => {redex = ty, residue = names ()})
-         (type_vars_in_term tm)) tm
+  fun combin name =
+    gen_tyvarify (prim_mk_const {Thy = "combin", Name = name})
 
-  (* boolSyntax.sep_type_unify: rename the type variables of both types
-     apart, unify, and map the solution back. *)
-  fun sep_type_unify names ty1 ty2 =
-    let
-      val vars1 = type_vars ty1
-      val vars2 = type_vars ty2
-      val new1 = map (fn _ => names ()) vars1
-      val new2 = map (fn _ => names ()) vars2
-      fun rename olds news = ListPair.map op|-> (olds, news)
-      val sub =
-        type_unify (type_subst (rename vars1 new1) ty1)
-                   (type_subst (rename vars2 new2) ty2)
-      val (sub1, sub2) = partition (C mem new1 o #redex) sub
-      val back = rename new1 vars1 @ rename new2 vars2
-      fun clean sub =
-        filter (fn {redex, residue} => redex <> residue)
-          (map (fn {redex, residue} =>
-                  type_subst back redex |-> type_subst back residue) sub)
-    in
-      (clean sub1, clean sub2)
-    end
+  fun ucomb f x = mk_ucomb (f, x)
 
-  (* Mirrors boolSyntax.mk_ucomb, whose sep_type_unify draws the fresh
-     variables of the first type and then those of the second, in this
-     order, and then unifies.  The draw order decides the names, hence the
-     exported files: keep this in step with boolSyntax.  It cannot call
-     boolSyntax, because that draws from the global counter whatever the
-     caller wants, and changing boolSyntax is a last resort. *)
-  fun mk_ucomb_with names (f, a) =
-    let
-      val (dty, _) = dom_rng (Term.type_of f)
-      val (dsub, asub) = sep_type_unify names dty (Term.type_of a)
-    in
-      mk_comb (Term.inst dsub f, Term.inst asub a)
-    end
-
-  fun combin names name =
-    gen_tyvarify names (prim_mk_const {Thy = "combin", Name = name})
-
-  fun ucomb names f x = mk_ucomb_with names (f, x)
-
-  fun apply2 names f x y = ucomb names (ucomb names f x) y
+  fun apply2 f x y = ucomb (ucomb f x) y
 
   (* Instantiation of a polymorphic combinator is fixed by its final
      argument.  Peel that application back off to obtain the required
      function-valued combinator term. *)
-  fun as_function names variable tm = rator (ucomb names tm variable)
+  fun as_function variable tm = rator (ucomb tm variable)
 
-  fun abstract names variable tm =
+  fun abstract variable tm =
     let
       (* Return whether the subtree contains [variable] together with its
          abstraction when it does, or the unchanged subtree when it does
@@ -128,7 +82,7 @@ struct
          textbook presentation on large premise sets. *)
       fun walk body =
         if aconv variable body then
-          (true, as_function names variable (combin names "I"))
+          (true, as_function variable (combin "I"))
         else if is_comb body then
           let
             val left = rator body
@@ -140,25 +94,24 @@ struct
                aconv variable right then
               (true, left)
             else if left_has andalso right_has then
-              (true, as_function names variable
-                (apply2 names (combin names "S") left' right'))
+              (true, as_function variable
+                (apply2 (combin "S") left' right'))
             else if left_has then
-              (true, as_function names variable
-                (apply2 names (combin names "C") left' right))
+              (true, as_function variable
+                (apply2 (combin "C") left' right))
             else if right_has then
-              (true, as_function names variable
-                (apply2 names (combin names "o") left right'))
+              (true, as_function variable
+                (apply2 (combin "o") left right'))
             else (false, body)
           end
         else (false, body)
       val (occurs, result) = walk tm
     in
       if occurs then result
-      else
-        as_function names variable (ucomb names (combin names "K") tm)
+      else as_function variable (ucomb (combin "K") tm)
     end
 
-  fun eliminate_abs names tm =
+  fun eliminate_abs tm =
     let
       fun formula body = formula_map formula term body
       and term body =
@@ -170,8 +123,7 @@ struct
                representation lambda of a nested logical binder. *)
             val matrix' = term matrix
           in
-            List.foldr (fn (var, result) => abstract names var result)
-              matrix' vars
+            List.foldr (fn (var, result) => abstract var result) matrix' vars
           end
         else if is_comb body then
           mk_comb (term (rator body), term (rand body))
@@ -259,27 +211,24 @@ struct
      quantified arguments of the lifted symbol: abstracting them too wraps
      the body in one more combinator layer per captured variable, so the
      definition grows quadratically in their number. *)
-  fun combinator_definition names {name, captured, bound, replacement,
-                                   matrix} =
-    (name ^ ".combs", eliminate_abs names (list_mk_forall (captured,
+  fun combinator_definition {name, captured, bound, replacement, matrix} =
+    (name ^ ".combs", eliminate_abs (list_mk_forall (captured,
       mk_eq (replacement, list_mk_abs (bound, matrix)))))
 
-  fun translate_with _ Lifting formulas =
+  fun translate Lifting formulas =
         let val (rewritten, definitions) = lift formulas in
           (rewritten, map lifted_definition definitions)
         end
-    | translate_with names Combs formulas =
-        (map (eliminate_abs names o close_formula) formulas, [])
-    | translate_with names CombsAndLifting formulas =
+    | translate Combs formulas =
+        (map (eliminate_abs o close_formula) formulas, [])
+    | translate CombsAndLifting formulas =
         let
           val (rewritten, definitions) = lift formulas
         in
           (rewritten, map lifted_definition definitions @
-            map (combinator_definition names) definitions)
+            map combinator_definition definitions)
         end
-    | translate_with _ KeepLams formulas =
+    | translate KeepLams formulas =
         (map (eta_contract o close_formula) formulas, [])
-
-  val translate = translate_with hhNames.global
 
 end

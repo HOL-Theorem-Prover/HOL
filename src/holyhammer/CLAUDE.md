@@ -49,9 +49,9 @@ rely on its contents being present or committed.
   `hhStature`** — kNN, MaSh, and MeSh rankings (`hhLearn.rank_filters`),
   MePo relevance filtering, fact lookup by name, and fact statures.
 - **Problem generation: `hhProblemGen`, `hhTypeEnc`, `hhLamTrans`,
-  `hhMonomorph`, `hhNames`, `hhTptpProblem`** — goal + premises → typed
-  TPTP (`tf0`/`tf1`/`tx0`/`tx0-`/`th0`/`th1`): type encodings, lambda
-  translations, monomorphisation, fresh names, and the TPTP AST/printer.
+  `hhMonomorph`, `hhTptpProblem`** — goal + premises → typed TPTP
+  (`tf0`/`tf1`/`tx0`/`tx0-`/`th0`/`th1`): type encodings, lambda
+  translations, monomorphisation, and the TPTP AST/printer.
 - **`hhTranslate`, `hhExportLib`, and the `hhExport*` writers** (Fof,
   Tf0/Tf1, Th0/Th1, Sexpr) — the legacy FOF exporter the schedule still
   uses (`hhExportFof`), and the bushy/chainy dataset exporters

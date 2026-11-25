@@ -1632,9 +1632,7 @@ fun test_hhProblemGen () =
        String.isSubstring "help_2Epxy_2Eall_2E2" combs_all andalso
        String.isSubstring "help_2Eeq__ext_2E2" combs_all andalso
        String.isSubstring "var_2E_27a" combs_all)
-    fun unused_fresh_name () = raise Fail "memo fixture draws a type variable"
-    fun fresh_memo () = new_export_memo_with unused_fresh_name
-    val memo = fresh_memo ()
+    val memo = new_export_memo ()
     val output1 = OS.FileSys.tmpName ()
     val output2 = OS.FileSys.tmpName ()
     val export_options =
@@ -1659,7 +1657,7 @@ fun test_hhProblemGen () =
        String.isSubstring "% Conjecture" first_export)
     fun render export_memo options terms =
       format_pb options (force_tail (prepare_pb export_memo options terms))
-    fun fresh_export terms = render (fresh_memo ()) export_options terms
+    fun fresh_export terms = render (new_export_memo ()) export_options terms
     val changed_goal = (mk_neg memo_goal, memo_facts)
     val new_goal_export = render memo export_options changed_goal
     val _ = expect "hhProblemGen export memo distinguishes conjectures"
@@ -1675,7 +1673,7 @@ fun test_hhProblemGen () =
        lam_trans = hhLamTrans.KeepLams, mono_iters = 3, mono_instances = 100}
     val _ = expect "hhProblemGen export memo agrees with fresh across formats"
       (render memo higher_export_options changed_facts =
-       render (fresh_memo ()) higher_export_options changed_facts)
+       render (new_export_memo ()) higher_export_options changed_facts)
     val comb_problem = string_of_problem tf0 "combin helpers"
       (generate_problem
         {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
@@ -2168,119 +2166,6 @@ fun test_hhProblemGen_counter_window () =
   end
 
 val _ = test_hhProblemGen_counter_window ()
-
-(* The private supply of fresh type variables: its names are the global
-   counter's, numbered from the seed on and formatted alike; it draws
-   nothing globally after its seed, whatever other threads draw; its release
-   moves the counter past the names handed out; it is usable only inside
-   its scope, which turns the kernel's complaint off for the scope's thread
-   alone. *)
-fun test_hhNames () =
-  let
-    val first = counter ()
-    val {supply, release, scoped} = hhNames.private_supply ()
-    val warnings = ref 0
-    fun complaint () =
-      (warnings := 0; ignore (Type.mk_vartype "%%not-standard"); !warnings)
-    fun number ty = valOf (Int.fromString (String.extract (Type.dest_vartype ty,
-      size "%%gen_tyvar%%", NONE)))
-    val old_outstream = !Feedback.WARNING_outstream
-    val _ = Feedback.WARNING_outstream := (fn _ => warnings := !warnings + 1)
-    val outside_before = complaint ()
-    val other_during = ref ~1
-    val drawn = ref ([] : Type.hol_type list)
-    val outside_raises = (supply (); false) handle Fail _ => true
-    val inside = ref ~1
-    val _ = scoped (fn () =>
-      let
-        (* another thread draws globally meanwhile and keeps its flags *)
-        val t = Thread.fork (fn () =>
-          (OS.Process.sleep (Time.fromMilliseconds 20);
-           ignore (List.tabulate (50, fn _ => Type.gen_tyvar ()));
-           other_during := complaint ()), [])
-        val a = supply ()
-        val _ = OS.Process.sleep (Time.fromMilliseconds 100)
-        val b = supply ()
-        val c = supply ()
-      in
-        inside := complaint (); drawn := [a, b, c]
-      end)
-    val outside_after = complaint ()
-    val _ = Feedback.WARNING_outstream := old_outstream
-    val numbers = map number (!drawn)
-    val _ = release ()
-    val after = counter ()
-  in
-    expect "private supply: the seed is one global draw, the names follow"
-      (case numbers of
-           [a, b, c] => a = first + 1 andalso b = a + 1 andalso c = b + 1
-         | _ => false);
-    expect "private supply: the names are generated type variables"
-      (List.all Type.is_gen_tyvar (!drawn) andalso
-       map Type.dest_vartype (!drawn) =
-         map (fn n => "%%gen_tyvar%%" ^ Int.toString n) numbers);
-    expect "private supply: release moves the counter past the names"
-      (after > List.last numbers);
-    expect "private supply: no complaint inside the scope, only for it"
-      (outside_before = 1 andalso !inside = 0 andalso !other_during = 1 andalso
-       outside_after = 1);
-    expect "private supply: used outside its scope it fails"
-      outside_raises
-  end
-val _ = test_hhNames ()
-
-(* hhLamTrans.mk_ucomb_with replaces boolSyntax.mk_ucomb, which draws from
-   the global counter whatever the caller wants (the pipelined export draws
-   from a supply of its own).  With the global supply it gives the same
-   term and draws the same number of names, also where the types share
-   variables, leave variables unconstrained, or do not unify. *)
-fun test_hhLamTrans_ucomb () =
-  let
-    val alpha = Type.alpha
-    val beta = Type.beta
-    val gamma = Type.gamma
-    val num = Type.mk_type ("num", [])
-    fun mk name ty = Term.mk_var (name, ty)
-    fun combin name = Term.prim_mk_const {Thy = "combin", Name = name}
-    val cases =
-      [("K applied to a shared variable", combin "K", mk "x" alpha),
-       ("I applied to a numeral type", combin "I", mk "x" num),
-       ("S applied to a shared curried variable", combin "S",
-        mk "g" (Type.--> (alpha, Type.--> (beta, gamma)))),
-       ("a variable and its result type", mk "h" (Type.--> (alpha, beta)),
-        mk "y" beta),
-       ("o applied to a function with unconstrained variables", combin "o",
-        mk "p" (Type.--> (beta, gamma))),
-       ("C applied to a nested polymorphic type", combin "C",
-        mk "q" (Type.--> (Type.mk_type ("list", [alpha]),
-                          Type.--> (beta, alpha)))),
-       ("a function applied to an argument of a variable-sharing type",
-        mk "f" (Type.--> (alpha, alpha)), mk "a" (Type.--> (beta, alpha))),
-       ("no unifier", mk "h" (Type.--> (num, Type.bool)), mk "z" Type.bool)]
-    fun result apply (f, a) =
-      let
-        val before = counter ()
-        val outcome = SOME (apply (f, a)) handle Feedback.HOL_ERR _ => NONE
-      in
-        (outcome, counter () - before - 1)
-      end
-    fun agree (_, f, a) =
-      let
-        val (r1, d1) = result boolSyntax.mk_ucomb (f, a)
-        val (r2, d2) = result (hhLamTrans.mk_ucomb_with hhNames.global) (f, a)
-      in
-        d1 = d2 andalso
-        (case (r1, r2) of
-             (NONE, NONE) => true
-           | (SOME t1, SOME t2) => Term.aconv t1 t2
-           | _ => false)
-      end
-  in
-    List.app (fn c => expect ("hhLamTrans.mk_ucomb_with: " ^ #1 c ^
-                              " agrees with boolSyntax.mk_ucomb") (agree c))
-      cases
-  end
-val _ = test_hhLamTrans_ucomb ()
 
 (* A "lambda survived" failure of the tail of a prepared problem is raised
    raw (it may run on a worker, where the term grammar must not be read)

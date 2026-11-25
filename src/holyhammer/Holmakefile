@@ -1,4 +1,4 @@
-all: $(DEFAULT_TARGETS) hhNames.uo hhPool.uo hhStature.uo hhMePo.uo \
+all: $(DEFAULT_TARGETS) hhPool.uo hhStature.uo hhMePo.uo \
      hhFactIndex.uo hhLearn.uo hhTptpProblem.uo hhTypeEnc.uo \
      hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
      hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo \
@@ -16,14 +16,12 @@ hhLearn.uo: hhLearn.sml hhLearn.ui hhStature.uo hhFactIndex.uo hhMePo.uo
 
 hhTypeEnc.uo: hhTypeEnc.sml hhTypeEnc.ui hhTptpProblem.uo
 
-hhNames.uo: hhNames.sml hhNames.ui
+hhLamTrans.uo: hhLamTrans.sml hhLamTrans.ui
 
-hhLamTrans.uo: hhLamTrans.sml hhLamTrans.ui hhNames.uo
-
-hhMonomorph.uo: hhMonomorph.sml hhMonomorph.ui hhNames.uo
+hhMonomorph.uo: hhMonomorph.sml hhMonomorph.ui
 
 hhProblemGen.uo: hhProblemGen.sml hhProblemGen.ui hhTptpProblem.uo \
-                 hhNames.uo hhTypeEnc.uo hhLamTrans.uo hhMonomorph.uo
+                 hhTypeEnc.uo hhLamTrans.uo hhMonomorph.uo
 
 hhConfig.uo: hhConfig.sml hhConfig.ui hhTptpProblem.uo hhTypeEnc.uo \
              hhLamTrans.uo
@@ -45,7 +43,7 @@ hhEval.uo: hhEval.sml hhEval.ui hhConfig.uo hhProver.uo hhSlice.uo \
 holyHammer.uo: holyHammer.sml holyHammer.ui hhConfig.uo hhProver.uo \
                hhSlice.uo hhSchedule.uo hhLearn.uo
 
-selftest.uo: selftest.sml hhNames.uo hhStature.uo hhMePo.uo hhLearn.uo \
+selftest.uo: selftest.sml hhStature.uo hhMePo.uo hhLearn.uo \
              hhTptpProblem.uo hhTypeEnc.uo \
              hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
              hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo \

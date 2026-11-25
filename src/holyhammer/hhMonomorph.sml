@@ -96,7 +96,7 @@ struct
      premise match a goal occurrence such as count_occ : 'a -> ... at the
      goal's own 'a; Type.match_type drops identity bindings, so an
      unrenamed premise could never be instantiated there. *)
-  fun rename_apart names rigid theorem tvars =
+  fun rename_apart rigid theorem tvars =
     let
       val clashing = List.filter (fn ty => mem ty rigid) tvars
     in
@@ -104,19 +104,18 @@ struct
       else
         let
           val renamed = Term.inst (map (fn ty =>
-            {redex = ty, residue = names ()}) clashing) theorem
+            {redex = ty, residue = Type.gen_tyvar ()}) clashing) theorem
         in
           (renamed, Term.type_vars_in_term renamed)
         end
     end
 
-  fun classify names rigid rank (nickname, original) =
+  fun classify rigid rank (nickname, original) =
     case Term.type_vars_in_term original of
         [] => Ground (nickname, original)
       | original_vars =>
           let
-            val (theorem, tvars) = rename_apart names rigid original
-              original_vars
+            val (theorem, tvars) = rename_apart rigid original original_vars
             fun describe (constant as (_, ty)) =
               let val vars = Type.type_vars ty in
                 (constant, vars, length vars)
@@ -464,8 +463,7 @@ struct
        forced = fn () => Option.isSome (!cell)}
     end
 
-  type pool = {fresh : hhNames.supply,
-               goal : term susp,
+  type pool = {goal : term susp,
                rigid : hol_type list susp,
                index : (string, hol_type list) Redblackmap.dict susp}
 
@@ -474,9 +472,9 @@ struct
       (fold_consts index_add goal
         (Redblackmap.mkDict String.compare))
 
-  fun mk_pool_with names goal =
+  fun mk_pool goal =
     let val rigid = susp (fn () => Term.type_vars_in_term goal) in
-      {fresh = names, goal = susp (fn () => goal), rigid = rigid,
+      {goal = susp (fn () => goal), rigid = rigid,
        index = susp (fn () => index_of goal)}
     end
 
@@ -514,13 +512,13 @@ struct
             end
           else index_of (#force goal ()))
       in
-        {fresh = #fresh pool, goal = goal, rigid = rigid, index = index}
+        {goal = goal, rigid = rigid, index = index}
       end
 
   fun monomorph_pool {max_iters, max_new_instances} (pool : pool) premises =
     let
       val rigid = #force (#rigid pool) ()
-      val infos = Portable.mapi (classify (#fresh pool) rigid) premises
+      val infos = Portable.mapi (classify rigid) premises
       val names = schema_names infos
       val has_schemas = Redblackmap.numItems names <> 0
       val initial =
@@ -562,8 +560,6 @@ struct
     in
       List.concat (map result_of infos)
     end
-
-  val mk_pool = mk_pool_with hhNames.global
 
   fun monomorph caps goal premises =
     monomorph_pool caps (mk_pool goal) premises
