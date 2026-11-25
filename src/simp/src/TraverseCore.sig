@@ -1,6 +1,6 @@
 (* =====================================================================
  * FILE          : TraverseCore.sig
- * DESCRIPTION   : The traversal engine for the extended entry points.
+ * DESCRIPTION   : The traversal engine shared by Traverse and TraverseExt.
  *                 It is polymorphic in the reducer type: a client supplies
  *                 each reducer's initial context, its context collector and
  *                 how to apply it.

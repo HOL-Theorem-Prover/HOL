@@ -68,7 +68,7 @@ FRESH_LOAD = ../tests/fresh-load
 # two in step.  Holmake has no filter-out, so the launcher skips theory
 # scripts that match a pattern.
 FRESH_EXT_UO = $(patsubst %.sml,%.uo,\
-  $(wildcard *Ext*.sml split*.sml SplitData.sml TraverseCore.sml))
+  $(wildcard *Ext*.sml split*.sml SplitData.sml))
 FRESH_SCENARIOS = control attribute-first set-first attribute-after set-after \
   syntax-first
 

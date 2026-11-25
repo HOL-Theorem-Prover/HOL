@@ -6,7 +6,7 @@ val _ = List.app (fn name =>
      Option.isSome (#lookupStruct PolyML.globalNameSpace name)
   then raise Fail ("ordinary load imported extension module " ^ name)
   else ())
-  ["TraverseCore","TraverseExt","Cond_rewrExt","simpExtLib","congExtLib",
+  ["TraverseExt","Cond_rewrExt","simpExtLib","congExtLib",
    "splitLib","SplitData","splitPersistLib"];
 val _ = List.app (fn name =>
   (testutils.tprint ("ordinary load preserves foreign syntax: " ^ name);

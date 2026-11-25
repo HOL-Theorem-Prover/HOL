@@ -1,6 +1,6 @@
 (* =====================================================================
  * FILE          : TraverseCore.sml
- * DESCRIPTION   : The traversal engine for the extended entry points
+ * DESCRIPTION   : The traversal engine shared by Traverse and TraverseExt
  *
  * AUTHOR        : Donald Syme
  *                 Based loosely on original HOL rewriting by

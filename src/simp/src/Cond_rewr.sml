@@ -275,55 +275,10 @@ fun ac_term_ord(tm1,tm2) =
         end
         handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
 
-   (* Keep the ordinary runner's depth check and term order inline. *)
-   fun COND_REWR_CONV (nm,th) bounded =
-      let val (isperm,instth) = prepare th
-      in
-      fn solver => fn stack => fn tm =>
-       (let val conditional_eqn = instth tm
-            val (conditions,(l,r)) = rewrite_parts (concl conditional_eqn)
-            val _ = if exists (C (op_mem aconv) stack) conditions
-                        then (trace(1, TEXT "looping - cut");
-                              failwith "looping!") else ()
-            val _ = if length stack + length conditions > (!stack_limit)
-                    then (trace(1, TEXT "looping - stack limit reached");
-                          failwith "stack limit") else ()
-            val _ =
-              if Term.aconv l r then
-                (trace(4, IGNORE ("Rewrite loops", conditional_eqn));
-                 failwith "looping rewrite")
-              else ()
-
-            val _ = if isperm andalso ac_term_ord(l, r) <> GREATER andalso
-                       not bounded
-                    then
-                      (trace(4, IGNORE("possibly looping",conditional_eqn));
-                       failwith "permutative rewr: not applied")
-                    else ()
-            val disch_eqn =
-                case conditions of
-                    [] => conditional_eqn
-                  | _ => solve_conditions (nm,th,isperm) solver stack tm
-                                          conditions conditional_eqn
-            val final_thm = if aconv l tm then disch_eqn
-                            else TRANS (ALPHA tm l) disch_eqn
-            val _ = if null conditions then
-              trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
-                    else ()
-            (* note_rewrite is a no-op unless someone is tracking *)
-            val _ = if null stack then note_rewrite th else ()
-        in trace(if isperm then 3 else 2,PRODUCE(tm,nm,final_thm));
-            final_thm
-        end
-        handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
-      end
-      handle e  => WRAP_ERR("COND_REWR_CONV (construction) ",e);
-
    fun COND_REWR_CONVS (nm,th) bounded =
      let val (isperm,instth) = prepare th
      in
-       (* The paired runners sample the default on entry to the conversion.
-          The ordinary runner above reads it only at the depth check. *)
+       (* The paired runners sample the default on entry to the conversion. *)
        {legacy = fn solver => fn stack => fn tm =>
           apply (nm,th,bounded,isperm,instth)
             (!stack_limit) ac_term_ord solver stack tm,
@@ -337,6 +292,8 @@ fun ac_term_ord(tm1,tm2) =
           end}
      end
      handle e => WRAP_ERR("COND_REWR_CONV (construction) ",e)
+
+   fun COND_REWR_CONV nm_th bounded = #legacy (COND_REWR_CONVS nm_th bounded)
 
 
 val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",

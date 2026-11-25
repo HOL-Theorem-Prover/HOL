@@ -68,7 +68,7 @@ fun compiles src = (compile_string src; true) handle _ => false
    ext_patterns (`*` only), minus theory scripts.  The same patterns appear
    in the Holmakefile wildcard FRESH_EXT_UO; the static check compares both
    with the added modules. *)
-val ext_patterns = ["*Ext*", "split*", "SplitData", "TraverseCore"]
+val ext_patterns = ["*Ext*", "split*", "SplitData"]
 fun glob [] [] = true
   | glob (#"*" :: ps) s =
       glob ps s orelse (case s of [] => false | _ :: t => glob (#"*" :: ps) t)

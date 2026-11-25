@@ -58,7 +58,7 @@
     (I.e., it has no weakening congprocs.)
 
     The travrules is a static piece of information for guiding simplification.
-    The dynamic data that is maintained during simplification (containing context values, the relation currently being used and the context’s free variables) is a `trav_state`, which is private to module `Traverse`.
+    The dynamic data that is maintained during simplification (containing context values, the relation currently being used and the context’s free variables) is a `trav_state`, which is private to module `TraverseCore`.
 
     Each simpset contains a list of `travrules` values.
 
@@ -133,9 +133,7 @@ There is no conversion back.
 
 To avoid duplication, the two engines share their implementation:
 
-- `Traverse` implements ordinary parent-first traversal.
-  `TraverseExt` uses `TraverseCore` for both its default and configured
-  entry points.
+- `TraverseCore` is the traversal engine of both `Traverse` and `TraverseExt`, polymorphic in the reducer type.
 - `congLibFn` is the functor behind both `congLib` and `congExtLib`.
 - `simpCommon` holds the code shared by `simpLib` and `simpExtLib`.
 - `Cond_rewr.COND_REWR_CONVS` prepares a conditional rewrite once for both the ordinary and the configurable runner.

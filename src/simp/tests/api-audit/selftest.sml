@@ -12,9 +12,9 @@ fun loaded name = member name (Meta.loaded ()) orelse
   Option.isSome (#lookupStruct PolyML.globalNameSpace name)
 fun forbidden name = String.isSuffix "Ext" name orelse
   String.isSuffix "ExtLib" name orelse
-  member name ["TraverseCore","SplitData","splitLib","splitPersistLib"]
+  member name ["SplitData","splitLib","splitPersistLib"]
 val forbidden_names =
-  ["TraverseCore","TraverseExt","Cond_rewrExt",
+  ["TraverseExt","Cond_rewrExt",
    "simpExtLib","congExtLib","SplitData","splitLib","splitPersistLib"]
 val used = ref ([] : string list)
 fun files stage = List.app (fn (file,dir) =>
