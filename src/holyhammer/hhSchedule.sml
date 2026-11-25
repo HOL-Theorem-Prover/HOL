@@ -491,26 +491,18 @@ fun publish_work (observer : export_observer)
    one means inline.  A caller with a pinned context (Context.is_pinned,
    in practice only the proof replay of the language server) gets one:
    the tail reads the ambient signature, which a fresh thread would see
-   unpinned.  pinned is the caller's answer, asked once where the export
-   starts.  The items admitted and waiting for resolution are bounded by
+   unpinned.  The items admitted and waiting for resolution are bounded by
    the workers (the queue briefly holds one more at admission), so the
    prepared tails (retained HOL terms) and the finished files held at any
    time are bounded as well. *)
-fun pool_size pinned (options : hhConfig.hh_options) works =
+fun pool_size (options : hhConfig.hh_options) works =
   let
     val generated = length (List.filter
       (fn {kind = ExportGenerated _, ...} => true | _ => false) works)
   in
-    if pinned then 1
+    if Context.is_pinned () then 1
     else Int.min (Int.min (#export_workers options, #cores options),
                   generated)
-  end
-
-(* The threads of the pool: a pool of at most one worker is the inline
-   export, which has none. *)
-fun pool_threads pinned options works =
-  let val workers = pool_size pinned options works in
-    if workers <= 1 then 0 else workers
   end
 
 (* Theorems with hypotheses are no premises (see hhLearn); explicit hh_pb
@@ -528,8 +520,8 @@ fun lazy_named rankings =
         | NONE =>
             let
               val selected = first_n count (ranking_for rankings filter)
-              val named =
-                premises_of (smlRedirect.hidef mlThmData.thml_of_namel selected)
+              val named = premises_of
+                (smlRedirect.hidef mlThmData.thml_of_namel selected)
             in
               named_memo := (key, named) :: !named_memo;
               named
@@ -545,8 +537,7 @@ fun lazy_named rankings =
    generated problems (the tail of the preparation, then format and write)
    moves to the workers of a pool, which is closed (its workers stopped and
    their files removed) before this returns or raises. *)
-fun export_works pinned (observer : export_observer) options goal rankings
-    works =
+fun export_works (observer : export_observer) options goal rankings works =
   let
     val fork = !hhSchedule_Test.fork
     val before_finish = !hhSchedule_Test.before_finish
@@ -560,16 +551,17 @@ fun export_works pinned (observer : export_observer) options goal rankings
          submit = submit, await = await_pending,
          publish = publish_work observer, abandon = abandon_pending,
          release = release_finished} works
-    val workers = pool_threads pinned options works
+    val workers = pool_size options works
   in
-    if workers = 0 then run 0 submit_inline
+    if workers <= 1 then run 0 submit_inline
     else
       hhPool.with_pool {workers = workers, fork = fork}
-        (fn pool => run workers (submit_pooled pool before_finish after_submit))
+        (fn pool =>
+         run workers (submit_pooled pool before_finish after_submit))
   end
 
 fun export_problems_observed observer root options goal rankings schedule =
-  export_works (Context.is_pinned ()) observer options goal rankings
+  export_works observer options goal rankings
     (ordered_work root options rankings schedule)
 
 val export_problems = export_problems_observed silent_observer
@@ -616,8 +608,7 @@ fun run_with_root share_digests root
        an error or an interrupt of it propagates before any event. *)
     val scheduled_paths = schedule_paths root schedule
     val works = ordered_work_for options rankings scheduled_paths
-    val _ = export_works (Context.is_pinned ()) silent_observer options goal
-      rankings works
+    val _ = export_works silent_observer options goal rankings works
     val _ = hhCache.prune options
     (* In a private root, a byte copy and its source share a digest.
        Each group has its own lock so unrelated hashes can overlap. *)
@@ -764,13 +755,9 @@ fun run_with_root share_digests root
           cancelled
         end)
 
-    (* A directed interrupt of a thread of the run, never of the running
-       one (it would be taken at its next wait). *)
-    fun interrupt_thread thread =
-      if Thread.equal (thread, Thread.self ()) then ()
-      else Thread.interrupt thread handle Thread _ => ()
-
-    fun interrupt_recon () = Option.app interrupt_thread (!recon_thread)
+    fun interrupt_recon () =
+      Option.app (fn t => Thread.interrupt t handle Thread _ => ())
+        (!recon_thread)
 
     (* Kills the provers.  A final stop (SOME reason) also ends the run and
        drops the queued proofs; the halt of the hard deadline (NONE) leaves

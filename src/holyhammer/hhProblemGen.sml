@@ -1713,7 +1713,8 @@ struct
      entries : (hhLamTrans.mode * named_terms * named_terms) list ref,
      runs : int ref}
 
-  fun new_export_memo () = {simplified = ref [], entries = ref [], runs = ref 0}
+  fun new_export_memo () =
+    {simplified = ref [], entries = ref [], runs = ref 0}
   fun memo_lambda_runs ({runs, ...} : export_memo) = !runs
 
   (* The scheduler shares the exact named list for each selection. Keep

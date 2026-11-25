@@ -119,10 +119,11 @@ sig
   val export_problems : string -> hhConfig.hh_options -> goal ->
     (string * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit
-  (* run_in exports the problems of the schedule on the calling thread, as
-     export_problems does, and then runs the schedule.  A failure or an
-     interrupt of the export propagates before any event, with no
-     ScheduleDone.
+  (* run_in exports the problems of the schedule as export_problems does
+     (prepare on the calling thread, the tails on the pool workers), then
+     prunes the cache, probes the provers and runs the schedule.  A failure
+     or an interrupt before the launch (the export, the prune or the
+     probes) propagates with no event and no ScheduleDone.
 
      The clock.  The timeout bounds the proof search and starts at the
      launch of the provers, after the export.  At the soft deadline no
