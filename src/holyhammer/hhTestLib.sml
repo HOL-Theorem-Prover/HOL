@@ -28,6 +28,8 @@ in
        OS.Process.exit OS.Process.failure)
 end
 
+fun read_text path = String.concat (aiLib.bare_readl path)
+
 (* f dir for a fresh directory dir under the state directory, which is
    removed afterwards, also when f raises. *)
 fun with_fresh_dir f =
@@ -39,7 +41,7 @@ fun with_fresh_dir f =
 (* The text that write file writes to a fresh file. *)
 fun written_by write = with_fresh_dir (fn dir =>
   let val file = join dir "written" in
-    write file; String.concat (aiLib.bare_readl file)
+    write file; read_text file
   end)
 
 (* f (), with stdout sent to a fresh file: its result and what it
@@ -49,7 +51,7 @@ fun capture_stdout f = with_fresh_dir (fn dir =>
     val file = join dir "stdout"
     val result = smlRedirect.hide_in_file file f ()
   in
-    (result, String.concat (aiLib.bare_readl file))
+    (result, read_text file)
   end)
 
 fun expect message truth =

@@ -466,7 +466,7 @@ fun test_hhEval root =
        ("mono_instances", "17"), ("debug_dir", "quoted \"directory\"")]
     val script = with_hh_options worker_options (fn () =>
       hhEval.write_evalscript expdir "list" [condition] 7)
-    val script_text = String.concat (aiLib.bare_readl script)
+    val script_text = read_text script
     val _ = expect "worker script preserves runtime hammer options"
       (List.all (fn (key, value) => String.isSubstring
         ("hhConfig.hh_set (" ^ Portable.mlquote key ^ ", " ^
@@ -476,7 +476,7 @@ fun test_hhEval root =
       (case #mono_instances (hhConfig.snapshot ()) of
            NONE => not (String.isSubstring
              "hhConfig.hh_set (\"mono_instances\""
-             (String.concat (aiLib.bare_readl default_script)))
+             (read_text default_script))
          | SOME _ => true)
     val _ = expect "worker script is beside its theory"
       (OS.Path.dir script = join src "one" andalso
@@ -508,7 +508,7 @@ fun test_hhEval root =
     val fixture_journal = join "test-data" "hheval-report/journal"
     fun copy_fixture name =
       aiLib.write_file (join report_journal name)
-        (String.concat (aiLib.bare_readl (join fixture_journal name)))
+        (read_text (join fixture_journal name))
     val _ = hhConfig.remove_tree reportdir
     val _ = hhConfig.ensure_dir report_journal
     val _ = copy_fixture "list.jsonl"
@@ -613,7 +613,7 @@ fun test_hhEval root =
     val e_prover = named "prover" "e" prover_rows
     val vampire_prover = named "prover" "vampire" prover_rows
     val report_text =
-      String.concat (aiLib.bare_readl (join reportdir "report.md"))
+      read_text (join reportdir "report.md")
     val _ = expect "report writes both output files"
       (OS.FileSys.access (join reportdir "summary.json", [OS.FileSys.A_READ])
        andalso
@@ -796,8 +796,8 @@ fun test_hhEval_integration () =
           val expdir = join root "smoke"
           val pair_journal = hhEval.journal_path expdir "pair"
           val option_journal = hhEval.journal_path expdir "option"
-          val journal_before = String.concat (aiLib.bare_readl pair_journal) ^
-            String.concat (aiLib.bare_readl option_journal)
+          val journal_before = read_text pair_journal ^
+            read_text option_journal
           val _ = expect "hhEval integration journals are valid"
             (not (null (hhEval.read_journal pair_journal)) andalso
              not (null (hhEval.read_journal option_journal)) andalso
@@ -811,8 +811,8 @@ fun test_hhEval_integration () =
           val _ = run "smoke" [condition]
           val _ = expect "hhEval resume sweeps stale worker scripts"
             (not (script_exists "pair"))
-          val journal_after = String.concat (aiLib.bare_readl pair_journal) ^
-            String.concat (aiLib.bare_readl option_journal)
+          val journal_after = read_text pair_journal ^
+            read_text option_journal
           val _ = expect "hhEval integration resume is a no-op"
             (journal_before = journal_after)
           val changed : hhEval.condition =
@@ -825,8 +825,8 @@ fun test_hhEval_integration () =
                String.isSubstring "conditions differs" message)
           val _ = expect "hhEval rejects incompatible completed runs"
             (rejected andalso journal_before =
-              String.concat (aiLib.bare_readl pair_journal) ^
-              String.concat (aiLib.bare_readl option_journal))
+              read_text pair_journal ^
+              read_text option_journal)
           val _ = run "worker-options" [scheduled]
           val worker_dir = join root "worker-options"
           val worker_entries =
