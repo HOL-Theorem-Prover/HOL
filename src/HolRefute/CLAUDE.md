@@ -159,8 +159,11 @@ repository.
 - No wall clock in a verdict.  `Timeout.apply` raises only if its timer
   thread beats the body, so "was the deadline reached" is unassertable.
   A spent budget is decided by `Util.apply_within_budget`, degradation
-  polarity by `abandoned_mono_verdict`; never assert the race.
-  Three level-2 flakes so far: 8f042b080, 757301f92, and `tac_timeout 0.0`.
+  polarity by `abandoned_mono_verdict`; never assert the race.  A test of
+  `apply_within_budget` itself accepts every TIMEOUT its contract allows:
+  one after the thread's CPU time reached the budget, or one past the wall
+  backstop.  Three level-2 flakes so far: 8f042b080, 757301f92, and
+  `tac_timeout 0.0`; one at level 1, the CPU-budget test at 0642fc4a80.
 - Gate by cost on `selftest_level` (reads HOLSELFTESTLEVEL, default 1):
   cheap and targeted ungated; expensive or matrix-shaped behind
   `if selftest_level >= 2`.

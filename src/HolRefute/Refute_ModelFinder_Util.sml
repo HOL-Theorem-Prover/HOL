@@ -329,8 +329,10 @@ structure Refute_ModelFinder_Util :> Refute_ModelFinder_Util = struct
               Exn.capture (fn () =>
                 Thread_Attributes.with_attributes caller_attributes
                   (fn _ => work argument)) ()
-            val stop = Time.now ()
             val _ = Mutex.lock lock
+            (* after the watcher's last decision, so that a TIMEOUT it sent
+               at the backstop reports at least the backstop *)
+            val stop = Time.now ()
             val fired = !state = Fired
             val _ = state := Finished
             val _ = ConditionVar.signal wake

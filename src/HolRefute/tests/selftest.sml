@@ -70,13 +70,14 @@ fun check_result P =
    printed again there *)
 val failed_tests = ref ([] : string list)
 
-fun test name pred =
+fun test_msg name pred msg =
   let val failures = !erc in
     tprint name;
-    require_msg (check_result pred) (fn () => name ^ " failed")
-      (fn () => ()) ();
+    require_msg (check_result pred) msg (fn () => ()) ();
     if !erc > failures then failed_tests := name :: !failed_tests else ()
   end
+
+fun test name pred = test_msg name pred (fn () => name ^ " failed")
 
 fun section name = print ("\n== " ^ name ^ "\n")
 fun skip name why = (tprint name; print ("skipped: " ^ why ^ "\n"))
@@ -583,10 +584,9 @@ fun refute_ancestry_is_exact () =
   same_string_set (Theory.parents "refute")
     ["words", "frac", "finite_map", "finite_set", "listRange"]
 
-val _ = tprint "refuteTheory has exactly its declared parents"
-val _ = require_msg (check_result refute_ancestry_is_exact) (fn () =>
-  "refute parents: " ^ String.concatWith ", " (Theory.parents "refute"))
-  (fn () => ()) ()
+val _ = test_msg "refuteTheory has exactly its declared parents"
+  refute_ancestry_is_exact (fn () =>
+    "refute parents: " ^ String.concatWith ", " (Theory.parents "refute"))
 
 (* ------------------------------------------------------------------- *)
 (* Facade and tactics                                                  *)
@@ -3492,6 +3492,15 @@ local
     end
   fun times_out f =
     (ignore (f ()); false) handle Timeout.TIMEOUT _ => true
+  (* waits on a condition nothing signals: only an interrupt ends it *)
+  fun block () : bool =
+    let
+      val lock = Mutex.mutex ()
+      val never = ConditionVar.conditionVar ()
+      fun wait () = (ConditionVar.wait (never, lock); wait ())
+    in
+      Mutex.lock lock; wait ()
+    end
   datatype 'a outcome =
       Returned of 'a
     | Stopped of {used : real, elapsed : real}
@@ -3566,7 +3575,7 @@ val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
     fun widen s =
       if representable (2.0 * s) then widen (2.0 * s) else narrow s (2.0 * s)
   in
-    (case run 0.01 (idle 3600.0) () of
+    (case run 0.01 block () of
          Returned _ => false
        | Stopped {elapsed, ...} => past_backstop 0.01 elapsed) andalso
     within (seconds (widen 1.0)) (fn () => true) ()
