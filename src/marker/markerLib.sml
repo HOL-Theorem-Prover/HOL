@@ -172,6 +172,9 @@ fun mk_require_tac tac = collect_requirements tac ([],tac)
 fun require_all thl =
     List.foldl (fn (th,acc) => require_check (requirement th) o acc) I thl
 
+fun mk_require_all_tac tac thl =
+    require_all thl (tac (map (#plain o requirement) thl))
+
 (*---------------------------------------------------------------------------*)
 (* Support for abbreviations.                                                *)
 (*---------------------------------------------------------------------------*)

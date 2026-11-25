@@ -43,9 +43,10 @@ sig
                        (term list -> term -> thm) -> term list -> conv
 
   (* COND_REWR_CONV's matcher, prepared once, behind two runners.  legacy
-     is COND_REWR_CONV (and the ordinary simplifier's runner).  configured takes the side-condition depth (NONE:
-     read stack_limit at each application) and the order deciding whether
-     a permutative rewrite applies. *)
+     is COND_REWR_CONV, used by simpsets without settings.  configured
+     takes the side-condition depth (NONE: read stack_limit at each
+     application) and the order deciding whether a permutative rewrite
+     applies. *)
   type config =
     {solver : term list -> term -> thm, stack : term list,
      cond_depth : int option, term_ord : term * term -> order}

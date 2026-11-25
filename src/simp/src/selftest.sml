@@ -714,10 +714,11 @@ val _ = let
     DISCH_THEN (fn rebuilt => REWRITE_TAC [GSYM rebuilt]) THEN
     AP_TERM_TAC THEN ABS_TAC THEN ASM_REWRITE_TAC [] THEN
     ASM_CASES_TAC “Q (x:'a) : bool” THEN RES_TAC THEN ASM_REWRITE_TAC [])
-  val imp_premises : xsimptac_config =
+  fun global concl_in_fixpoint imp_rebuild imp_premises : xsimptac_config =
       {base = {strip = true, elimvars = false, droptrues = true,
                oldestfirst = true},
-       concl_in_fixpoint = true, imp_rebuild = false, imp_premises = true}
+       concl_in_fixpoint = concl_in_fixpoint, imp_rebuild = imp_rebuild,
+       imp_premises = imp_premises}
   val (once_ss, once_ths) =
       prepare_rewrite_arguments pureSimps.pure_ss
                                 [Once AND_CLAUSES]
@@ -746,6 +747,22 @@ in
         (mk_conj(p, q)) (mk_conj(q, p));
   leaves "Split splits a conditional" (SIMP_TAC bool_ss [Split bool_split])
          ([], cond_goal) [split_goal];
+  leaves "SPLIT_TAC splits a conditional"
+         (splitLib.SPLIT_TAC [bool_split]) ([], cond_goal) [split_goal];
+  tprint "[split] theorems are split rules until excluded";
+  require_msg (check_result (equal (["scratch$bool_split"], [])))
+    (fn (l1, l2) => String.concatWith "," l1 ^ "; " ^
+                    String.concatWith "," l2)
+    (fn th =>
+        (splitLib.enable_split_attribute ();
+         HOLFlags.set_flag (Theory.save_thm_reporting, 0);
+         ignore (save_thm ("bool_split[split]", th));
+         let val recorded = map #1 (splitLib.named_split_thms ())
+         in
+           splitLib.exclude_split "bool_split";
+           (recorded, map #1 (splitLib.named_split_thms ()))
+         end))
+    bool_split;
   leaves "ExclX excludes a split rule"
          (SIMP_TAC (add_split bool_split bool_ss)
                    [ExclX ("split:" ^ splitLib.split_thm_name bool_split)])
@@ -755,8 +772,22 @@ in
                    [ASSUME “!y:'a. bnd y ==> (bdy y <=> bdy' y)”])
         “?x:'a. bnd x /\ bdy x” “?x:'a. bnd x /\ bdy' x”;
   leaves "imp_premises moves premises to the assumptions"
-         (GEN_GLOBAL_SIMP_TAC {safe = false} imp_premises bool_ss [])
+         (GEN_GLOBAL_SIMP_TAC {safe = false} (global true false true)
+                              bool_ss [])
          ([], “(x = (a:'a)) ==> (y = x) ==> P y”) [“(P:'a -> bool) a”];
+  tprint "concl_in_fixpoint simplifies assumptions a looper adds";
+  require_msg
+    (check_result (fn ([(asl, _)], _) => tmem “(Q:'a -> bool) a” asl
+                    | _ => false))
+    goals_to_string
+    (runtac (VALID (GEN_GLOBAL_SIMP_TAC {safe = false}
+                      (global true false false)
+                      (add_looper ("strip", K STRIP_TAC) bool_ss) [])))
+    ([“(Q:'a -> bool) x”], “(x = (a:'a)) ==> P x”);
+  leaves "imp_rebuild rewrites an assumption and the conclusion together"
+         (GEN_GLOBAL_SIMP_TAC {safe = false} (global false true false)
+                              bool_ss [IMP_DISJ_THM])
+         ([p], q) [mk_disj(mk_neg p, q)];
   gives "A rewrite bundle's bound is shared across calls"
         (SIMP_CONV bundled_ss [] THENC SIMP_CONV bundled_ss []) TTp
         “T /\ p”

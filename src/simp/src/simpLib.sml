@@ -3207,17 +3207,18 @@ fun looper_tac ss =
     first_tactic enabled apply (#loopers s)
   end
 
-fun bounded_looper rounds tac g =
+(* Charges the limit only when a looper applies *)
+fun bounded_looper rounds tac g ctxt =
   case !rounds of
       SOME n =>
-        if n <= 0 then NO_TAC g
+        if n <= 0 then NO_TAC g ctxt
         else
-          let val result = tac g
+          let val result = tac g ctxt
           in
             rounds := SOME (n - 1);
             result
           end
-    | NONE => tac g
+    | NONE => tac g ctxt
 
 (* [xdata_of] extracts traversal data from a marker-adjusted tracked set. *)
 fun gen_simp_tac_with_rounds rounds traversal
@@ -3616,7 +3617,7 @@ fun gen_global_simp_tac_with_bound traversal bound mode
        In particular the already installed bundle must not be reconstructed
        as supplied arguments, or repaired by a second history replay. *)
   in
-    with_tactic_context o markerLib.mk_require_tac (
+    with_tactic_context o markerLib.mk_require_all_tac (
       markerLib.ABBRS_THEN (
         markerLib.LLABEL_RES_THEN (
           fn thl =>

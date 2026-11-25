@@ -27,8 +27,9 @@ procedure whose name is exactly the string given. Kernel-style names
 
 ### Failure
 
-Never fails. The simplifier call fails if the theory is not an ancestor
-or the name has more than two dots. A name that matches nothing is ignored.
+Never fails. The simplifier call fails if the name has more than two
+dots, or if in the form `Thy.name` the theory is not an ancestor; the
+form `Thy.name.suffix` is not checked. A name that matches nothing is ignored.
 
 ### Example
 

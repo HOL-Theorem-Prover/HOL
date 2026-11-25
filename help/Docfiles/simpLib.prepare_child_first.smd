@@ -23,7 +23,9 @@ Prepares child-first simplification with a simpset for repeated use.
 without reprocessing it:
 
 - `normalize ths` simplifies a term as
-  `simpLib.SIMP_CONV_CHILD_FIRST policy ss ths` does.
+  `simpLib.SIMP_CONV_CHILD_FIRST policy ss ths` does, with `ths` used
+  only as context theorems: directives such as `ExclX`, `SF` or `Cong`
+  among them have no effect.
 - `arguments ths` simplifies only the arguments of a term (or the body,
   if it is an abstraction), leaving the term's head as it is. It is
   `Traverse.NORMALIZE_ARGUMENTS policy (normalize ths)`, which

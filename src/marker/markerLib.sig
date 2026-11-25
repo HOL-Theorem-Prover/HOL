@@ -41,6 +41,8 @@ sig
   val dest_Req0 : thm -> thm option
   val dest_ReqD : thm -> thm option
   val mk_require_tac : (thm list -> tactic) -> (thm list -> tactic)
+  (* As mk_require_tac, checking the requirements of every theorem *)
+  val mk_require_all_tac : (thm list -> tactic) -> (thm list -> tactic)
 
   (* The theorem-list directive vocabulary: theorems that control the
      tactic or simpset they are passed to instead of being used as facts.

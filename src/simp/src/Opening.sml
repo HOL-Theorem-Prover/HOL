@@ -306,7 +306,8 @@ in fn relation =>
                   let val thm = refl {Rinst = oper, arg = orig}
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));(thm,false))
                   end
-                val absify = CONV_RULE (RAND_CONV (liteLib.MK_ABSL_CONV ho_vars))
+                val absify =
+                    CONV_RULE (RAND_CONV (liteLib.MK_ABSL_CONV ho_vars))
                 val abs_rewr_thm =
                     if null ho_vars then rewr_thm
                     else

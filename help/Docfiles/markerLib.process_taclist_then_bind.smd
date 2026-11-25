@@ -15,7 +15,8 @@ several goals.
 Like `markerLib.process_taclist_then`, `process_taclist_then_bind {arg} k`
 handles the directives in `arg`:
 
-- `Abbr` and `L` are applied to the goal;
+- `Abbr` is applied to the goal, and the theorem an `L` names is
+  passed to `k` in `asms`, for the first goal only;
 - `NoAsms` and `IgnAsm` select which assumptions are passed on;
 - `Req0` and `ReqD` are checked on the result.
 

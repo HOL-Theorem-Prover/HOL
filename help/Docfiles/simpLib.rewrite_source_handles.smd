@@ -28,7 +28,9 @@ handles. `source_rewrite h` returns the rewrite with the name of the
 theorem it was made from. `same_rewrite_source (h1, h2)` holds if `h1`
 and `h2` identify the same rewrite; this survives rebuilding the simpset
 (for example by `filter_rewrites`) as long as the rewrite is unchanged.
-`rewrite_source_compare` orders handles by installation.
+`rewrite_source_compare` orders handles by when their rewrites were made:
+by `simpLib.prepare_rewrite_bundle` for a bundle's, else when they were
+added.
 
 `rewrite_views [(h, th)]` is a fragment that adds `th` as an alias of the
 rewrite `h`: it has the same name, shares its remaining uses if `h` is
