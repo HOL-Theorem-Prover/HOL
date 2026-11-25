@@ -891,11 +891,14 @@ struct
   fun symbol_table encoding : symbols =
     let
       val head = memoise Term.compare (encoded_symbol encoding)
+      (* A monomorphic encoding has one app symbol per signature, so its
+         declaration or guard axiom fixes the result type. *)
+      val mono_app = memoise signature_compare mono_app_symbol
       val (value, app) =
         case encoding of
             hhTypeEnc.Native {poly = false, ...} =>
-              (memoise Term.compare mono_value_symbol,
-               memoise signature_compare mono_app_symbol)
+              (memoise Term.compare mono_value_symbol, mono_app)
+          | hhTypeEnc.Guards {poly = false, ...} => (head, mono_app)
           | _ => (head, fn _ => "app_2E")
       val mangle = memoise Type.compare mangle_type
       val ty = memoise Type.compare (type_for mangle encoding)
@@ -1097,31 +1100,46 @@ struct
                 (map (#mangle symbols) distinct))
     end
 
+  (* The guard axiom [name] of [symbol] applied to arguments of the types
+     [domains], or NONE if its type [result] is not guarded. *)
+  fun guard_axiom (symbols : symbols) encoding needs
+                  (name, symbol, domains, result) =
+    if not (guarded_type encoding needs result) then NONE
+    else
+      let
+        val variables = ListPair.zip
+          (map (fn index => "G" ^ Int.toString index)
+             (List.tabulate (length domains, fn index => index)),
+           map (#ty symbols) domains)
+        val application = hhTptpProblem.Tm
+          ((symbol, []),
+           map (fn (name, _) => hhTptpProblem.Tm ((name, []), [])) variables)
+        val body = guard_atom symbols result application
+        val formula = if null variables then body else hhTptpProblem.Quant
+          (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
+      in
+        SOME (hhTptpProblem.FormLine (name, hhTptpProblem.Axiom, formula))
+      end
+
   (* The guard axiom of a symbol applied to [arity] arguments, the arity
      of all its occurrences: it guards the type that remains. *)
   fun gsy_line (symbols : symbols) encoding needs arity head =
     let
       val (domains, result) = split_fun arity (type_of head)
+      val symbol = #head symbols head
     in
-      if not (guarded_type encoding needs result) then NONE
-      else
-        let
-          val variables = ListPair.zip
-            (map (fn index => "G" ^ Int.toString index)
-               (List.tabulate (length domains, fn index => index)),
-             map (#ty symbols) domains)
-          val application = hhTptpProblem.Tm
-            ((#head symbols head, []),
-             map (fn (name, _) =>
-               hhTptpProblem.Tm ((name, []), [])) variables)
-          val body = guard_atom symbols result application
-          val formula = if null variables then body else hhTptpProblem.Quant
-            (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
-        in
-          SOME (hhTptpProblem.FormLine
-            (aiLib.escape "gsy." ^ #head symbols head,
-             hhTptpProblem.Axiom, formula))
-        end
+      guard_axiom symbols encoding needs
+        (aiLib.escape "gsy." ^ symbol, symbol, domains, result)
+    end
+
+  (* The guard axiom of the app symbol of one signature. *)
+  fun app_guard_line (symbols : symbols) encoding needs
+                     (app_signature as (function_type, argument_type,
+                                        result_type)) =
+    let val symbol = #app symbols app_signature in
+      guard_axiom symbols encoding needs
+        (aiLib.escape "gsy." ^ symbol, symbol,
+         [function_type, argument_type], result_type)
     end
 
   fun witness_line (symbols : symbols) ty =
@@ -1240,8 +1258,6 @@ struct
                               (mk_imp (app p [x], app head [p])))] end
                         | NONE => [])
                   | _ => [])
-            | "pxy.true" => [("help.pxy.true", mk_eq (head, T))]
-            | "pxy.false" => [("help.pxy.false", mk_eq (head, F))]
             | _ => []
         end
     in
@@ -1392,6 +1408,13 @@ struct
           | _ => encoding0
       val all_formulas = conjecture :: map #2 facts
       val symbols = symbol_table encoding
+      (* The distinct application signatures, in order of first
+         occurrence; only monomorphic encodings give them their own symbols. *)
+      val app_signatures =
+        if used_app andalso is_monomorphic encoding then
+          rev (#2 (List.foldl (fold_apps_formula add_app_signature)
+            (Redblackset.empty signature_compare, []) all_formulas))
+        else []
       val typed = format <> hhTptpProblem.FOF
       val guarded = case encoding of hhTypeEnc.Guards _ => true | _ => false
       fun declared head =
@@ -1448,7 +1471,6 @@ struct
             val app_decls =
               case encoding of
                   hhTypeEnc.Native {poly = false, ...} =>
-                    if not used_app then [] else
                     map (fn app_signature as (function_type, argument_type,
                                               result_type) =>
                       let val symbol = #app symbols app_signature in
@@ -1459,10 +1481,7 @@ struct
                               hhTptpProblem.TyFun
                                 (#ty symbols argument_type,
                                  #ty symbols result_type)))
-                      end) (rev (#2 (List.foldl
-                        (fold_apps_formula add_app_signature)
-                        (Redblackset.empty signature_compare, [])
-                        all_formulas)))
+                      end) app_signatures
                 | hhTypeEnc.Native {higher = false, ...} =>
                     if used_app then
                       let
@@ -1506,7 +1525,9 @@ struct
       val gsy = if guarded then
         List.mapPartial (fn head =>
           gsy_line symbols encoding needs (head_arity head) head)
-          declaration_heads
+          declaration_heads @
+        List.mapPartial (app_guard_line symbols encoding needs)
+          app_signatures
         else []
       val guard_types =
         List.filter (guarded_type encoding needs) all_types

@@ -82,7 +82,7 @@ tff(sy_2Evalue_c_2Ecombin_2EI_52be863679c4, type,
     value_c_2Ecombin_2EI_52be863679c4 : ty_2Emin_2Efun_28min_2Ebool_2Cmin_2Ebool_29).
 tff(sy_2Epp, type,
     pp_2E : ty_2Emin_2Ebool > $o).
-% Helpers (20)
+% Helpers (18)
 tff(help_2Ecombin_2EI, axiom,
     ((![V_x : ty_2Emin_2Ebool]: (pp_2E(app_9ef68b7b5caf32d0(value_c_2Ecombin_2EI_52be863679c4,V_x)) <=> pp_2E(V_x))))).
 tff(help_2Ecombin_2EI_2E2, axiom,
@@ -109,10 +109,6 @@ tff(help_2Eif__False_2E4, axiom,
     ((![HX : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29]: (![HY : ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29]: (c_2Ebool_2ECOND_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29(pxy_2Efalse,HX,HY) = HY))))).
 tff(help_2Ebool__cases, axiom,
     ((![HB : ty_2Emin_2Ebool]: ((HB = pxy_2Etrue) | (HB = pxy_2Efalse))))).
-tff(help_2Epxy_2Etrue, axiom,
-    ((pp_2E(pxy_2Etrue) <=> pp_2E(pxy_2Etrue)))).
-tff(help_2Epxy_2Efalse, axiom,
-    ((pp_2E(pxy_2Efalse) <=> pp_2E(pxy_2Efalse)))).
 tff(help_2Epxy_2Enot, axiom,
     ((![HP : ty_2Emin_2Ebool]: (pp_2E(app_9ef68b7b5caf32d0(value_pxy_2Enot_52be863679c4,HP)) <=> (~ pp_2E(HP)))))).
 tff(help_2Eeq__ext, axiom,
