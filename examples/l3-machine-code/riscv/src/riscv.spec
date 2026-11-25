@@ -395,7 +395,7 @@ regType MSTATUS_CONST = 0xA00000000        -- UXL = SXL = 2 (P §3.1.6.3 p.34)
 regType MSTATUS_SD    = 0x8000000000000000
 
 -- An explicit write.  Read-only and WPRI fields are dropped (P §2.3.1
--- p.24).  MPP is WARL and holds U, S or M (P §3.1.6.2 p.33); the reserved
+-- p.24).  MPP is WARL and holds U, S or M (P §3.1.6.1 p.33); the reserved
 -- 10 is stored as U.
 mstatus legalize_mstatus(v::regType) =
 { var m = mstatus(v && MSTATUS_WMASK)
@@ -5631,8 +5631,9 @@ unit Next =
 -- with every extension, mcause = 0 and every PMP entry OFF and unlocked.
 -- What the reset leaves unspecified is zero: the
 -- read value of mstatus is 0x0000000A00000000 (FS Off, MPP U), mtvec and
--- stvec are Direct at address 0, and the counters are zero.  The
--- emulator sets the pc and the CLINT memory.
+-- stvec are Direct at address 0, and the counters are zero.  The pc is
+-- the argument of initRegs; the CLINT registers (mtime, mtimecmp, msip)
+-- are memory, which reset leaves as it is.
 
 unit initIdent(arch::Architecture) =
 { when arch != RV64I do #UNDEFINED("only RV64I is implemented")
