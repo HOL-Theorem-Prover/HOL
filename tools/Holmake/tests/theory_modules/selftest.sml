@@ -158,6 +158,22 @@ val _ = if not supported then () else
     val _ = expect "cold, no libcrypto SHA-1" [0, 5, 5]
     val _ = if names_ok () then OK ()
             else die "a module name has another digest"
+    val _ = tprint "headers are read when broken over lines or after 4 KiB"
+    val long = "moduleLongNameThatMakesTheGeneratedTheoryHeaderBreakItsLine"
+    val _ = command [holmake, "--no-cache", long ^ "Theory.uo"]
+    val _ = (clear "modules"; OS.FileSys.mkDir "modules"; clear "written")
+    val _ = (remove "module-stats";
+             command [hol, "run", "--noconfig", "header.sml"])
+    val hash = Int.toString 40
+    val stats = String.fields (fn c => c = #"\n") (read "module-stats")
+    val _ = if List.take (stats, 3) = [long ^ " " ^ hash, long ^ " " ^ hash,
+                                        "none"]
+            then OK ()
+            else die ("headers read: " ^ String.concatWith "; " stats)
+    val _ = tprint "a header the writer can't read skips only its theory"
+    val _ = if List.drop (stats, 3) = ["6"] then OK ()
+            else die ("writer wrote " ^
+                      String.concatWith " " (List.drop (stats, 3)))
   in
     ()
   end;
