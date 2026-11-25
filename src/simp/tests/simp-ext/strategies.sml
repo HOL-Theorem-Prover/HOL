@@ -392,6 +392,8 @@ val _ = let
     [(asl,p),(asl,q),(asl,r)]
   val skipped = S.empty_ss
     |> S.add_looper ("unchanged",fn _ => fn _ => raise UNCHANGED)
+    |> S.add_looper ("unchanged later",
+                     fn _ => fn _ => fn _ => raise UNCHANGED)
     |> S.add_looper ("split",fn _ => CONJ_TAC)
     |> S.limit 1
 in tactic "looper UNCHANGED permits the next candidate"

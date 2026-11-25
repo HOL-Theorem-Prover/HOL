@@ -342,6 +342,9 @@ val _ = scoped (fn () => let
     (#arguments private []) tm alias
   val _ = converted "private normalization restores public exhaustion"
     (cv private_ss) ``ext_g x`` ``ext_g x``
+  val _ = fails "prepared normalization refuses simpset directives"
+    (fn HOL_ERR _ => true | _ => false)
+    (fn () => #normalize private [markerLib.Cong boolTheory.AND_CONG] tm)
   exception Stop of unit ref
   val stop_token = ref ()
   val seen = ref false

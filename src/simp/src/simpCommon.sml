@@ -419,9 +419,9 @@ fun user_conv {name,trace=trace_level} =
       val trace_string2 = name^" ineffectual"
       val trace_string3 = name^" left term unchanged"
       val trace_string4 = name^" raised an unusual exception (ignored)"
-  in fn conv => fn tm =>
+  in fn conv => fn x => fn y => fn tm =>
       let val _ = trace(trace_level+2,Trace.REDUCE(trace_string1,tm))
-          val thm = conv tm
+          val thm = conv x y tm
       in
         trace(trace_level,Trace.PRODUCE(tm,name,thm));
         thm
@@ -728,6 +728,12 @@ fun process_tags {frag_of, remove_ssfrags, add, force_add, cong_ac,
             SOME (DBounded (plain,_)) => bounds_on_directive plain
           | NONE => false
           | _ => true
+      fun bounds_on_extension_only th =
+        case dest_directive th of
+            SOME (DBounded (plain,_)) => bounds_on_extension_only plain
+          | SOME (DSplit _) => true
+          | SOME (DExclX _) => true
+          | _ => false
       fun sort (th, acc as (congs, splits, acs, excls, exclfrags, frags,
                             rest)) =
           case dest_directive th of
@@ -758,8 +764,10 @@ fun process_tags {frag_of, remove_ssfrags, add, force_add, cong_ac,
             | SOME (DBounded (plain,_)) =>
                 (* In the extension, bounds on directives do not turn them
                    into rewrite facts. Genuine rewrite bounds retain their
-                   controls. *)
-                if isSome extension andalso bounds_on_directive plain
+                   controls.  The ordinary simplifier refuses a bounded
+                   Split or ExclX as it refuses a bare one. *)
+                if (isSome extension andalso bounds_on_directive plain)
+                   orelse bounds_on_extension_only plain
                 then sort (plain,acc)
                 else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
             | SOME (DReq0 _) =>
@@ -897,14 +905,14 @@ fun stdcon (c : simptac_config) th =
 fun popper_of (cfg : simptac_config) =
     if #oldestfirst cfg then pop_last_assum else pop_assum
 
-fun global_simp_tac {process_tags, add_rewrites, allasms, asm_simp_tac}
+fun global_simp_tac {add_rewrites, allasms, asm_simp_tac}
                     cfg ss0 =
     markerLib.mk_require_tac (
       markerLib.ABBRS_THEN (
         markerLib.LLABEL_RES_THEN (
           fn thl =>
              let
-               val ss = add_rewrites (process_tags ss0 thl)
+               val ss = add_rewrites (ss0, thl)
                val allasms = allasms ()
              in
                rpt (CHANGED_TAC (allasms cfg ss)) THEN

@@ -81,8 +81,10 @@ sig
       (string option * string) list -> string option -> string -> bool
   val munge_simpset_name : string -> string option * string
 
-  (* Trace a user conversion's attempt and its outcome *)
-  val user_conv : {name : string, trace : int} -> conv -> conv
+  (* Trace a user conversion's attempt and its outcome; the conversion
+     gets both its arguments inside the traced attempt *)
+  val user_conv :
+      {name : string, trace : int} -> ('a -> 'b -> conv) -> 'a -> 'b -> conv
   val any : term
   val mk_ac : thm * thm -> (thname option * controlled_thm) list ->
               (thname option * controlled_thm) list
@@ -150,8 +152,7 @@ sig
        NO_STRIP_FULL_SIMP_TAC : 's -> thm list -> tactic,
        NO_STRIP_REV_FULL_SIMP_TAC : 's -> thm list -> tactic}
   val global_simp_tac :
-      {process_tags : 's -> thm list -> 's * thm list,
-       add_rewrites : 's * thm list -> 's,
+      {add_rewrites : 's * thm list -> 's,
        allasms : unit -> simptac_config -> 's -> tactic,
        asm_simp_tac : 's -> thm list -> tactic} ->
       simptac_config -> 's -> thm list -> tactic

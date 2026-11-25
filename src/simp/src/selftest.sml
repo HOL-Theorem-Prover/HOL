@@ -625,7 +625,8 @@ val _ =
   in
     List.app refuses [("Req0", Req0 th), ("ReqD", ReqD th),
                       ("Split", markerLib.Split th),
-                      ("ExclX", markerLib.ExclX "nm")];
+                      ("ExclX", markerLib.ExclX "nm"),
+                      ("Once Split", Once (markerLib.Split th))];
     List.app drops [("NoAsms", markerLib.NoAsms, concl markerLib.NoAsms),
                     ("IgnAsm", markerLib.IgnAsm ‘x = _’,
                      concl (markerLib.IgnAsm ‘x = _’))]

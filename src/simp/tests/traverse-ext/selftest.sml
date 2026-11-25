@@ -821,6 +821,16 @@ val _ = let
       predicate (fn () => charged a)
     val _ = check ("charge abort precedes reducer attempt: " ^ label)
       (terms (!visits) [a,a] andalso !n = 2 andalso !applications = 0)
+    val _ = applications := 0
+    val fired = ref false
+    fun check_stop () =
+      if !applications = 1 andalso not (!fired) then
+        (fired := true; raise error)
+      else ()
+    val checked = T.CHILD_FIRST_WITH_ABORT check_stop NONE
+      (T.charge_only (fn () => ())) xd empty_context
+    val _ = fails ("abort check inside a reducer preserves " ^ label)
+      predicate (fn () => checked a)
   in () end
   val _ = List.app abort exceptions
 in () end

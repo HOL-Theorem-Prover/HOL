@@ -278,8 +278,7 @@ fun remove_simps nms ss = ss -* nms
    * ---------------------------------------------------------------------*)
 
  fun USER_CONV {name,key,trace,conv} =
-  let val traced = simpCommon.user_conv {name=name,trace=trace}
-  in fn solver => fn stack => traced (conv solver stack) end;
+  simpCommon.user_conv {name=name,trace=trace} conv;
 
  val any = simpCommon.any
 
@@ -629,8 +628,7 @@ fun allasms cfg ss g = allasms0 (new_memo ()) cfg ss g
 
 fun global_simp_tac cfg =
     simpCommon.global_simp_tac
-      {process_tags = process_tags,
-       add_rewrites = fn (ss,thl) => ss ++ rewrites thl,
+      {add_rewrites = op &&,
        allasms = fn () => allasms0 (new_memo ()),
        asm_simp_tac = ASM_SIMP_TAC}
       cfg

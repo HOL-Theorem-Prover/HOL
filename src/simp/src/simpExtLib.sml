@@ -428,11 +428,13 @@ fun all_named_frags() =
 
 fun name_ss s frag = setfrag_name (SOME s) frag
 
-fun rewrites rewrs =
-  setfrag_rewrs (map (source_slot o pair NONE) rewrs) empty_ssfrag
-
+(* Fragments the ordinary constructors build, lifted *)
+fun rewrites rewrs = lift_ssfrag (simpLib.rewrites rewrs)
 fun rewrites_with_names rewrs =
-  setfrag_rewrs (map (source_slot o apfst SOME) rewrs) empty_ssfrag
+  lift_ssfrag (simpLib.rewrites_with_names rewrs)
+fun ac_ss aclist = lift_ssfrag (simpLib.ac_ss aclist)
+fun conv_ss conv = lift_ssfrag (simpLib.conv_ss conv)
+fun relsimp_ss rsdata = lift_ssfrag (simpLib.relsimp_ss rsdata)
 
 fun rewrite_views views =
   setfrag_views (map (fn (source,th) => (source,th,NONE)) views) empty_ssfrag
@@ -449,24 +451,6 @@ fun dproc_ss dproc =
      dprocs=[dproc], congs=[], threaded_congs=[], relsimps=[],
      loopers=[], unsafe_solvers=[], safe_solvers=[]}
 
-fun ac_ss aclist =
-  SSFRAG_CON
-    {name=NONE, convs=[], rewrs=[], ac=map source_slot aclist, views=[],
-     filter=NONE, dprocs=[], congs=[], threaded_congs=[], relsimps=[],
-     loopers=[], unsafe_solvers=[], safe_solvers=[]}
-
-fun conv_ss conv =
-  SSFRAG_CON
-    {name=NONE, convs=[lift_conv NONE conv],
-     rewrs=[], ac=[], views=[], filter=NONE, dprocs=[], congs=[],
-     threaded_congs=[], relsimps=[], loopers=[],
-     unsafe_solvers=[], safe_solvers=[]}
-
-fun relsimp_ss rsdata =
-  SSFRAG_CON
-    {name=NONE, convs=[], rewrs=[], ac=[], views=[], filter=NONE,
-     dprocs=[], congs=[], threaded_congs=[], relsimps=[rsdata],
-     loopers=[], unsafe_solvers=[], safe_solvers=[]}
 
 fun looper_ss looper =
   SSFRAG_CON
@@ -703,10 +687,10 @@ fun remove_simps nms ss = ss -* nms
    * ---------------------------------------------------------------------*)
 
  fun USER_CONVS {name,key,trace,conv} legacy =
-  let val traced = simpCommon.user_conv {name=name,trace=trace}
+  let fun traced c = simpCommon.user_conv {name=name,trace=trace} c
+      val configured = traced (fn ctxt => fn () => conv ctxt)
   in
-    {legacy = fn solver => fn stack => traced (legacy solver stack),
-     configured = fn ctxt => traced (conv ctxt)}
+    {legacy = traced legacy, configured = fn ctxt => configured ctxt ()}
   end;
 
  val any = simpCommon.any
@@ -2507,7 +2491,19 @@ fun prepare_child_first_with_observer observer
     fun traversal premises =
       TraverseExt.CHILD_FIRST_WITH_ABORT check_abort observer policy xdata
         {reducer_context=premises,solver_context=[]}
-    fun child premises = QCONV (TRY_CONV (traversal premises))
+    (* The prepared traversal data is fixed, so premises that would change
+       the simpset are refused rather than ignored. *)
+    fun child premises =
+      let
+        val (ss', premises) = process_tags ss premises
+      in
+        if Portable.pointer_eq (ss', ss) then
+          QCONV (TRY_CONV (traversal premises))
+        else
+          raise ERR ("prepare_child_first",
+                     "simpset directives must be added to the simpset " ^
+                     "before it is prepared")
+      end
     fun observed conversion tm =
       case observer of
           NONE => conversion tm
@@ -2523,16 +2519,17 @@ fun prepare_child_first_with_observer observer
       | opaque_event _ = false
     val opaque = not (null (#dprocs data)) orelse
                  List.exists opaque_event (#history data)
+    fun eta_reducible tm =
+      is_abs (rand tm) andalso not (TraverseExt.keep_abstraction policy tm)
     fun reducible tm =
       not (null (Ho_Net.lookup tm (#initial_net data))) orelse
       (is_comb tm andalso
-       (is_abs (rator tm) orelse
+       (is_abs (rator tm) orelse eta_reducible tm orelse
         reducible (rator tm) orelse reducible (rand tm))) orelse
       (is_abs tm andalso reducible (#2 (dest_abs tm)))
     fun arguments_reducible tm =
       if is_comb tm then
-        (is_abs (rand tm) andalso
-         not (TraverseExt.keep_abstraction policy tm)) orelse
+        eta_reducible tm orelse
         reducible (rand tm) orelse arguments_reducible (rator tm)
       else if is_abs tm then reducible (#2 (dest_abs tm))
       else false
@@ -2659,10 +2656,10 @@ fun looper_tac ss =
     fun enabled (LooperEntry {kind=OrdinaryLooper,...}) = true
       | enabled entry =
           not (Binaryset.member (#excl_loopers s,looper_display entry))
-    (* An UNCHANGED raised before context application declines this looper. *)
-    fun apply (LooperEntry {apply,...}) g =
-      apply ss g
-      handle Conv.UNCHANGED => NO_TAC g
+    (* An UNCHANGED from the looper declines it. *)
+    fun apply (LooperEntry {apply,...}) g ctxt =
+      apply ss g ctxt
+      handle Conv.UNCHANGED => NO_TAC g ctxt
   in
     first_tactic enabled apply (#loopers s)
   end
@@ -3148,8 +3145,7 @@ fun GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND policy mode cfg ss bundle =
 fun global_simp_tac cfg ss0 thl gl =
     if strategy_free ss0 thl then
       simpCommon.global_simp_tac
-        {process_tags = process_tags,
-         add_rewrites = fn (ss,thl) => ss ++ rewrites thl,
+        {add_rewrites = op &&,
          allasms = fn () => allasms,
          asm_simp_tac = ASM_SIMP_TAC}
         cfg ss0 thl gl

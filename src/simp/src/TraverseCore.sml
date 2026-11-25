@@ -289,14 +289,16 @@ fun TRAVERSE_IN_CONTEXT {check_abort=check_external_abort, eager, observer,
      HOL_ERR, and reducer dispatch can treat those as a failed attempt.
      Retain the original callback exception across the whole traversal. *)
   val aborted = ref (NONE : exn option)
-  fun check_abort () =
-    ((case check_external_abort of NONE => () | SOME check => check ());
-     case !aborted of NONE => () | SOME e => raise e)
   fun protected callback argument =
     case !aborted of
         SOME e => raise e
       | NONE => callback argument
           handle e => (aborted := SOME e; raise e)
+  fun check_abort () =
+    ((case check_external_abort of
+          NONE => ()
+        | SOME check => protected check ());
+     case !aborted of NONE => () | SOME e => raise e)
   val policy =
     case policy of
         ParentFirst => ParentFirst

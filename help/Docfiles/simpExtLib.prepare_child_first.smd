@@ -45,8 +45,11 @@ fail.
 
 ### Failure
 
-Never fails. The conversions fail only if the policy raises an exception,
-and return a reflexive theorem if nothing changes.
+`prepare_child_first` never fails. `normalize ths` and `arguments ths`
+fail if `ths` holds a directive that changes the simpset (`Excl`, `ExclX`,
+`ExclSF`, `SF`, `Cong`, `AC` or `Split`): add those to `ss` before
+preparing it. Otherwise the conversions fail only if the policy raises an
+exception, and return a reflexive theorem if nothing changes.
 
 ### Example
 

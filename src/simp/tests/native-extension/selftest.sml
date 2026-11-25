@@ -2788,6 +2788,13 @@ val _ = let
     then OK()
     else die "cached datatype splits changed"
 
+  val _ = tprint "datatype assumption split rule splits an assumption"
+  val _ =
+    case valid (SPLIT_ASM_TAC [if_asm_split])
+           ([``R (if b then x:'a else y) : bool``], ``G:bool``) of
+        [_, _] => OK()
+      | _ => die "type_asm_split_of gave no assumption split"
+
   val context = Context.snapshot ()
   val bool_info = valOf (TypeBase.fetch ``:bool``)
   val nchotomy = TypeBasePure.nchotomy_of bool_info
@@ -4007,6 +4014,8 @@ fun prepared_normalization_fixture () =
         andalso aconv (rhs (concl still_exhausted)) ``prepared_g (x:bool)``
         andalso #may_reduce_arguments prepared input
         andalso not (#may_reduce_arguments bare ``prepared_c (x:bool)``)
+        andalso #may_reduce_arguments bare
+                  ``eta_f (eta_g (\y:bool. eta_h y : bool)) : bool``
         andalso #may_reduce_arguments opaque ``prepared_c (x:bool)``
       end
   in
