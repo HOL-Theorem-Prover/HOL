@@ -182,10 +182,11 @@ fun test_child root =
        #provers options = [Eprover, Vampire, Zipperposition] andalso
        #cores options = 3 andalso #slices options = 72 andalso
        #filter options = "none" andalso #max_facts options = SOME 17 andalso
-       #format options = "tf0" andalso #type_enc options = "mono_native" andalso
+       #format options = "tf0" andalso
+       #type_enc options = "mono_native" andalso
        #lam_trans options = "lifting" andalso #mono_iters options = 4 andalso
-       #mono_instances options = SOME 77 andalso not (#minimize options) andalso
-       #cache options andalso
+       #mono_instances options = SOME 77 andalso
+       not (#minimize options) andalso #cache options andalso
        #cache_dir options = join (hhConfig.state_dir ()) "cache" andalso
        #cache_max_entries options = 100000 andalso
        #debug_dir options = SOME (join root "debug"))
@@ -1036,8 +1037,9 @@ fun test_hhMonomorph () =
     val _ = expect "monomorphization enforces its global instance cap"
       (length global_cap = 1)
     val _ = expect "monomorphization enforces ten instances per fact"
-      (ListPair.allEq (fn ((_, actual), expected) => Term.aconv actual expected)
-        (named "many" per_fact, smallest_ten))
+      (ListPair.allEq
+         (fn ((_, actual), expected) => Term.aconv actual expected)
+         (named "many" per_fact, smallest_ten))
     val _ = expect "monomorphization skips facts with over twenty schematics"
       (null (named "too-many" schematic_cap))
     val _ = expect "monomorphization enforces its round cap"
@@ -4448,7 +4450,8 @@ fun test_schedule_deadline_recon sleeper_parser =
       end
     fun config slices : hhProver.prover_config =
       printer_config name
-        (map (fn (delay, file) => fixture_slice Vampire [delay, file] 1) slices)
+        (map (fn (delay, file) => fixture_slice Vampire [delay, file] 1)
+           slices)
         (fn _ => ()) parse
     fun progress (hhSchedule.Verified suggestion) =
           note ("verified|" ^ #stac suggestion)
@@ -5299,7 +5302,7 @@ fun test_schedule_pool () =
        export starts; they are set for one export and restored after it.
        Concurrent exports must therefore start under the hooks they want
        and restore in the reverse order (see the concurrent test). *)
-    fun using {fork, before_finish} observer root workers goal rankings
+    fun hooked {fork, before_finish} observer root workers goal rankings
         schedule =
       Portable.bracket
         (fn () => (!hhSchedule_Test.fork, !hhSchedule_Test.before_finish))
@@ -5313,7 +5316,7 @@ fun test_schedule_pool () =
               (options workers NONE) goal rankings schedule))
     (* An export of the fixture's rankings into root. *)
     fun export_into hooks observer workers root sched =
-      using hooks observer root workers pool_goal rankings sched
+      hooked hooks observer root workers pool_goal rankings sched
     (* One export at a given counter start: its files (relative paths with
        their bytes), the number of names drawn, counted by one read of the
        counter after the run, and the counter reading before it. *)
@@ -5321,7 +5324,7 @@ fun test_schedule_pool () =
       let
         val _ = advance_to start
         val first = counter ()
-        val _ = using hooks silent root workers goal rankings schedule
+        val _ = hooked hooks silent root workers goal rankings schedule
         val used = counter () - first - 1
       in
         (tree root, used, first)
@@ -5455,7 +5458,7 @@ fun test_schedule_pool () =
            copied = fn _ => ()}
         fun fail_two index = if index = 2 then raise failure else ()
         val outcome =
-          (using {fork = fork, before_finish = fail_two} observer root 4
+          (hooked {fork = fork, before_finish = fail_two} observer root 4
              pool_goal failing_rankings failing_schedule; "ok")
           handle Fail text => text | Feedback.HOL_ERR _ => "prepare"
       in
@@ -5481,7 +5484,7 @@ fun test_schedule_pool () =
       let
         val (fork, threads) = recording_fork (fn start => start)
         val outcome =
-          (using {fork = fork, before_finish = fn _ => ()} silent root 4
+          (hooked {fork = fork, before_finish = fn _ => ()} silent root 4
              pool_goal failing_rankings failing_schedule; "ok")
           handle Feedback.HOL_ERR _ => "prepare"
       in
@@ -6535,9 +6538,10 @@ fun test_hhMePo_pool_restrictions () =
     val nested = hhMePo.restrict_context dense sparse_names
     (* A wide parent keeps the selected facts' pconst indices high, even
        though this restriction only needs a few cached weights. *)
-    val wide = mepo_context "Fixture" (List.tabulate (2048, fn i =>
+    fun noise i =
       fixture ("OtherTheory.noise_" ^ Int.toString i)
-        (Term.mk_var ("mepo_pool_noise_" ^ Int.toString i, Type.bool))) @ facts)
+        (Term.mk_var ("mepo_pool_noise_" ^ Int.toString i, Type.bool))
+    val wide = mepo_context "Fixture" (List.tabulate (2048, noise) @ facts)
   in
     expect "hhMePo sparse restriction keeps original order and duplicates"
       (matches (hhMePo.restrict_context context sparse_names)
@@ -7210,8 +7214,8 @@ fun test_hhLearn_shared_predictions () =
       map #1 (aiLib.first_n 24 (rev rows)))
     fun restricted_agrees requests =
       let
-        val shared = hhLearn.rank_for_filters context {pool = pool, goal = goal}
-          requests
+        val shared =
+          hhLearn.rank_for_filters context {pool = pool, goal = goal} requests
         fun independent (filter, n) =
           hhLearn.rank context
             {filter = filter, pool = pool, goal = goal, n = n}
