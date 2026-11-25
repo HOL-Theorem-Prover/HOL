@@ -59,6 +59,13 @@ fun option_error fragments thunk =
      end
         | _ => false)
 
+fun contains needle haystack =
+  String.isSubstring needle haystack
+
+fun hh_error call =
+  ((call (); NONE)
+   handle Feedback.HOL_ERR error => SOME (Feedback.message_of error))
+
 (* An installation root/dir/<platform>/name. *)
 fun install_probe name root dir =
   let
@@ -138,10 +145,11 @@ fun test_child root =
         (fn () => hhConfig.hh_set ("timeout", "not-an-integer")))
     val _ = expect "failed validation preserves the runtime value"
       (hhConfig.hh_get "timeout" = "23")
+    val unknown = "not-a-holyhammer-prover"
     val _ = expect "provers are validated at set time"
-      (option_error ["provers", "prover names: e, vampire, zipperposition, z3"]
-        (fn () => hhConfig.hh_set
-          ("provers", "not-a-holyhammer-prover")))
+      (option_error
+        ["provers", unknown, "prover names: e, vampire, zipperposition, z3"]
+        (fn () => hhConfig.hh_set ("provers", unknown)))
     val _ = expect "unknown unset option is a HOL_ERR"
       (option_error ["unknown", "valid keys"]
         (fn () => hhConfig.hh_unset "not_an_option"))
@@ -219,7 +227,7 @@ fun test_child root =
     val _ = expect "hh_unset restores config precedence"
       (hhConfig.hh_get "timeout" = "21")
     val _ = aiLib.write_file config
-      ("provers = not-a-holyhammer-prover\n" ^ config_contents)
+      ("provers = " ^ unknown ^ "\n" ^ config_contents)
     val _ = expect "provers are validated at snapshot time"
       (option_error ["provers", "prover names: e, vampire"]
         (fn () => ignore (hhConfig.snapshot ())))
@@ -296,8 +304,18 @@ fun test_child root =
       (List.exists (fn (key, value) =>
          key = "priority" andalso String.isPrefix "config: " value)
        (hhConfig.dump ()))
+    val output = join root "no-prover"
+    val message = smlRedirect.hide_in_file output
+      (fn () => hh_error (fn () =>
+        ignore (holyHammer.hh_pb "" [Zipperposition] []
+          ([], boolSyntax.T)))) ()
+    val printed = String.concat (aiLib.bare_readl output)
   in
-    ()
+    expect "no-prover path prints downloader hint"
+      (contains "tools/download-provers" printed andalso
+       case message of
+           SOME text => contains "tools/download-provers" text
+         | NONE => false)
   end
 
 fun make_fixture root =
@@ -399,13 +417,18 @@ fun test_environment_default root value =
     ()
   end
 
+(* A child runs only its own checks, then reports that it finished them
+   and exits; the parent runs the rest of the suite. *)
 val _ =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
       NONE => run_parent ()
     | SOME root =>
-      (case OS.Process.getEnv "HHCONFIG_ENV_DEFAULT_TEST" of
-           SOME value => test_environment_default root value
-         | NONE => test_child root)
+      ((case OS.Process.getEnv "HHCONFIG_ENV_DEFAULT_TEST" of
+            SOME value => test_environment_default root value
+          | NONE => test_child root);
+       check_stdout "at the end of the child";
+       aiLib.write_file (join root child_done) "";
+       OS.Process.exit OS.Process.success)
 
 fun test_hhTptpProblem () =
   let
@@ -2896,40 +2919,6 @@ fun test_hhCache () =
     ()
   end
 
-fun contains needle haystack =
-  String.isSubstring needle haystack
-
-fun hh_error call =
-  ((call (); NONE)
-   handle Feedback.HOL_ERR error => SOME (Feedback.message_of error))
-
-fun test_holyHammer_validation () =
-  let
-    val unknown = "not-a-holyhammer-prover"
-    val _ = expect "prover option rejects unknown prover names"
-      (option_error [unknown, "prover names: e, vampire"]
-        (fn () => hhConfig.hh_set ("provers", unknown)))
-  in
-    case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-        NONE => ()
-      | SOME _ =>
-          let
-            val output = OS.FileSys.tmpName ()
-            val message = smlRedirect.hide_in_file output
-              (fn () => hh_error (fn () =>
-                ignore (holyHammer.hh_pb "" [Zipperposition] []
-                  ([], boolSyntax.T)))) ()
-            val printed = String.concat (aiLib.bare_readl output)
-            val _ = OS.FileSys.remove output
-          in
-            expect "no-prover path prints downloader hint"
-              (contains "tools/download-provers" printed andalso
-               case message of
-                   SOME text => contains "tools/download-provers" text
-                 | NONE => false)
-          end
-  end
-
 fun fake_config name exec_name args parser : hhProver.prover_config =
   {name = name, exec_names = [exec_name], env_var = "",
    version_args = ["--version"], parse_version = fn _ => SOME "test",
@@ -3030,9 +3019,6 @@ fun run_text config timeout =
   end
 
 fun test_runner () =
-  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-      SOME _ => ()
-    | NONE =>
   let
     val e = prover Eprover
     val good = fake_config "runner-good" "/bin/echo"
@@ -3421,17 +3407,13 @@ fun test_replay_timeout () =
          end)
   end
 
-(* Once, like test_hhSchedule: not in the hermetic children. *)
-val _ =
-  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-      NONE => (test_replay_timeout (); test_hhReconstruct ())
-    | SOME _ => ()
+val _ = test_replay_timeout ()
+val _ = test_hhReconstruct ()
 
 val _ = test_szs_status_words ()
 val _ = test_hhProver ()
 val _ = test_hhSlice ()
 val _ = test_hhCache ()
-val _ = test_holyHammer_validation ()
 val _ = test_runner ()
 
 val schedule_fixture_dir = "test-data"
@@ -4766,30 +4748,27 @@ fun test_schedule_deadline_recon sleeper_parser =
   end
 
 fun test_hhSchedule () =
-  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-      SOME _ => ()
-    | NONE =>
-        let
-          val parser = #parse_output (prover Eprover)
-          val started = Time.now ()
-          val _ = test_schedule_max_proofs parser
-          val _ = test_schedule_reconstruction_failure parser
-          val _ = test_schedule_without_minimization ()
-          val _ = test_schedule_failed_list_once ()
-          val _ = test_schedule_drop_one ()
-          val _ = test_schedule_early_stop parser
-          val _ = test_schedule_budget_truncation parser
-          val _ = test_schedule_cache parser
-          val _ = test_schedule_cancelled_cache parser
-          val _ = test_schedule_isolation parser
-          val _ = test_schedule_concurrent_runs parser
-          val _ = test_schedule_timeout parser
-          val _ = test_schedule_filter_rankings parser
-          val _ = test_schedule_deadline_recon parser
-        in
-          expect "scheduler hermetic suite stays within its wall-time bound"
-            (Time.toReal (Time.- (Time.now (), started)) < 60.0)
-        end
+  let
+    val parser = #parse_output (prover Eprover)
+    val started = Time.now ()
+    val _ = test_schedule_max_proofs parser
+    val _ = test_schedule_reconstruction_failure parser
+    val _ = test_schedule_without_minimization ()
+    val _ = test_schedule_failed_list_once ()
+    val _ = test_schedule_drop_one ()
+    val _ = test_schedule_early_stop parser
+    val _ = test_schedule_budget_truncation parser
+    val _ = test_schedule_cache parser
+    val _ = test_schedule_cancelled_cache parser
+    val _ = test_schedule_isolation parser
+    val _ = test_schedule_concurrent_runs parser
+    val _ = test_schedule_timeout parser
+    val _ = test_schedule_filter_rankings parser
+    val _ = test_schedule_deadline_recon parser
+  in
+    expect "scheduler hermetic suite stays within its wall-time bound"
+      (Time.toReal (Time.- (Time.now (), started)) < 60.0)
+  end
 
 structure StagedFixture =
 struct
@@ -6304,10 +6283,7 @@ fun test_schedule_run_in parser =
   end
 
 val _ = test_schedule_pool ()
-(* Once, like test_hhSchedule: not in the hermetic children. *)
-val _ = case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-            SOME _ => ()
-          | NONE => test_schedule_run_in (#parse_output (prover Eprover))
+val _ = test_schedule_run_in (#parse_output (prover Eprover))
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
 val _ = test_hhSchedule ()
@@ -6377,16 +6353,8 @@ fun test_holyHammer_unverified_failure parser =
     ()
   end
 
-fun test_holyHammer_scheduler_api () =
-  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-      SOME _ => ()
-    | NONE =>
-        let val parser = #parse_output (prover Eprover) in
-          test_main_hh_lemmas_hook parser;
-          test_holyHammer_unverified_failure parser
-        end
-
-val _ = test_holyHammer_scheduler_api ()
+val _ = test_main_hh_lemmas_hook (#parse_output (prover Eprover))
+val _ = test_holyHammer_unverified_failure (#parse_output (prover Eprover))
 
 fun test_hhStature_pure () =
   let
@@ -7641,10 +7609,5 @@ local open hhReconstruct hhTranslate holyHammer hhExportLib hhExportFof
   hhCache hhSchedule hhStature hhMePo hhLearn
 in end
 
-(* Last: stdout is still the run's own, and a child reports that it got
-   here. *)
+(* Last: stdout is still the run's own. *)
 val _ = check_stdout "at the end of the run"
-val _ =
-  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
-      SOME root => aiLib.write_file (join root child_done) ""
-    | NONE => ()
