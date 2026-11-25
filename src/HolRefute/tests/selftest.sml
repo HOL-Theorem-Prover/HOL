@@ -1388,6 +1388,227 @@ val _ = test "the integer injection is executable" (fn () =>
       | _ => false) configs
   end)
 
+(* Constants only their theories define
+   ([new_definition], [new_recursive_definition]: neither in [DefnBase]
+   nor in the compset) are executable through those definitions, followed
+   to what they call, under every Quickcheck back end and substrate, with
+   certified counterexamples and the caller's compset unchanged.  A
+   definition reaching [ARB] stays refused. *)
+local
+  val _ = Datatype.Datatype
+    `rf_thy_pkg = <| rf_thy_exports : num list; rf_thy_size : num |>`
+  val _ = Datatype.Datatype `rf_thy_loc = RFThyA | RFThyB num`
+  val _ = new_definition ("rf_thy_inc_def", ``rf_thy_inc (x : num) = x + 1``)
+  val _ = new_definition ("rf_thy_twice_def",
+    ``rf_thy_twice (x : num) = rf_thy_inc x * 2``)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_sum_def", rec_axiom = prim_recTheory.num_Axiom,
+     def = ``(rf_thy_sum 0 = 0) /\
+             (!n. rf_thy_sum (SUC n) = rf_thy_twice n + rf_thy_sum n)``}
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_slot_def", rec_axiom = TypeBase.axiom_of ``:rf_thy_loc``,
+     def = ``(rf_thy_slot RFThyA = rf_thy_twice 0) /\
+             (!k. rf_thy_slot (RFThyB k) = rf_thy_inc k)``}
+  val _ = new_definition ("rf_thy_package_def",
+    ``rf_thy_package = rf_thy_pkg [rf_thy_inc 1] 2``)
+  val _ = Datatype.Datatype
+    `rf_thy_tree = RFTLeaf num | RFTNode rf_thy_forest ;
+     rf_thy_forest = RFTNil | RFTCons rf_thy_tree rf_thy_forest`
+  (* one theorem defines both, each calling the other *)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_tsize_def",
+     rec_axiom = TypeBase.axiom_of ``:rf_thy_tree``,
+     def = ``(rf_thy_tsize (RFTLeaf n) = n) /\
+             (rf_thy_tsize (RFTNode f) = rf_thy_fsize f + 1) /\
+             (rf_thy_fsize RFTNil = 0) /\
+             (rf_thy_fsize (RFTCons t f) = rf_thy_tsize t + rf_thy_fsize f)``}
+  (* one theorem defines both, and only the second calls the first *)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_tleaf_def",
+     rec_axiom = TypeBase.axiom_of ``:rf_thy_tree``,
+     def = ``(rf_thy_tleaf (RFTLeaf n) = n) /\
+             (rf_thy_tleaf (RFTNode f) = 0) /\
+             (rf_thy_fbad RFTNil = @m : num. 0 < m) /\
+             (rf_thy_fbad (RFTCons t f) = rf_thy_tleaf t + rf_thy_fbad f)``}
+  val _ = new_definition ("rf_thy_opt_def",
+    ``rf_thy_opt (x : num) = SOME (x + 1)``)
+  val _ = new_definition ("rf_thy_arb_def",
+    ``rf_thy_arb (x : num) = x + ARB``)
+  val _ = new_definition ("rf_thy_small_def",
+    ``rf_thy_small (l : num list) <=> !x. MEM x l ==> x < 3``)
+  val configs =
+    List.concat (map (fn backend =>
+      map (fn substrate =>
+        default_config |> only [backend] |> quiet |> upd_substrate substrate)
+        [NativeSML, Compute]) [Exhaustive, Random])
+  fun refuted_everywhere goal =
+    List.all (fn cfg =>
+      case refute cfg goal of
+          Counterexample (c :: _) => certifies goal c
+        | _ => false) configs
+  (* the tests over all four configurations *)
+  fun matrix_test name pred =
+    if selftest_level >= 2 then test name pred else ()
+in
+  val _ = matrix_test "theory definitions outside the compset are executable"
+    (fn () =>
+      let
+        fun keys () = map #1 (computeLib.listItems (computeLib.the_compset ()))
+        val initial = keys ()
+        val outside = not (List.exists (fn (name, _) => Lib.mem name
+          ["rf_thy_inc", "rf_thy_twice", "rf_thy_sum", "rf_thy_slot",
+           "rf_thy_package", "rf_thy_arb", "rf_thy_small"]) initial)
+        val refuted = List.all refuted_everywhere
+          [``!x. rf_thy_inc x = 0``, ``!x. rf_thy_twice x < 5``,
+           ``!n. rf_thy_sum n < 3``, ``!l. rf_thy_slot l < 4``,
+           ``rf_thy_package.rf_thy_exports = []``, ``!l. rf_thy_small l``]
+        val refused = List.all (fn cfg =>
+            refute cfg ``!x. rf_thy_arb x = 0``
+              == Unknown ["not executable: ARB"]) configs
+      in
+        outside andalso refuted andalso refused andalso keys () = initial
+      end)
+
+  (* A constant defined again under its old name keeps its key: what was
+     kept for the first definition must not answer for the second. *)
+  val _ = matrix_test
+    "a constant defined again evaluates by its new definition"
+    (fn () =>
+      let
+        val _ = new_definition ("rf_thy_again_def",
+          ``rf_thy_again (x : num) = x + 1``)
+        val first = refuted_everywhere ``!x. rf_thy_again x = 0``
+        val _ = new_definition ("rf_thy_again_again_def",
+          ``rf_thy_again (x : num) = x + 5``)
+      in
+        first andalso refuted_everywhere ``!x. rf_thy_again x = x + 1``
+      end)
+
+  (* Restoring a context fires no theory hook: what was kept for a later
+     definition must not answer for the restored one. *)
+  val _ = matrix_test
+    "a restored context evaluates by its own definition"
+    (fn () => registration_context (fn () =>
+      let
+        val _ = new_definition ("rf_thy_restored_def",
+          ``rf_thy_restored (x : num) = x + 1``)
+        val first = refuted_everywhere ``!x. rf_thy_restored x = 0``
+        val earlier = Context.snapshot ()
+        val _ = new_definition ("rf_thy_restored_again_def",
+          ``rf_thy_restored (x : num) = x + 5``)
+        val second = refuted_everywhere ``!x. rf_thy_restored x = x + 1``
+        val _ = Context.restore earlier
+      in
+        first andalso second andalso
+        refuted_everywhere ``!x. rf_thy_restored x = x + 5``
+      end))
+
+  (* The definitions a term needs are collected through every call, not
+     only those an earlier goal left behind: a fresh chain, its outermost
+     constant evaluated first. *)
+  val _ = test "a chain of theory definitions is collected from its top"
+    (fn () =>
+      let
+        val _ = new_definition ("rf_thy_leaf_def",
+          ``rf_thy_leaf (x : num) = x + 3``)
+        val _ = new_definition ("rf_thy_middle_def",
+          ``rf_thy_middle (x : num) = rf_thy_leaf x * 2``)
+        val _ = new_definition ("rf_thy_outer_def",
+          ``rf_thy_outer (x : num) = rf_thy_middle x + 1``)
+        val goal = ``!x. rf_thy_outer x < 7``
+      in
+        case refute (default_config |> only [Exhaustive] |> quiet
+                       |> upd_substrate Compute) goal of
+          Counterexample (c :: _) => certifies goal c
+        | _ => false
+      end)
+
+  (* What a term evaluates to doesn't depend on the terms evaluated
+     before it: a term evaluates with the theory definitions it reaches
+     and no others, so a goal over [rf_thy_caller], whose compset rule
+     calls a constant only its theory defines, gets the same outcome
+     whether or not a goal over [rf_thy_callee] was just tested. *)
+  val _ = test "evaluation doesn't depend on the terms evaluated before"
+    (fn () =>
+      let
+        val _ = new_definition ("rf_thy_callee_def",
+          ``rf_thy_callee (x : num) = x * 2``)
+        val caller = new_definition ("rf_thy_caller_def",
+          ``rf_thy_caller (x : num) = rf_thy_callee x + 1``)
+        val compute = default_config |> only [Exhaustive] |> quiet
+                        |> upd_substrate Compute |> upd_timeout 3.0
+        fun summary goal =
+          case refute compute goal of
+              Counterexample _ => "counterexample"
+            | NoCounterexample => "none"
+            | Unknown reasons => String.concatWith "; " reasons
+            | _ => "other"
+        val goal = ``!x. rf_thy_caller x = 0``
+        val saved = computeLib.the_compset ()
+      in
+        Portable.finally (fn () => computeLib.put_compset saved)
+          (fn () =>
+             let
+               val _ = computeLib.add_funs [caller]
+               val cold = summary goal
+               val callee = ``!x. rf_thy_callee x = 0``
+               val callee_refuted =
+                 case refute compute callee of
+                   Counterexample (c :: _) => certifies callee c
+                 | _ => false
+             in
+               callee_refuted andalso cold = summary goal
+             end) ()
+      end)
+
+  (* a premise equating a call with a constructor splits on the call's
+     value, rebuilt with the definition it reaches *)
+  val _ = matrix_test "a split on a theory definition's value is rebuilt"
+    (fn () => refuted_everywhere ``!x n. rf_thy_opt x = SOME n ==> n < 3``)
+
+  val _ = matrix_test "mutually recursive theory definitions are executable"
+    (fn () => refuted_everywhere ``!t. rf_thy_tsize t < 3``)
+
+  (* [rf_thy_tleaf] doesn't call [rf_thy_fbad], defined beside it, so
+     isn't compiled with it: [rf_thy_fbad] can't be, since it chooses *)
+  val _ = matrix_test "a definition's non-executable sibling is left out"
+    (fn () => refuted_everywhere ``!t. rf_thy_tleaf t < 2``)
+
+  (* A non-equational specification registers a fact about the constant
+     ([DefnBase.OTHER]), not its equations: the constant is read as an
+     unregistered one is, here by its compset rule. *)
+  val _ = test "a constant registered by a fact runs by its compset rule"
+    (fn () =>
+      let
+        val spec = new_specification ("rf_thy_oth_def", ["rf_thy_oth"],
+          prove (``?f. !x : num. x <= f x /\ f x <= x``,
+                 Q.EXISTS_TAC `\x. x` THEN BETA_TAC THEN
+                 REWRITE_TAC [arithmeticTheory.LESS_EQ_REFL]))
+        val rule = prove (``!x. rf_thy_oth x = x``,
+          GEN_TAC THEN MATCH_MP_TAC arithmeticTheory.LESS_EQUAL_ANTISYM THEN
+          REWRITE_TAC [spec])
+        val other =
+          case DefnBase.lookup_userdef ``rf_thy_oth`` of
+            SOME {thm = DefnBase.OTHER _, ...} => true
+          | _ => false
+        val goal = ``!x. rf_thy_oth x < 3``
+        val saved = computeLib.the_compset ()
+      in
+        other andalso
+        Portable.finally (fn () => computeLib.put_compset saved)
+          (fn () =>
+             (computeLib.add_funs [rule];
+              case refute (default_config |> only [Exhaustive] |> quiet
+                             |> upd_substrate NativeSML) goal of
+                Counterexample (c :: _) => certifies goal c
+              | _ => false)) ()
+      end)
+
+  val _ = matrix_test
+    "a loaded theory's definitions outside the compset are executable"
+    (fn () => refuted_everywhere ``!x. zoo_thy_outer x < 9``)
+end
+
 val _ = test "an any-goal backend still receives gated instances" (fn () =>
   let
     val enabled = ref false
@@ -4566,8 +4787,10 @@ val _ = mf_group "baseline" I [
   ("function application", ``(f : bool -> num) b = 0``, I, V ExpectGenuine,
    CSome),
   ("TotalDefn equation", ``zoo_total n = 0``, I, V ExpectGenuine, CSome),
+  (* [zoo_height]'s equations are only its theory's definition, which
+     certification evaluates *)
   ("DefnBase equation", ``zoo_height (ZooLeaf n) = SUC n``, I,
-   V ExpectGenuine, CNone),
+   V ExpectGenuine, CSome),
   ("unary natural", ``SUC n = n``, I, V ExpectGenuine, CSome),
   ("unary integer", ``(i : int) + 1 = i``, I, V ExpectGenuine, CSome),
   ("choice spec", ``zoo_spec = 1``, I, V ExpectGenuine, CNone),

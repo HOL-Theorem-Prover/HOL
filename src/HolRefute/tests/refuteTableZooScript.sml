@@ -1636,3 +1636,12 @@ QED
 
 val _ = DefnBase.register_defn
           {tag = "user", thmname = "zoo_self_presentation"};
+
+(* Constants only this theory defines ([new_definition] puts them in
+   neither [DefnBase] nor the compset), which a theory loading this one
+   reads through [DB.definitions]. *)
+val _ = new_definition ("zoo_thy_inner_def",
+  ``zoo_thy_inner (x : num) = x + 2``);
+
+val _ = new_definition ("zoo_thy_outer_def",
+  ``zoo_thy_outer (x : num) = zoo_thy_inner x * 3``);

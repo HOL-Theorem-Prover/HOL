@@ -228,10 +228,14 @@ structure Refute_EvalSML :> Refute_EvalSML = struct
   fun reconstruction_arg constructor_index argument_index rebuild () =
     constructor_argument constructor_index argument_index (rebuild ())
 
+  (* The scrutinee is evaluated with the definitions it reaches, as native
+     code ran: a constant only its theory defines stays folded under
+     [EVAL_CONV], and the constructor would not match. *)
   fun split_term constructor_index argument_index expression_index
       environment =
     constructor_argument constructor_index argument_index
-      (eval_term expression_index environment)
+      (boolSyntax.rhs (Thm.concl (Refute_Cert.eval
+         (instantiate (raw_term expression_index) environment))))
 
   fun pretty_string pretty =
     let

@@ -1453,34 +1453,271 @@ structure Refute_Core :> Refute_Core = struct
      native code compiles [&] as the identity ([Refute_Extract]). *)
   val data_constants = [pred_setSyntax.empty_tm, intSyntax.int_injection]
 
-  fun nonexecutable_constants terms =
+  (* Bounded quantifiers inside a definition's right-hand side, read the
+     same way by extraction and by [definition_closure] below.
+     [normalize] rewrites a goal's bounded quantifiers into
+     list searches, but a definition's equations reach the clause compiler
+     as [DefnBase] presents them, so [!x. MEM x l ==> P x] in a body
+     compiled through [FORALL_DEF] as a function equality.  The same
+     rewrites are applied to each equation's right side here, after
+     currying the antecedents ([a /\ b ==> c] to [a ==> b ==> c]) and
+     pushing a binder past the antecedents and conjuncts that do not
+     mention it, so that [!x y. MEM x l /\ MEM y (f x) ==> P] becomes
+     [!x. MEM x l ==> !y. MEM y (f x) ==> P] before the bound of each
+     binder is read.  The two-index shape [!i j. i < j ==> j < n ==> P i j]
+     is a nested count, [refuteTheory.forall_lt_lt_count_list].  Patterns
+     on the left side are untouched. *)
+  fun definition_body_conv tm =
     let
-      val comp_items = computeLib.listItems (computeLib.the_compset ())
-      val executable_keys =
-        List.foldl (fn ((key, transforms), keys) =>
-          if null transforms then keys else Redblackset.add (keys, key))
-          (Redblackset.empty
-            (Portable.pair_compare (String.compare, String.compare)))
-          comp_items
-      fun executable_constant constant =
+      fun pass theorems = Ho_Rewrite.REWRITE_CONV theorems
+    in
+      (* Curried first: the pair lemma needs [i < j] and [j < n] as
+         separate antecedents, and an interval rule applied to the raw
+         conjunction would consume the inner binder and leave [!i] with
+         no bound.  The bounded rules run on the curried form, where
+         [n < e ==> P n] takes any P, then again refolded, where the
+         interval shapes are conjunctions. *)
+      Conv.EVERY_CONV
+        [pass [Conv.GSYM boolTheory.AND_IMP_INTRO],
+         pass [refuteTheory.forall_lt_lt_count_list],
+         pass [boolTheory.RIGHT_FORALL_IMP_THM,
+               boolTheory.RIGHT_EXISTS_AND_THM],
+         pass bounded_rewrites,
+         pass [boolTheory.AND_IMP_INTRO],
+         pass bounded_rewrites] tm
+    end
+
+  (* Only a right side with a quantifier is rewritten; any other equation
+     stays as [DefnBase] presents it. *)
+  fun normalize_definition theorem =
+    let
+      fun quantified tm =
+        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
+      fun rhs_of tm =
+        case Lib.total boolSyntax.dest_eq tm of
+            SOME (_, right) => right
+          | NONE => boolSyntax.T
+      fun equations tm =
+        if boolSyntax.is_forall tm then
+          Conv.STRIP_QUANT_CONV equations tm
+        else if boolSyntax.is_conj tm then
+          Conv.BINOP_CONV equations tm
+        else if Lib.can (HolKernel.find_term quantified) (rhs_of tm) then
+          Conv.RAND_CONV definition_body_conv tm
+        else Conv.ALL_CONV tm
+    in
+      Conv.CONV_RULE (Conv.QCONV equations) theorem
+    end
+
+  type constant_key = string * string
+
+  fun constant_key constant =
+    let val {Name, Thy, ...} = Term.dest_thy_const constant
+    in (Name, Thy) end
+
+  fun executable_keys compset =
+    List.foldl (fn ((key, transforms), keys) =>
+      if null transforms then keys else Redblackset.add (keys, key))
+      (Redblackset.empty
+        (Portable.pair_compare (String.compare, String.compare)))
+      (computeLib.listItems compset)
+
+  (* The definitions of [constant] in the theory
+     that created it, oldest first, at their own types and cut to the
+     conjuncts headed by [constant]: what [Definition.new_definition] and
+     [Prim_rec.new_recursive_definition] leave there without adding the
+     constant to [DefnBase] or the compset.  A recursive definition with
+     no termination proof has only its [WFREC] primitive there, which
+     nothing evaluates, so none. *)
+  fun theory_entries constant =
+    let
+      val {Name, Thy, ...} = Term.dest_thy_const constant
+      val entries =
+        (* A script run with [hol run] has no current theory. *)
+        if Lib.total Theory.current_theory () = SOME Thy then
+          Theory.current_definitions ()
+        else DB.definitions Thy
+      fun is_primitive equation =
+        case Lib.total Term.dest_thy_const (#1 (boolSyntax.strip_comb
+               (boolSyntax.rhs (#2 (boolSyntax.strip_forall
+                  (Thm.concl equation)))))) of
+          SOME {Name = "WFREC", Thy = "relation", ...} => true
+        | _ => false
+      fun usable (_, theorem) =
+        if not (Theory.uptodate_thm theorem) then NONE
+        else
+          let
+            val equations = DefnBase.defn_eqns theorem
+              handle DefnBase.nonstdform => []
+          in
+            if List.exists (fn (key, _) => key = {Name = Name, Thy = Thy})
+                 equations andalso
+               not (List.exists (is_primitive o #2) equations)
+            then SOME equations
+            else NONE
+          end
+    in
+      List.mapPartial usable entries
+    end
+
+  fun theory_definitions constant =
+    let val {Name, Thy, ...} = Term.dest_thy_const constant
+    in
+      map (fn equations =>
+             Drule.LIST_CONJ (map #2 (List.filter
+               (fn (key, _) => key = {Name = Name, Thy = Thy}) equations)))
+        (theory_entries constant)
+    end
+
+  (* The constants the theorem behind [theory_definition constant] defines
+     together with [constant], at its type instance: those that call it
+     and that it calls, through that theorem's equations.  A
+     [Prim_rec.new_recursive_definition] over a mutually recursive
+     datatype defines several at once; one that neither calls the other
+     is compiled on its own. *)
+  fun theory_definition_group constant =
+    case theory_entries constant of
+      [] => [constant]
+    | entries =>
+        let
+          val equations =
+            map (#2 o boolSyntax.strip_forall o Thm.concl o #2)
+              (List.last entries)
+          fun head equation =
+            #1 (boolSyntax.strip_comb (boolSyntax.lhs equation))
+          fun member c = List.exists (Term.same_const c)
+          val heads = List.foldl (fn (equation, heads) =>
+              if member (head equation) heads then heads
+              else heads @ [head equation]) [] equations
+          fun calls c =
+            List.filter (fn h => List.exists (fn equation =>
+                Term.same_const c (head equation) andalso
+                Lib.can (HolKernel.find_term (Term.same_const h))
+                  (boolSyntax.rhs equation)) equations) heads
+          fun reach seen [] = seen
+            | reach seen (c :: rest) =
+                if member c seen then reach seen rest
+                else reach (c :: seen) (calls c @ rest)
+          val generic = valOf (List.find (Term.same_const constant) heads)
+          val called = reach [] [generic]
+          val group = List.filter (fn h =>
+              member h called andalso member generic (reach [] [h])) heads
+          val theta =
+            Type.match_type (Term.type_of generic) (Term.type_of constant)
+        in
+          map (Term.inst theta) group
+        end
+
+  fun theory_definition constant =
+    case theory_definitions constant of
+      [] => NONE
+    | definitions => SOME (List.last definitions)
+
+  (* [theory_definition] and its normalization, kept per constant until a
+     theory changes.  Finding a constant's definition reads every definition
+     of its theory ([theory_entries]), a quarter of a second on a large one,
+     and evaluation asks for the same constants for every candidate
+     ([Refute_Cert.default_compset]).  The definition depends only on the
+     constant's name and theory and on the theories, so it is session state: a
+     restored context brings back the entries made in it, and a pinned proof's
+     entries stay in its pin.  Normalizing also reads the implicit rewrites,
+     so a normalized theorem is reused only under the same set, and is redone
+     from the stored one otherwise.  A lookup that began before a theory
+     changed is not stored. *)
+  local
+    type entry =
+      {stored : thm option, rewrites : thm list, normalized : thm option}
+    type table =
+      {generation : unit ref,
+       entries : (constant_key, entry) Redblackmap.dict}
+    fun empty () : table =
+      {generation = ref (),
+       entries = Redblackmap.mkDict
+         (Portable.pair_compare (String.compare, String.compare))}
+    val table = Refute_Session.state "theory_definitions" (empty ())
+    val _ = Theory.register_hook ("Refute_Core.normalized_definition",
+      fn _ => Refute_Session.publish table (fn _ => empty ()))
+  in
+    fun normalized_definition constant =
+      let
+        val key = constant_key constant
+        val {generation, entries} = Refute_Session.read table
+        val rewrites = Ho_Rewrite.implicit_rewrites ()
+        fun keep stored =
+          let
+            val normalized = Option.map normalize_definition stored
+            val entry =
+              {stored = stored, rewrites = rewrites, normalized = normalized}
+          in
+            Refute_Session.update table (fn current : table =>
+              if #generation current = generation then
+                {generation = generation,
+                 entries = Redblackmap.insert (#entries current, key, entry)}
+              else current);
+            normalized
+          end
+      in
+        case Redblackmap.peek (entries, key) of
+          SOME (entry : entry) =>
+            if PolyML.pointerEq (#rewrites entry, rewrites) then
+              #normalized entry
+            else keep (#stored entry)
+        | NONE => keep (theory_definition constant)
+      end
+  end
+
+  (* The constants [terms] reach that [known]
+     doesn't hold: those with a theory definition ([defined], with
+     [definitions]), whose right sides are followed in turn, and those
+     with none ([missing]).  A definition is read as extraction reads it,
+     its bounded quantifiers rewritten ([normalize_definition]), so a
+     binder left on a right side is one nothing bounds.  [known] holds the
+     compset's keys, so a
+     constant evaluation already reduces is never unfolded.  The binders
+     are never unfolded either: [bool] defines [!] as [\P. P = \x. T],
+     which nothing evaluates, and the search handles them itself. *)
+  fun definition_closure known terms =
+    let
+      val binders =
+        [boolSyntax.universal, boolSyntax.existential, boolSyntax.exists1,
+         boolSyntax.select]
+      fun definition constant =
+        if List.exists (fn binder => Term.same_const binder constant) binders
+        then NONE
+        else normalized_definition constant
+      fun executable constant =
         Refute_TypeBase.is_constructor constant orelse
         List.exists (fn data => Term.same_const data constant)
           data_constants orelse
-        Refute_Gen.is_family_constructor constant orelse
-        let
-          val {Name, Thy, ...} = Term.dest_thy_const constant
-        in
-          Redblackset.member (executable_keys, (Name, Thy))
-        end
-      fun add (term, constants) =
-        List.foldl (fn (constant, collected) =>
-          if List.exists (fn old => Term.same_const old constant) collected
-          then collected
-          else constant :: collected) constants (term_constants term)
-      val constants = List.foldl add [] terms
+        Refute_Gen.is_family_constructor constant
+      fun right_constants theorem =
+        List.concat (map (term_constants o boolSyntax.rhs o #2 o
+                          boolSyntax.strip_forall)
+                       (boolSyntax.strip_conj (Thm.concl theorem)))
+      fun visit (constant, state as (seen, defined, definitions, missing)) =
+        if Redblackset.member (seen, constant_key constant) orelse
+           executable constant then state
+        else
+          let val seen = Redblackset.add (seen, constant_key constant)
+          in
+            case definition constant of
+              SOME theorem =>
+                List.foldl visit
+                  (seen, constant :: defined, theorem :: definitions, missing)
+                  (right_constants theorem)
+            | NONE => (seen, defined, definitions, constant :: missing)
+          end
+      val (_, defined, definitions, missing) =
+        List.foldl visit (known, [], [], [])
+          (List.concat (map term_constants terms))
     in
-      List.filter (not o executable_constant) constants
+      {defined = List.rev defined, definitions = List.rev definitions,
+       missing = List.rev missing}
     end
+
+  fun nonexecutable_constants terms =
+    #missing (definition_closure
+      (executable_keys (computeLib.the_compset ())) terms)
 
   fun show_constants constants =
     String.concatWith ", "
