@@ -123,16 +123,16 @@ fun test_hhEval root =
     val expdir = join root "hheval"
     val _ = hhConfig.remove_tree expdir
     val journal = hhEval.journal_path expdir "list"
-    val null_entry : hhEval.journal_entry =
+    (* The list.nil cell of condition deps-e, ended with szs and error. *)
+    fun nil_entry szs error : hhEval.journal_entry =
       {run = "fixture", thy = "list", thm = "nil", goal_id = "list.nil",
        cond = "deps-e", regime = hhEval.Bushy, selector = hhEval.Deps,
        engine = SOME (hhEval.Prover Eprover), ho = false, fresh = false,
-       prover = SOME Eprover,
-       prover_version = NONE,
-       nfacts = 0, timeout = 5,
-       szs = hhEval.BrokenDeps, t_prover = 0.0, axioms_used = NONE,
+       prover = SOME Eprover, prover_version = NONE, nfacts = 0, timeout = 5,
+       szs = szs, t_prover = 0.0, axioms_used = NONE,
        recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
-       error = NONE, stop = NONE, t_total = NONE, winner = NONE, slices = []}
+       error = error, stop = NONE, t_total = NONE, winner = NONE, slices = []}
+    val null_entry = nil_entry hhEval.BrokenDeps NONE
     val full_entry : hhEval.journal_entry =
       {run = "fixture", thy = "list", thm = "cons", goal_id = "list.cons",
        cond = "knn-e", regime = hhEval.Chainy, selector = hhEval.Knn 128,
@@ -187,34 +187,15 @@ fun test_hhEval root =
     val _ = expect "resume empty journal"
       (not (hhEval.journal_complete empty complete))
     val retry = hhEval.journal_path expdir "retry"
-    val retry_entry : hhEval.journal_entry =
-      {run = "fixture", thy = "list", thm = "nil", goal_id = "list.nil",
-       cond = "deps-e", regime = hhEval.Bushy, selector = hhEval.Deps,
-       engine = SOME (hhEval.Prover Eprover), ho = false, fresh = false,
-       prover = SOME Eprover,
-       prover_version = NONE, nfacts = 0, timeout = 5,
-       szs = hhEval.EvalError, t_prover = 0.0, axioms_used = NONE,
-       recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
-       error = SOME "transient harness failure", stop = NONE,
-       t_total = NONE, winner = NONE, slices = []}
-    val _ = hhEval.append_journal retry retry_entry
+    val _ = hhEval.append_journal retry
+      (nil_entry hhEval.EvalError (SOME "transient harness failure"))
     val _ = expect "resume retries harness errors"
       (not (hhEval.cell_completed (hhEval.read_completed retry)
         ("list.nil", "deps-e")))
     val run_failure = hhEval.journal_path expdir "runfailure"
     val _ = hhEval.append_journal run_failure
-      {run = #run retry_entry, thy = #thy retry_entry,
-       thm = #thm retry_entry, goal_id = #goal_id retry_entry,
-       cond = #cond retry_entry, regime = #regime retry_entry,
-       selector = #selector retry_entry, engine = #engine retry_entry,
-       ho = #ho retry_entry, fresh = #fresh retry_entry,
-       prover = #prover retry_entry,
-       prover_version = NONE, nfacts = 0, timeout = 5,
-       szs = hhEval.Szs (hhProver.RunFailure ""), t_prover = 0.0,
-       axioms_used = NONE,
-       recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
-       error = SOME "prover binary was missing", stop = NONE,
-       t_total = NONE, winner = NONE, slices = []}
+      (nil_entry (hhEval.Szs (hhProver.RunFailure ""))
+         (SOME "prover binary was missing"))
     val _ = expect "resume retries cells whose prover never ran"
       (not (hhEval.cell_completed (hhEval.read_completed run_failure)
         ("list.nil", "deps-e")))
