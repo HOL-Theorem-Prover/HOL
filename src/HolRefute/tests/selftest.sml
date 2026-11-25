@@ -66,10 +66,17 @@ fun check_result P =
              | e => (print ("\n  raised: " ^ General.exnMessage e ^ "\n");
                      false))
 
+(* CI shows only the end of the log, so the names of failed tests are
+   printed again there *)
+val failed_tests = ref ([] : string list)
+
 fun test name pred =
-  (tprint name;
-   require_msg (check_result pred) (fn () => name ^ " failed")
-     (fn () => ()) ())
+  let val failures = !erc in
+    tprint name;
+    require_msg (check_result pred) (fn () => name ^ " failed")
+      (fn () => ()) ();
+    if !erc > failures then failed_tests := name :: !failed_tests else ()
+  end
 
 fun section name = print ("\n== " ^ name ^ "\n")
 fun skip name why = (tprint name; print ("skipped: " ^ why ^ "\n"))
@@ -3461,13 +3468,17 @@ val _ = section "model finder"
 
 (* The model finder's own proofs (monotonicity, well-foundedness, the
    fixpoint lemma) run under [tac_timeout] of the calling thread's CPU
-   time, so that a loaded machine doesn't change what they prove.  The
-   checks here don't depend on load: work that waits uses no CPU, and
-   work that computes is measured by the same clock. *)
+   time, so that a loaded machine doesn't change what they prove.  A call
+   returns its work's value, or raises TIMEOUT once the calling thread has
+   used the budget, to a tick, or [backstop_factor] times the budget of
+   wall time has passed.  The checks assert that contract, which holds
+   whatever the load: a thread kept from its CPU only moves a call from
+   one side of it to the other. *)
 (* reached only through the alias below (holdep) *)
 local open Refute_ThreadClock in end
 local
   val within = Refute_ModelFinder_Util.apply_within_budget
+  val backstop_factor = Refute_ModelFinder_Util.backstop_factor
   structure Clock = Refute_ThreadClock
   fun seconds s = Time.fromReal s
   fun idle s () = (OS.Process.sleep (seconds s); true)
@@ -3481,51 +3492,67 @@ local
     end
   fun times_out f =
     (ignore (f ()); false) handle Timeout.TIMEOUT _ => true
+  datatype 'a outcome =
+      Returned of 'a
+    | Stopped of {used : real, elapsed : real}
+  (* [within] for [budget] seconds, with the CPU time the calling thread
+     used and the wall time TIMEOUT reports *)
+  fun run budget work x =
+    let val clock = Clock.start () in
+      Returned (within (seconds budget) work x)
+      handle Timeout.TIMEOUT t =>
+        Stopped {used = Clock.seconds clock, elapsed = Time.toReal t}
+    end
+  fun past_backstop budget elapsed = elapsed >= backstop_factor * budget
+  fun in_contract budget {used, elapsed} =
+    used >= budget - Clock.tick orelse past_backstop budget elapsed
 in
-(* Work that waits runs past the budget; work that computes stops within
-   a tick of it (the watcher sleeps at most the CPU budget left, in wall
-   time); and on Linux, another thread computing twice the budget meanwhile
-   is not charged to the work. *)
+(* Work that waits returns, unless the backstop stops it; work that
+   computes forever is stopped, and not before its budget unless the
+   backstop came first; and, on Linux, another thread computing twice the
+   budget is not charged to the clock [within] reads.  That clock is
+   started here and read from the other thread, as the watcher reads the
+   caller's, while this thread blocks rather than polls. *)
 val _ = test "an inner proof's budget is its thread's CPU time" (fn () =>
   let
-    val waits = within (seconds 0.05) (idle 0.3) ()
-    val clock = Clock.start ()
-    val stopped = times_out (fn () => within (seconds 0.2) spin 0)
-    val used = Clock.seconds clock
     fun other_thread () =
       let
-        val stop = ref false
-        val spun = ref 0.0
+        val clock = Clock.start ()
+        val lock = Mutex.mutex ()
+        val spun = ConditionVar.conditionVar ()
+        val charged = ref NONE
         fun spinner () =
-          let
-            val clock = Clock.start ()
-            fun loop () =
-              if !stop then () else (spun := Clock.seconds clock; loop ())
-          in
-            loop ()
-          end
-        fun wait_for_spinner () =
-          let
-            val from = !spun
-            fun wait () = !spun >= from + 0.1 orelse (idle 0.01 (); wait ())
-          in
-            wait ()
-          end
+          (ignore (spin_for 0.1);
+           Mutex.lock lock;
+           charged := SOME (Clock.seconds clock);
+           ConditionVar.signal spun;
+           Mutex.unlock lock)
+        fun wait () =
+          case !charged of
+              SOME s => s
+            | NONE => (ConditionVar.wait (spun, lock); wait ())
+        val _ = Mutex.lock lock
         val _ = Thread.fork (spinner, [])
+        val s = wait ()
+        val _ = Mutex.unlock lock
       in
-        (within (seconds 0.05) wait_for_spinner () before stop := true)
-        handle e => (stop := true; raise e)
+        s < 0.05
       end
   in
-    waits andalso stopped andalso used >= 0.2 - Clock.tick andalso
-    used <= 0.2 + 1.5 * Clock.tick andalso
+    (case run 0.05 (idle 0.3) () of
+         Returned b => b
+       | Stopped s => in_contract 0.05 s) andalso
+    (case run 0.2 spin 0 of
+         Returned _ => false
+       | Stopped s => in_contract 0.2 s) andalso
     (not (OS.FileSys.access ("/proc/thread-self", [])) orelse
      other_thread ())
   end)
 
-(* Work that waits stops at the wall backstop, and the largest budget
-   [upd_tac_timeout] accepts (the largest number of seconds Time can hold;
-   its backstop, 20 times that, is past it) still runs its work. *)
+(* Work that never ends by itself stops at the wall backstop, and the
+   largest budget [upd_tac_timeout] accepts (the largest number of seconds
+   Time can hold; its backstop, 20 times that, is past it) still runs its
+   work. *)
 val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
   let
     fun representable s = (ignore (seconds s); true) handle Time.Time => false
@@ -3539,7 +3566,9 @@ val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
     fun widen s =
       if representable (2.0 * s) then widen (2.0 * s) else narrow s (2.0 * s)
   in
-    times_out (fn () => within (seconds 0.01) (idle 0.5) ()) andalso
+    (case run 0.01 (idle 3600.0) () of
+         Returned _ => false
+       | Stopped {elapsed, ...} => past_backstop 0.01 elapsed) andalso
     within (seconds (widen 1.0)) (fn () => true) ()
   end)
 
@@ -3557,9 +3586,8 @@ val _ = test "an inner proof's interrupts stay its own" (fn () =>
               handle Timeout.TIMEOUT _ => (finished := true; true))) ())
     fun calls 0 = ()
       | calls n =
-          (ignore (within (seconds 0.01) (fn () => true) ());
-           if n mod 10 = 0 then ignore (times_out (fn () =>
-             within (seconds 0.01) spin 0)) else ();
+          (ignore (run 0.01 (fn () => true) ());
+           if n mod 10 = 0 then ignore (run 0.01 spin 0) else ();
            calls (n - 1))
   in
     outer_first andalso not (!finished) andalso
@@ -6173,4 +6201,9 @@ val _ = test "a certifiable hit is upgraded to Genuine" (fn () =>
          ``~(HD (MAP (f : num -> num) xs) = f (HD xs))``
   |> cex_where (fn c => is_genuine c andalso Option.isSome (#cert c)))
 
+val _ =
+  if null (!failed_tests) then ()
+  else print ("\nFailed tests:\n" ^
+              String.concat (map (fn name => "  " ^ name ^ "\n")
+                                 (rev (!failed_tests))))
 val _ = exit_count0 erc

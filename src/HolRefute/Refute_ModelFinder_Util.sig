@@ -42,6 +42,8 @@ signature Refute_ModelFinder_Util = sig
   val signed_string_of_int : int -> string
 
   val apply_within_budget : Time.time -> ('a -> 'b) -> 'a -> 'b
+  (* the wall backstop of [apply_within_budget], in multiples of its budget *)
+  val backstop_factor : real
 
   val flip_polarity : polarity -> polarity
 
