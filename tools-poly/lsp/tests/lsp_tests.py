@@ -3780,23 +3780,64 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
     until someone killed the server: the probe never answered, and
     nor did anything else.
 
-    So the assertions are the two halves of that.  Every probe has to
-    come back, and the server has to still be there afterwards.
+    One probe per walk, each stopped by its own budget and each
+    having to blame its own text:
 
-    Deliberately all on ONE client.  The neighbouring budget test
-    retries with a fresh `Client' per attempt, which is why it could
-    never have caught this: a wedged server is abandoned rather than
-    noticed."""
+      - `slow_body' puts the cost in the body, so the walk to the
+        anchor is the one that runs out.  Under a single canary that
+        walk swallowed the interrupt, carried on into the candidate,
+        and the report then sliced the body's span out of the
+        candidate's string -- so this probe is the one that fails on
+        the old code.
+      - `slow_candidate' puts a cheap body in front of a costly
+        candidate, so the second walk is the one that runs out, which
+        it can only do if it was given a budget at all.
+
+    The cost has to be real.  `EVAL' on `2 ** 200000' takes a second
+    or two -- three orders of magnitude past the 1ms budget -- so the
+    canary is not racing the walk and a timeout here is not luck.
+    The fixture this replaced proved `a + (b + (c + d)) =
+    d + (c + (b + a))' by `rw[] >> metis_tac[...]': `rw[]' closes
+    that goal in 1ms and `metis_tac' then runs over no goals at all,
+    so both walks held about a millisecond of work against a 1ms
+    budget.  Measured 2026-11-25, the canary won 52% of tries idle
+    and 20% under load, and the test asked only for one win in ten --
+    a ~10% failure rate on a contended build, which is when the suite
+    runs.  The fixture below is 80/80 at load average 12.
+
+    Deliberately all on ONE client, with a goal state asked for
+    afterwards: a client that gives up and closes abandons a wedged
+    server rather than noticing it."""
     src = ("Theory gs_twobudget\n"
            "Ancestors arithmetic\n\n"
-           "Theorem slow_anchor:\n"
-           "  !a b c d:num. a + (b + (c + d)) = d + (c + (b + a))\n"
+           "Theorem slow_body:\n"
+           "  2 ** 200000 = 2 ** 200000\n"
            "Proof\n"
-           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC, ADD_SYM]\n"
+           "  CONV_TAC EVAL\n"
+           "QED\n\n"
+           "Theorem slow_candidate:\n"
+           "  2 ** 200000 = 2 ** 200000\n"
+           "Proof\n"
+           "  ALL_TAC >> EVAL_TAC\n"
            "QED\n")
     uri = "file:///tmp/gs_twobudget.sml"
-    END = 46     # past the metis call, so the anchor walk runs it
-    CAND = "simp[ADD_COMM, ADD_ASSOC, ADD_SYM, ADD_0, ADD_SUC]"
+    # Line 6 is `  CONV_TAC EVAL' and column 15 is its end, so the walk
+    # to the anchor has to run it.  Line 12 is `  ALL_TAC >> EVAL_TAC'
+    # and column 9 is just past `ALL_TAC', so that walk costs nothing
+    # and the candidate is the only thing left to be slow.
+    SLOW_BODY = (6, 15)
+    FAST_BODY = (12, 9)
+
+    def probe(c, req_id, pos, cand):
+        r = _send_trytactic(c, req_id, uri, pos[0], pos[1], cand,
+                            budget_ms=1)
+        assert_true(r is not None,
+                    f"probe {req_id} answered at all; no reply is the "
+                    f"wedge this test exists for")
+        err = ((r.get("result") or {}).get("error")) or ""
+        assert_contains(err, "budget",
+                        f"a 1ms budget stopped the walk ({r!r})")
+        return err
 
     c = Client("/tmp")
     try:
@@ -3805,63 +3846,31 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
 
-        # Whether the canary wins is a race -- it sleeps the budget and
-        # then has to be scheduled, while the walk runs -- so try until
-        # it does; but every single try must answer, because a miss
-        # here is the wedge.  Each try extends the candidate, so the
-        # candidate walk is fresh text rather than a cached resume: a
-        # repeat at the same anchor costs nothing to walk and so would
-        # never run out of budget.
-        fired = None
-        last = None
-        for attempt in range(10):
-            cand = CAND[:-1] + (", ADD_0" * attempt) + "]"
-            r = _send_trytactic(c, 7360 + attempt, uri, 6, END, cand,
-                                budget_ms=1)
-            assert_true(r is not None,
-                        f"probe {attempt} answered at all; no reply is the "
-                        f"wedge this test exists for")
-            res = r.get("result") or {}
-            last = res
-            if "budget" in (res.get("error") or ""):
-                fired = res["error"]
-                break
-        assert_true(fired is not None,
-                    f"a 1ms budget stopped a walk in ten tries "
-                    f"(last reply {last!r})")
+        # The anchor walk ran out, so the report names the body's step.
+        # `budgetReport' slices the span the walker left behind out of
+        # whichever text it was told to blame, so blaming the wrong one
+        # does not merely mislabel the step: it indexes one string with
+        # the other's offsets.
+        err = probe(c, 7360, SLOW_BODY, "simp[]")
+        assert_contains(err, "`CONV_TAC EVAL`",
+                        "the anchor's timeout names the body's step")
 
-        # Whichever walk it stopped, it must blame that walk's own
-        # text -- the two index different strings, and either can be
-        # the one that ran out.  The sharp assertions here are the
-        # reply and the survival either side of this; this one only
-        # holds the report to naming something that exists.
-        if "`" in fired:
-            step = fired.split("`")[1]
-            # As the server renders it: every whitespace character
-            # becomes a space (runs are *not* collapsed, so offsets
-            # still line up), and anything past 60 characters is cut
-            # to 57 plus an ellipsis -- `goal_state_init.ML:160-168'.
-            # Compare on the same terms.  Without this the assertion
-            # could only hold while the candidate stayed under the
-            # cut: `CAND' is 51 characters and each attempt adds 7, so
-            # from the third attempt on a fired canary always named a
-            # step that matched neither text, and whether this test
-            # passed came down to which attempt the 1ms canary won.
-            flat = lambda t: "".join(" " if ch.isspace() else ch
-                                     for ch in t)
-            needle = step[:-3] if step.endswith("...") else step
-            assert_true(any(needle in flat(h) for h in (src, cand)),
-                        f"the named step comes from one of the two texts "
-                        f"the walks index ({step!r} in {fired!r})")
+        # And the candidate walk has a budget of its own, or this probe
+        # is the one that never comes back.
+        err = probe(c, 7361, FAST_BODY, "EVAL_TAC")
+        assert_contains(err, "`EVAL_TAC`",
+                        "the candidate's timeout names the candidate")
+        assert_true("CONV_TAC" not in err,
+                    f"the candidate's timeout blames the candidate and "
+                    f"not the body ({err!r})")
 
         # And the server is still usable -- the half of this the
         # single-canary version failed.
-        after = _send_goalstate(c, 7369, uri, 6, END)
+        after = _send_goalstate(c, 7369, uri, FAST_BODY[0], FAST_BODY[1])
         assert_true(after is not None,
                     "the server still answers after a probe timed out")
     finally:
         c.close()
-
 
 def test_tryTactic_says_when_a_candidate_will_not_compile():
     """A candidate whose SML does not compile is told so.
@@ -4233,55 +4242,48 @@ def test_goalState_budget_timeout_names_the_step():
     race; the report must then name the step in flight, give its range,
     and count what finished before it.
 
+    Deterministic needs a step that is actually slow.  `EVAL' on
+    `2 ** 200000' takes a second or two against the 1ms budget, so
+    the canary has a thousandfold margin rather than a race to win.
+    This used to prove `a + (b + c) = c + (b + a)' by
+    `rw[] >> metis_tac[...]', where `rw[]' closes the goal in a
+    millisecond and `metis_tac' never runs at all; the walk was over
+    before the canary could be scheduled about half the time, and the
+    test covered for that by retrying ten times with a fresh server
+    each.  See `tryTactic_budget_bounds_both_of_its_walks', which had
+    the same fixture and the same lottery.
+
     The second half is the control: the same walk under the shipped
     budget says nothing at all, so the attribution cannot become noise
     on a healthy proof."""
     src = ("Theory gs_budget\n"
            "Ancestors arithmetic\n\n"
            "Theorem slow_one:\n"
-           "  !a b c:num. a + (b + c) = c + (b + a)\n"
+           "  2 ** 200000 = 2 ** 200000\n"
            "Proof\n"
-           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC]\n"
+           "  ALL_TAC >> CONV_TAC EVAL\n"
            "QED\n")
     uri = "file:///tmp/gs_budget.sml"
-    END = 40   # past `metis_tac[...]', so the walk runs it
+    END = 26   # the end of `CONV_TAC EVAL', so the walk runs it
 
-    # Whether the canary wins is a race: it sleeps the budget and then
-    # has to be scheduled, while the walk runs.  Measured under eight
-    # busy cores it wins about half the tries -- `rw[]' discharges this
-    # goal, so the walk is over in a millisecond or two however hard
-    # the goal is made, and the race is decided inside the first step.
-    # Hence ten tries rather than a slower proof: the walk cannot be
-    # stretched, so the provocation is repeated instead.  A server that
-    # stopped attributing would fail all ten.
-    timed_out = None
-    last = None
-    for attempt in range(10):
-        c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
-        try:
-            _init(c, "/tmp")
-            _did_open(c, uri, src, 1)
-            assert_true(c.wait_for_method("$/compileCompleted", 30),
-                        "compileCompleted")
-            r = _send_goalstate(c, 7101 + attempt, uri, 6, END)
-            res = (r or {}).get("result")
-            assert_true(res is not None, f"a result came back ({r!r})")
-            last = res
-            if res.get("error"):
-                timed_out = res
-                break
-        finally:
-            c.close()
+    c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 7101, uri, 6, END)
+        timed_out = (r or {}).get("result")
+        assert_true(timed_out is not None, f"a result came back ({r!r})")
+    finally:
+        c.close()
 
-    assert_true(timed_out is not None,
-                f"a 1ms budget stopped the walk in ten tries "
-                f"(last reply {last!r})")
     err = timed_out.get("error") or ""
     assert_contains(err, "budget", "the report names the budget")
     assert_contains(err, "step(s) completed",
                     "the report counts what finished")
-    assert_true("`" in err,
-                f"the report names a step in backticks ({err!r})")
+    assert_contains(err, "`CONV_TAC EVAL`",
+                    "the report names the step that was in flight")
     rng = timed_out.get("failedRange")
     assert_true(rng is not None,
                 f"the in-flight step is ranged ({timed_out!r})")
@@ -4295,17 +4297,16 @@ def test_goalState_budget_timeout_names_the_step():
         _did_open(c, uri, src, 1)
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted (default budget)")
-        # Stopping before `metis_tac' keeps this half cheap by
+        # Stopping before `CONV_TAC EVAL' keeps this half cheap by
         # construction rather than by luck, so it tests what it says:
         # a walk inside its budget says nothing about cost.
-        r = _send_goalstate(c, 7110, uri, 6, 6)
+        r = _send_goalstate(c, 7110, uri, 6, 9)
         res = (r or {}).get("result")
         assert_true(res is not None, f"a result came back ({r!r})")
         assert_eq(res.get("error"), None,
                   "a walk that fits its budget reports no cost")
     finally:
         c.close()
-
 
 def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
     """A `by' block is structurally step-able without desugaring it to
