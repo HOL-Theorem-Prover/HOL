@@ -137,10 +137,10 @@ repository.
   user's theory on any path (success, failure, timeout, interrupt); if safe
   cleanup is unavailable, report inapplicable instead.
   `theory_tests/refuteMfClean*` and `refuteRegistrationClean*` check this.
-- Ancestry: refuteTheory's parents are real, words, rat, finite_map and
-  listRange (the declared `sorting` folds into `finite_map`); its
-  `Ancestors` declaration is exact and the selftest asserts the parent
-  set.
+- Ancestry: refuteTheory's parents are words, frac, finite_map,
+  finite_set and listRange (the declared `sorting` folds into
+  `finite_map`); its `Ancestors` declaration is exact and the selftest
+  asserts the parent set.
 
 ## Testing Guidelines
 

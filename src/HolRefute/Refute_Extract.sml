@@ -475,9 +475,9 @@ structure Refute_Extract :> Refute_Extract = struct
         kname constructor = wanted) (#constructors info)))
     end
 
-  (* A finite set's helpers, as a finite map's: [member] and [elements] (distinct, by the element equality) read an
-     fINSERT chain as the set it denotes.  Their names request the element
-     equality. *)
+  (* A finite set's helpers, as a finite map's: [member] and [elements]
+     (distinct, by the element equality) read an fINSERT chain as the set
+     it denotes.  Their names request the element equality. *)
   fun fset_element_type ty = hd (#Args (Type.dest_thy_type ty))
 
   fun fset_helper (context as {fsets, ...} : context) ty which =
@@ -1842,10 +1842,11 @@ structure Refute_Extract :> Refute_Extract = struct
         | _ => NONE
     end
 
-  (* The finite-set operations, in either mode, from the helpers of [fset_helper_declarations] and the chain
-     constructors.  A result set is rebuilt as a chain from a list of
-     elements, as [FUNION] rebuilds a map: [onto] puts them onto a set,
-     both in the extraction's representation. *)
+  (* The finite-set operations, in either mode, from the helpers of
+     [fset_helper_declarations] and the chain constructors.  A result set
+     is rebuilt as a chain from a list of elements, as [FUNION] rebuilds a
+     map: [onto] puts them onto a set, both in the extraction's
+     representation. *)
   fun fset_primitive context head arguments =
     let
       val {force, delay, defer, apply, ...} = context_operations context
