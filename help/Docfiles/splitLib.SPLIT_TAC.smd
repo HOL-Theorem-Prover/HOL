@@ -24,7 +24,9 @@ datatype `ty`; `splitLib.type_split_of ty` gives the conclusion rule.
 `SPLIT_TAC rules` rewrites the conclusion with one instance of a
 conclusion rule: the matching redex under the fewest binders it depends
 on, outermost and leftmost first, with `P` taken as the enclosing
-formula. If no conclusion rule applies, it rewrites the first assumption
+formula. Abstractions in function position are not entered, so a
+redex inside an unreduced beta-redex is not found. If no conclusion rule
+applies, it rewrites the first assumption
 to which an assumption rule applies and strips the result, producing a
 goal per case.
 

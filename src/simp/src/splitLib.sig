@@ -2,9 +2,12 @@ signature splitLib =
 sig
   include Abbrev
 
-  (* One split of a term, at the first occurrence a rule applies to; at
-     one occurrence a later rule takes precedence over an earlier one.  The
-     rules are analysed when the conversion is built. *)
+  (* One split of a term, at the first occurrence a rule applies to.  At
+     one occurrence, rules are grouped by constant and type shape: groups
+     are tried in the order of their first rule, and within a group a
+     later rule takes precedence.  Abstractions in function position are
+     not entered, so the term should be beta-reduced.  The rules are
+     analysed when the conversion is built. *)
   val SPLIT_CONV : thm list -> conv
 
   (* Splits the first assumption that one of the assumption rules applies
