@@ -34,7 +34,7 @@ fun remove_tree path =
 
 fun make_executable path =
   let
-    val _ = write_file path "#!/bin/sh\nexit 0\n"
+    val _ = aiLib.write_file path "#!/bin/sh\nexit 0\n"
     val status = OS.Process.system ("/bin/chmod 700 " ^ path)
   in
     if OS.Process.isSuccess status then ()
@@ -110,7 +110,7 @@ fun test_child root =
        \timeout = 21\n\
        \cores = 3\n\
        \prover.e.executable = " ^ config_exec ^ "\n")
-    val _ = write_file config config_contents
+    val _ = aiLib.write_file config config_contents
     val _ = expect "state directory" (OS.FileSys.isDir (hhConfig.state_dir ()))
     val _ = expect "comment and assignment parsing"
       (is_some "key = value" (hhConfig.get "plain"))
@@ -223,12 +223,12 @@ fun test_child root =
     val _ = hhConfig.hh_unset "timeout"
     val _ = expect "hh_unset restores config precedence"
       (hhConfig.hh_get "timeout" = "21")
-    val _ = write_file config
+    val _ = aiLib.write_file config
       ("provers = not-a-holyhammer-prover\n" ^ config_contents)
     val _ = expect "provers are validated at snapshot time"
       (option_error ["provers", "prover names: e, vampire"]
         (fn () => ignore (hhConfig.snapshot ())))
-    val _ = write_file config config_contents
+    val _ = aiLib.write_file config config_contents
     val _ = hhConfig.hh_set ("provers", "e vampire")
     val _ = expect "prover lists parse to provers"
       (#provers (hhConfig.snapshot ()) = [Eprover, Vampire])
@@ -272,7 +272,7 @@ fun test_child root =
     val find_e_exec = hhConfig.find_exec "e" "HOL4_EPROVER_EXECUTABLE"
     val _ = expect "configuration executable discovery"
       (is_some config_exec (find_e_exec ["path-exec"]))
-    val _ = write_file config
+    val _ = aiLib.write_file config
       ("priority = user # comments are ignored\n\
        \integer = 42\n\
        \enabled = YeS\n\
@@ -318,7 +318,7 @@ fun make_fixture root =
     val hammer = join (join home ".hol4") "hammer"
     val _ = mkdirs hammer
     val _ = mkdirs (join holdir "etc")
-    val _ = write_file (join (join holdir "etc") "hammer-config")
+    val _ = aiLib.write_file (join (join holdir "etc") "hammer-config")
       "priority = system\nplain = system value\nsystem.only = system only\n"
   in
     (home, holdir, join root "path", join root "env-exec")
@@ -355,7 +355,7 @@ fun run_parent () =
       " ./selftest.exe"
     val _ = tprint "hhConfig hermetic selftests"
     val first = OS.Process.system command
-    val _ = write_file (join (join (join home ".hol4") "hammer")
+    val _ = aiLib.write_file (join (join (join home ".hol4") "hammer")
                             "config") "# no cache_max_entries here\n"
     val second = OS.Process.system env_command
     val _ = remove_tree root
@@ -449,7 +449,7 @@ fun test_hhTptpProblem () =
         Atom (Tm (("p", [TyVar "A"]), [ite])))
     fun golden name format problem =
       expect_equal ("TPTP golden " ^ name)
-        (String.concat (read_lines (join "test-data/problems" name)))
+        (String.concat (aiLib.bare_readl (join "test-data/problems" name)))
         (string_of_problem format ("hhTptpProblem " ^ name) problem)
     fun fails_with fragment thunk =
       (thunk (); false) handle Fail message =>
@@ -1594,8 +1594,8 @@ fun test_hhProblemGen () =
     val exported = (memo_goal, memo_facts)
     val _ = export_pb_in memo export_options output1 exported
     val _ = export_pb_in memo export_options output2 exported
-    val first_export = String.concat (read_lines output1)
-    val second_export = String.concat (read_lines output2)
+    val first_export = String.concat (aiLib.bare_readl output1)
+    val second_export = String.concat (aiLib.bare_readl output2)
     val _ = OS.FileSys.remove output1
     val _ = OS.FileSys.remove output2
     val _ = expect "hhProblemGen export is stable and memoizes lambda handling"
@@ -1687,12 +1687,12 @@ fun test_hhProblemGen () =
            mono_instances = instances}
         val temporary = OS.FileSys.tmpName ()
         val _ = export_pb options temporary exported
-        val actual = String.concat (read_lines temporary)
+        val actual = String.concat (aiLib.bare_readl temporary)
         val _ = OS.FileSys.remove temporary
         val path = join "test-data/problems" name
       in
         expect_equal ("hhProblemGen golden " ^ name)
-          (String.concat (read_lines path)) actual
+          (String.concat (aiLib.bare_readl path)) actual
       end
     val _ = List.app (golden_problem_of golden_exported 100) golden_specs
     (* A bound function-valued variable and one polymorphic constant used
@@ -1727,7 +1727,7 @@ fun test_hhProblemGen () =
       [(roundtrip_name, roundtrip_theorem),
        (roundtrip_name, roundtrip_theorem)])
     val _ = export_pb export_options roundtrip_file roundtrip_input
-    val roundtrip_problem = String.concat (read_lines roundtrip_file)
+    val roundtrip_problem = String.concat (aiLib.bare_readl roundtrip_file)
     val _ = OS.FileSys.remove roundtrip_file
     val escaped_roundtrip = aiLib.escape ("thm." ^ roundtrip_name)
     val escaped_copy = aiLib.escape ("thm2." ^ roundtrip_name)
@@ -2108,7 +2108,7 @@ fun test_hhProblemGen_counter_window () =
         val first = counter ()
         val used_text =
           (hhProblemGen.export_pb options file (goal, premises);
-           (counter () - first - 1, String.concat (read_lines file)))
+           (counter () - first - 1, String.concat (aiLib.bare_readl file)))
           handle e => (finish (); raise e)
       in
         finish (); used_text
@@ -2288,7 +2288,7 @@ val sample_request : hhProver.run_request =
 
 fun test_recording file parser expected_szs expected_axioms =
   let
-    val (szs, axioms) = parser (read_lines (join "test-data" file))
+    val (szs, axioms) = parser (aiLib.bare_readl (join "test-data" file))
     val _ = expect_equal ("recording status " ^ file) expected_szs szs
   in
     expect_equal ("recording axioms " ^ file) expected_axioms axioms
@@ -2384,7 +2384,7 @@ fun test_hhProver () =
       "TSTP parse-back drops generated names and dedups copies"
       ["alpha", "beta"]
       (hhProver.axioms_from_tstp
-        (read_lines "test-data/hhproblemgen-roundtrip.out"))
+        (aiLib.bare_readl "test-data/hhproblemgen-roundtrip.out"))
     val _ = expect_equal "TSTP parse-back accepts thm copies and dedups"
       ["alpha"]
       (hhProver.axioms_from_tstp
@@ -2392,13 +2392,15 @@ fun test_hhProver () =
          "fof(thm2_2Ealpha, axiom, p).",
          "fof(thm10_2Ealpha, axiom, p)."])
     val _ = expect_equal "E version parser" (SOME "3.2.5-ho")
-      (#parse_version e (String.concat (read_lines "test-data/e-version.out")))
+      (#parse_version e
+       (String.concat (aiLib.bare_readl "test-data/e-version.out")))
     val _ = expect_equal "Vampire version parser" (SOME "5.0.1")
       (#parse_version vampire
-       (String.concat (read_lines "test-data/vampire-version.out")))
+       (String.concat (aiLib.bare_readl "test-data/vampire-version.out")))
     val _ = expect_equal "Zipperposition version parser" (SOME "2.1")
       (#parse_version zipperposition
-       (String.concat (read_lines "test-data/zipperposition-version.out")))
+       (String.concat
+          (aiLib.bare_readl "test-data/zipperposition-version.out")))
     val _ = expect_equal "Z3 TPTP version parser" (SOME "4.11.2.0")
       (#parse_version z3 "Z3tptp [4.11.2.0] (c) Microsoft Corp.")
     val _ = expect_equal "E command"
@@ -2724,9 +2726,9 @@ fun test_hhCache () =
     val problem2 = join moved "renamed.p"
     val problem3 = join root "changed.p"
     val contents = "fof(cache_fixture, conjecture, $true).\n"
-    val _ = write_file problem1 contents
-    val _ = write_file problem2 contents
-    val _ = write_file problem3 (contents ^ "% changed\n")
+    val _ = aiLib.write_file problem1 contents
+    val _ = aiLib.write_file problem2 contents
+    val _ = aiLib.write_file problem3 (contents ^ "% changed\n")
     val first : hhCache.key_parts =
       {prover = "e", version = SOME "3.2.5",
        argv = ["--cpu-limit=10", problem1], problem = problem1}
@@ -2792,7 +2794,7 @@ fun test_hhCache () =
       {prover = "e", version = NONE, argv = ["--corrupt", problem1],
        problem = problem1}
     val corrupt_path = join cache (hhCache.key_of corrupt)
-    val _ = write_file corrupt_path "this is not JSON"
+    val _ = aiLib.write_file corrupt_path "this is not JSON"
     val _ = expect "corrupt cache entries are misses"
       (not (Option.isSome
         (hhCache.lookup options (hhCache.key_of corrupt))))
@@ -2868,7 +2870,7 @@ fun test_holyHammer_validation () =
               (fn () => hh_error (fn () =>
                 ignore (holyHammer.hh_pb "" [Zipperposition] []
                   ([], boolSyntax.T)))) ()
-            val printed = String.concat (read_lines output)
+            val printed = String.concat (aiLib.bare_readl output)
             val _ = OS.FileSys.remove output
           in
             expect "no-prover path prints downloader hint"
@@ -2972,7 +2974,7 @@ fun run_text config timeout =
     val result = hhProver.run config
       {timeout = timeout, problem = "unused", extra = [],
        debug_dir = SOME dir}
-    val text = String.concat (read_lines (#output_file result))
+    val text = String.concat (aiLib.bare_readl (#output_file result))
     val _ = remove_tree dir
   in
     (result, text)
@@ -3027,7 +3029,7 @@ fun test_runner () =
       (#parse_output e)
     val (printer_result, printed) = run_text printer 2
     val recorded = String.concat
-      (read_lines (join fixture_dir "e-theorem-chatter.out"))
+      (aiLib.bare_readl (join fixture_dir "e-theorem-chatter.out"))
     val _ = expect "runner captures stdout intact"
       (#szs printer_result = hhProver.SzsTheorem andalso
        printed = recorded)
@@ -3044,7 +3046,7 @@ fun test_runner () =
     val _ = #kill running_fork ()
     val forking_result = #wait running_fork ()
     val grandchild = pid_from_output
-      (String.concat (read_lines (#output_file forking_result)))
+      (String.concat (aiLib.bare_readl (#output_file forking_result)))
     val grandchild_gone = wait_until
       (Time.+ (Time.now (), Time.fromSeconds 5))
       (fn () => process_is_gone grandchild)
@@ -3552,7 +3554,7 @@ fun fixture_child_gone directory name =
   case output_files directory name of
       [path] =>
         let
-          val pid = pid_from_output (String.concat (read_lines path))
+          val pid = pid_from_output (String.concat (aiLib.bare_readl path))
         in
           wait_until (Time.+ (Time.now (), Time.fromSeconds 5))
             (fn () => process_is_gone pid)
@@ -3640,10 +3642,10 @@ fun test_schedule_reconstruction_failure parser =
        fixture_slice Z3 ["0", "schedule-add1.out"] 1]
     val config = printer_config name slices (fn _ => ()) parser
     val (bad_status, bad_axioms) =
-      parser (read_lines (join schedule_fixture_dir bad_recording))
+      parser (aiLib.bare_readl (join schedule_fixture_dir bad_recording))
     val (good_status, good_axioms) =
       parser
-        (read_lines (join schedule_fixture_dir "schedule-add1.out"))
+        (aiLib.bare_readl (join schedule_fixture_dir "schedule-add1.out"))
     val options = fixture_options [Z3] 2 1 5 false "" NONE
     val goal = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
     val ((result, events), stderr) = capture_stderr (fn () =>
@@ -3945,11 +3947,11 @@ fun test_schedule_isolation parser =
             | SOME _ => (second_path := SOME path; false))
       in
         if first then
-          (first_text := String.concat (read_lines path);
+          (first_text := String.concat (aiLib.bare_readl path);
            await_schedule_test "overlapping export did not finish"
              (fn () => locked (fn () => !release));
-           intact := !first_text = String.concat (read_lines path))
-        else second_text := String.concat (read_lines path)
+           intact := !first_text = String.concat (aiLib.bare_readl path))
+        else second_text := String.concat (aiLib.bare_readl path)
       end
     val options = fixture_options [Z3] 1 1 5 false "" NONE
     val first_result = ref NONE
@@ -4039,8 +4041,8 @@ fun test_schedule_filter_rankings parser =
     val result =
       run_with
         [("knn", ["boolTheory.TRUTH"]), ("mepo", ["boolTheory.T_DEF"])]
-    val knn_text = String.concat (read_lines knn_path)
-    val mepo_text = String.concat (read_lines mepo_path)
+    val knn_text = String.concat (aiLib.bare_readl knn_path)
+    val mepo_text = String.concat (aiLib.bare_readl mepo_path)
     val _ = expect "filter-only problem keys and directories are distinct"
       (knn_path <> mepo_path andalso
        OS.FileSys.access (knn_path, []) andalso
@@ -4092,10 +4094,10 @@ fun test_schedule_knn_anchor_export () =
     val _ = expect "all-knn export preserves longest-ranking prefixes"
       (hhSchedule.problem_path root one <> hhSchedule.problem_path root two
        andalso
-       String.concat (read_lines (hhSchedule.problem_path root one)) =
-         String.concat (read_lines (join expected_one "atp_in")) andalso
-       String.concat (read_lines (hhSchedule.problem_path root two)) =
-         String.concat (read_lines (join expected_two "atp_in")))
+       String.concat (aiLib.bare_readl (hhSchedule.problem_path root one)) =
+         String.concat (aiLib.bare_readl (join expected_one "atp_in")) andalso
+       String.concat (aiLib.bare_readl (hhSchedule.problem_path root two)) =
+         String.concat (aiLib.bare_readl (join expected_two "atp_in")))
     val _ = List.app remove_tree [expected_one, expected_two]
     val _ = List.app (remove_tree o OS.Path.dir)
       [hhSchedule.problem_path root one, hhSchedule.problem_path root two]
@@ -4140,7 +4142,7 @@ fun test_schedule_mono_cap_export () =
       [("knn", map (fn fact => "listTheory." ^ fact) facts)])
       [(small_cap, slice)]
     val problem =
-      String.concat (read_lines (hhSchedule.problem_path root slice))
+      String.concat (aiLib.bare_readl (hhSchedule.problem_path root slice))
     fun exported fact =
       String.isSubstring ("thm_2ElistTheory_2E" ^
         String.translate (fn #"_" => "__" | c => str c) fact) problem
@@ -4158,14 +4160,15 @@ fun test_with_problem_dir () =
     val _ = OS.FileSys.remove outside
     val _ = mkdir outside
     val kept_file = join outside "kept"
-    val _ = write_file kept_file "kept"
+    val _ = aiLib.write_file kept_file "kept"
     fun options debug_dir =
       fixture_options [Eprover] 1 1 5 false "" debug_dir
     fun populate root =
       let
         val slice_dir = join root "e.knn.fof...32"
         val _ = mkdir slice_dir
-        val _ = write_file (join slice_dir "atp_in") "fof(a, axiom, $true)."
+        val _ = aiLib.write_file (join slice_dir "atp_in")
+          "fof(a, axiom, $true)."
         val _ = Posix.FileSys.symlink {old = outside, new = join root "link"}
       in
         root
@@ -4245,17 +4248,17 @@ fun test_schedule_export_wiring () =
     val _ = hhExportFof.fof_export_pb expected_dir (boolSyntax.T, [])
     val _ = hhSchedule.export_problems root (options NONE) goal
       [("none", [])] [(e, legacy)]
-    val legacy_empty_text = String.concat (read_lines legacy_path)
+    val legacy_empty_text = String.concat (aiLib.bare_readl legacy_path)
     val _ = expect "legacy scheduler dispatch is byte-identical"
       (legacy_empty_text =
-       String.concat (read_lines (join expected_dir "atp_in")))
+       String.concat (aiLib.bare_readl (join expected_dir "atp_in")))
     val _ = hhSchedule.export_problems root (options NONE) goal
       [("none", ["boolTheory.TRUTH"])] [(e, legacy)]
     val _ = expect "filter=none exports premises beyond the slice fact count"
-      (legacy_empty_text <> String.concat (read_lines legacy_path))
+      (legacy_empty_text <> String.concat (aiLib.bare_readl legacy_path))
     val _ = hhSchedule.export_problems root (options NONE) goal [("none", [])]
       [(e, lifting), (e, combs), (e, lifting)]
-    val lifting_text = String.concat (read_lines lifting_path)
+    val lifting_text = String.concat (aiLib.bare_readl lifting_path)
     val _ = expect "problem exports re-key full triples"
       (lifting_path <> combs_path andalso OS.FileSys.access (lifting_path, [])
        andalso OS.FileSys.access (combs_path, []))
@@ -4266,7 +4269,8 @@ fun test_schedule_export_wiring () =
     val _ = hhSchedule.export_problems root
       (options (SOME 77)) goal [("none", [])] [(e, lifting)]
     val _ = expect "explicit mono-instance option beats the prover config cap"
-      (contains "mono_instances=77" (String.concat (read_lines lifting_path)))
+      (contains "mono_instances=77"
+        (String.concat (aiLib.bare_readl lifting_path)))
     fun mono_slice prover : hhProver.slice =
       {prover = prover, format = "th0", type_enc = "mono_native_higher",
        lam_trans = "keep_lams", nfacts = 0, filter = "none",
@@ -4280,9 +4284,9 @@ fun test_schedule_export_wiring () =
     val _ = expect "prover-specific monomorphization exports stay distinct"
       (e_mono_path <> vampire_mono_path andalso
        contains "mono_instances=128"
-         (String.concat (read_lines e_mono_path)) andalso
+         (String.concat (aiLib.bare_readl e_mono_path)) andalso
        contains "mono_instances=256"
-         (String.concat (read_lines vampire_mono_path)))
+         (String.concat (aiLib.bare_readl vampire_mono_path)))
     val _ = remove_tree expected_dir
   in
     remove_tree root
@@ -4336,7 +4340,7 @@ fun test_schedule_legacy_sharing () =
        smlRedirect.hidef (hhSchedule.export_problems_observed observer root
          options goal rankings) schedule)
     fun text slice =
-      String.concat (read_lines (hhSchedule.problem_path root slice))
+      String.concat (aiLib.bare_readl (hhSchedule.problem_path root slice))
     fun direct ranking count =
       let
         val dir = OS.FileSys.tmpName ()
@@ -4347,7 +4351,7 @@ fun test_schedule_legacy_sharing () =
         val _ = hhExportFof.fof_export_pb dir
           (boolSyntax.list_mk_imp goal,
            List.filter (null o Thm.hyp o #2) named)
-        val result = String.concat (read_lines (join dir "atp_in"))
+        val result = String.concat (aiLib.bare_readl (join dir "atp_in"))
       in
         (remove_tree dir; result)
       end
@@ -4408,21 +4412,21 @@ fun test_schedule_legacy_sharing () =
     val _ = mkdir parent
     val blocked = join parent "atp_in"
     val _ = mkdir blocked
-    val _ = write_file (join blocked "occupied") "x"
+    val _ = aiLib.write_file (join blocked "occupied") "x"
     val raised = (hhSchedule.copy_file source blocked; false)
       handle OS.SysErr _ => true
     val missing = join (join parent "absent") "atp_in"
     val raised_missing = (hhSchedule.copy_file source missing; false)
       handle IO.Io _ => true
     val good = join parent "good"
-    val _ = write_file good "old"
+    val _ = aiLib.write_file good "old"
     val size = hhSchedule.copy_file source good
     val _ = expect "a failed copy raises and leaves no temporary file"
       (raised andalso raised_missing andalso
        is_dir blocked andalso
        list_directory parent = ["atp_in", "good"] andalso
        size = String.size (text knn_a) andalso
-       String.concat (read_lines good) = text knn_a)
+       String.concat (aiLib.bare_readl good) = text knn_a)
     (* A writer that fails midway leaves the old target and no temporary. *)
     val failed = (hhConfig.write_atomically
       {open_out = TextIO.openOut, close_out = TextIO.closeOut} good
@@ -4430,7 +4434,7 @@ fun test_schedule_legacy_sharing () =
       handle Div => true
     val _ = expect "a failing atomic writer keeps the target and cleans up"
       (failed andalso list_directory parent = ["atp_in", "good"] andalso
-       String.concat (read_lines good) = text knn_a)
+       String.concat (aiLib.bare_readl good) = text knn_a)
   in
     remove_tree root
   end
@@ -4725,7 +4729,7 @@ struct
       (root_files root)
   (* The files of a root (relative paths) with their bytes, sorted. *)
   fun tree root =
-    map (fn file => (file, String.concat (read_lines (join root file))))
+    map (fn file => (file, String.concat (aiLib.bare_readl (join root file))))
       (sorted_files root)
   (* A start whose runs stay below the next power of ten (the counter
      only moves forward, so a fresh start is the next number unless a
@@ -4913,7 +4917,7 @@ fun test_schedule_staged () =
     val blocked = hhSchedule.problem_path root (#2 (List.nth (failing, 2)))
     val _ = hhConfig.ensure_dir (OS.Path.dir blocked)
     val _ = mkdir blocked
-    val _ = write_file (join blocked "occupied") "x"
+    val _ = aiLib.write_file (join blocked "occupied") "x"
     val raised = (quiet (fn () => hhSchedule.export_problems root
       (options NONE) goal [("knn", ranking)] failing); false)
       handle OS.SysErr _ => true
@@ -4940,7 +4944,8 @@ fun test_schedule_staged () =
       (hhExportFof.fof_export_pbfile file (``\x:num. x``, []); false)
       handle Feedback.HOL_ERR _ => true
     val _ = expect "a direct legacy failure raises before the first write"
-      (raised_direct andalso String.size (String.concat (read_lines file)) = 0)
+      (raised_direct andalso
+       String.size (String.concat (aiLib.bare_readl file)) = 0)
     val _ = remove_tree root
     (* with_problem_dir removes the root, staged files included. *)
     val parent = hhSchedule.new_problem_dir (hhConfig.state_dir ())
@@ -5802,8 +5807,9 @@ fun test_schedule_pool () =
             (hhSchedule.problem_path root slice, [])) sched andalso
           no_temporaries root
         fun generated_text root sched indices =
-          map (fn index => String.concat (read_lines (hhSchedule.problem_path
-                 root (#2 (List.nth (sched, index)))))) indices
+          map (fn index => String.concat (aiLib.bare_readl
+                 (hhSchedule.problem_path root
+                    (#2 (List.nth (sched, index)))))) indices
         val (serial_files, _, _) = export plain 1 concurrent_start
         val (first_serial, _, _) = export_of
           {label = "pool", goal = pool_goal,
@@ -5960,7 +5966,7 @@ fun test_schedule_pool () =
             val _ = smlRedirect.hide_in_file file (fn () =>
               using plain silent root (options_with 8 workers NONE NONE)
                 pool_goal [("knn", pool_ranking)] schedule) ()
-            val text = String.concat (read_lines file)
+            val text = String.concat (aiLib.bare_readl file)
           in
             (OS.FileSys.remove file; remove_tree root; text)
           end
@@ -6170,7 +6176,7 @@ fun test_schedule_pipelined parser =
           let val path = #problem request in
             monitor_do m (fn () =>
               entered := (relative root path,
-                          String.concat (read_lines path), !released) ::
+                          String.concat (aiLib.bare_readl path), !released) ::
                          !entered)
           end
         fun progress event =
@@ -8560,7 +8566,7 @@ fun test_hypothesis_premises () =
     fun export ranking =
       (hhSchedule.export_problems root options goal [("none", ranking)]
          (map (fn s => (prover Eprover, s)) slices);
-       map (String.concat o read_lines o hhSchedule.problem_path root)
+       map (String.concat o aiLib.bare_readl o hhSchedule.problem_path root)
          slices)
     val with_fixture = export [truth, fixture]
     val without_fixture = export [truth]

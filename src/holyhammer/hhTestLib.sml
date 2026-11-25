@@ -9,27 +9,6 @@ struct
 
 fun join a b = OS.Path.concat (a, b)
 
-fun write_file path contents =
-  let
-    val output = TextIO.openOut path
-    val _ = TextIO.output (output, contents)
-  in
-    TextIO.closeOut output
-  end
-
-fun read_lines path =
-  let
-    val input = TextIO.openIn path
-    fun loop lines =
-      case TextIO.inputLine input of
-          NONE => List.rev lines
-        | SOME line => loop (line :: lines)
-    val lines = loop []
-    val _ = TextIO.closeIn input
-  in
-    lines
-  end
-
 fun expect message truth =
   (testutils.tprint message;
    if truth then testutils.OK () else testutils.die ("FAILED: " ^ message))

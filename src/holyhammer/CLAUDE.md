@@ -25,9 +25,11 @@ is no per-test flag; comment out the top-level call to isolate a
 section.  The selftest launches no real prover; live proof search is
 exercised by `smoke.exe` alone, which runs each tested prover alone, the
 schedule (and its cache), the MePo/MaSh/MeSh selectors, every typed
-slice, and unprovable goals, printing one line per check; absent
-provers are skipped.  Under the whole-tree build the full selftest runs
-only when `HOLSELFTESTLEVEL` is set (see `Holmakefile`).
+slice, and unprovable goals, printing one line per check.  It fails,
+naming them, when E, Vampire or Zipperposition is absent; Z3 is only
+run, when present, by the runner check.  Under the whole-tree build the
+full selftest runs only when `HOLSELFTESTLEVEL` is set (see
+`Holmakefile`).
 
 Prover-parsing tests are hermetic: they replay recorded prover stdout
 from `test-data/` rather than invoking a binary.  When you change output

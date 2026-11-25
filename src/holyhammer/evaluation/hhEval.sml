@@ -2058,11 +2058,15 @@ fun write_evalscript expdir thy conditions sample =
     val action = "val _ = hhEval.eval_thy " ^ Portable.mlquote expdir ^
       " " ^ Portable.mlquote thy ^ ";"
     val worker_theory = "hheval_worker_" ^ safe_component thy
-    (* hhEval is not in sigobj: it is built in this directory only. *)
+    (* hhEval is not in sigobj: it is built in this directory only, of
+       the tree whose bin/hol runs the worker. *)
     val evaluation_dir =
-      join (join (join (holdir ()) "src") "holyhammer") "evaluation"
+      join (join (join Globals.HOLDIR "src") "holyhammer") "evaluation"
+    (* Reconstruction replays a Metis tactic, whose structure the heap of
+       a theory built before bossLib lacks. *)
     val _ = write_file path
       ("load \"BasicProvers\";\n" ^
+       "load \"metisTools\";\n" ^
        "load " ^ Portable.mlquote (thy ^ "Theory") ^ ";\n" ^
        "val _ = Feedback.quiet_messages Theory.new_theory " ^
        Portable.mlquote worker_theory ^ ";\n" ^

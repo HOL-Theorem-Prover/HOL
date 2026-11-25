@@ -4,91 +4,13 @@
 (* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 
-fun fresh_output () =
-  let
-    val path = OS.FileSys.tmpName ()
-    val _ = OS.FileSys.remove path handle OS.SysErr _ => ()
-  in
-    path
-  end
-
-(* Runs every installed prover once, through its own command line, on a
-   one-step problem; an absent prover is reported and skipped. *)
-fun runner_smoke problem prover =
-  let
-    val name = hhConfig.prover_name prover
-    val config = hhProver.config_of prover
-  in
-    case hhProver.probe config of
-        NONE => print ("runner " ^ name ^ ": skipped (absent)\n")
-      | SOME _ =>
-          let
-            val result = hhProver.run config
-              {timeout = 5, problem = problem, extra = [], debug_dir = NONE}
-          in
-            if #szs result = hhProver.SzsTheorem then
-              print ("runner " ^ name ^ ": Theorem\n")
-            else raise Fail ("runner smoke failed for " ^ name ^
-              ": status=" ^ hhProver.szs_name (#szs result))
-          end
-  end
-
-fun runner_smokes () =
-  let
-    val problem = OS.FileSys.tmpName ()
-    val stream = TextIO.openOut problem
-    val _ = TextIO.output (stream,
-      "fof(thm_2Ekeep__name, axiom, p).\nfof(conjecture, conjecture, p).\n")
-    val _ = TextIO.closeOut stream
-    fun remove () = OS.FileSys.remove problem handle OS.SysErr _ => ()
-  in
-    (app (runner_smoke problem) hhConfig.all_provers; remove ())
-    handle error => (remove (); raise error)
-  end
-
-(* Runs the user-facing hh_pb with E on arithmeticTheory.ADD1, and checks
-   that the tactic to use is the last thing printed, after every slice has
-   reported. *)
-fun hh_pb_smoke () =
-  case hhProver.probe (hhProver.config_of hhConfig.Eprover) of
-      NONE => print "hh_pb e: skipped (absent)\n"
-    | SOME _ =>
-        let
-          val root = fresh_output ()
-          val _ = OS.FileSys.mkDir root
-          val output = OS.Path.concat (root, "stdout")
-          val add1 = DB.fetch "arithmetic" "ADD1"
-          fun call () =
-            (ignore (holyHammer.hh_pb root [hhConfig.Eprover]
-               ["arithmeticTheory.ADD1"] (Thm.dest_thm add1));
-             TextIO.flushOut TextIO.stdOut)
-          val printed =
-            (holyHammer.set_timeout 10;
-             TextIO.flushOut TextIO.stdOut;
-             smlRedirect.hide_in_file output call ();
-             hhConfig.hh_unset "timeout";
-             aiLib.readl output)
-            handle error =>
-              (hhConfig.hh_unset "timeout"; hhConfig.remove_tree root;
-               raise error)
-          val _ = hhConfig.remove_tree root
-        in
-          case List.rev printed of
-              tactic :: "Replace `hh_pb` with:" :: _ =>
-                if String.isPrefix "  " tactic andalso
-                   String.isSubstring "ADD1" tactic
-                then print ("hh_pb e:" ^ tactic ^ "\n")
-                else raise Fail ("hh_pb smoke: unexpected tactic " ^ tactic)
-            | _ => raise Fail "hh_pb smoke: no tactic printed last"
-        end
-
-
 fun join a b = OS.Path.concat (a, b)
 
 (* Applies f to a fresh directory, which is removed afterwards. *)
 fun with_fresh_dir f =
   let
-    val dir = fresh_output ()
+    val dir = OS.FileSys.tmpName ()
+    val _ = OS.FileSys.remove dir handle OS.SysErr _ => ()
     val _ = OS.FileSys.mkDir dir
   in
     (f dir before hhConfig.remove_tree dir)
@@ -96,20 +18,6 @@ fun with_fresh_dir f =
   end
 
 fun installed prover = isSome (hhProver.probe (hhProver.config_of prover))
-
-(* The checks below run the installed tested provers on their default
-   slice tables, each search for at most timeout seconds, on the premises
-   given (filter none) and without the cache. *)
-val timeout = 30
-val tested_provers =
-  List.filter installed
-    [hhConfig.Eprover, hhConfig.Vampire, hhConfig.Zipperposition]
-val settings =
-  [("timeout", Int.toString timeout),
-   ("provers",
-    String.concatWith " " (map hhConfig.prover_name tested_provers)),
-   ("slices", "16"), ("cores", "16"), ("filter", "none"),
-   ("cache", "false"), ("format", ""), ("type_enc", ""), ("lam_trans", "")]
 
 (* Each check prints one line and is counted; one that fails or raises
    makes the smoke fail. *)
@@ -127,22 +35,95 @@ fun check name run =
     print (name ^ ": " ^ detail ^ "\n")
   end
 
-fun reconstructs axioms goal =
+(* Runs every installed prover once, through its own command line, on a
+   one-step problem.  Z3, which no other check uses, may be absent. *)
+fun runner_smoke problem prover =
+  let val name = "runner " ^ hhConfig.prover_name prover in
+    if installed prover then
+      check name (fn () =>
+        let
+          val result = hhProver.run (hhProver.config_of prover)
+            {timeout = 5, problem = problem, extra = [], debug_dir = NONE}
+        in
+          (#szs result = hhProver.SzsTheorem,
+           hhProver.szs_name (#szs result))
+        end)
+    else print (name ^ ": skipped (absent)\n")
+  end
+
+fun runner_smokes () =
+  with_fresh_dir (fn dir =>
+    let
+      val problem = join dir "problem.p"
+      val _ = aiLib.write_file problem
+        "fof(thm_2Ekeep__name, axiom, p).\nfof(conjecture, conjecture, p).\n"
+    in
+      app (runner_smoke problem) hhConfig.all_provers
+    end)
+
+(* Runs the user-facing hh_pb with E on arithmeticTheory.ADD1, and checks
+   that the tactic to use is the last thing printed, after every slice has
+   reported. *)
+fun hh_pb_smoke () =
+  check "hh_pb e" (fn () => with_fresh_dir (fn root =>
+    let
+      val output = join root "stdout"
+      val add1 = DB.fetch "arithmetic" "ADD1"
+      fun call () =
+        (ignore (holyHammer.hh_pb root [hhConfig.Eprover]
+           ["arithmeticTheory.ADD1"] (Thm.dest_thm add1));
+         TextIO.flushOut TextIO.stdOut)
+      val printed =
+        (holyHammer.set_timeout 10;
+         TextIO.flushOut TextIO.stdOut;
+         smlRedirect.hide_in_file output call ();
+         hhConfig.hh_unset "timeout";
+         aiLib.readl output)
+        handle error => (hhConfig.hh_unset "timeout"; raise error)
+    in
+      case List.rev printed of
+          tactic :: "Replace `hh_pb` with:" :: _ =>
+            if String.isPrefix "  " tactic andalso
+               String.isSubstring "ADD1" tactic
+            then (true, String.extract (tactic, 2, NONE))
+            else (false, "unexpected tactic " ^ tactic)
+        | _ => (false, "no tactic printed last")
+    end))
+
+(* The checks below run the tested provers on their default slice tables,
+   each search for at most timeout seconds, on the premises given (filter
+   none), without the cache and without fact or monomorphisation caps. *)
+val timeout = 30
+val tested_provers =
+  [hhConfig.Eprover, hhConfig.Vampire, hhConfig.Zipperposition]
+val settings =
+  [("timeout", Int.toString timeout),
+   ("provers",
+    String.concatWith " " (map hhConfig.prover_name tested_provers)),
+   ("slices", "16"), ("cores", "16"), ("filter", "none"),
+   ("cache", "false"), ("format", ""), ("type_enc", ""), ("lam_trans", ""),
+   ("max_facts", ""), ("mono_instances", "")]
+
+(* NONE when Metis replays the proof from axioms, else why it did not. *)
+fun reconstruction_error axioms goal =
   let val options = hhConfig.snapshot () in
     (ignore (hhReconstruct.hh_reconstruct_with
        {minimize = true, preplay_timeout = #preplay_timeout options,
         minimize_timeout = #minimize_timeout options,
         minimize_deadline = NONE} axioms goal);
-     true)
-    handle Interrupt => raise Interrupt | _ => false
+     NONE)
+    handle Interrupt => raise Interrupt
+         | error => SOME (General.exnMessage error)
   end
 
 (* A prover run passes with a theorem whose parsed axioms Metis replays. *)
 fun verdict goal (result : hhProver.run_result) =
   case (#szs result, #used_axioms result) of
       (hhProver.SzsTheorem, SOME axioms) =>
-        if reconstructs axioms goal then (true, "Theorem, reconstructed")
-        else (false, "Theorem, reconstruction failed")
+        (case reconstruction_error axioms goal of
+             NONE => (true, "Theorem, reconstructed")
+           | SOME message =>
+               (false, "Theorem, reconstruction failed: " ^ message))
     | (hhProver.SzsTheorem, NONE) => (false, "Theorem, no axioms parsed")
     | (szs, _) => (false, hhProver.szs_name szs)
 
@@ -210,13 +191,12 @@ fun goal_smoke (thy, name, kind) =
   let
     val thm = DB.fetch thy name
     val goal = Thm.dest_thm thm
-    val (prover, label) =
+    val label =
       case kind of
-          Alone prover => (SOME prover, hhConfig.prover_name prover)
+          Alone prover => hhConfig.prover_name prover
         | Ranked (prover, filter, _) =>
-            (SOME prover, hhConfig.prover_name prover ^ ", " ^ filter)
-        | Schedule => (NONE, "schedule")
-    val label = thy ^ "." ^ name ^ " [" ^ label ^ "]"
+            hhConfig.prover_name prover ^ ", " ^ filter
+        | Schedule => "schedule"
     fun proof dependencies =
       case kind of
           Alone prover => verdict goal (run_alone prover goal dependencies)
@@ -231,9 +211,7 @@ fun goal_smoke (thy, name, kind) =
           (true, dependencies) => proof dependencies
         | (false, _) => (false, "broken dependencies")
   in
-    if Option.getOpt (Option.map installed prover, true) then
-      check label run
-    else print (label ^ ": skipped (absent)\n")
+    check (thy ^ "." ^ name ^ " [" ^ label ^ "]") run
   end
 
 (* The first proof of a schedule cancels its remaining slices, whose
@@ -279,8 +257,9 @@ fun run_slice options timeout goal premises (slice : hhProver.slice) =
             extra = #extra_opts slice, debug_dir = NONE}))
   end
 
-(* Every typed slice of the default schedule proves ADD1 from ADD1 itself,
-   and its proof, which must name ADD1, is parsed back and replayed. *)
+(* Every typed slice of the default schedule, of which there must be
+   some, proves ADD1 from ADD1 itself, and its proof, which must use that
+   premise, is parsed back and replayed. *)
 fun format_smoke () =
   let
     val options = hhConfig.snapshot ()
@@ -294,9 +273,12 @@ fun format_smoke () =
              #format slice ^ "/" ^ #type_enc slice ^ "/" ^ #lam_trans slice)
         (fn () => format_verdict
           (run_slice options timeout goal ["arithmeticTheory.ADD1"] slice))
+    val typed = List.filter (fn (_, slice) => #type_enc slice <> "")
+      (hhSlice.mk_schedule options)
   in
-    app one (List.filter (fn (_, slice) => #type_enc slice <> "")
-      (hhSlice.mk_schedule options))
+    if null typed then
+      check "format" (fn () => (false, "no typed slice in the schedule"))
+    else app one typed
   end
 
 fun pigeonhole count =
@@ -353,8 +335,7 @@ fun soundness_smoke (name, count) =
           (#slices_run result) andalso
         null (#suggestions result)
       val matrix_ok =
-        List.all (no_theorem o #szs o run_slice options 3 goal [])
-          (List.filter (installed o #prover) matrix)
+        List.all (no_theorem o #szs o run_slice options 3 goal []) matrix
       val public_ok =
         with_fresh_dir (fn dir =>
           holyHammer.main_hh_lemmas dir mlThmData.empty_thmdata goal) = NONE
@@ -365,22 +346,23 @@ fun soundness_smoke (name, count) =
     end)
 
 fun main () =
-  let
-    (* The standalone executable has no script-owned theory by default.
-       Reconstruction evaluates a tactic and therefore needs initialized
-       kernel theory state, just as an interactive HOL session has. *)
-    val _ =
-      (ignore (Theory.current_theory ()); ())
-      handle Feedback.HOL_ERR _ =>
-        Feedback.quiet_messages Theory.new_theory "hhSmoke"
-    val _ = runner_smokes ()
-    val _ = hh_pb_smoke ()
-  in
-    if null tested_provers then
-      (print "HolyHammer smoke: no tested prover is installed\n";
-       OS.Process.failure)
-    else
+  case List.filter (not o installed) tested_provers of
+      absent as _ :: _ =>
+        (print ("HolyHammer smoke: absent provers: " ^
+           String.concatWith " " (map hhConfig.prover_name absent) ^ "\n");
+         OS.Process.failure)
+    | [] =>
       let
+        (* The standalone executable has no script-owned theory by
+           default.  Reconstruction evaluates a tactic and therefore needs
+           initialized kernel theory state, just as an interactive HOL
+           session has. *)
+        val _ =
+          (ignore (Theory.current_theory ()); ())
+          handle Feedback.HOL_ERR _ =>
+            Feedback.quiet_messages Theory.new_theory "hhSmoke"
+        val _ = runner_smokes ()
+        val _ = hh_pb_smoke ()
         val _ = List.app hhConfig.hh_set settings
         val _ = List.app goal_smoke goals
         val _ = check "arithmetic.ADD1 [schedule cache]" cache_smoke
@@ -393,7 +375,6 @@ fun main () =
           Int.toString (!checks) ^ " checks\n");
         if !failures = 0 then OS.Process.success else OS.Process.failure
       end
-  end
 
 val status =
   main ()
