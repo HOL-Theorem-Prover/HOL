@@ -489,7 +489,8 @@ local
                 "<=", ">=", "<", ">"])
 
   fun is_hex_digit_literal t =
-     numSyntax.int_of_term t < 16 handle HOL_ERR _ => false
+     Arbnum.< (numSyntax.dest_numeral t, Arbnum.fromInt 16)
+     handle HOL_ERR _ => false
 
   fun is_bool t = Teq t orelse Feq t
 
@@ -558,7 +559,8 @@ in
         val is_ground = is_ground_fn set
      in
         fn t =>
-          ( List.null (type_vars_in_term t) andalso is_ground t orelse
+          ( (is_ground t handle HOL_ERR _ => false) andalso
+            List.null (type_vars_in_term t) orelse
             raise ERR "WORD_GROUND_CONV"
                       "Term not ground or contains type variables."
           ; cnv t
