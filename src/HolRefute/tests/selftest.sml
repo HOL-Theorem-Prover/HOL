@@ -1369,6 +1369,25 @@ val _ = test "non-executable goals report the gate reason" (fn () =>
   unknown_with "GSPEC" (refute (exhaustive |> upd_size 4)
                           ``!x : num. x IN {y | y < 3}``))
 
+(* [&] builds integers as [{}] builds sets: the compset has no rules
+   keyed on it, yet a goal using it runs, on every Quickcheck back end and
+   substrate at level 2. *)
+val _ = test "the integer injection is executable" (fn () =>
+  let
+    val goal = ``!(n : num) (i : int). (i = &n) = (i = 0)``
+    val configs =
+      if selftest_level >= 2 then
+        [(Exhaustive, NativeSML), (Exhaustive, Compute),
+         (Random, NativeSML), (Random, Compute)]
+      else [(Exhaustive, NativeSML)]
+  in
+    List.all (fn (backend, substrate) =>
+      case refute (default_config |> only [backend] |> quiet
+                     |> upd_substrate substrate) goal of
+        Counterexample (c :: _) => certifies goal c
+      | _ => false) configs
+  end)
+
 val _ = test "an any-goal backend still receives gated instances" (fn () =>
   let
     val enabled = ref false
