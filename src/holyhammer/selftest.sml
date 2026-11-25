@@ -51,8 +51,31 @@ fun make_executable path =
     else raise Fail ("could not make executable " ^ path)
   end
 
+(* smlRedirect redirects fd 1 for the whole process: a redirect that is
+   never undone sends every later line to its file while the run goes on
+   and succeeds.  check_stdout fails the run, on stderr, when fd 1 is no
+   longer the file it was at the start. *)
+local
+  fun identity () =
+    let val status = Posix.FileSys.fstat Posix.FileSys.stdout
+    in (Posix.FileSys.ST.dev status, Posix.FileSys.ST.ino status) end
+  val initial = identity ()
+in
+  fun check_stdout context =
+    if identity () = initial then ()
+    else
+      (TextIO.output (TextIO.stdErr,
+         "FAILED: stdout is redirected " ^ context ^ "\n");
+       TextIO.flushOut TextIO.stdErr;
+       OS.Process.exit OS.Process.failure)
+end
+
 fun expect message truth =
-  (tprint message; if truth then OK () else die ("FAILED: " ^ message))
+  (check_stdout ("before \"" ^ message ^ "\"");
+   tprint message; if truth then OK () else die ("FAILED: " ^ message))
+
+(* A hermetic child creates this file in its root as its last action. *)
+val child_done = "child-done"
 
 fun is_some expected actual = actual = SOME expected
 
@@ -375,14 +398,24 @@ fun run_parent () =
       " HOLDIR=" ^ holdir ^
       " PATH=" ^ path ^
       " ./selftest.exe"
+    (* A child passes when it exits with success and reached the end. *)
+    fun run_child command =
+      let
+        val marker = join root child_done
+        val status = OS.Process.system command
+        val finished = OS.FileSys.access (marker, [])
+      in
+        (OS.FileSys.remove marker handle OS.SysErr _ => ());
+        OS.Process.isSuccess status andalso finished
+      end
     val _ = tprint "hhConfig hermetic selftests"
-    val first = OS.Process.system command
+    val first = run_child command
     val _ = write_file (join (join (join home ".hol4") "hammer")
                             "config") "# no eval.dir here\n"
-    val second = OS.Process.system env_command
+    val second = run_child env_command
     val _ = remove_tree root
   in
-    if OS.Process.isSuccess first andalso OS.Process.isSuccess second then OK ()
+    if first andalso second then OK ()
     else die "FAILED: hhConfig child selftest"
   end
 
@@ -8366,3 +8399,11 @@ local open hhReconstruct hhTranslate holyHammer hhExportLib hhExportFof
   hhExportTf0 hhExportTh0 hhExportTf1 hhExportTh1 hhConfig hhProver hhSlice
   hhCache hhSchedule hhStature hhMePo hhLearn
 in end
+
+(* Last: stdout is still the run's own, and a child reports that it got
+   here. *)
+val _ = check_stdout "at the end of the run"
+val _ =
+  case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
+      SOME root => write_file (join root child_done) ""
+    | NONE => ()
