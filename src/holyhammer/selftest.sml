@@ -2524,17 +2524,44 @@ fun test_hhProver () =
     ()
   end
 
-fun slice_options provers slices cores timeout filter max_facts
-    : hhConfig.hh_options =
-  {timeout = timeout, provers = provers, slices = slices,
-   cores = cores,
-   export_workers = 1,
-   filter = filter, max_facts = max_facts,
-   format = "", type_enc = "", lam_trans = "", mono_iters = 3,
-   mono_instances = NONE, minimize = true,
-   preplay_timeout = 1.0, minimize_timeout = 1.0, cache = false,
-   cache_dir = "", cache_max_entries = 100000, debug_dir = NONE,
-   preplay_drop_one = false, verbose = false}
+val default_provers = [Eprover, Vampire, Zipperposition]
+
+(* The options of a test: these defaults, changed by the settings given
+   (of two settings of a field, the later wins). *)
+datatype setting =
+    Timeout of int | Provers of prover list | Slices of int | Cores of int
+  | Workers of int | Filter of string | MaxFacts of int option
+  | Encoding of string * string * string | MonoInstances of int option
+  | Minimize of bool | DropOne of bool | Cache of bool | CacheDir of string
+  | CacheMax of int | Debug of string option
+
+fun hh_options settings : hhConfig.hh_options =
+  let
+    fun pick select default =
+      List.foldl (fn (setting, value) => getOpt (select setting, value))
+        default settings
+    val (format, type_enc, lam_trans) =
+      pick (fn Encoding triple => SOME triple | _ => NONE) ("", "", "")
+  in
+    {timeout = pick (fn Timeout n => SOME n | _ => NONE) 30,
+     provers = pick (fn Provers ps => SOME ps | _ => NONE) [Eprover],
+     slices = pick (fn Slices n => SOME n | _ => NONE) 1,
+     cores = pick (fn Cores n => SOME n | _ => NONE) 1,
+     export_workers = pick (fn Workers n => SOME n | _ => NONE) 1,
+     filter = pick (fn Filter name => SOME name | _ => NONE) "none",
+     max_facts = pick (fn MaxFacts n => SOME n | _ => NONE) NONE,
+     format = format, type_enc = type_enc, lam_trans = lam_trans,
+     mono_iters = 3,
+     mono_instances = pick (fn MonoInstances n => SOME n | _ => NONE) NONE,
+     minimize = pick (fn Minimize b => SOME b | _ => NONE) true,
+     preplay_timeout = 1.0, minimize_timeout = 1.0,
+     cache = pick (fn Cache b => SOME b | _ => NONE) false,
+     cache_dir = pick (fn CacheDir dir => SOME dir | _ => NONE) "",
+     cache_max_entries = pick (fn CacheMax n => SOME n | _ => NONE) 100,
+     debug_dir = pick (fn Debug dir => SOME dir | _ => NONE) NONE,
+     preplay_drop_one = pick (fn DropOne b => SOME b | _ => NONE) false,
+     verbose = false}
+  end
 
 fun slice_summary (slice : hhProver.slice) =
   (#prover slice, #format slice, #type_enc slice, #lam_trans slice,
@@ -2613,22 +2640,20 @@ fun test_hhSlice () =
        (map prover [Z3]))
     val _ = expect_equal "rotation truncates to requested slice count"
       [Vampire, Eprover, Zipperposition, Vampire, Eprover]
-      (hhSlice.schedule_of_provers
-        [Eprover, Vampire, Zipperposition] 5)
+      (hhSlice.schedule_of_provers default_provers 5)
     val _ = expect_equal "golden 24-slice rotation"
       [Vampire, Eprover, Zipperposition, Vampire, Eprover, Vampire,
        Zipperposition, Vampire, Vampire, Eprover, Zipperposition,
        Eprover, Vampire, Eprover, Vampire, Zipperposition, Vampire,
        Eprover, Zipperposition, Vampire, Eprover, Vampire, Eprover,
        Vampire]
-      (hhSlice.schedule_of_provers
-        [Eprover, Vampire, Zipperposition] 24)
+      (hhSlice.schedule_of_provers default_provers 24)
     val _ = expect_equal "rotation filters and extends in requested order"
       [Eprover, Zipperposition, Eprover, Zipperposition, Eprover,
        Zipperposition, Eprover]
       (hhSlice.schedule_of_provers [Zipperposition, Eprover] 7)
-    val defaults = slice_options [Eprover, Vampire, Zipperposition]
-      (24 * 32) 32 30 "" NONE
+    val defaults = hh_options
+      [Provers default_provers, Slices (24 * 32), Cores 32, Filter ""]
     val default_schedule = hhSlice.mk_schedule defaults
     val _ = expect_equal "golden 24-slice Phase 3 schedule"
       expected_default (map (slice_summary o #2) default_schedule)
@@ -2637,10 +2662,9 @@ fun test_hhSlice () =
       (List.take (map (slice_summary o #2) default_schedule, 16))
     val _ = expect_equal "Phase 1 eight-slice prefix is frozen verbatim"
       phase1 (List.take (map (slice_summary o #2) default_schedule, 8))
-    val gate30 = slice_options [Eprover, Vampire, Zipperposition]
-      8 8 30 "knn" NONE
-    val gate10 = slice_options [Eprover, Vampire, Zipperposition]
-      8 8 10 "knn" NONE
+    val gate = [Provers default_provers, Slices 8, Cores 8, Filter "knn"]
+    val gate30 = hh_options gate
+    val gate10 = hh_options (gate @ [Timeout 10])
     val gate30_schedule = hhSlice.mk_schedule gate30
     val gate10_schedule = hhSlice.mk_schedule gate10
     val expected_gate = List.take (phase1, 8)
@@ -2672,13 +2696,13 @@ fun test_hhSlice () =
     val _ = expect "gate anchors are command-equivalent to one-shot B"
       (List.all anchor_command_equal anchors)
     val small = hhSlice.mk_schedule
-      (slice_options [Eprover, Vampire, Zipperposition] 5 2 30 "knn"
-        NONE)
+      (hh_options [Provers default_provers, Slices 5, Cores 2, Filter "knn"])
     val _ = expect_equal "small schedule follows the golden rotation"
       (List.take (schedule_summary default_schedule, 5))
       (schedule_summary small)
     val subset = hhSlice.mk_schedule
-      (slice_options [Zipperposition, Eprover] 7 4 30 "knn" NONE)
+      (hh_options [Provers [Zipperposition, Eprover], Slices 7, Cores 4,
+                   Filter "knn"])
     val _ = expect_equal "prover subset consumes each table head-first"
       [("e", 128, "knn", []),
        ("zipperposition", 128, "knn", []),
@@ -2689,7 +2713,7 @@ fun test_hhSlice () =
        ("e", 512, "knn", [])]
       (schedule_summary subset)
     val overridden = hhSlice.mk_schedule
-      (slice_options [Eprover] 20 2 30 "none" (SOME 40))
+      (hh_options [Slices 20, Cores 2, MaxFacts (SOME 40)])
     val _ = expect_equal "fact and filter overrides precede deduplication"
       [("e", 40, "none", []),
        ("e", 40, "none", []),
@@ -2697,19 +2721,17 @@ fun test_hhSlice () =
        ("e", 40, "none", [])]
       (schedule_summary overridden)
     val filter_override = hhSlice.mk_schedule
-      (slice_options [Eprover, Vampire, Zipperposition] 24 24 30
-        "none" NONE)
+      (hh_options [Provers default_provers, Slices 24, Cores 24])
     val _ = expect "set filter overrides every per-slice table value"
       (not (null filter_override) andalso
        List.all (fn (_, slice) => #filter slice = "none") filter_override)
     val exhausted = hhSlice.mk_schedule
-      (slice_options [Eprover, Vampire, Zipperposition] 100 8 30 ""
-        NONE)
+      (hh_options [Provers default_provers, Slices 100, Cores 8, Filter ""])
     val _ = expect "rotation exhaustion stops at twenty-four slices"
       (length exhausted = 24)
     val _ = expect "Z3 remains outside the slice scheduler"
       (null (hhSlice.mk_schedule
-        (slice_options [Z3] 100 8 30 "knn" NONE)))
+        (hh_options [Provers [Z3], Slices 100, Cores 8, Filter "knn"])))
     val first_slice = #2 (hd default_schedule)
     val large_slice : hhProver.slice =
       {prover = #prover first_slice, format = #format first_slice,
@@ -2719,7 +2741,8 @@ fun test_hhSlice () =
     val _ = expect "budget uses full timeout when slices fit on cores"
       (real_close 30.0 (hhSlice.slice_budget (length default_schedule) defaults
         first_slice))
-    val budget_options = slice_options [Eprover] 999 32 30 "knn" NONE
+    val budget_options =
+      hh_options [Slices 999, Cores 32, Filter "knn"]
     val _ = expect "budget arithmetic uses ceiling batches"
       (let val b = hhSlice.slice_budget
       in real_close 15.0 (b 33 budget_options first_slice) andalso
@@ -2732,18 +2755,10 @@ fun test_hhSlice () =
       {prover = Eprover, format = format, type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none", extra_opts = [],
        slice_size = 1}
-    val triple_options : hhConfig.hh_options =
-      {timeout = 30, provers = [Eprover], slices = 1, cores = 1,
-      export_workers = 1,
-       filter = "knn", max_facts = NONE, format = "tf0",
-       type_enc = "mono_native", lam_trans = "lifting", mono_iters = 3,
-       mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
-       minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100000, debug_dir = NONE,
-       preplay_drop_one = false, verbose = false}
-    val triple_schedule = hhSlice.mk_schedule triple_options
+    fun triple_schedule triple =
+      hhSlice.mk_schedule (hh_options [Filter "knn", Encoding triple])
     val _ = expect "slice construction accepts a supported full triple"
-      (case triple_schedule of
+      (case triple_schedule ("tf0", "mono_native", "lifting") of
            [(_, slice)] => #format slice = "tf0" andalso
                          #type_enc slice = "mono_native" andalso
                          #lam_trans slice = "lifting"
@@ -2755,25 +2770,12 @@ fun test_hhSlice () =
           | hhSlice.Legacy => false) andalso
        ((ignore (hhSlice.encoding_of (slice_of "fof" "" "lifting")); false)
         handle Fail _ => true))
-    fun invalid_triple format type_enc lam_trans =
-      let
-        val options : hhConfig.hh_options =
-          {timeout = 30, provers = [Eprover], slices = 1,
-           cores = 1,
-           export_workers = 1,
-           filter = "knn", max_facts = NONE, format = format,
-           type_enc = type_enc, lam_trans = lam_trans, mono_iters = 3,
-           mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
-           minimize_timeout = 1.0, cache = false, cache_dir = "",
-           cache_max_entries = 100000, debug_dir = NONE,
-           preplay_drop_one = false, verbose = false}
-      in
-        ((ignore (hhSlice.mk_schedule options); false) handle Fail _ => true)
-      end
+    fun invalid_triple triple =
+      (ignore (triple_schedule triple); false) handle Fail _ => true
     val _ = expect "slice construction rejects incoherent triples"
-      (invalid_triple "tf0" "" "lifting" andalso
-       invalid_triple "th1" "mono_native_higher" "keep_lams" andalso
-       invalid_triple "tf0" "mono_native" "")
+      (invalid_triple ("tf0", "", "lifting") andalso
+       invalid_triple ("th1", "mono_native_higher", "keep_lams") andalso
+       invalid_triple ("tf0", "mono_native", ""))
     fun filter_test_config filter : hhProver.prover_config =
       let
         val slice : hhProver.slice =
@@ -2790,7 +2792,7 @@ fun test_hhSlice () =
     fun rejects_filter filter =
       hhProver.with_override Z3 (filter_test_config filter) (fn () =>
         (ignore (hhSlice.mk_schedule
-          (slice_options [Z3] 1 1 30 "" NONE)); false)
+          (hh_options [Provers [Z3], Filter ""])); false)
         handle Fail _ => true)
     val _ = expect "slice construction validates the filter vocabulary"
       (List.all rejects_filter ["", "not-a-filter"])
@@ -2798,16 +2800,9 @@ fun test_hhSlice () =
     ()
   end
 
-fun cache_options directory maximum enabled : hhConfig.hh_options =
-  {timeout = 30, provers = [Eprover], slices = 1,
-   cores = 1,
-   export_workers = 1,
-   filter = "knn", max_facts = NONE,
-   format = "", type_enc = "", lam_trans = "", mono_iters = 3,
-   mono_instances = NONE, minimize = true,
-   preplay_timeout = 1.0, minimize_timeout = 1.0, cache = enabled,
-   cache_dir = directory, cache_max_entries = maximum, debug_dir = NONE,
-   preplay_drop_one = false, verbose = false}
+fun cache_options directory maximum enabled =
+  hh_options [Filter "knn", Cache enabled, CacheDir directory,
+              CacheMax maximum]
 
 fun test_hhCache () =
   let
@@ -3481,42 +3476,12 @@ fun sleeper_config_sized size prover name parser
 fun sleeper_config prover name parser =
   sleeper_config_sized 1 prover name parser
 
-fun fixture_options provers slices cores timeout cache cache_dir
-    debug_dir : hhConfig.hh_options =
-  {timeout = timeout, provers = provers,
-   slices = slices, cores = cores,
-   export_workers = 1,
-   filter = "none", max_facts = NONE,
-   format = "", type_enc = "", lam_trans = "", mono_iters = 3,
-   mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
-   minimize_timeout = 1.0,
-   cache = cache, cache_dir = cache_dir, cache_max_entries = 100,
-   debug_dir = debug_dir,
-   preplay_drop_one = false, verbose = false}
-
 (* A fixture prover_config stands in for a built-in prover while f runs.
    Its name stays its own, so its output files and probe results are not
    mistaken for the built-in prover's. *)
 fun with_fixtures [] f = f ()
   | with_fixtures ((prover, config) :: rest) f =
       hhProver.with_override prover config (fn () => with_fixtures rest f)
-
-fun reconstruction_options {minimize, preplay_drop_one}
-    (options : hhConfig.hh_options) : hhConfig.hh_options =
-  {timeout = #timeout options,
-   provers = #provers options, slices = #slices options,
-   cores = #cores options,
-   export_workers = 1,
-   filter = #filter options,
-   max_facts = #max_facts options, format = #format options,
-   type_enc = #type_enc options, lam_trans = #lam_trans options,
-   mono_iters = #mono_iters options, mono_instances = #mono_instances options,
-   minimize = minimize, preplay_timeout = #preplay_timeout options,
-   minimize_timeout = #minimize_timeout options, cache = #cache options,
-   cache_dir = #cache_dir options,
-   cache_max_entries = #cache_max_entries options,
-   debug_dir = #debug_dir options,
-   preplay_drop_one = preplay_drop_one, verbose = #verbose options}
 
 fun slice_event_tag (slice : hhProver.slice) =
   hhConfig.prover_name (#prover slice) ^ ":" ^
@@ -3630,7 +3595,7 @@ fun test_schedule_max_proofs parser =
       (fn request =>
          paths := (#problem request, readable (#problem request)) :: !paths)
       parser
-    val options = fixture_options [Z3] 2 2 5 false "" NONE
+    val options = hh_options [Provers [Z3], Slices 2, Cores 2, Timeout 5]
     val run_with = fn proofs =>
       run_schedule_with proofs ([], boolSyntax.T) options
     val ((result1, _), (result2, events2)) =
@@ -3701,7 +3666,7 @@ fun test_schedule_reconstruction_failure parser =
     val (good_status, good_axioms) =
       parser
         (aiLib.bare_readl (join schedule_fixture_dir "schedule-add1.out"))
-    val options = fixture_options [Z3] 2 1 5 false "" NONE
+    val options = hh_options [Provers [Z3], Slices 2, Timeout 5]
     val goal = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
     val ((result, events), stderr) = capture_stderr (fn () =>
       with_fixtures [(Z3, config)] (fn () => run_schedule_on goal options))
@@ -3754,8 +3719,7 @@ fun test_schedule_without_minimization () =
     val config = printer_config name [slice] (fn _ => ())
       (fn _ => (hhProver.SzsTheorem, SOME lemmas))
     val options =
-      reconstruction_options {minimize = false, preplay_drop_one = false}
-      (fixture_options [Z3] 1 1 5 false "" NONE)
+      hh_options [Provers [Z3], Timeout 5, Minimize false]
     val (result, _) =
       with_fixtures [(Z3, config)] (fn () => run_schedule options)
     val _ = expect "scheduler minimize=false preserves the ATP lemma list"
@@ -3781,9 +3745,8 @@ fun test_schedule_drop_one () =
     fun run preplay_drop_one =
       #1 (with_fixtures [(Z3, config)] (fn () =>
         run_schedule_on goal
-          (reconstruction_options
-             {minimize = true, preplay_drop_one = preplay_drop_one}
-             (fixture_options [Z3] 1 1 5 false "" NONE))))
+          (hh_options
+             [Provers [Z3], Timeout 5, DropOne preplay_drop_one])))
     val plain = run false
     val retried = run true
   in
@@ -3809,7 +3772,8 @@ fun test_schedule_failed_list_once () =
           1)
     val config = printer_config name slices (fn _ => ())
       (fn _ => (hhProver.SzsTheorem, SOME lemmas))
-    val options = fixture_options [Z3] 5 5 20 false "" NONE
+    val options =
+      hh_options [Provers [Z3], Slices 5, Cores 5, Timeout 20]
     val (result, events) = with_fixtures [(Z3, config)] (fn () =>
       run_schedule_on ([], ``!n. n + 1 = n``) options)
     val found = List.filter (String.isPrefix "found|") events
@@ -3835,8 +3799,8 @@ fun test_schedule_early_stop parser =
        (Zipperposition, sleeper_config Zipperposition slow2 parser)]
     val cache = join debug "cache"
     val options =
-      fixture_options [Eprover, Vampire, Zipperposition] 3 3 12 true cache
-        (SOME debug)
+      hh_options [Provers default_provers, Slices 3, Cores 3, Timeout 12,
+                  Cache true, CacheDir cache, Debug (SOME debug)]
     val (result, events) =
       with_fixtures fixtures (fn () => run_schedule options)
     val children_gone =
@@ -3879,7 +3843,7 @@ fun test_schedule_budget_truncation parser =
     fun note (request : hhProver.run_request) =
       budgets := !budgets @ [#timeout request]
     val config = printer_config name [first, second] note parser
-    val options = fixture_options [Z3] 2 1 4 false "" NONE
+    val options = hh_options [Provers [Z3], Slices 2, Timeout 4]
     val (result, _) =
       with_fixtures [(Z3, config)] (fn () => run_schedule options)
     val wanted = Real.ceil (hhSlice.slice_budget 2 options second)
@@ -3902,7 +3866,8 @@ fun test_schedule_cache parser =
     val cache = join root "cache"
     val _ = remove_tree root
     val _ = mkdir root
-    val options = fixture_options [Z3] 1 1 5 true cache NONE
+    val options =
+      hh_options [Provers [Z3], Timeout 5, Cache true, CacheDir cache]
     fun spawns_of_run () =
       let
         val _ = hhProver.reset_spawn_count ()
@@ -3944,7 +3909,8 @@ fun test_schedule_cancelled_cache parser =
     val name = "hh-schedule-cancelled-cache"
     val slice = fixture_slice Z3 ["1", "e-gave-up.out"] 1
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val options = fixture_options [Z3] 1 1 5 true root NONE
+    val options =
+      hh_options [Provers [Z3], Timeout 5, Cache true, CacheDir root]
     val config = printer_config name [slice] (fn _ => ()) parser
     val _ = ignore (hhProver.probe config)
   in
@@ -4008,7 +3974,7 @@ fun test_schedule_isolation parser =
            intact := !first_text = String.concat (aiLib.bare_readl path))
         else second_text := String.concat (aiLib.bare_readl path)
       end
-    val options = fixture_options [Z3] 1 1 5 false "" NONE
+    val options = hh_options [Provers [Z3], Timeout 5]
     val first_result = ref NONE
     fun overlapping_runs () =
       let
@@ -4053,7 +4019,7 @@ fun test_schedule_concurrent_runs parser =
     fun verified prover goal lemma =
       let
         val (result, events) =
-          run_schedule_on goal (fixture_options [prover] 1 1 5 false "" NONE)
+          run_schedule_on goal (hh_options [Provers [prover], Timeout 5])
       in
         #stopped result = hhSchedule.MaxProofs andalso
         not (List.exists (String.isPrefix "not-replayed|") events) andalso
@@ -4095,7 +4061,8 @@ fun test_schedule_timeout parser =
     val name = "hh-schedule-timeout"
     val debug = OS.FileSys.tmpName ()
     val _ = remove_tree debug
-    val options = fixture_options [Z3] 1 1 1 false "" (SOME debug)
+    val options =
+      hh_options [Provers [Z3], Timeout 1, Debug (SOME debug)]
     val (result, events) =
       with_fixtures [(Z3, sleeper_config Z3 name parser)] (fn () =>
         run_schedule options)
@@ -4117,16 +4084,8 @@ fun test_schedule_filter_rankings parser =
     val mepo = ranking_fixture_slice Z3 "mepo" 1
     val slices = [knn, mepo]
     val config = printer_config name slices (fn _ => ()) parser
-    val options : hhConfig.hh_options =
-      {timeout = 5, provers = [Z3], slices = 2,
-       cores = 1,
-       export_workers = 1,
-       filter = "", max_facts = NONE, format = "",
-       type_enc = "", lam_trans = "", mono_iters = 3,
-       mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
-       minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100, debug_dir = NONE,
-       preplay_drop_one = false, verbose = false}
+    val options =
+      hh_options [Timeout 5, Provers [Z3], Slices 2, Filter ""]
     val knn_path = hhSchedule.problem_path root knn
     val mepo_path = hhSchedule.problem_path root mepo
     fun clean () = List.app (remove_tree o OS.Path.dir)
@@ -4173,16 +4132,7 @@ fun test_schedule_knn_anchor_export () =
     val two = slice 2
     val schedule = [(e, one), (e, two)]
     val ranking = ["boolTheory.TRUTH", "boolTheory.T_DEF"]
-    val options : hhConfig.hh_options =
-      {timeout = 5, provers = [Eprover], slices = 2,
-       cores = 1,
-       export_workers = 1,
-       filter = "knn", max_facts = NONE, format = "",
-       type_enc = "", lam_trans = "", mono_iters = 3,
-       mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
-       minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100, debug_dir = NONE,
-       preplay_drop_one = false, verbose = false}
+    val options = hh_options [Timeout 5, Slices 2, Filter "knn"]
     val expected_one = OS.FileSys.tmpName ()
     val expected_two = OS.FileSys.tmpName ()
     val _ = List.app (fn path => OS.FileSys.remove path handle _ => ())
@@ -4233,16 +4183,7 @@ fun test_schedule_mono_cap_export () =
       {prover = Eprover, format = "tx0-", type_enc = "mono_native_fool",
        lam_trans = "lifting", nfacts = length facts, filter = "knn",
        extra_opts = [], slice_size = 1}
-    val options : hhConfig.hh_options =
-      {timeout = 5, provers = [Eprover], slices = 1,
-       cores = 1,
-       export_workers = 1,
-       filter = "knn", max_facts = NONE, format = "",
-       type_enc = "", lam_trans = "", mono_iters = 3,
-       mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
-       minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100, debug_dir = NONE,
-       preplay_drop_one = false, verbose = false}
+    val options = hh_options [Timeout 5, Filter "knn"]
     val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = LENGTH (REVERSE [1; 2n])``)
     val _ = hhSchedule.export_problems root options goal
       [("knn", map (fn fact => "listTheory." ^ fact) facts)]
@@ -4267,8 +4208,7 @@ fun test_with_problem_dir () =
     val _ = mkdir outside
     val kept_file = join outside "kept"
     val _ = aiLib.write_file kept_file "kept"
-    fun options debug_dir =
-      fixture_options [Eprover] 1 1 5 false "" debug_dir
+    fun options debug_dir = hh_options [Timeout 5, Debug debug_dir]
     fun populate root =
       let
         val slice_dir = join root "e.knn.fof...32"
@@ -4325,16 +4265,7 @@ fun test_schedule_export_wiring () =
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val e = prover Eprover
     val vampire = prover Vampire
-    fun options mono_instances : hhConfig.hh_options =
-      {timeout = 30, provers = [Eprover], slices = 1,
-       cores = 1,
-       export_workers = 1,
-       filter = "none", max_facts = NONE, format = "", type_enc = "",
-       lam_trans = "", mono_iters = 3, mono_instances = mono_instances,
-       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
-       cache = false, cache_dir = "", cache_max_entries = 100,
-       debug_dir = NONE,
-       preplay_drop_one = false, verbose = false}
+    fun options cap = hh_options [MonoInstances cap]
     fun slice type_enc lam_trans : hhProver.slice =
       {prover = Eprover, format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",
@@ -4417,15 +4348,7 @@ fun test_schedule_legacy_sharing () =
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val e = prover Eprover
     val vampire = prover Vampire
-    fun options max_facts : hhConfig.hh_options =
-      {timeout = 30, provers = [Eprover], slices = 1,
-       cores = 1,
-       export_workers = 1,
-       filter = "none", max_facts = max_facts, format = "",
-       type_enc = "", lam_trans = "", mono_iters = 3, mono_instances = NONE,
-       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
-       cache = false, cache_dir = "", cache_max_entries = 100,
-       debug_dir = NONE, preplay_drop_one = false, verbose = false}
+    fun options max_facts = hh_options [MaxFacts max_facts]
     fun slice prover filter nfacts : hhProver.slice =
       {prover = prover, format = "fof", type_enc = "", lam_trans = "",
        nfacts = nfacts, filter = filter, extra_opts = [], slice_size = 1}
@@ -4617,12 +4540,12 @@ fun test_schedule_deadline_recon sleeper_parser =
           note ("verified|" ^ #stac suggestion)
       | progress _ = ()
     fun request slices sleeping max_proofs drop_one =
-      {options = reconstruction_options
-         {minimize = true, preplay_drop_one = drop_one}
-         (fixture_options (if sleeping then [Eprover, Vampire] else [Vampire])
-            (length slices + (if sleeping then 1 else 0))
-            (length slices + (if sleeping then 1 else 0)) 1
-            false "" NONE),
+      {options =
+         let val count = length slices + (if sleeping then 1 else 0) in
+           hh_options
+             [Provers (if sleeping then [Eprover, Vampire] else [Vampire]),
+              Slices count, Cores count, Timeout 1, DropOne drop_one]
+         end,
        max_proofs = max_proofs,
        goal = ([], boolSyntax.T), rankings = [("none", [])],
        progress = SOME progress}
@@ -4798,17 +4721,6 @@ structure StagedFixture =
 struct
   val e = prover Eprover
   val vampire = prover Vampire
-  fun options_capped cores workers debug max_facts cap : hhConfig.hh_options =
-    {timeout = 30, provers = [Eprover], slices = 1,
-     cores = cores,
-     export_workers = workers,
-     filter = "none", max_facts = max_facts, format = "",
-     type_enc = "", lam_trans = "", mono_iters = 3, mono_instances = cap,
-     minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
-     cache = false, cache_dir = "", cache_max_entries = 100,
-     debug_dir = debug, preplay_drop_one = false, verbose = false}
-  fun options_with cores workers debug max_facts =
-    options_capped cores workers debug max_facts NONE
   fun legacy prover filter nfacts : hhProver.slice =
     {prover = prover, format = "fof", type_enc = "", lam_trans = "",
      nfacts = nfacts, filter = filter, extra_opts = [], slice_size = 1}
@@ -4848,7 +4760,7 @@ end
 fun test_schedule_staged () =
   let
     open StagedFixture
-    fun options max_facts = options_with 1 1 NONE max_facts
+    fun options max_facts = hh_options [MaxFacts max_facts]
     (* The ordered work description. *)
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val schedule =
@@ -5474,7 +5386,9 @@ fun test_schedule_pool () =
     fun no_temporaries root =
       List.all (not o String.isSuffix ".tmp") (root_files root)
     val plain = {fork = hhPool.default_fork, before_finish = fn _ => ()}
-    fun options workers debug = options_capped 8 workers debug NONE (SOME 3)
+    fun options workers debug =
+      hh_options [Cores 8, Workers workers, Debug debug,
+                  MonoInstances (SOME 3)]
     (* The test hooks are global (hhSchedule_Test) and read once when an
        export starts; they are set for one export and restored after it.
        Concurrent exports must therefore start under the hooks they want
@@ -6021,14 +5935,9 @@ fun test_schedule_run_in parser =
          (Eprover, printer_config_formats ["fof", "tf0"] "hh-run-e"
             [legacy legacies Eprover 2, mono monos Eprover 7] ignore parser)]
         f
-    fun options cores slices : hhConfig.hh_options =
-      {timeout = 30, provers = [Eprover, Vampire], slices = slices,
-       cores = cores, export_workers = 2, filter = "", max_facts = NONE,
-       format = "", type_enc = "", lam_trans = "", mono_iters = 3,
-       mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
-       minimize_timeout = 1.0, cache = false, cache_dir = "",
-       cache_max_entries = 100, debug_dir = NONE, preplay_drop_one = false,
-       verbose = false}
+    fun options cores slices =
+      hh_options [Provers [Eprover, Vampire], Slices slices, Cores cores,
+                  Workers 2, Filter ""]
     val (fork, recorded) = recording_fork (fn default => default)
     (* run_in on its own thread, with wrap around it: the result or the
        failure, the events and the files left in the root.  steer runs on
@@ -7468,16 +7377,7 @@ fun test_hypothesis_premises () =
       {filter = "knn", pool = NONE, goal = goal, n = 1}
     val promoted = hhLearn.rank_filters data goal filters
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val options : hhConfig.hh_options =
-      {timeout = 30, provers = [Eprover], slices = 1,
-       cores = 1,
-       export_workers = 1,
-       filter = "none", max_facts = NONE, format = "", type_enc = "",
-       lam_trans = "", mono_iters = 3, mono_instances = NONE,
-       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
-       cache = false, cache_dir = "", cache_max_entries = 100,
-       debug_dir = NONE,
-       preplay_drop_one = false, verbose = false}
+    val options = hh_options []
     fun slice type_enc lam_trans : hhProver.slice =
       {prover = Eprover, format = "fof", type_enc = type_enc,
        lam_trans = lam_trans, nfacts = 0, filter = "none",
