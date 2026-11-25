@@ -120,6 +120,12 @@ fun list_dest_conj tm =
 
 exception Missing_from_to of hol_type;
 
+fun is_clash e =
+  Feedback.top_structure_of e = "cv_typeLib" andalso
+  Feedback.top_function_of e = "from_to_for"
+
+val from_to_tm = from_to_def |> SPEC_ALL |> concl |> lhs |> strip_comb |> fst
+
 fun from_to_for_tyvar tyvar = let
   val name = dest_vartype tyvar
   val name = if String.isPrefix "'" name
@@ -159,12 +165,15 @@ fun from_to_for tyvars_alist ty =
       SOME tyvar_assum => ASSUME tyvar_assum
     | NONE => if is_vartype ty then from_to_for_tyvar ty else
     let
-      val thms = cv_from_to_thms ()
+      (* the type a cv_from_to theorem translates *)
+      fun entry_ty th = let
+        val tm = th |> UNDISCH_ALL |> concl
+        val _ = same_const (fst (strip_comb tm)) from_to_tm orelse
+                raise ERR "entry_ty" "not a from_to theorem"
+        in tm |> rand |> type_of |> dest_fun_type |> snd end
       fun match_from_to_thm th =
         let
-          val th1 = th |> UNDISCH_ALL
-          val ty1 = th1 |> concl |> rand |> type_of |> dest_fun_type |> snd
-          val i = match_type ty1 ty
+          val i = match_type (entry_ty th) ty
           val th2 = th |> INST_TYPE i |> DISCH_ALL
         in
           if not (is_imp (concl th2)) then th2 else
@@ -178,10 +187,69 @@ fun from_to_for tyvars_alist ty =
               val th4 = LIST_CONJ (map prove_from_to_thm tms)
             in MATCH_MP th3 th4 end
         end
+      (* a clash found for an argument type is reported, not taken as a
+         failure of this entry *)
       fun find_first f [] = NONE
-        | find_first f (x::xs) = SOME (f x) handle HOL_ERR e => find_first f xs
+        | find_first f (x::xs) =
+            SOME (f x) handle HOL_ERR e =>
+              if is_clash e then raise HOL_ERR e else find_first f xs
+      val entries = cv_from_to_entries ()
+      (* the current theory's entries and the session's (cv_from_to_add
+         gives them no name), which count as from a descendant of every
+         loaded theory *)
+      fun is_own name =
+        name = "" orelse
+        (case Thm.getCT () of
+           SOME thy => String.isPrefix (thy ^ ".") name
+         | NONE => false)
+      fun thy_of name = hd (String.fields (fn c => c = #".") name)
+      (* Two inherited entries that match ty and come from theories neither
+         of which is an ancestor of the other must give the same
+         translation.  Premises are not proved here, since proving them
+         can define from/to functions.  Once this holds, two matching
+         entries that give different translations are from related
+         theories, and the descendant's comes first in every load order
+         (a theory's entries are added after its ancestors', whether it
+         is loaded after cv_memLib or replayed, in ancestry order, when
+         cv_memLib is loaded).  Load orders can then differ only in which
+         of two unrelated entries comes first, and those give the same
+         translation, so the first entry that applies gives a translation
+         that does not depend on load order. *)
+      fun check () = let
+        fun inst (n, th) =
+          (n, thy_of n,
+           th |> INST_TYPE (match_type (entry_ty th) ty) |> UNDISCH_ALL
+              |> concl)
+        val cs =
+            entries
+            |> filter (fn (n, th) =>
+                         not (is_own n) andalso
+                         can (fn th => match_type (entry_ty th) ty) th)
+            |> map inst
+            |> Listsort.sort (fn ((n1, _, _), (n2, _, _)) =>
+                                String.compare (n1, n2))
+        fun clash (_, thy1, c1) (_, thy2, c2) =
+          thy1 <> thy2 andalso not (aconv c1 c2) andalso
+          not (mem thy1 (Theory.ancestry thy2)) andalso
+          not (mem thy2 (Theory.ancestry thy1))
+        fun find_pair [] = NONE
+          | find_pair (x::xs) =
+              case List.find (clash x) xs of
+                SOME y => SOME (x, y)
+              | NONE => find_pair xs
+      in
+        case find_pair cs of
+          NONE => ()
+        | SOME ((n1, _, _), (n2, _, _)) =>
+            raise ERR "from_to_for"
+              ("unrelated theories give different from/to translations" ^
+               " of " ^ type_to_string ty ^ ": " ^ n1 ^ " and " ^ n2 ^
+               "; choose one by removing the other with " ^
+               "cv_transLib.cv_from_to_delete " ^ Lib.quote n2)
+      end
+      val _ = check ()
     in
-      case find_first match_from_to_thm thms of
+      case find_first match_from_to_thm (map #2 entries) of
         SOME th => th
       | NONE =>
          if can dom_rng ty then (
@@ -338,6 +406,7 @@ fun cv_rep_case_for from_def = let
   *)
   val lemma = prove(goal,
     Cases
+    \\ once_rewrite_tac [oneTheory.one]
     \\ rewrite_tac [inj,dist]
     \\ rewrite_tac [cv_rep_alt]
     \\ rpt strip_tac

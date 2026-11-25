@@ -188,6 +188,40 @@ fun encGoalStateResponse encRng
   encArray encStepCost (List.rev (!LSPExtension.lastStepCosts)) print;
   print "}")
 
+(* What `$/hol/declResults' answers: what a REPL would have printed
+   for each top-level declaration the client's selection covers.
+
+   `results' is in source order, one entry per declaration, holding
+   that declaration's span (so a client can point back at it) and the
+   `val name = value : type' lines it bound.  `omitted' counts the
+   declarations dropped off the *front* when a selection covered more
+   than the cap -- later declarations are the ones a reader asked
+   about.  `tornStart' / `tornEnd' say the selection began or ended
+   part-way through a declaration, which is the one thing a client
+   cannot see for itself and the one thing that makes a short answer
+   honest rather than quietly wrong. *)
+type decl_results = {
+  status     : string,
+  results    : (range * string) list,
+  omitted    : int,
+  tornStart  : bool,
+  tornEnd    : bool }
+
+fun encBool b print = print (if b then "true" else "false")
+
+fun encDeclResult encRng (rng, text) print = (
+  print "{\"range\":"; encRng rng print;
+  print ",\"text\":"; encString text print; print "}")
+
+fun encDeclResults encRng ({status, results, omitted, tornStart,
+                            tornEnd}: decl_results) print = (
+  print "{\"status\":"; encString status print;
+  print ",\"results\":"; encArray (encDeclResult encRng) results print;
+  print ",\"omitted\":"; encInt omitted print;
+  print ",\"tornStart\":"; encBool tornStart print;
+  print ",\"tornEnd\":"; encBool tornEnd print;
+  print "}")
+
 (* Stream an in-memory buffer's declarations.  The parser pulls its
    input through a callback and we have the whole text in hand, so give
    it over in one chunk and nothing after that.  Errors are dropped: a
@@ -1097,6 +1131,15 @@ val goalStateParams =
            {uri = uri, pos = pos, width = width, step = step})
     (field "textDocument" (field "uri" string), field "position" position,
      fieldD "width" int defaultGoalWidth, fieldO "step" int)
+
+(* `$/hol/declResults': a *range* rather than a position, because what
+   the user indicated is what they want told back to them -- a bare
+   cursor arrives as an empty range.  `width' is the pane's, as for
+   `$/hol/goalState'. *)
+val declResultsParams =
+  map3 (fn (uri, rng, width) => {uri = uri, range = rng, width = width})
+    (field "textDocument" (field "uri" string), field "range" range,
+     fieldD "width" int defaultGoalWidth)
 
 (* `$/hol/tryTactic': the goal-state request plus a candidate to apply
    at it, and what that probe may spend.  `budgetMs' 0 means the
@@ -2195,6 +2238,20 @@ fun start {diag, dbg, warnings} = let
     plugins     : plugin_data,
     compileSnap : LSPExtension.compileSnap }
 
+  (* What one declaration's compilation entered at the SML top level,
+     and which declaration that was -- `endByte` is its
+     `HOLSourceAST.decSpan` stop, the same number `declSnapshot` is
+     keyed by and the same one a later parse of the buffer computes, so
+     a reader matches a declaration to its bindings by that alone.
+
+     Kept as values rather than as rendered text: rendering a theorem
+     means printing a term, which every compile would then pay for on
+     every declaration whether anyone asks or not.  `$/hol/declResults`
+     prints them when asked. *)
+  type declBinding = {
+    endByte : int,
+    values  : (string * PolyML.NameSpace.Values.value) list }
+
   type parse_data = {
     done: bool,
     pos: int,
@@ -2205,35 +2262,57 @@ fun start {diag, dbg, warnings} = let
        last-completed compile.  Consulted by `startCompile` to resume
        from the largest snapshot with `endByte <= the edit mark`
        instead of restarting from byte 0. *)
-    declSnapshots: declSnapshot list}
+    declSnapshots: declSnapshot list,
+    (* Newest-first, one entry per declaration the compile actually
+       ran.  Unlike `declSnapshots` this is kept for a declaration that
+       drew a diagnostic of its own: what it bound is still what a REPL
+       would have printed for it, and an error above does not change
+       that. *)
+    declBindings: declBinding list}
   fun emptyParseData n: parse_data = {
     done = false, pos = 0, builtTrees = [],
     diags = DArray.new (n, Completed),
     plugins = emptyPluginData,
-    declSnapshots = [] }
+    declSnapshots = [], declBindings = [] }
   (* Preserve `declSnapshots` from `p` but zero the rest.  Used by
      `applyEdit` so a `didChange` doesn't discard the snapshots the
      previous compile computed. *)
-  fun carryOverSnapshots ({declSnapshots, ...}:parse_data): parse_data = {
+  fun carryOverSnapshots ({declSnapshots, declBindings,
+                           ...}:parse_data): parse_data = {
     done = false, pos = 0, builtTrees = [],
     diags = DArray.new (0, Completed),
     plugins = emptyPluginData,
-    declSnapshots = declSnapshots }
-  fun addBuiltTree t {done, pos, builtTrees, diags, plugins, declSnapshots} =
+    declSnapshots = declSnapshots, declBindings = declBindings }
+  fun addBuiltTree t {done, pos, builtTrees, diags, plugins, declSnapshots,
+                      declBindings} =
     {done = done, pos = pos, builtTrees = t :: builtTrees, diags = diags,
-     plugins = plugins, declSnapshots = declSnapshots}
-  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins, declSnapshots} =
+     plugins = plugins, declSnapshots = declSnapshots,
+     declBindings = declBindings}
+  fun setParsePos pos {done, pos = _, builtTrees, diags, plugins,
+                       declSnapshots, declBindings} =
     {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
-     plugins = plugins, declSnapshots = declSnapshots}
-  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins, declSnapshots} =
+     plugins = plugins, declSnapshots = declSnapshots,
+     declBindings = declBindings}
+  fun setParseDone pos {done = _, pos = _, builtTrees, diags, plugins,
+                        declSnapshots, declBindings} =
     {done = true, pos = pos, builtTrees = builtTrees, diags = diags,
-     plugins = plugins, declSnapshots = declSnapshots}
-  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _, declSnapshots} =
+     plugins = plugins, declSnapshots = declSnapshots,
+     declBindings = declBindings}
+  fun setPlugins plugins {done, pos, builtTrees, diags, plugins = _,
+                          declSnapshots, declBindings} =
     {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
-     plugins = plugins, declSnapshots = declSnapshots}
-  fun addDeclSnapshot snap {done, pos, builtTrees, diags, plugins, declSnapshots} =
+     plugins = plugins, declSnapshots = declSnapshots,
+     declBindings = declBindings}
+  fun addDeclSnapshot snap {done, pos, builtTrees, diags, plugins,
+                            declSnapshots, declBindings} =
     {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
-     plugins = plugins, declSnapshots = snap :: declSnapshots}
+     plugins = plugins, declSnapshots = snap :: declSnapshots,
+     declBindings = declBindings}
+  fun addDeclBinding b {done, pos, builtTrees, diags, plugins,
+                        declSnapshots, declBindings} =
+    {done = done, pos = pos, builtTrees = builtTrees, diags = diags,
+     plugins = plugins, declSnapshots = declSnapshots,
+     declBindings = b :: declBindings}
 
   (* Why a file is not being compiled: the declared dependency list
      whose change clears the block, and what went wrong. *)
@@ -3563,7 +3642,8 @@ fun start {diag, dbg, warnings} = let
        proof body is itself a wide cancellation. *)
     val proofGenAtEntry = !LSPExtension.proofGeneration
     val {text as {lines, ...}, parse = lastParse} = Sref.value lastTrees
-    val {declSnapshots = lastSnaps, diags = oldDiags, ...} = lastParse
+    val {declSnapshots = lastSnaps, declBindings = lastBindings,
+         diags = oldDiags, ...} = lastParse
     (* Which declaration's proof body the edit is in, for deciding how
        much of the pool to invalidate.
 
@@ -3733,7 +3813,14 @@ fun start {diag, dbg, warnings} = let
             diags = seededDiags, plugins = plugins,
             declSnapshots =
               List.filter (fn (s':declSnapshot) => #endByte s' <= endByte)
-                          lastSnaps}
+                          lastSnaps,
+            (* The decs this pass is about to skip bound what they
+               bound; the ones below `endByte` are about to be
+               re-entered, and would otherwise be recorded twice with
+               the stale copy found first. *)
+            declBindings =
+              List.filter (fn (b:declBinding) => #endByte b <= endByte)
+                          lastBindings}
           val emptyDiags = DArray.new (0, Completed)
         in (fn () => !LSPExtension.restoreCompileSnap (#compileSnap snap),
             trees, endByte, emptyDiags) end
@@ -4404,7 +4491,31 @@ fun start {diag, dbg, warnings} = let
          fails the second adds nothing of its own and would be captured
          at the very byte the error is at.  A resume there skips text
          the user is still typing and inherits the error for good. *)
-      fun captureSnap endByte = let
+      (* Both halves of "this declaration has finished": what it bound,
+         which is kept whatever happened, and the resume snapshot,
+         which is not.  See `captureSnap`. *)
+      fun onDecDone {start, stop, bindings} = (
+        (* Only a declaration that has source text of its own.  The
+           parser synthesises a zero-width end-of-theory declaration
+           at `(size, size)` (`finishTheory`), and `declBindings` is
+           keyed by the stop alone, so a file that does not end in a
+           newline -- which is every file while its last declaration
+           is being typed -- has the synthetic dec land on the last
+           real one's stop and, being the newer entry, win.  It binds
+           nothing, so the pane walked past the declaration the user
+           was looking at and answered about the one above it.
+
+           Recording it is worth nothing even when it collides with
+           nothing: a zero-width declaration has no text for a cursor
+           to be at the end of.  The resume snapshot below is a
+           different matter and is still taken for it -- an append is
+           exactly an edit at that byte, and resuming from there is
+           what keeps a file being extended off the from-boot path. *)
+        if start < stop then
+          trees := addDeclBinding {endByte = stop, values = bindings} (!trees)
+        else ();
+        captureSnap stop)
+      and captureSnap endByte = let
         val () = lastDecEnd := endByte
         val {builtTrees, plugins, diags, ...} = !trees
         val n = DArray.size diags
@@ -4683,7 +4794,7 @@ fun start {diag, dbg, warnings} = let
       fun runCompile () = (
         sendProgressBegin ();
         compileForReport uri (#text text) resumeStart stopAfter lastPos
-                         processBuiltTree pruneSeedAt captureSnap process;
+                         processBuiltTree pruneSeedAt onDecDone process;
         afterCompile (!lastPos, size (#text text)) (!ls);
         (* stopCompile no longer waits for the thread to exit, so
            we might land here on a stale thread whose applyEdit has
@@ -4888,6 +4999,19 @@ fun start {diag, dbg, warnings} = let
                  val carried =
                      List.map carry
                        (List.filter (fn s => #endByte s >= oldDecEnd) lastSnaps)
+                 (* Strictly below the edited declaration, where the
+                    snapshots above take it from `>=': this pass re-ran
+                    that declaration and recorded what it bound, and a
+                    carried copy would shift onto the same `endByte'
+                    and be found first -- answering about the text the
+                    user has just replaced. *)
+                 val carriedBindings =
+                     List.map (fn (b:declBinding) =>
+                                  {endByte = #endByte b + delta,
+                                   values = #values b})
+                       (List.filter (fn (b:declBinding) =>
+                                        #endByte b > oldDecEnd)
+                                    lastBindings)
                in
                  trees := {
                    done = #done fresh, pos = #pos fresh,
@@ -4895,7 +5019,8 @@ fun start {diag, dbg, warnings} = let
                    diags = #diags fresh,
                    plugins = LSPExtension.reusePluginData
                                reuse (#plugins prev) (#plugins fresh),
-                   declSnapshots = carried @ #declSnapshots fresh};
+                   declSnapshots = carried @ #declSnapshots fresh,
+                   declBindings = carriedBindings @ #declBindings fresh};
                  !LSPExtension.restoreCompileSnap (#compileSnap prev)
                end);
           commitCompletedPass ();
@@ -5619,6 +5744,164 @@ fun start {diag, dbg, warnings} = let
               val r = run (ctx, thm)
             in holdForTests (); r end)
          in demandParentProof resumeOf resp; resp end
+    end handle Empty => NONE
+
+  (* How many declarations `$/hol/declResults' will render, and how
+     many bindings one of them may have before it is taken to be an
+     `open' rather than something a reader asked about.
+
+     The second cap is not a display limit: `open bossLib' enters every
+     name in the structure, and a `Theory' header expands to four of
+     them, so without it a cursor after the header would answer with a
+     few thousand lines of library.  Nothing a user writes by hand
+     binds a dozen values in one declaration. *)
+  val maxDeclResults = 10
+  val maxDeclValues = 12
+
+  (* `$/hol/declResults': what a REPL would have printed for the
+     declarations the client's range covers.
+
+     Why this is not part of `$/hol/goalState': a goal state is what a
+     position is inside, and this is what a *range* contains, which the
+     goal-state params cannot express.  The two answer the same pane
+     and the client picks between them, so a server that has one and
+     not the other keeps working.
+
+     Printing happens here rather than at compile time because a
+     theorem's `val' line is a term print, and making every compile pay
+     for one per declaration -- for an answer almost no declaration is
+     ever asked for -- is the wrong trade.  What the compile keeps is
+     the values; see `declBinding'. *)
+  fun declResultsAt ({lastTrees, ...}:file_data) (rng, width) = let
+    val {parse, text} = Sref.value lastTrees
+    val {declBindings, declSnapshots, ...} = parse
+    val lines = #lines text
+    val src = #text text
+    val a0 = fromLineCol lines (#1 rng)
+    val b0 = fromLineCol lines (#2 rng)
+    val (a, b) = if a0 <= b0 then (a0, b0) else (b0, a0)
+    (* Every declaration's span, in source order.  From the buffer and
+       not from the last compile: a declaration the user has typed
+       since is still a declaration, and saying nothing about the one
+       above it because of that would make the pane blink out on a
+       keystroke. *)
+    val decs = let
+      val parseDec = bufferDecs src
+      fun loop acc =
+        case parseDec () of
+            NONE => List.rev acc
+          | SOME d => loop (HOLSourceAST.decSpan d :: acc)
+      in loop [] handle _ => [] end
+    (* The compile keyed its bindings by the same `decSpan' stop this
+       parse computes, so equality is the whole of the match.  An edit
+       since the compile moves the declarations below it and they stop
+       matching -- which is the right answer, those bindings having
+       been made from text the user has since replaced.
+
+       Indexed rather than searched: a pane that follows the cursor
+       asks on every movement, and the longest script in the tree has
+       about 1700 declarations, so a linear search per declaration is
+       a walk of three million entries for one cursor move.
+       `declBindings' is newest-first, so the fold runs from the right
+       and the newest entry at a byte is the one inserted last --
+       which is the one a search down the list would have found. *)
+    val bindingTbl = List.foldr
+      (fn (bd:declBinding, m) =>
+          Binarymap.insert (m, #endByte bd, #values bd))
+      (Binarymap.mkDict Int.compare) declBindings
+    fun bindingsAt stop = getOpt (Binarymap.peek (bindingTbl, stop), [])
+    (* A declaration worth printing: one that bound something, and not
+       so much that it is an `open' in disguise. *)
+    fun shown (span as (_, stop)) =
+      case bindingsAt stop of
+          [] => NONE
+        | vs => if List.length vs > maxDeclValues then NONE
+                else SOME (span, vs)
+    fun strictlyInside p = List.exists (fn (st, sp) => st < p andalso p < sp)
+                                       decs
+    (* A cursor is "between declarations" when it is in no declaration's
+       interior.  Sitting exactly on a declaration's last byte counts as
+       between -- that is a cursor just after `QED', which is the whole
+       point of the cursor case. *)
+    val (candidates, tornStart, tornEnd) =
+      if a = b then
+        (if strictlyInside a then []
+         else
+           (* The last declaration that has anything to say.  Walking
+              past the ones that have nothing is what makes a cursor
+              after `val y = 5;' answer about `y' rather than about the
+              semicolon -- and after a `Theory' header's `open's,
+              about nothing at all rather than about the library. *)
+           case List.find (fn d => isSome (shown d))
+                  (List.rev (List.filter (fn (_, sp) => sp <= a) decs)) of
+               NONE => []
+             | SOME d => [d],
+         false, false)
+      else let
+        (* A selection inside one declaration -- a subexpression, say --
+           is not a question about declarations, so it gets no answer
+           at all rather than a torn-at-both-ends message. *)
+        val within = List.exists
+              (fn (st, sp) => st <= a andalso b <= sp andalso
+                              not (st = a andalso b = sp)) decs
+      in if within then ([], false, false)
+         else (List.filter (fn (st, sp) => a <= st andalso sp <= b) decs,
+               strictlyInside a, strictlyInside b)
+      end
+    val chosen = List.mapPartial shown candidates
+    val n = List.length chosen
+    (* Later declarations win the cap: a reader who selected a page of
+       script is asking what it ended up with. *)
+    val keep = if n <= maxDeclResults then chosen
+               else List.drop (chosen, n - maxDeclResults)
+    val omitted = n - List.length keep
+    (* Largest snapshot at or before the last declaration shown, which
+       is the state the compile had just after it ran -- the state a
+       REPL would have printed its value in.  The same fold as
+       `snapBefore' above, with the bound inclusive because a
+       snapshot's `endByte' *is* a declaration's stop. *)
+    fun snapAt stop = List.foldl
+      (fn (s, best) =>
+        if #endByte s > stop then best
+        else case best of
+               NONE => SOME s
+             | SOME bst => if #endByte s > #endByte bst then SOME s else best)
+      NONE declSnapshots
+    fun render vs = let
+      val out = DArray.new (8, "")
+      fun pr s = DArray.push (out, s)
+      (* `printWithType' renders the whole `val name = value : type'
+         line and `prettyPrint' ends it with a newline, exactly as
+         `$/eval' gets it -- see `codeFn' in holide.ML.  A printer that
+         raises costs one line, not the answer. *)
+      fun one (nm, value) =
+        PolyML.prettyPrint (pr, width)
+          (PolyML.NameSpace.Values.printWithType
+             (value, HOL_IDE.printDepth, SOME LSPNameSpace.fileNS))
+        handle Thread.Interrupt => raise Thread.Interrupt
+             | _ => pr ("val " ^ nm ^ " = <could not print>\n")
+      in List.app one vs; String.concat (DArray.toList out) end
+    fun answer status results = SOME {
+      status = status, results = results, omitted = omitted,
+      tornStart = tornStart, tornEnd = tornEnd} : decl_results option
+    in
+      if List.null keep andalso not tornStart andalso not tornEnd
+      then NONE
+      else if List.null keep then answer "ok" []
+      else
+        (* The same bracket as the walk above, and for the same reason:
+           rendering a theorem reads the Context and the grammars, and
+           this rewinds them to the declaration it is printing.  A
+           compile holding the state is told about rather than waited
+           for -- a pane following the cursor asks again anyway. *)
+        withWalkState
+          {busy = fn () => answer "pending" [], cleanup = fn () => ()}
+          (fn () => let
+             val () = case snapAt (#2 (#1 (List.last keep))) of
+                 NONE => ()
+               | SOME sn => !LSPExtension.restoreCompileSnap (#compileSnap sn)
+           in answer "ok" (List.map (fn (span, vs) => (span, render vs)) keep)
+           end)
     end handle Empty => NONE
 
   (* Walk a failed proof to the end of its tactic and record the pool's
@@ -6484,6 +6767,16 @@ fun start {diag, dbg, warnings} = let
             in if changed then publishAllDiagnostics uri v else () end
           | _ => ()
         in goalStateReply (v_opt, resp) end)
+    | Request {method = "$/hol/declResults", id, params} =>
+      spawnJob id params declResultsParams (fn {uri, range, width} =>
+        case withFileInfo (fn fileInfo =>
+               (fileInfo, Binarymap.peek (fileInfo, uri))) of
+            NONE => Ok encNull
+          | SOME (v: file_data) => let
+              val lines = #lines (#text (Sref.value (#lastTrees v)))
+            in Ok (encOrNull (encDeclResults (encRangeLC lines))
+                             (declResultsAt v (range, width)))
+            end)
     | Request {method = "$/hol/tryTactic", id, params} =>
       spawnJob id params tryTacticParams
         (fn {uri, pos, width, step, tactic, budgetMs} => let

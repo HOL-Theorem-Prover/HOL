@@ -417,6 +417,14 @@ fun preprocess_def def = let
                 |> LIST_CONJ
   val defs = def |> DefnBase.one_line_ify_mutrec NONE
                  |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
+  (* like can from_to_thm_for, but a clash is reported, not taken as a
+     missing translation *)
+  fun has_from_to ty =
+    (cv_typeLib.from_to_thm_for ty; true)
+    handle HOL_ERR e =>
+             if cv_typeLib.is_clash e then raise HOL_ERR e else false
+         | Interrupt => raise Interrupt
+         | _ => false
   (* val th = hd defs *)
   fun adjust_def th =
     let val (l,r) = th |> concl |> dest_eq
@@ -424,7 +432,7 @@ fun preprocess_def def = let
         val is_fun = can dom_rng l_ty
     in
       if not is_fun then th else
-      if can cv_typeLib.from_to_thm_for l_ty then th else
+      if has_from_to l_ty then th else
         let val dom_ty = fst (dom_rng l_ty)
             val var = mk_var ("arg", dom_ty)
             val var = numvariant (free_vars (concl th)) var
@@ -432,7 +440,7 @@ fun preprocess_def def = let
     end;
   val defs = map adjust_def defs
   fun is_bad_arg_ty ty =
-    if can cv_typeLib.from_to_thm_for ty then false else
+    if has_from_to ty then false else
       contains_fun_ty ty;
   (* val th = hd defs *)
   fun check_arg_tys th =

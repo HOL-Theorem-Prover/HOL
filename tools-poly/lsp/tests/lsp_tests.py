@@ -3780,23 +3780,64 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
     until someone killed the server: the probe never answered, and
     nor did anything else.
 
-    So the assertions are the two halves of that.  Every probe has to
-    come back, and the server has to still be there afterwards.
+    One probe per walk, each stopped by its own budget and each
+    having to blame its own text:
 
-    Deliberately all on ONE client.  The neighbouring budget test
-    retries with a fresh `Client' per attempt, which is why it could
-    never have caught this: a wedged server is abandoned rather than
-    noticed."""
+      - `slow_body' puts the cost in the body, so the walk to the
+        anchor is the one that runs out.  Under a single canary that
+        walk swallowed the interrupt, carried on into the candidate,
+        and the report then sliced the body's span out of the
+        candidate's string -- so this probe is the one that fails on
+        the old code.
+      - `slow_candidate' puts a cheap body in front of a costly
+        candidate, so the second walk is the one that runs out, which
+        it can only do if it was given a budget at all.
+
+    The cost has to be real.  `EVAL' on `2 ** 200000' takes a second
+    or two -- three orders of magnitude past the 1ms budget -- so the
+    canary is not racing the walk and a timeout here is not luck.
+    The fixture this replaced proved `a + (b + (c + d)) =
+    d + (c + (b + a))' by `rw[] >> metis_tac[...]': `rw[]' closes
+    that goal in 1ms and `metis_tac' then runs over no goals at all,
+    so both walks held about a millisecond of work against a 1ms
+    budget.  Measured 2026-11-25, the canary won 52% of tries idle
+    and 20% under load, and the test asked only for one win in ten --
+    a ~10% failure rate on a contended build, which is when the suite
+    runs.  The fixture below is 80/80 at load average 12.
+
+    Deliberately all on ONE client, with a goal state asked for
+    afterwards: a client that gives up and closes abandons a wedged
+    server rather than noticing it."""
     src = ("Theory gs_twobudget\n"
            "Ancestors arithmetic\n\n"
-           "Theorem slow_anchor:\n"
-           "  !a b c d:num. a + (b + (c + d)) = d + (c + (b + a))\n"
+           "Theorem slow_body:\n"
+           "  2 ** 200000 = 2 ** 200000\n"
            "Proof\n"
-           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC, ADD_SYM]\n"
+           "  CONV_TAC EVAL\n"
+           "QED\n\n"
+           "Theorem slow_candidate:\n"
+           "  2 ** 200000 = 2 ** 200000\n"
+           "Proof\n"
+           "  ALL_TAC >> EVAL_TAC\n"
            "QED\n")
     uri = "file:///tmp/gs_twobudget.sml"
-    END = 46     # past the metis call, so the anchor walk runs it
-    CAND = "simp[ADD_COMM, ADD_ASSOC, ADD_SYM, ADD_0, ADD_SUC]"
+    # Line 6 is `  CONV_TAC EVAL' and column 15 is its end, so the walk
+    # to the anchor has to run it.  Line 12 is `  ALL_TAC >> EVAL_TAC'
+    # and column 9 is just past `ALL_TAC', so that walk costs nothing
+    # and the candidate is the only thing left to be slow.
+    SLOW_BODY = (6, 15)
+    FAST_BODY = (12, 9)
+
+    def probe(c, req_id, pos, cand):
+        r = _send_trytactic(c, req_id, uri, pos[0], pos[1], cand,
+                            budget_ms=1)
+        assert_true(r is not None,
+                    f"probe {req_id} answered at all; no reply is the "
+                    f"wedge this test exists for")
+        err = ((r.get("result") or {}).get("error")) or ""
+        assert_contains(err, "budget",
+                        f"a 1ms budget stopped the walk ({r!r})")
+        return err
 
     c = Client("/tmp")
     try:
@@ -3805,63 +3846,31 @@ def test_tryTactic_budget_bounds_both_of_its_walks():
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted")
 
-        # Whether the canary wins is a race -- it sleeps the budget and
-        # then has to be scheduled, while the walk runs -- so try until
-        # it does; but every single try must answer, because a miss
-        # here is the wedge.  Each try extends the candidate, so the
-        # candidate walk is fresh text rather than a cached resume: a
-        # repeat at the same anchor costs nothing to walk and so would
-        # never run out of budget.
-        fired = None
-        last = None
-        for attempt in range(10):
-            cand = CAND[:-1] + (", ADD_0" * attempt) + "]"
-            r = _send_trytactic(c, 7360 + attempt, uri, 6, END, cand,
-                                budget_ms=1)
-            assert_true(r is not None,
-                        f"probe {attempt} answered at all; no reply is the "
-                        f"wedge this test exists for")
-            res = r.get("result") or {}
-            last = res
-            if "budget" in (res.get("error") or ""):
-                fired = res["error"]
-                break
-        assert_true(fired is not None,
-                    f"a 1ms budget stopped a walk in ten tries "
-                    f"(last reply {last!r})")
+        # The anchor walk ran out, so the report names the body's step.
+        # `budgetReport' slices the span the walker left behind out of
+        # whichever text it was told to blame, so blaming the wrong one
+        # does not merely mislabel the step: it indexes one string with
+        # the other's offsets.
+        err = probe(c, 7360, SLOW_BODY, "simp[]")
+        assert_contains(err, "`CONV_TAC EVAL`",
+                        "the anchor's timeout names the body's step")
 
-        # Whichever walk it stopped, it must blame that walk's own
-        # text -- the two index different strings, and either can be
-        # the one that ran out.  The sharp assertions here are the
-        # reply and the survival either side of this; this one only
-        # holds the report to naming something that exists.
-        if "`" in fired:
-            step = fired.split("`")[1]
-            # As the server renders it: every whitespace character
-            # becomes a space (runs are *not* collapsed, so offsets
-            # still line up), and anything past 60 characters is cut
-            # to 57 plus an ellipsis -- `goal_state_init.ML:160-168'.
-            # Compare on the same terms.  Without this the assertion
-            # could only hold while the candidate stayed under the
-            # cut: `CAND' is 51 characters and each attempt adds 7, so
-            # from the third attempt on a fired canary always named a
-            # step that matched neither text, and whether this test
-            # passed came down to which attempt the 1ms canary won.
-            flat = lambda t: "".join(" " if ch.isspace() else ch
-                                     for ch in t)
-            needle = step[:-3] if step.endswith("...") else step
-            assert_true(any(needle in flat(h) for h in (src, cand)),
-                        f"the named step comes from one of the two texts "
-                        f"the walks index ({step!r} in {fired!r})")
+        # And the candidate walk has a budget of its own, or this probe
+        # is the one that never comes back.
+        err = probe(c, 7361, FAST_BODY, "EVAL_TAC")
+        assert_contains(err, "`EVAL_TAC`",
+                        "the candidate's timeout names the candidate")
+        assert_true("CONV_TAC" not in err,
+                    f"the candidate's timeout blames the candidate and "
+                    f"not the body ({err!r})")
 
         # And the server is still usable -- the half of this the
         # single-canary version failed.
-        after = _send_goalstate(c, 7369, uri, 6, END)
+        after = _send_goalstate(c, 7369, uri, FAST_BODY[0], FAST_BODY[1])
         assert_true(after is not None,
                     "the server still answers after a probe timed out")
     finally:
         c.close()
-
 
 def test_tryTactic_says_when_a_candidate_will_not_compile():
     """A candidate whose SML does not compile is told so.
@@ -4233,55 +4242,48 @@ def test_goalState_budget_timeout_names_the_step():
     race; the report must then name the step in flight, give its range,
     and count what finished before it.
 
+    Deterministic needs a step that is actually slow.  `EVAL' on
+    `2 ** 200000' takes a second or two against the 1ms budget, so
+    the canary has a thousandfold margin rather than a race to win.
+    This used to prove `a + (b + c) = c + (b + a)' by
+    `rw[] >> metis_tac[...]', where `rw[]' closes the goal in a
+    millisecond and `metis_tac' never runs at all; the walk was over
+    before the canary could be scheduled about half the time, and the
+    test covered for that by retrying ten times with a fresh server
+    each.  See `tryTactic_budget_bounds_both_of_its_walks', which had
+    the same fixture and the same lottery.
+
     The second half is the control: the same walk under the shipped
     budget says nothing at all, so the attribution cannot become noise
     on a healthy proof."""
     src = ("Theory gs_budget\n"
            "Ancestors arithmetic\n\n"
            "Theorem slow_one:\n"
-           "  !a b c:num. a + (b + c) = c + (b + a)\n"
+           "  2 ** 200000 = 2 ** 200000\n"
            "Proof\n"
-           "  rw[] >> metis_tac[ADD_COMM, ADD_ASSOC]\n"
+           "  ALL_TAC >> CONV_TAC EVAL\n"
            "QED\n")
     uri = "file:///tmp/gs_budget.sml"
-    END = 40   # past `metis_tac[...]', so the walk runs it
+    END = 26   # the end of `CONV_TAC EVAL', so the walk runs it
 
-    # Whether the canary wins is a race: it sleeps the budget and then
-    # has to be scheduled, while the walk runs.  Measured under eight
-    # busy cores it wins about half the tries -- `rw[]' discharges this
-    # goal, so the walk is over in a millisecond or two however hard
-    # the goal is made, and the race is decided inside the first step.
-    # Hence ten tries rather than a slower proof: the walk cannot be
-    # stretched, so the provocation is repeated instead.  A server that
-    # stopped attributing would fail all ten.
-    timed_out = None
-    last = None
-    for attempt in range(10):
-        c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
-        try:
-            _init(c, "/tmp")
-            _did_open(c, uri, src, 1)
-            assert_true(c.wait_for_method("$/compileCompleted", 30),
-                        "compileCompleted")
-            r = _send_goalstate(c, 7101 + attempt, uri, 6, END)
-            res = (r or {}).get("result")
-            assert_true(res is not None, f"a result came back ({r!r})")
-            last = res
-            if res.get("error"):
-                timed_out = res
-                break
-        finally:
-            c.close()
+    c = Client("/tmp", env={"HOL_LSP_WALK_BUDGET_MS": "1"})
+    try:
+        _init(c, "/tmp")
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_goalstate(c, 7101, uri, 6, END)
+        timed_out = (r or {}).get("result")
+        assert_true(timed_out is not None, f"a result came back ({r!r})")
+    finally:
+        c.close()
 
-    assert_true(timed_out is not None,
-                f"a 1ms budget stopped the walk in ten tries "
-                f"(last reply {last!r})")
     err = timed_out.get("error") or ""
     assert_contains(err, "budget", "the report names the budget")
     assert_contains(err, "step(s) completed",
                     "the report counts what finished")
-    assert_true("`" in err,
-                f"the report names a step in backticks ({err!r})")
+    assert_contains(err, "`CONV_TAC EVAL`",
+                    "the report names the step that was in flight")
     rng = timed_out.get("failedRange")
     assert_true(rng is not None,
                 f"the in-flight step is ranged ({timed_out!r})")
@@ -4295,17 +4297,16 @@ def test_goalState_budget_timeout_names_the_step():
         _did_open(c, uri, src, 1)
         assert_true(c.wait_for_method("$/compileCompleted", 30),
                     "compileCompleted (default budget)")
-        # Stopping before `metis_tac' keeps this half cheap by
+        # Stopping before `CONV_TAC EVAL' keeps this half cheap by
         # construction rather than by luck, so it tests what it says:
         # a walk inside its budget says nothing about cost.
-        r = _send_goalstate(c, 7110, uri, 6, 6)
+        r = _send_goalstate(c, 7110, uri, 6, 9)
         res = (r or {}).get("result")
         assert_true(res is not None, f"a result came back ({r!r})")
         assert_eq(res.get("error"), None,
                   "a walk that fits its budget reports no cost")
     finally:
         c.close()
-
 
 def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
     """A `by' block is structurally step-able without desugaring it to
@@ -4350,6 +4351,305 @@ def test_goalState_steps_inside_by_and_resolves_wildcard_equality():
         t2 = g2["goals"][0].get("goal", "")
         assert_true("y * 2" in t2 and "y + x + y" in t2 and "_" not in t2,
                     f"wildcard quotation was resolved ({t2!r})")
+    finally:
+        c.close()
+
+
+def _send_declresults(c, req_id, uri, start, end, timeout=20):
+    """Ask `$/hol/declResults' over the range START..END, each a
+    (line, character) pair, and return the reply or None.  A cursor is
+    an empty range, so pass the same pair twice.  Budget as
+    `_send_goalstate': a server that is going to answer does so in
+    milliseconds."""
+    c.send({"jsonrpc":"2.0","id":req_id,
+            "method":"$/hol/declResults",
+            "params":{"textDocument":{"uri":uri},
+                      "range":{"start":{"line":start[0],
+                                        "character":start[1]},
+                               "end":{"line":end[0], "character":end[1]}}}})
+    def got(cl):
+        with cl.msgs_lock:
+            for m in cl.msgs:
+                if m.get("id") == req_id: return m
+        return None
+    return c.wait_until(got, timeout)
+
+
+def _declresults_texts(reply):
+    """The `text' of each result in REPLY, or None if there is no
+    result object at all."""
+    r = reply.get("result")
+    if r is None: return None
+    return [x.get("text", "") for x in r.get("results", [])]
+
+
+# The file every `declResults' test but the cap one opens.  Lines are
+# numbered in the comments because every assertion below is a position
+# in it, and a position argued from a line count nobody can see is the
+# kind of test that passes for the wrong reason.
+_DECLRESULTS_SRC = (
+    "Theory declresults\n"          # 0
+    "Ancestors arithmetic\n"        # 1
+    "\n"                            # 2
+    "val x = 3;\n"                  # 3
+    "val y = 5;\n"                  # 4
+    "\n"                            # 5
+    "val z = 10;\n"                 # 6
+    "\n"                            # 7
+    "Theorem truth:\n"              # 8
+    "  T\n"                         # 9
+    "Proof\n"                       # 10
+    "  rw[]\n"                      # 11
+    "QED\n"                         # 12
+    "\n")                           # 13
+
+
+def test_declResults_cursor_sees_the_last_declaration():
+    """A cursor between declarations answers with what the REPL would
+    have printed for the one above it -- walking past the `;' that
+    immediately precedes it, which binds nothing."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_cursor.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Blank line 5, between `val y = 5;' and `val z = 10;'.
+        r = _send_declresults(c, 301, uri, (5, 0), (5, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("y" in texts[0] and "5" in texts[0]
+                    and "int" in texts[0],
+                    f"the REPL line for `val y = 5' ({texts[0]!r})")
+        # And not the one below it, which has not run at this point.
+        assert_true("10" not in texts[0],
+                    f"not the declaration below ({texts[0]!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_after_QED_shows_the_theorem():
+    """A theorem is a top-level declaration like any other: just after
+    its `QED' the answer is `val name = |- ... : thm'."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_qed.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 13, the blank line after `QED'.
+        r = _send_declresults(c, 311, uri, (13, 0), (13, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("truth" in texts[0] and "thm" in texts[0],
+                    f"the theorem's own REPL line ({texts[0]!r})")
+        assert_true("T" in texts[0], f"and its statement ({texts[0]!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_inside_a_declaration_is_null():
+    """A cursor in a declaration's interior is editing it, not asking
+    about it.  Same rule as a selection within one declaration."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_inside.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 3 is `val x = 3;'; character 5 is inside the binding.
+        r = _send_declresults(c, 321, uri, (3, 5), (3, 5))
+        assert_eq(r.get("result"), None, "cursor inside a declaration")
+        # And a selection of a subexpression -- the `3' -- says nothing
+        # either, rather than reporting itself torn at both ends.
+        r2 = _send_declresults(c, 322, uri, (3, 8), (3, 9))
+        assert_eq(r2.get("result"), None, "selection inside one declaration")
+        # The positive half, in the same file and the same server: a
+        # test that only ever asserts `null' passes just as well with
+        # the whole feature taken out.  Line 5 is the blank between
+        # `val y' and `val z', one byte past the interior above.
+        r3 = _send_declresults(c, 323, uri, (5, 0), (5, 0))
+        assert_true(_declresults_texts(r3),
+                    f"and the cursor between declarations does answer ({r3!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_selection_covers_each_declaration():
+    """A selection spanning whole declarations answers for all of them,
+    in source order."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_sel.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Start of line 3 (`val x') to start of line 7, which takes in
+        # `val x', `val y' and `val z' whole and tears neither end.
+        r = _send_declresults(c, 331, uri, (3, 0), (7, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 3,
+                    f"three declarations answered ({r!r})")
+        assert_true("x" in texts[0] and "y" in texts[1]
+                    and "z" in texts[2],
+                    f"in source order ({texts!r})")
+        assert_eq(r["result"].get("tornStart"), False, "start not torn")
+        assert_eq(r["result"].get("tornEnd"), False, "end not torn")
+        assert_eq(r["result"].get("omitted"), 0, "nothing omitted")
+    finally:
+        c.close()
+
+
+def test_declResults_reports_a_torn_selection():
+    """A selection that starts part-way through a declaration says so,
+    and answers for the whole ones it does contain."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_torn.sml"
+        _did_open(c, uri, _DECLRESULTS_SRC, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # From inside `val x = 3' (line 3, character 4) to the start of
+        # line 6, so `val y' is whole and `val x' is cut into.
+        r = _send_declresults(c, 341, uri, (3, 4), (6, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None, f"an answer came ({r!r})")
+        assert_eq(r["result"].get("tornStart"), True, "torn at the start")
+        assert_eq(r["result"].get("tornEnd"), False, "not torn at the end")
+        assert_true(len(texts) == 1 and "y" in texts[0],
+                    f"only the whole declaration ({texts!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_caps_at_ten_keeping_the_later_ones():
+    """Twelve declarations selected answer with the last ten, and the
+    reply says two were dropped."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_cap.sml"
+        src = ("Theory declresults_cap\n"
+               "Ancestors arithmetic\n"
+               "\n")
+        for i in range(1, 13):
+            src += "val v%d = %d\n" % (i, i)
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        # Line 3 is `val v1'; line 15 is just past `val v12'.
+        r = _send_declresults(c, 351, uri, (3, 0), (15, 0))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 10,
+                    f"ten declarations answered ({r!r})")
+        assert_eq(r["result"].get("omitted"), 2, "two dropped")
+        assert_true("v3" in texts[0], f"starting at the third ({texts[0]!r})")
+        assert_true("v12" in texts[-1], f"ending at the last ({texts[-1]!r})")
+    finally:
+        c.close()
+
+
+# A file whose last declaration is not followed by a newline, which is
+# every file while its last declaration is being typed.  The parser
+# puts a zero-width end-of-theory declaration at `(size, size)`, so
+# there it lands on the last real declaration's `decSpan` stop -- the
+# one `declBindings` is keyed by.
+_DECLRESULTS_EOF_HEAD = (
+    "Theory declresults_eof\n"       # 0
+    "Ancestors arithmetic\n"         # 1
+    "\n"                             # 2
+    "Theorem thatthm:\n"             # 3
+    "  T\n"                          # 4
+    "Proof\n"                        # 5
+    "  rw[]\n"                       # 6
+    "QED\n"                          # 7
+    "\n")                            # 8
+
+
+def test_declResults_answers_for_an_unterminated_last_declaration():
+    """A cursor at the end of the file's last declaration answers about
+    *it*, not about the one above it, when there is no final newline.
+
+    The end-of-theory declaration the parser synthesises at EOF is
+    zero-width, so without a newline it shares the declaration's stop;
+    it binds nothing, and as the newer entry at that byte it used to
+    hide the answer and send the walk one declaration further up."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_eof.sml"
+        # Line 9 is `val x = 10' and the file stops at its last byte.
+        src = _DECLRESULTS_EOF_HEAD + "val x = 10"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_declresults(c, 361, uri, (9, 10), (9, 10))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("x" in texts[0] and "10" in texts[0]
+                    and "int" in texts[0],
+                    f"the REPL line for `val x = 10' ({texts[0]!r})")
+        # The positive control for the failure this guards: the
+        # theorem above it is what the walk used to land on.
+        assert_true("thatthm" not in texts[0],
+                    f"not the declaration above it ({texts[0]!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_survives_the_final_newline_arriving():
+    """And it stays answered once the user ends the line.
+
+    Typing the newline puts the edit exactly at that declaration's
+    stop, so the resumed compile skips the declaration and nothing
+    re-records what it bound.  A wrong entry made while the file had no
+    final newline therefore stood for the rest of the session -- this
+    is the half of the bug that did not heal on its own."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_eof_nl.sml"
+        src = _DECLRESULTS_EOF_HEAD + "val x = 10"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "first compileCompleted")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, src + "\n", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "second compileCompleted")
+        r = _send_declresults(c, 371, uri, (9, 10), (9, 10))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("x" in texts[0] and "10" in texts[0],
+                    f"still the REPL line for `val x = 10' ({texts[0]!r})")
+        # And the declaration typed after it answers for itself.
+        idx_before2 = c.total_msgs()
+        src2 = _DECLRESULTS_EOF_HEAD + "val x = 10\nval y = 11"
+        _did_change_full(c, uri, src2, 3)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before2),
+                    "third compileCompleted")
+        r2 = _send_declresults(c, 372, uri, (10, 10), (10, 10))
+        t2 = _declresults_texts(r2)
+        assert_true(t2 is not None and len(t2) == 1,
+                    f"one declaration answered ({r2!r})")
+        assert_true("y" in t2[0] and "11" in t2[0],
+                    f"the REPL line for `val y = 11' ({t2[0]!r})")
+        # The one above it is still its own answer, not `y''s and not
+        # the theorem's.
+        r3 = _send_declresults(c, 373, uri, (9, 10), (9, 10))
+        t3 = _declresults_texts(r3)
+        assert_true(t3 is not None and len(t3) == 1
+                    and "x" in t3[0] and "10" in t3[0],
+                    f"and `val x = 10' above it ({r3!r})")
     finally:
         c.close()
 
@@ -13694,6 +13994,22 @@ TESTS = [
     ("eval_is_logged", test_eval_is_logged),
     ("goalState_steps_inside_by_and_resolves_wildcard_equality",
                     test_goalState_steps_inside_by_and_resolves_wildcard_equality),
+    ("declResults_cursor_sees_the_last_declaration",
+                                     test_declResults_cursor_sees_the_last_declaration),
+    ("declResults_after_QED_shows_the_theorem",
+                                     test_declResults_after_QED_shows_the_theorem),
+    ("declResults_inside_a_declaration_is_null",
+                                     test_declResults_inside_a_declaration_is_null),
+    ("declResults_selection_covers_each_declaration",
+                                     test_declResults_selection_covers_each_declaration),
+    ("declResults_reports_a_torn_selection",
+                                     test_declResults_reports_a_torn_selection),
+    ("declResults_caps_at_ten_keeping_the_later_ones",
+                                     test_declResults_caps_at_ten_keeping_the_later_ones),
+    ("declResults_answers_for_an_unterminated_last_declaration",
+                                     test_declResults_answers_for_an_unterminated_last_declaration),
+    ("declResults_survives_the_final_newline_arriving",
+                                     test_declResults_survives_the_final_newline_arriving),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
                                      test_goalState_between_two_theorems),

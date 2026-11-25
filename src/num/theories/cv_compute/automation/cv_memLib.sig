@@ -24,6 +24,11 @@ sig
   val cv_pre_thms     : unit -> thm list
   val cv_inline_thms  : unit -> thm list
   val cv_from_to_thms : unit -> thm list
+  (* each cv_from_to theorem with the name it is stored under ("thy.name"),
+     or "" if cv_from_to_add added it; most recently added first *)
+  val cv_from_to_entries : unit -> (string * thm) list
+  (* removes the cv_from_to theorem of this name, here and in descendants *)
+  val cv_from_to_delete  : string -> unit
 
   val cv_pre_add      : thm -> unit
   val cv_inline_add   : thm -> unit
