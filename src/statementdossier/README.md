@@ -21,6 +21,20 @@ both formats. About accepts Markdown, including fenced command blocks.
 Outside the reader view, supporting theorems whose statements print
 longer than 40 lines are folded. Markdown output ends with a single newline.
 
+Pattern completion stores a `case` with a wildcard arm as one arm per
+constructor. By default, the arms of a `case` expression that share a
+right-hand side mentioning none of their pattern variables print as one
+final `_` arm, so long as the printed arms compile, as the parser
+compiles a `case`, back to the stored term up to bound variable names,
+and that right-hand side has no free variable the parser would take the
+`_` to bind (`_0`, `_1`, ...), and `_` is not overloaded; otherwise the
+expression prints in full. When a constant left in the patterns has an
+overloaded name, which the dropped arms may have been all that resolved,
+the case gives the type of what it splits on, as in `case (v :value)
+of`. About says how many expressions were merged, and the run prints how
+many were merged and how many failed that check. Set the flag
+`statementdossier.case_wildcards` to false to print every arm.
+
 ## Example
 
 In a configured, built Poly/ML HOL tree, from its root:
@@ -249,8 +263,9 @@ report and configuration tests run under both compilers; command tests
 run under Poly/ML.
 They exercise stored statement fidelity, kernel assumptions, recursive and
 cyclic expansion, boundaries, records, HTML escaping and fragment links,
-trust tags, repeated database snapshots, snippets, positive and negative
-assumption prose validation, TOML configuration errors and paths relative
-to the configuration file. Command tests exercise automatic theory
-loading and failure exits. Oracle and axiom fixtures exist only in the
-test process; no theory or axiom is exported by this library.
+trust tags, repeated database snapshots, snippets, wildcard case arms,
+positive and negative assumption prose validation, TOML configuration
+errors and paths relative to the configuration file. Command tests
+exercise automatic theory loading and failure exits. Oracle and axiom
+fixtures exist only in the test process; no theory or axiom is exported
+by this library.

@@ -480,6 +480,49 @@ val _ = check "Each constant of a mutual recursion shows its equations"
         contains (entry_of (read html_path) name) "<code>mutual_def</code>")
      ["mut_even", "mut_odd"])
 
+(* Arms sharing a right-hand side that uses none of their pattern
+   variables print as one final wildcard arm. *)
+val _ = Define `pick (m:num) n x =
+  (case (m, n) of (0, 0) => 1 | _ => 2) +
+  (case x of NONE => 0 | SOME (INL k) => k | SOME (INR k) => k)`
+val _ = save_thm ("pick_result", REFL ``pick m n x``)
+val pick_md = #1 (generate (basic ["pick_result"]))
+val _ = check "Repeated case arms print as one wildcard arm"
+  (contains pick_md "| _ => 2" andalso contains pick_md "SOME (INR k') => k'")
+val pick_off_md =
+  #1 (HOLFlags.with_bflags [(case_wildcards, false)] generate
+                           (basic ["pick_result"]))
+val _ = check "With case_wildcards off, every arm prints"
+  (not (contains pick_off_md "_ =>") andalso
+   not (contains pick_off_md "one final"))
+
+(* With an overloaded name left in the patterns, which the merged arms
+   may have been all that resolved, the case gives the type of what it
+   splits on. *)
+val typed_t =
+  ``case (x:(num + num) option) of
+      NONE => 0 | SOME (INL 0) => 2
+    | SOME (INL (SUC k)) => 1 | SOME (INR m) => 1``
+val _ = save_thm ("typed_result", REFL typed_t)
+val _ = temp_overload_on ("NONE", ``[] : num list``)
+val typed_md = #1 (generate (basic ["typed_result"]))
+val _ = temp_remove_ovl_mapping "NONE" {Name = "NIL", Thy = "list"}
+val _ = check "Overloaded names left in the patterns fix the type"
+  (contains typed_md "case (x :(num + num) option) of" andalso
+   contains typed_md "| _ => 1")
+
+(* A printed _ would bind the free _0 the merged arms return, so the case
+   fails the check and prints every arm. *)
+val uscore = mk_var ("_0", ``:num``)
+val _ = save_thm ("capture_result", REFL
+  ``case (x:(num + num) option) of
+      NONE => (y:num) | SOME (INL 0) => z
+    | SOME (INL (SUC k)) => ^uscore | SOME (INR m) => ^uscore``)
+val capture_md = #1 (generate (basic ["capture_result"]))
+val _ = check "Merged arms that fail the check print in full"
+  (not (contains capture_md "_ =>") andalso
+   contains capture_md "SOME (INR m) => _0")
+
 val _ = List.app OS.FileSys.remove
   [markdown_path, html_path, prose_path, snippets_in, snippets_out]
 val _ = print "statementDossierLib selftests passed\n"

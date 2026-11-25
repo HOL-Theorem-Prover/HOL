@@ -32,6 +32,14 @@ type presentation = {about : string, omit_types : name list,
 (* Supporting statements printed longer than this many lines are folded *)
 val supporting_fold_lines = 40
 
+(* Print a case expression's arms that share a right-hand side as one
+   final wildcard arm (wildcard_case) *)
+val {get = wildcard_arms, flag = case_wildcards, ...} =
+    HOLFlags.create_btrace(
+      {group = "statementdossier", name = "case_wildcards"},
+      true
+    )
+
 fun key ({Thy, Name} : name) = Thy ^ "$" ^ Name
 
 fun name_of_const c =
@@ -120,6 +128,162 @@ fun script_theories dirs =
    term left to right (operator before operands).  Numerals count as
    atoms, so their encoding (NUMERAL, BIT1, ...) is left out. *)
 fun theorem_terms th = hyp th @ [concl th]
+
+(* Case expression t as printed with a wildcard arm: what it splits on,
+   whether to print that with its type, and its arms: the
+   largest group (of two or more, leaving another arm) of the arms of
+   TypeBase.strip_case t that have the same right-hand side, which
+   mentions none of its arm's pattern variables, merged into one final
+   arm with pattern _.  NONE if no arms merge.  Raises HOL_ERR unless the
+   merged arms, compiled as the parser compiles a case, give back t up to
+   the names of bound variables, or if the printed arms might not read
+   back as these: when _ is overloaded, or when the merged right-hand
+   side has a free variable named like the one the parser makes of a
+   printed _ (_0, _1, ...), which the _ would capture.  What it splits
+   on is printed with its type when a constant left in the patterns has
+   an overloaded name, which the dropped arms may have been all that
+   resolved. *)
+fun wildcard_case t =
+  let
+    fun uscore_name s =
+      String.isPrefix "_" s andalso
+      CharVector.all (fn c => c = #"_" orelse Char.isDigit c) s
+    val oinfo = term_grammar.overload_info (Parse.term_grammar ())
+    fun ambiguous c =
+      case Option.mapPartial (Overload.info_for_name oinfo)
+                             (Overload.overloading_of_term oinfo c) of
+        SOME {actual_ops, ...} => length actual_ops > 1
+      | NONE => false
+    fun refuse why = raise mk_HOL_ERR "statementDossierLib" "wildcard_case" why
+    val (split_on, rows) = TypeBase.strip_case t
+    fun merges body (p, r) =
+      aconv r body andalso not (List.exists (C free_in r) (free_vars p))
+    fun group (_, r) = List.filter (merges r) rows
+    val merged =
+      List.foldl (fn (row, best) =>
+                     let val g = group row
+                     in if length g >= length best then g else best end)
+                 [] rows
+    val body = case merged of (_, r) :: _ => r | [] => t
+    val kept = List.filter (not o merges body) rows
+  in
+    if length merged < 2 orelse null kept then NONE
+    else if List.exists (uscore_name o #1 o dest_var) (free_vars body) then
+      refuse "the _ arm would capture a free variable"
+    else if Overload.is_overloaded oinfo "_" then refuse "_ is overloaded"
+    else
+      let
+        val annotate =
+          List.exists (List.exists ambiguous o find_terms is_const o #1) kept
+        val rows' = kept @ [(mk_var ("_", type_of split_on), body)]
+        val (v, f) =
+          dest_abs (Lib.with_flag (Feedback.emit_MESG, false)
+                                  TypeBase.mk_pattern_fn rows')
+      in
+        if aconv (subst [v |-> split_on] f) t then
+          SOME (split_on, annotate, rows')
+        else refuse "merged arms give another term"
+      end
+  end
+
+(* A user printer for case expressions with a wildcard arm, laid out as
+   term_pp lays out a case.  As there, a case is parenthesised when it
+   is an operand of a function application or an operator to its left,
+   and in a set comprehension. *)
+fun wildcard_case_pp (tyg, _) backend sys
+                     (ppfns : term_pp_types.ppstream_funs)
+                     (_, lgrav, rgrav) depth t =
+  let
+    open term_pp_types term_pp_utils smpp
+    val (split_on, annotate, rows) =
+      (case wildcard_case t of SOME c => c | NONE => raise UserPP_Failed)
+      handle HOL_ERR _ => raise UserPP_Failed
+    val _ = HOLFlags.get_bflag term_pp.cases orelse raise UserPP_Failed
+    val {add_string, add_break, ublock, ...} = ppfns
+    fun pr rgrav t =
+      sys {gravs = (Top, Top, rgrav), binderp = false,
+           depth = decdepth depth} t
+    val parens =
+      (case rgrav of Prec _ => true | _ => false) orelse
+      (case lgrav of
+         Prec (_, s) => s = GrammarSpecials.fnapp_special
+       | _ => false)
+    val casebar = add_break (1, 0) >> add_string "|" >> add_string " "
+    fun arm rgrav (l, r) =
+      record_bvars (free_vars l)
+        (ublock PP.CONSISTENT 0
+           (pr Top l >> add_string " " >> add_string "=>" >>
+            add_break (1, 2) >> ublock PP.CONSISTENT 0 (pr rgrav r)))
+    (* As term_pp does after printing a type, so that the closing
+       parenthesis is not spaced off as if it could merge with the : *)
+    val after_type =
+      fupdate (fn {seen_frees, current_bvars, in_gspec, ...} =>
+                  {seen_frees = seen_frees, current_bvars = current_bvars,
+                   last_string = " ", in_gspec = in_gspec}) >> return ()
+    val scrutinee =
+      if annotate then
+        add_string "(" >> pr Top split_on >> add_string " :" >>
+        type_pp.pp_type_with_depth tyg backend (decdepth depth)
+                                   (type_of split_on) >>
+        after_type >> add_string ")"
+      else pr Top split_on
+    val body =
+      ublock PP.CONSISTENT 0
+        (add_string "case" >> add_break (1, 2) >> scrutinee >>
+         add_break (1, 0) >> add_string "of") >>
+      (if HOLFlags.get_bflag term_pp.print_firstcasebar then casebar
+       else add_break (1, 2)) >>
+      pr_list (arm (Prec (0, "casebar"))) casebar (Lib.butlast rows) >>
+      casebar >> arm (if parens then Top else rgrav) (List.last rows)
+  in
+    get_gspec >-
+    (fn gspec =>
+        if gspec orelse parens then
+          ublock PP.CONSISTENT 1 (add_string "(" >> body >> add_string ")")
+        else ublock PP.CONSISTENT 0 body)
+  end
+
+(* Printing under the user printer above, if the flag is set *)
+fun with_wildcard_arms f x =
+  if wildcard_arms () then
+    let
+      val name = "statementDossierLib.wildcard_case"
+      val pat = mk_var ("t", alpha)
+      fun remove () = ignore (Parse.temp_remove_user_printer (name, pat))
+      val () = Parse.temp_add_user_printer (name, pat, wildcard_case_pp)
+      val result = f x handle e => (remove (); raise e)
+    in
+      remove (); result
+    end
+  else f x
+
+(* How many case expressions in the terms print with a wildcard arm, and
+   how many have arms to merge that fail wildcard_case's check, reaching
+   them as the printer does: through the arms of each case it prints. *)
+fun wildcard_counts tms =
+  let
+    fun walk (t, acc as (merged, failed)) =
+      case TypeBase.strip_case t of
+        (_, []) =>
+          (case dest_term t of
+             COMB (f, x) => walk (x, walk (f, acc))
+           | LAMB (_, b) => walk (b, acc)
+           | _ => acc)
+      | (x, rows) =>
+          let
+            val acc =
+                (case wildcard_case t of
+                   SOME _ => (HOLset.add (merged, t), failed)
+                 | NONE => acc)
+                handle HOL_ERR _ => (merged, HOLset.add (failed, t))
+          in
+            List.foldl (fn ((_, r), acc) => walk (r, acc)) (walk (x, acc))
+                       rows
+          end
+    val (merged, failed) = List.foldl walk (empty_tmset, empty_tmset) tms
+  in
+    (HOLset.numItems merged, HOLset.numItems failed)
+  end
 
 fun consts_lr tm =
   let
@@ -1409,6 +1573,21 @@ fun render ({about = extra_about, omit_types, reader_view,
           if shown = "Unknown" then [] else [Code shown]
       | NONE => []
     val (entries, met) = closure (not reader_view) cfg tyidx theorems
+    val (merged_cases, failed_cases) =
+      if wildcard_arms () andalso HOLFlags.get_bflag term_pp.cases then
+        wildcard_counts
+          (List.concat
+             (map (theorem_terms o #2)
+                (theorems @ supporting @
+                 List.concat (map (fn (e : entry) => #defs e @ #lemmas e)
+                                  entries))))
+      else (0, 0)
+    val () =
+      if merged_cases + failed_cases = 0 then ()
+      else print ("statementDossierLib: case expressions printed with a \
+                  \wildcard arm: " ^ Int.toString merged_cases ^
+                  "; printed in full as the merged arms failed the check: " ^
+                  Int.toString failed_cases ^ "\n")
     val bucket_maps = map (fn (n, th) => (n, buckets cfg entries th)) theorems
     fun bucket_in m c =
       getOpt (Redblackmap.peek (m, key (name_of_const c)), Plumbing)
@@ -1943,6 +2122,12 @@ fun render ({about = extra_about, omit_types, reader_view,
       [Para [Text "Recorded oracle tags, axiom dependencies and kernel \
                   \assumptions are shown beside each statement. Their absence \
                   \alone is not an independent proof audit."]] @
+      (if merged_cases = 0 then [] else
+         [Para [Text ("In " ^ Int.toString merged_cases ^ " case \
+                      \expressions, the arms that share a right-hand side \
+                      \using none of their pattern variables are printed as \
+                      \one final `_` arm; each was checked to read back as \
+                      \the stored term.")]]) @
       (if reader_view then
          [Para [Text ("Contents: " ^
            Int.toString (length theorems + length supporting) ^
@@ -2148,10 +2333,11 @@ fun run_with_presentation presentation (cfg : config) =
       end
   in
     HOLFlags.with_bflags [(Parse.avoid_unicode, false)]
-      (fn () => let val doc as (_, _, href) = render presentation cfg in
-                  List.app (write doc) (#outputs cfg);
-                  Option.app (write_snippets cfg href) (#snippets cfg)
-                end) ()
+      (with_wildcard_arms
+         (fn () => let val doc as (_, _, href) = render presentation cfg in
+                     List.app (write doc) (#outputs cfg);
+                     Option.app (write_snippets cfg href) (#snippets cfg)
+                   end)) ()
   end
 
 fun run cfg = run_with_presentation
