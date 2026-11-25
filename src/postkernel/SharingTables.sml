@@ -351,8 +351,7 @@ fun add_types tys (SDI{strtable,idtable,tytable,tmtable,exp}) =
    children.  The walk also records, for every position of the tree in
    pre-order, the number and the size of the subterm there, so the writer can
    decide at each position whether to write a reference, without hashing again.
-   All per-node storage is in byte arrays (32-bit entries), which the garbage
-   collector does not scan. *)
+*)
 val share_subterms =
     case OS.Process.getEnv "HOL_SHARE_SUBTERMS" of
         SOME "0" => false
@@ -364,66 +363,32 @@ val entry_len = 13     (* "(ap 123 456)" and a separator *)
 structure HashCons =
 struct
 
-(* 32-bit little-endian words in a byte array, indexed by word *)
-fun get32 (a : Word8Array.array, i) =
-    let fun b k = Word8.toInt (Word8Array.sub (a, 4 * i + k))
-    in b 0 + 256 * (b 1 + 256 * (b 2 + 256 * b 3)) end
-fun set32 (a : Word8Array.array, i, v) =
-    let fun put (k, x) =
-            Word8Array.update (a, 4 * i + k, Word8.fromInt (x mod 256))
-    in put (0, v); put (1, v div 256); put (2, v div 65536);
-       put (3, v div 16777216) end
+(* int darrays indexed past their size: reads give the default, writes grow *)
+fun get a i =
+    if i < DArray.size a then DArray.sub (a, i) else #3 (DArray.base a)
+fun set a i v = (DArray.extend (a, i + 1); DArray.update (a, i, v))
+fun renew a = DArray.replace (a, DArray.new (4096, #3 (DArray.base a)))
 
-(* growable arrays of 32-bit words, in byte arrays *)
-structure PA =
-struct
-  type t = Word8Array.array ref
-  fun new () : t = ref (Word8Array.array (4096, 0w0))
-  fun cap (a : t) = Word8Array.length (!a) div 4
-  fun ensure (a : t) i =
-      if i >= cap a then
-        let val b = Word8Array.array (4 * Int.max (2 * cap a, i + 1), 0w0)
-        in Word8Array.copy {src = !a, dst = b, di = 0}; a := b end
-      else ()
-  fun get (a : t) i =
-      if i < cap a then get32 (!a, i)
-      else 0
-  fun set (a : t) i v =
-      (ensure a i;
-       set32 (!a, i, v))
-  fun clear (a : t) = a := Word8Array.array (4096, 0w0)
-end
-
-(* low 3 bits: 0 atom, 1 comb, 3 abs, 4 bv; bit 3: contains an abstraction *)
-val kind = ref (Word8Array.array (1, 0w0))
-fun kset i k =
-    (if i >= Word8Array.length (!kind) then
-       let val b = Word8Array.array
-                     (Int.max (2 * Word8Array.length (!kind), i + 1), 0w0)
-       in Word8Array.copy {src = !kind, dst = b, di = 0}; kind := b end
-     else ();
-     Word8Array.update (!kind, i, Word8.fromInt k))
-fun kget i =
-    if i < Word8Array.length (!kind)
-    then Word8.toInt (Word8Array.sub (!kind, i)) else 0
-fun kindof i = kget i mod 8
-fun abof i = kget i >= 8
-
-val ca = PA.new () and cb = PA.new ()
-val n = ref 0
+(* per node: kind (low 3 bits: 0 atom, 1 comb, 3 abs, 4 bv; bit 3: contains
+   an abstraction), the two children, and table index + 1 (0 = none) *)
+val kind = DArray.new (4096, 0)
+val ca = DArray.new (4096, 0) and cb = DArray.new (4096, 0)
+val tbl = DArray.new (4096, 0)
+fun kindof i = DArray.sub (kind, i) mod 8
+fun abof i = DArray.sub (kind, i) >= 8
+fun aof i = DArray.sub (ca, i)
+fun bof i = DArray.sub (cb, i)
 
 fun newnode k a b abflag =
-    let val i = !n
+    let val i = DArray.size kind
     in
-      kset i (k + (if abflag then 8 else 0));
-      PA.set ca i a; PA.set cb i b; n := i + 1; i
+      DArray.push (kind, k + (if abflag then 8 else 0));
+      DArray.push (ca, a); DArray.push (cb, b); DArray.push (tbl, 0); i
     end
-fun aof i = PA.get ca i
-fun bof i = PA.get cb i
 
-(* hash table of node ids (id + 1; 0 = empty), keyed by (tag, a, b) *)
-val slots = PA.new ()
-val hsize = ref 0
+(* open-addressing hash table of node ids (id + 1; 0 = empty), keyed by
+   (tag, a, b) *)
+val slots = ref (Array.array (0, 0))
 val hcount = ref 0
 fun hhash tag a b size =
     let val w = Word.orb (Word.<< (Word.fromInt tag, 0w60),
@@ -433,41 +398,38 @@ fun hhash tag a b size =
                               Word.fromInt (size - 1))) end
 fun hrebuild newsize =
     let
-      val old = !hsize
-      val oldslots = !slots
-      val ns = Word8Array.array (4 * newsize, 0w0)
+      val ns = Array.array (newsize, 0)
       fun put i =       (* insert node i into the new slot array *)
           let
             val tag = kindof i
-            val s0 = hhash (if tag = 3 then 1 else 0) (aof i) (bof i) newsize
             fun probe s =
-                if get32 (ns, s) = 0 then s
-                          else probe ((s + 1) mod newsize)
+                if Array.sub (ns, s) = 0 then s
+                else probe ((s + 1) mod newsize)
+            val s = probe (hhash (if tag = 3 then 1 else 0) (aof i) (bof i)
+                                 newsize)
           in
-            set32 (ns, probe s0, i + 1)
+            Array.update (ns, s, i + 1)
           end
-      fun scan s = if s >= old then ()
-                   else (let val v = get32 (oldslots, s)
-                         in if v <> 0 then put (v - 1) else () end;
-                         scan (s + 1))
     in
-      scan 0; slots := ns; hsize := newsize
+      Array.app (fn v => if v <> 0 then put (v - 1) else ()) (!slots);
+      slots := ns
     end
 fun hfind tag a b create =
     let
-      val _ = if !hsize = 0 then (slots := Word8Array.array (4 * 1048576, 0w0);
-                                  hsize := 1048576)
-              else if 2 * (!hcount + 1) > !hsize then hrebuild (2 * !hsize)
+      val _ = if Array.length (!slots) = 0 then
+                slots := Array.array (1048576, 0)
+              else if 2 * (!hcount + 1) > Array.length (!slots) then
+                hrebuild (2 * Array.length (!slots))
               else ()
-      val size = !hsize
       val arr = !slots
+      val size = Array.length arr
       val nodetag = if tag = 1 then 3 else 1
       fun probe s =
-          let val v = get32 (arr, s)
+          let val v = Array.sub (arr, s)
           in
             if v = 0 then
               let val id = create ()
-              in set32 (arr, s, id + 1);
+              in Array.update (arr, s, id + 1);
                  hcount := !hcount + 1; id end
             else if kindof (v - 1) = nodetag andalso aof (v - 1) = a andalso
                     bof (v - 1) = b
@@ -476,14 +438,13 @@ fun hfind tag a b create =
           end
     in probe (hhash tag a b size) end
 
-val atoms = ref (Termtab.empty : int Termtab.table)
 val atomlist = ref ([] : term list)
-val bvs = ref (Array.array (16, ~1))
+val bvs = DArray.new (16, ~1)
 val tys = ref (Typetab.empty : int Typetab.table)
 val ntys = ref 0
 val lastty = ref (NONE : (hol_type * int) option)
-val tbl = PA.new ()        (* table index + 1, 0 = none *)
-val pids = PA.new () and psize = PA.new ()
+(* per pre-order position: node id and subtree size *)
+val pids = DArray.new (4096, 0) and psize = DArray.new (4096, 0)
 val top = ref 0
 (* root and its base position *)
 val roots = ref ([] : (term * int) list)
@@ -491,12 +452,11 @@ val roots = ref ([] : (term * int) list)
 val abuckets = ref (Array.array (65536, [] : (term * int) list))
 
 fun reset () =
-    (n := 0; hcount := 0; hsize := 0; PA.clear slots;
+    (List.app renew [kind, ca, cb, tbl, bvs, pids, psize];
+     slots := Array.array (0, 0); hcount := 0;
      abuckets := Array.array (65536, []); atomlist := [];
-     bvs := Array.array (16, ~1);
      tys := Typetab.empty; ntys := 0; lastty := NONE;
-     PA.clear tbl; PA.clear pids; PA.clear psize; PA.clear ca; PA.clear cb;
-     kind := Word8Array.array (1, 0w0); top := 0; roots := [])
+     top := 0; roots := [])
 
 (* atoms: hash of the name, then a short bucket checked by pointer equality
    and Term.compare *)
@@ -527,16 +487,10 @@ fun atomid t =
                      atomlist := t :: !atomlist; i end
     end
 fun bvid j =
-    let
-      val _ = if j >= Array.length (!bvs) then
-                let val b = Array.array
-                              (Int.max (2 * Array.length (!bvs), j + 1), ~1)
-                in Array.copy {src = !bvs, dst = b, di = 0}; bvs := b end
-              else ()
-      val v = Array.sub (!bvs, j)
+    let val v = get bvs j
     in
       if v >= 0 then v
-      else let val i = newnode 4 j 0 false in Array.update (!bvs, j, i); i end
+      else let val i = newnode 4 j 0 false in set bvs j i; i end
     end
 fun typeid ty =
     case !lastty of
@@ -558,23 +512,23 @@ fun absid tyi bi =
 
 (* the callbacks of Term.raw_fold: each node records its id and the size of
    its subtree at its position *)
-fun setp p id sz = (PA.set pids p id; PA.set psize p sz; id)
+fun setp p id sz = (set pids p id; set psize p sz; id)
 val callbacks =
     {atom = fn p => fn t => setp p (atomid t) 1,
      bv = fn p => fn j => setp p (bvid j) 1,
      comb = fn p => fn a => fn b =>
-               let val sa = PA.get psize (p + 1)
-                   val sb = PA.get psize (p + 1 + sa)
+               let val sa = get psize (p + 1)
+                   val sb = get psize (p + 1 + sa)
                in setp p (combid a b) (1 + sa + sb) end,
      abs = fn p => fn v => fn bi =>
               setp p (absid (typeid (type_of v)) bi)
-                   (2 + PA.get psize (p + 2))}
+                   (2 + get psize (p + 2))}
 
 fun walk_root t =
     let
       val base = !top
       val id = Term.raw_fold callbacks base t
-      val sz = PA.get psize base
+      val sz = get psize base
     in
       top := base + sz; roots := (t, base) :: !roots; id
     end
@@ -586,68 +540,59 @@ fun add_terms tms sdi =
       val _ = if ts0 = 0 then reset () else ()
       val _ = atomlist := []
       val rootids = map walk_root tms
-      val nn = !n
-      val refs = PA.new ()
-      fun bump i = PA.set refs i (PA.get refs i + 1)
+      val nn = DArray.size kind
+      val refs = Array.array (nn, 0)
+      fun bump i = Array.update (refs, i, Array.sub (refs, i) + 1)
       val _ = app bump rootids
       fun back i = if i < 0 then ()
-                   else (if kindof i = 1 andalso PA.get refs i > 0
+                   else (if kindof i = 1 andalso Array.sub (refs, i) > 0
                          then (bump (aof i); bump (bof i)) else ();
                          back (i - 1))
       val _ = back (nn - 1)
-      val expand = PA.new () and bring = PA.new ()
-      val intable = Word8Array.array (nn + 1, 0w0)
-      fun isin c = Word8Array.sub (intable, c) <> 0w0
-      fun elen c = if kindof c = 1 andalso not (isin c) then PA.get expand c
-                   else ref_len
+      val expand = Array.array (nn, 0) and bring = Array.array (nn, 0)
+      val intable = Array.array (nn, false)
+      fun isin c = Array.sub (intable, c)
+      fun elen c = if kindof c = 1 andalso not (isin c)
+                   then Array.sub (expand, c) else ref_len
       fun bringcost c = if kindof c = 1 andalso not (isin c)
-                        then PA.get bring c else 0
+                        then Array.sub (bring, c) else 0
       (* post-order of first visit over comb edges from the roots *)
-      val seen = Word8Array.array (nn + 1, 0w0)
-      val order = PA.new ()
-      val norder = ref 0
+      val seen = Array.array (nn, false)
+      val order = DArray.new (4096, 0)
       fun dfs i =
-          if kindof i = 1 andalso Word8Array.sub (seen, i) = 0w0 then
-            (Word8Array.update (seen, i, 0w1); dfs (aof i); dfs (bof i);
-             PA.set order (!norder) i; norder := !norder + 1)
+          if kindof i = 1 andalso not (Array.sub (seen, i)) then
+            (Array.update (seen, i, true); dfs (aof i); dfs (bof i);
+             DArray.push (order, i))
           else ()
       val _ = app dfs rootids
-      val shared = PA.new ()
-      val nshared = ref 0
-      fun decide k =
-          if k >= !norder then ()
+      val shared = DArray.new (4096, 0)
+      fun decide i =
+          if abof i then ()
           else
-            let val i = PA.get order k
+            let
+              val el = elen (aof i) + elen (bof i) + 2
+              val bc = entry_len + bringcost (aof i) + bringcost (bof i)
+              val r = Array.sub (refs, i)
             in
-              (if not (abof i) then
-                 let
-                   val el = elen (aof i) + elen (bof i) + 2
-                   val bc = entry_len + bringcost (aof i) + bringcost (bof i)
-                   val r = PA.get refs i
-                 in
-                   PA.set expand i el; PA.set bring i bc;
-                   if r >= 2 andalso (r - 1) * (el - ref_len) > bc
-                   then (Word8Array.update (intable, i, 0w1);
-                         PA.set shared (!nshared) i; nshared := !nshared + 1)
-                   else ()
-                 end
-               else ());
-              decide (k + 1)
+              Array.update (expand, i, el); Array.update (bring, i, bc);
+              if r >= 2 andalso (r - 1) * (el - ref_len) > bc
+              then (Array.update (intable, i, true); DArray.push (shared, i))
+              else ()
             end
-      val _ = decide 0
+      val _ = DArray.app decide order
       val SDI{strtable, idtable, tytable, tmtable, exp} = sdi
       val atomsl = Listsort.sort Term.compare (!atomlist)
       val (strtable, idtable, tytable, tmtable) =
           List.foldl (fn (t, tabs) => #2 (make_raw_term t tabs))
                      (strtable, idtable, tytable, tmtable) atomsl
-      val _ = app (fn t => PA.set tbl (atomid t)
-                                  (valOf (Termtab.lookup (#termmap tmtable) t)
-                                   + 1))
+      val _ = app (fn t => DArray.update
+                             (tbl, atomid t,
+                              valOf (Termtab.lookup (#termmap tmtable) t) + 1))
                   atomsl
       val ts = ref (#termsize tmtable)
       val tl = ref (#termlist tmtable)
       fun addEntry i =
-          let val x = PA.get tbl i
+          let val x = DArray.sub (tbl, i)
           in
             if x > 0 then x - 1
             else
@@ -657,13 +602,10 @@ fun add_terms tms sdi =
                 val idx = !ts
               in
                 tl := TMAp (ia, ib) :: !tl; ts := idx + 1;
-                PA.set tbl i (idx + 1); idx
+                DArray.update (tbl, i, idx + 1); idx
               end
           end
-      fun entries k = if k >= !nshared then ()
-                      else (ignore (addEntry (PA.get shared k));
-                            entries (k + 1))
-      val _ = entries 0
+      val _ = DArray.app (ignore o addEntry) shared
     in
       SDI {strtable = strtable, idtable = idtable, tytable = tytable,
               tmtable = {termsize = !ts, termmap = #termmap tmtable,
@@ -672,9 +614,9 @@ fun add_terms tms sdi =
     end
 
 (* the writer: pre-order walk over the recorded positions *)
-fun tblidx i = PA.get tbl i - 1
-fun pid p = PA.get pids p
-fun psz p = PA.get psize p
+fun tblidx i = DArray.sub (tbl, i) - 1
+fun pid p = get pids p
+fun psz p = get psize p
 
 fun write tm =
     let

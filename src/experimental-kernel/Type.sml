@@ -82,10 +82,12 @@ val ind  = Tyapp ((ind_tyid,  0), [])
 
 fun uptodate_kname knm =
     KernelSig.isSuccess (KernelSig.peek (typesig(), knm))
-fun uptodate_type (Tyv s) = true
-  | uptodate_type (Tyapp((info,_), args)) =
-    KernelSig.uptodate_id (typesig()) info andalso
-    List.all uptodate_type args
+fun uptodate_type ty = let
+  val tsig = typesig ()    (* one snapshot for the whole traversal *)
+  fun recurse (Tyv _) = true
+    | recurse (Tyapp((info,_), args)) =
+      KernelSig.uptodate_id tsig info andalso List.all recurse args
+  in recurse ty end
 
 fun dest_vartype (Tyv s) = s
   | dest_vartype _ = raise ERR "dest_vartype" "Type not a vartype"
