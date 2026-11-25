@@ -152,12 +152,14 @@ fun holdir () =
       SOME root => join root "holdir"
     | NONE => Option.getOpt (OS.Process.getEnv "HOLDIR", Globals.HOLDIR)
 
+fun user_dir () = join (join (home_dir ()) ".hol4") "hammer"
+
 fun state_dir () =
   let
     val dir =
       case OS.Process.getEnv "HOL4_HAMMER_DIR" of
           SOME path => path
-        | NONE => join (join (home_dir ()) ".hol4") "hammer"
+        | NONE => user_dir ()
     val _ = ensure_dir dir
   in
     dir
@@ -226,7 +228,7 @@ fun first_hits entries =
 
 fun config_entries () =
   let
-    val user = join (join (home_dir ()) ".hol4") "hammer/config"
+    val user = join (user_dir ()) "config"
     val system = read_config (join (join (holdir ()) "etc") "hammer-config")
   in
     first_hits (read_config user @ system)
@@ -661,28 +663,21 @@ fun platform () =
     arch ^ "-" ^ system
   end
 
-fun path_exec names =
-  let
-    fun direct name =
-      if String.isSubstring "/" name then
-        if executable name then SOME name else NONE
-      else NONE
-    fun in_dir dir name =
-      let val path = join dir name
-      in if executable path then SOME path else NONE end
-    fun on_path name =
-      case direct name of
-          SOME path => SOME path
-        | NONE =>
-          (case OS.Process.getEnv "PATH" of
-               NONE => NONE
-             | SOME path =>
-               Portable.get_first (fn dir => in_dir
-                 (if dir = "" then "." else dir) name)
-                 (String.fields (fn c => c = #":") path))
-  in
-    Portable.get_first on_path names
-  end
+fun exec_file path = if executable path then SOME path else NONE
+
+(* The first of names, in that order, found in any of dirs; a name with a
+   slash is a path of its own. *)
+fun exec_in dirs names =
+  Portable.get_first (fn name =>
+    if String.isSubstring "/" name then exec_file name
+    else Portable.get_first (fn dir => exec_file (join dir name)) dirs)
+    names
+
+fun path_dirs () =
+  case OS.Process.getEnv "PATH" of
+      NONE => []
+    | SOME path =>
+        map (fn "" => "." | dir => dir) (String.fields (fn c => c = #":") path)
 
 fun all_digits s =
   String.size s > 0 andalso
@@ -718,16 +713,6 @@ fun version_compare (left, right) =
     List.collate token_compare (left_tokens, right_tokens)
   end
 
-fun insert_version item [] = [item]
-  | insert_version (item as (version, _))
-      ((head as (head_version, _)) :: rest) =
-      if version_compare (version, head_version) = GREATER then
-        item :: head :: rest
-      else head :: insert_version item rest
-
-fun sort_versions versions =
-  List.foldl (fn (item, result) => insert_version item result) [] versions
-
 fun directory_names path =
   let
     val stream = OS.FileSys.openDir path
@@ -742,54 +727,38 @@ fun directory_names path =
   end
   handle OS.SysErr _ => []
 
-fun install_exec root prover names =
+(* The binary in root/<prover>-<version>/<platform>/ of the newest version
+   that holds one. *)
+fun install_exec prover names root =
   let
     val prefix = prover ^ "-"
-    fun candidate name =
-      String.isPrefix prefix name andalso is_dir (join root name)
-    fun version name = String.extract (name, String.size prefix, NONE)
-    val versions =
-      sort_versions (map (fn name => (version name, name))
-                         (List.filter candidate (directory_names root)))
+    fun candidate dir =
+      String.isPrefix prefix dir andalso is_dir (join root dir)
+    fun version dir = String.extract (dir, String.size prefix, NONE)
+    fun newer left right =
+      version_compare (version left, version right) <> LESS
     val plat = platform ()
-    fun in_version (_, name) = path_exec_in (join (join root name) plat) names
   in
-    case Portable.get_first in_version versions of
-        SOME path => SOME path
-      (* Legacy flat layout: the binary sits directly in provers/, as the
-         pre-download-provers instructions told users to install it. *)
-      | NONE => path_exec_in root names
+    Portable.get_first (fn dir => exec_in [join (join root dir) plat] names)
+      (Portable.sort newer (List.filter candidate (directory_names root)))
   end
-
-and path_exec_in dir names =
-  if is_dir dir then
-    Portable.get_first (fn name =>
-      let val path = join dir name
-      in if executable path then SOME path else NONE end) names
-  else NONE
 
 fun find_exec prover env_var names =
   let
     val config_key = "prover." ^ prover ^ ".executable"
     fun configured () =
-      case lookup config_key (config_entries ()) of
-          SOME path => if executable path then SOME path else NONE
-        | NONE => NONE
+      Option.mapPartial exec_file (lookup config_key (config_entries ()))
     fun environment () =
-      case OS.Process.getEnv env_var of
-          SOME path => if executable path then SOME path else NONE
-        | NONE => NONE
-    fun installed root = install_exec root prover names
-    fun system_install () =
-      installed (join (join (join (holdir ()) "src") "holyhammer") "provers")
-    fun state_install () = installed (join (state_dir ()) "provers")
-    fun user_install () =
-      installed (join (join (join (home_dir ()) ".hol4") "hammer")
-                 "provers")
+      Option.mapPartial exec_file (OS.Process.getEnv env_var)
+    (* The state directory is the user's unless HOL4_HAMMER_DIR moves it. *)
+    fun installed () =
+      Portable.get_first (install_exec prover names)
+        (Portable.mk_set
+           [join (state_dir ()) "provers", join (user_dir ()) "provers"])
   in
     Portable.get_first (fn source => source ())
-      [configured, environment, fn () => path_exec names,
-       system_install, state_install, user_install]
+      [configured, environment, fn () => exec_in (path_dirs ()) names,
+       installed]
   end
 
 end

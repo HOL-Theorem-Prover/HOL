@@ -124,8 +124,11 @@ installs the tested versions:
   * Vampire 5.0.1; and
   * Zipperposition 2.1 (Isabelle component revision 2).
 
-`provers/README` says where it puts them.  Alternatively, put a supported
-binary on `PATH`: `eprover-ho` or `eprover`, `vampire`, `zipperposition`, or
+It installs each prover in `<prover>-<version>/<platform>/`, where
+`<platform>` is such as `x86_64-linux` or `arm64-darwin`, below the first
+of: its `--dest` argument, `$HOL4_HAMMER_DIR/provers`, and
+`$HOME/.hol4/hammer/provers`.  Alternatively, put a supported binary on
+`PATH`: `eprover-ho` or `eprover`, `vampire`, `zipperposition`, or
 `z3_tptp`, Z3's TPTP front end built from `examples/tptp` in the Z3 sources
 (tested with 4.11.2).  The plain `z3` binary does not read TPTP and is never
 used.
@@ -139,8 +142,9 @@ A prover is found by the first of:
      `HOL4_Z3_TPTP_EXECUTABLE` (HolSmt's `HOL4_Z3_EXECUTABLE` names an
      SMT-LIB solver and is not consulted);
   3. `PATH`;
-  4. an installation in `$HOLDIR/src/holyhammer/provers`, in the state
-     directory's `provers`, or in `$HOME/.hol4/hammer/provers`.
+  4. an installation in the state directory's `provers`, then in
+     `$HOME/.hol4/hammer/provers`: the newest version directory holding
+     the binary for this platform.
 
 To check the installed provers end to end:
 

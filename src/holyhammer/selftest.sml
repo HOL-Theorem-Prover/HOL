@@ -84,6 +84,18 @@ fun with_hh_options settings action =
     handle exn => (restore (); raise exn)
   end
 
+(* An installation root/dir/<platform>/probe-exec. *)
+fun install_probe root dir =
+  let
+    val bin = join (join root dir) (hhConfig.platform ())
+    val file = join bin "probe-exec"
+  in
+    mkdirs bin; make_executable file; file
+  end
+
+fun find_probe env_var prover =
+  hhConfig.find_exec prover env_var ["probe-exec"]
+
 fun test_child root =
   let
     val home = join root "home"
@@ -93,37 +105,11 @@ fun test_child root =
     val config_exec = join root "config-exec"
     val env_exec = join root "env-exec"
     val path_dir = join root "path"
-    val path_exec = join path_dir "path-exec"
-    val platform = hhConfig.platform ()
-    val system_provers = join (join (join holdir "src") "holyhammer")
-                              "provers"
-    val user_provers = join hammer "provers"
-    val state_provers = join (hhConfig.state_dir ()) "provers"
-    fun install root version =
-      let
-        val dir = join (join root ("installprover-" ^ version)) platform
-        val _ = mkdirs dir
-        val file = join dir "install-exec"
-      in
-        make_executable file; file
-      end
-    val system_old = install system_provers "1.0"
-    val system_new = install system_provers "2.0"
-    val user_new = install user_provers "9.0"
-    val state_exec =
-      let
-        val dir = join (join state_provers "stateprover-3.0") platform
-        val _ = mkdirs dir
-        val file = join dir "state-exec"
-      in
-        make_executable file; file
-      end
-    (* Pre-download-provers installations put the binary straight into
-       provers/, with no version or platform directory. *)
-    val flat_exec =
-      let val file = join system_provers "flat-exec" in
-        mkdirs system_provers; make_executable file; file
-      end
+    val path_exec = join path_dir "probe-exec"
+    val state_exec = install_probe (join (hhConfig.state_dir ()) "provers")
+                                   "e-3.0"
+    val _ = install_probe (join hammer "provers") "e-9.0"
+    val user_exec = install_probe (join hammer "provers") "e-10.0"
     val _ = make_executable config_exec
     val _ = make_executable env_exec
     val _ = mkdirs path_dir
@@ -303,10 +289,19 @@ fun test_child root =
           handle Feedback.HOL_ERR _ => true) andalso
        ((hhConfig.snapshot_with [("no_such_option", "1")]; false)
           handle Feedback.HOL_ERR _ => true))
-    fun find_test_exec prover = hhConfig.find_exec prover "HOL4_UNSET_EXEC"
-    val find_e_exec = hhConfig.find_exec "e" "HOL4_EPROVER_EXECUTABLE"
-    val _ = expect "configuration executable discovery"
-      (is_some config_exec (find_e_exec ["path-exec"]))
+    fun find_e () = find_probe "HOL4_EPROVER_EXECUTABLE" "e"
+    fun found_without file expected =
+      (OS.FileSys.remove file; is_some expected (find_e ()))
+    val _ = expect "configured executable precedes the environment"
+      (is_some config_exec (find_e ()))
+    val _ = expect "environment executable precedes PATH"
+      (found_without config_exec env_exec)
+    val _ = expect "PATH precedes the installations"
+      (found_without env_exec path_exec)
+    val _ = expect "state installation precedes the user's"
+      (found_without path_exec state_exec)
+    val _ = expect "newest user installation is found"
+      (found_without state_exec user_exec)
     val _ = write_file config
       ("priority = user # comments are ignored\n\
        \integer = 42\n\
@@ -319,25 +314,6 @@ fun test_child root =
     val _ = expect "environment is effective after config removal"
       (hhConfig.hh_get "timeout" = "22" andalso
        has_parameter "timeout" "22" "env")
-    val _ = expect "prover environment executable discovery"
-      (is_some env_exec (find_e_exec ["path-exec"]))
-    val _ = expect "PATH executable discovery"
-      (is_some path_exec (find_test_exec "pathprover" ["path-exec"]))
-    val _ = expect "state-directory installation discovery"
-      (is_some state_exec
-       (find_test_exec "stateprover" ["state-exec"]))
-    val _ = expect "newest system installation is preferred"
-      (is_some system_new
-       (find_test_exec "installprover" ["install-exec"]))
-    val _ = expect "install search precedes user installation"
-      (find_test_exec "installprover" ["install-exec"] <> SOME user_new)
-    val _ = expect "older installation is not selected"
-      (find_test_exec "installprover" ["install-exec"] <> SOME system_old)
-    val _ = expect "legacy flat installation discovery"
-      (is_some flat_exec (find_test_exec "flatprover" ["flat-exec"]))
-    val _ = expect "versioned installation precedes the legacy layout"
-      (is_some system_new
-       (find_test_exec "installprover" ["install-exec"]))
     val _ = expect "dump reports provenance"
       (List.exists (fn (key, value) =>
          key = "priority" andalso String.isPrefix "config: " value)
@@ -381,7 +357,7 @@ fun run_parent () =
       " PATH=" ^ path ^
       " ./selftest.exe"
     val env_command =
-      clean_env ^ " -u HOL4_EPROVER_EXECUTABLE" ^
+      clean_env ^ " -u HOL4_EPROVER_EXECUTABLE -u HOL4_HAMMER_DIR" ^
       " HOL4_HAMMER_EVAL_DIR=environment-eval" ^
       " HHCONFIG_ENV_DEFAULT_TEST=environment-eval" ^
       " HHCONFIG_TEST_ROOT=" ^ root ^
@@ -399,8 +375,13 @@ fun run_parent () =
     else die "FAILED: hhConfig child selftest"
   end
 
-fun test_environment_default value =
+fun test_environment_default root value =
   let
+    val user_dir = join (join (join root "home") ".hol4") "hammer"
+    val user_exec = install_probe (join user_dir "provers") "probe-1.0"
+    val _ = expect "user installation is found in the default state directory"
+      (hhConfig.state_dir () = user_dir andalso
+       is_some user_exec (find_probe "" "probe"))
     val options : hhConfig.hh_options = hhConfig.snapshot ()
     val _ = expect "environment overrides the built-in default"
       (is_some value (hhConfig.get "eval.dir"))
@@ -432,7 +413,7 @@ val _ =
       NONE => run_parent ()
     | SOME root =>
       (case OS.Process.getEnv "HHCONFIG_ENV_DEFAULT_TEST" of
-           SOME value => test_environment_default value
+           SOME value => test_environment_default root value
          | NONE => test_child root)
 
 fun read_lines path =
