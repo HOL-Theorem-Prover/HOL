@@ -3261,17 +3261,21 @@ in
 val _ = test "an inner proof that waits runs past its CPU budget" (fn () =>
   within (seconds 0.05) (idle 0.3) ())
 
-(* The watcher sleeps at most the budget left before it reads the clock
-   again, so the work can overrun by up to the budget; the wall backstop
-   (4 s here) would let it compute far longer on a quiet machine. *)
+(* The watcher sleeps at most the CPU budget left, in wall time, and the
+   work cannot use more CPU than the wall time that passes, so the work
+   overruns by at most a tick of the clock and the watcher's wake-up; the
+   wall backstop (4 s here) would let it compute far longer. *)
 val _ = test "an inner proof that computes stops at its CPU budget" (fn () =>
   let
     val clock = Clock.start ()
     val stopped = times_out (fn () => within (seconds 0.2) spin 0)
     val used = Clock.seconds clock
   in
-    stopped andalso used >= 0.2 - Clock.tick andalso used < 2.0 * 0.2 + 0.5
+    stopped andalso used >= 0.2 - Clock.tick andalso used < 0.2 + 0.1
   end)
+
+val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
+  times_out (fn () => within (seconds 0.01) (idle 0.5) ()))
 
 val _ = test "a spent inner budget raises before the work starts" (fn () =>
   let val started = ref false in
@@ -3300,11 +3304,14 @@ val _ = test "the thread clock falls back to the process clock" (fn () =>
     val started = Time.now ()
     val clocks = [Clock.start_reading NONE,
                   Clock.start_reading (SOME "/nonexistent/stat")]
+    (* waiting first: the process clock counts the spinning, not the
+       wall time the wait took *)
+    val _ = idle 0.2 ()
     val _ = spin_for 0.05
     val used = List.map Clock.seconds clocks
     val wall = Time.toReal (Time.- (Time.now (), started))
   in
-    List.all (fn s => s > 0.0 andalso s <= wall) used
+    List.all (fn s => s > 0.0 andalso s < wall - 0.1) used
   end)
 
 (* An outer deadline that falls first stops the call, as Timeout.apply's
