@@ -12,6 +12,7 @@ src/refute
 [poly]src/simp/src/poly
 [mosml]src/simp/src/mosml
 src/simp/src
+!src/simp/theory_tests
 src/metis
 src/meson/src
 src/IndDef

@@ -19,8 +19,7 @@ structure Set = Binaryset
 
 type thname = KernelSig.kernelname
 
-val source_serial = ref 0
-fun source_token () = (source_serial := !source_serial + 1; !source_serial)
+val source_token = Portable.make_counter {init=1, inc=1}
 type 'a source_slot = {item : 'a, token : int}
 fun source_slot item = {item=item, token=source_token ()}
 type source_origin =
@@ -3150,6 +3149,16 @@ fun reconcile_hyps asl th =
     Lib.itlist ADD_ASSUM asl (Lib.itlist replace_hyp hypotheses th)
   end
 
+(* Adds supplied theorems to the decision procedures' contexts, as
+   Traverse.TRAVERSE does for its theorems *)
+fun prime_dprocs [] xdata = xdata
+  | prime_dprocs ths
+      (({limit,rewriters,dprocs,travrules,relation},config)
+         : Traverse.xtraverse_data) =
+      ({limit=limit, rewriters=rewriters,
+        dprocs=map (Traverse.addctxt ths) dprocs, travrules=travrules,
+        relation=relation}, config)
+
 fun simp_conv_with_xdata traversal xdata reducer_context solver_context =
   TRY_CONV
     (SIMP_QCONV_WITH_XDATA traversal xdata reducer_context solver_context)
@@ -3239,7 +3248,7 @@ fun gen_simp_tac_with_rounds rounds traversal
             let
               val (invocation_ss,context_thms) =
                 process_asm_tags invocation tagged_thms
-              val xdata = xdata_of invocation_ss
+              val xdata = prime_dprocs context (xdata_of invocation_ss)
               val rewr_tac =
                 CONV_TAC
                   (simp_conv_with_xdata traversal xdata
@@ -3268,9 +3277,27 @@ fun gen_simp_tac_with_xdata traversal xdata solver_context mode ss ths g =
 fun GEN_SIMP_TAC mode =
   gen_simp_tac_with_xdata ParentFirst xtraversedata_for_ss [] mode
 
-fun GEN_SIMP_TAC_CHILD_FIRST policy mode =
-  gen_simp_tac_with_xdata (ChildFirst policy)
-    (fn ss => xtraversedata_for_ss_prepared (ChildFirst policy) ss []) [] mode
+(* Runs tac (ChildFirst policy) so that an exception the policy raises
+   ends the tactic, as in SIMP_CONV_CHILD_FIRST, rather than counting as a
+   failed rewrite *)
+fun with_child_first_policy (policy : Traverse.child_first_policy) tac
+      g ctxt =
+  let
+    val failure = ref (NONE : exn option)
+    val policy =
+      {charge=protect_child_first_callback failure (#charge policy),
+       keep_abstraction=
+         protect_child_first_callback failure (#keep_abstraction policy)}
+  in
+    with_child_first_callbacks failure
+      (fn (g, ctxt) => tac (ChildFirst policy) g ctxt) (g, ctxt)
+  end
+
+fun GEN_SIMP_TAC_CHILD_FIRST policy mode ss ths =
+  with_child_first_policy policy (fn traversal =>
+    gen_simp_tac_with_xdata traversal
+      (fn ss => xtraversedata_for_ss_prepared traversal ss []) [] mode ss
+      ths)
 
 (* Plain tactic entry points retain simpLib's marker processing and pass
    schedule unless the invocation opts into a traversal strategy. *)
@@ -3678,8 +3705,9 @@ fun gen_global_simp_tac_with_bound traversal bound mode
                    fun build () =
                      let
                        val data =
-                         xtraversedata_for_ss_prepared
-                           traversal invocation_ss prepared
+                         prime_dprocs bound_context
+                           (xtraversedata_for_ss_prepared
+                              traversal invocation_ss prepared)
                      in
                        traversal_cache := SOME (invocation_ss,data);
                        data
@@ -3831,12 +3859,13 @@ fun gen_global_simp_tac_with traversal =
 fun GEN_GLOBAL_SIMP_TAC mode =
   gen_global_simp_tac_with ParentFirst mode
 
-fun GEN_GLOBAL_SIMP_TAC_CHILD_FIRST policy mode =
-  gen_global_simp_tac_with (ChildFirst policy) mode
+fun GEN_GLOBAL_SIMP_TAC_CHILD_FIRST policy mode cfg ss ths =
+  with_child_first_policy policy (fn traversal =>
+    gen_global_simp_tac_with traversal mode cfg ss ths)
 
-fun GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND policy mode cfg ss bundle =
-  gen_global_simp_tac_with_bound (ChildFirst policy) (SOME bundle)
-    mode cfg ss
+fun GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND policy mode cfg ss bundle ths =
+  with_child_first_policy policy (fn traversal =>
+    gen_global_simp_tac_with_bound traversal (SOME bundle) mode cfg ss ths)
 
 fun global_simp_tac cfg ss0 thl gl =
     if strategy_free ss0 thl then

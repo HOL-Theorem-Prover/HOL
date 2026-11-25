@@ -686,6 +686,7 @@ end
 (* Solvers, loopers, splits and side-condition settings *)
 val _ = let
   val p = mk_var("p", bool) and q = mk_var("q", bool)
+  val r = mk_var("r", bool)
   fun goals_to_string (gs, _) =
       String.concatWith "; " (map (term_to_string o snd) gs)
   fun leaves msg tac g want =
@@ -730,6 +731,9 @@ in
   leaves "Looper splits the simplified goal"
          (SIMP_TAC (add_looper ("conj", K CONJ_TAC) bool_ss) [])
          ([], mk_conj(p, q)) [p, q];
+  leaves "A limit bounds the loopers of one call"
+         (SIMP_TAC (limit 1 (add_looper ("conj", K CONJ_TAC) bool_ss)) [])
+         ([], list_mk_conj [p, q, r]) [p, mk_conj(q, r)];
   tprint "Safe solvers are used only in safe mode";
   require_msg (check_result (equal (0, 1)))
     (fn (m, n) => Int.toString m ^ " and " ^ Int.toString n ^ " goals")
