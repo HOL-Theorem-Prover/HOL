@@ -1,0 +1,37 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `mk_tactic_solver`
+
+``` hol4
+simpLib.mk_tactic_solver : string * tactic -> Traverse.ssolver
+```
+
+------------------------------------------------------------------------
+
+Turns a tactic into a named solver.
+
+`mk_tactic_solver (name, tac)` is a solver that proves a term `c` by
+solving the goal `(map concl context_thms, c)` with `tac`, where
+`context_thms` are the context theorems supplied by the simplifier. The
+hypotheses of those theorems become hypotheses of the result.
+
+Inside a `simpLib` simplification tactic, `tac` is run in the context
+that tactic was given; otherwise, in the ambient context.
+
+### Failure
+
+Never fails. The solver fails if `tac` fails or leaves subgoals.
+
+### Example
+
+``` hol4
+>> val em : Traverse.ssolver = simpLib.mk_tactic_solver
+     ("excluded middle", MATCH_ACCEPT_TAC EXCLUDED_MIDDLE);
+>> #solve em {stack = [], context_thms = [], recurse = REFL} “q ∨ ¬q”;
+```
+
+### See also
+
+[`simpLib.add_unsafe_solver`](#simpLib.add_unsafe_solver),
+[`simpLib.add_safe_solver`](#simpLib.add_safe_solver),
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC).

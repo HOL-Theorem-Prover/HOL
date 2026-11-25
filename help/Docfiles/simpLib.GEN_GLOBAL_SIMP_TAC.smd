@@ -1,0 +1,76 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `GEN_GLOBAL_SIMP_TAC`
+
+``` hol4
+simpLib.GEN_GLOBAL_SIMP_TAC : simpLib.simp_mode ->
+  simpLib.xsimptac_config -> simpLib.simpset -> thm list -> tactic
+simpLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST :
+  Traverse.child_first_policy -> simpLib.simp_mode ->
+  simpLib.xsimptac_config -> simpLib.simpset -> thm list -> tactic
+simpLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND :
+  Traverse.child_first_policy -> simpLib.simp_mode ->
+  simpLib.xsimptac_config -> simpLib.simpset ->
+  simpLib.rewrite_bundle -> thm list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Simplifies assumptions and conclusion together to a fixpoint.
+
+``` hol4
+type simptac_config =
+  {strip : bool, elimvars : bool, droptrues : bool, oldestfirst : bool}
+type xsimptac_config =
+  {base : simptac_config, concl_in_fixpoint : bool,
+   imp_rebuild : bool, imp_premises : bool}
+```
+
+`GEN_GLOBAL_SIMP_TAC mode cfg ss ths` repeatedly simplifies each assumption
+with the others, as `simpLib.global_simp_tac (#base cfg)` does, until
+nothing changes, and then simplifies the conclusion as
+`simpLib.GEN_SIMP_TAC mode` does. The flags of `#base cfg` control
+whether simplified assumptions are stripped, whether variables are
+eliminated by substitution, whether assumptions that become true are
+dropped, and whether the oldest assumptions are processed first. The other
+flags are:
+
+- `concl_in_fixpoint`: simplify the conclusion after each pass over the
+  assumptions, and start again if it changes;
+- `imp_premises`: first try to rewrite an implicational conclusion as a
+  whole, then move its antecedents into the assumptions;
+- `imp_rebuild`: try to rewrite the implications formed from the
+  conclusion and each assumption (most recent first), starting again after
+  the first that succeeds.
+
+The looper limit and bounded rewrites in `ths` apply across the whole
+call.
+
+`GEN_GLOBAL_SIMP_TAC_CHILD_FIRST policy` simplifies subterms before the
+terms containing them. The `BOUND` variant also takes a rewrite bundle
+that has already been installed in `ss` with
+`simpLib.install_rewrite_bundle`; it uses the bundle's rewrites without
+compiling them again, so `ths` should not repeat them.
+
+### Failure
+
+Fails if a requirement or directive in `ths` fails. May diverge.
+
+### Example
+
+``` hol4
+>>_ val cfg : simpLib.xsimptac_config =
+     {base = {strip = true, elimvars = false,
+              droptrues = true, oldestfirst = true},
+      concl_in_fixpoint = true, imp_rebuild = false, imp_premises = true};
+>>_ val ss = boolSimps.bool_ss;
+>> simpLib.GEN_GLOBAL_SIMP_TAC {safe = false} cfg ss []
+     ([], “x = 1 ⇒ y = x ⇒ P y”) (Context.snapshot());
+```
+
+### See also
+
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC),
+[`simpLib.prepare_rewrite_bundle`](#simpLib.prepare_rewrite_bundle),
+[`simpLib.SIMP_CONV_CHILD_FIRST`](#simpLib.SIMP_CONV_CHILD_FIRST),
+[`simpLib.mk_simpset`](#simpLib.mk_simpset).

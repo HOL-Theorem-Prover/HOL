@@ -1,0 +1,35 @@
+## `Split`
+
+``` hol4
+markerLib.Split : thm -> thm
+markerLib.destSplit : thm -> thm
+```
+
+------------------------------------------------------------------------
+
+Marks a theorem as a split rule for the simplifier.
+
+`Split th` proves `marker$Split p` from `th : A |- p`, keeping the
+hypotheses. `destSplit` undoes this. `markerLib.dest_directive` reports
+`Split th` as `DSplit th`.
+
+The marker is honoured by the simplifier, which adds `th` as a split rule
+for one call (see `simpLib.Split`).
+
+### Failure
+
+Never fails. `destSplit` returns a theorem without `marker$Split`
+constants unchanged.
+
+### Example
+
+``` hol4
+>> markerLib.Split (ASSUME “p:bool”);
+>> markerLib.destSplit it;
+```
+
+### See also
+
+[`simpLib.Split`](#simpLib.Split),
+[`markerLib.ExclX`](#markerLib.ExclX),
+[`markerLib.strip_wrappers`](#markerLib.strip_wrappers).

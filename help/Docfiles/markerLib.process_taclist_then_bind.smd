@@ -1,0 +1,45 @@
+## `process_taclist_then_bind`
+
+``` hol4
+markerLib.process_taclist_then_bind :
+  {arg : thm list} ->
+  (thm list -> ((thm list -> tactic) -> tactic) -> thm list -> tactic) ->
+  tactic
+```
+
+------------------------------------------------------------------------
+
+Processes a tactic's theorem-list argument, for tactics that act on
+several goals.
+
+Like `markerLib.process_taclist_then`, `process_taclist_then_bind {arg} k`
+handles the directives in `arg`:
+
+- `Abbr` and `L` are applied to the goal;
+- `NoAsms` and `IgnAsm` select which assumptions are passed on;
+- `Req0` and `ReqD` are checked on the result.
+
+It then applies `k args recur asms`, where `args` is the remaining
+arguments, stripped of their `Req0` and `ReqD` wrappers, and `asms` is the
+selected assumptions. `recur next` is a tactic that selects the
+assumptions of a later goal in the same way and passes them to `next`.
+Keeping `args` separate lets `k` prepare them once.
+
+The list's tactics and requirement checks run once, and every argument's
+checks apply, not just the last one's. A bound on `NoAsms`, `IgnAsm`,
+`Abbr` or `L` qualifies that directive rather than making it a rewrite.
+
+### Failure
+
+The tactic fails if a labelled assumption named by `L` is missing, if an
+`Abbr` cannot be expanded, or if a requirement check fails.
+
+### Comments
+
+The simplifier's tactics use this, so that the goals a looper
+produces see the assumptions selected for the original goal.
+
+### See also
+
+[`markerLib.strip_wrappers`](#markerLib.strip_wrappers),
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC).

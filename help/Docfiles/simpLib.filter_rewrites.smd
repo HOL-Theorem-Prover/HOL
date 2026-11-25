@@ -1,0 +1,46 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `filter_rewrites`
+
+``` hol4
+simpLib.filter_rewrites :
+  ((simpLib.thname option * thm) -> bool) ->
+  simpLib.simpset -> simpLib.simpset
+simpLib.filter_rewrites_preserving_controls :
+  ((simpLib.thname option * thm) -> bool) ->
+  simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes the rewrites of a simpset that a predicate rejects.
+
+`filter_rewrites keep ss` removes every rewrite `(name, th)`, as it was
+added to `ss`, for which `keep` returns false. Everything else in `ss` is
+kept, including its exclusions, limit, rewrite maker, solvers and
+loopers, which rebuilding from `ssfrags_of ss` would lose. If nothing is
+rejected, `ss` itself is returned.
+
+The simpset is rebuilt, so bounded rewrites (`Once`, `Ntimes`) start again
+with their full number of uses. With `filter_rewrites_preserving_controls`
+they keep the number of uses they had left.
+
+### Failure
+
+Fails if `keep` fails.
+
+### Example
+
+``` hol4
+>> fun keep (_, th) = not (aconv (concl th) (concl AND_CLAUSES));
+>>_ val ss = simpLib.filter_rewrites keep
+     boolSimps.bool_ss;
+>> QCONV (simpLib.SIMP_CONV ss []) “p ∧ T”;
+>> simpLib.SIMP_CONV ss [] “p ∨ F”;
+```
+
+### See also
+
+[`simpLib.clear_rules`](#simpLib.clear_rules),
+[`simpLib.mk_simpset`](#simpLib.mk_simpset),
+[`simpLib.rewrite_source_handles`](#simpLib.rewrite_source_handles).

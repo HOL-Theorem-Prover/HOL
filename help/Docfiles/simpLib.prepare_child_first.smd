@@ -1,0 +1,64 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `prepare_child_first`
+
+``` hol4
+simpLib.prepare_child_first :
+  Traverse.child_first_policy -> simpLib.simpset ->
+  {normalize : thm list -> conv, arguments : thm list -> conv,
+   may_reduce_arguments : term -> bool}
+simpLib.prepare_child_first_observed : (term -> unit) ->
+  Traverse.child_first_policy -> simpLib.simpset ->
+  {normalize : thm list -> conv, arguments : thm list -> conv,
+   may_reduce_arguments : term -> bool}
+Traverse.NORMALIZE_ARGUMENTS :
+  Traverse.child_first_policy -> conv -> conv
+```
+
+------------------------------------------------------------------------
+
+Prepares child-first simplification with a simpset for repeated use.
+
+`prepare_child_first policy ss` returns three functions, which use `ss`
+without reprocessing it:
+
+- `normalize ths` simplifies a term as
+  `simpLib.SIMP_CONV_CHILD_FIRST policy ss ths` does.
+- `arguments ths` simplifies only the arguments of a term (or the body,
+  if it is an abstraction), leaving the term's head as it is. It is
+  `Traverse.NORMALIZE_ARGUMENTS policy (normalize ths)`, which
+  eta-contracts abstraction arguments as the policy allows and repeats
+  until nothing changes.
+- `may_reduce_arguments t` is false if no argument of `t` can be
+  simplified. It is always true if `ss` has decision procedures,
+  congruence rules or relations other than equality.
+
+Each application of `normalize` or `arguments` starts the bounded rewrites
+(`Once`, `Ntimes`) of `ss` with their full allowance, and restores their
+counts afterwards, so it neither depends on nor uses up the allowance of
+an enclosing call.
+
+`prepare_child_first_observed observe` is the same, but also calls
+`observe` on the input and result of each conversion and on every term
+offered to the rewrites and side-condition solvers, including those that
+fail.
+
+### Failure
+
+Never fails. The conversions fail only if the policy raises an exception,
+and return a reflexive theorem if nothing changes.
+
+### Example
+
+``` hol4
+>>_ val {normalize, arguments, ...} = simpLib.prepare_child_first
+     (Traverse.charge_only (fn () => ()))
+     boolSimps.bool_ss;
+>> arguments [] “(p ∨ F) ∧ T”;
+>> normalize [] “(p ∨ F) ∧ T”;
+```
+
+### See also
+
+[`simpLib.SIMP_CONV_CHILD_FIRST`](#simpLib.SIMP_CONV_CHILD_FIRST),
+[`simpLib.GEN_GLOBAL_SIMP_TAC`](#simpLib.GEN_GLOBAL_SIMP_TAC).

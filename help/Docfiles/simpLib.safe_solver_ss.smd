@@ -1,0 +1,31 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `safe_solver_ss`
+
+``` hol4
+simpLib.safe_solver_ss : Traverse.ssolver -> simpLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Creates an anonymous fragment containing one safe solver.
+Installing it has the same effect as `add_safe_solver`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> val decide : Traverse.ssolver = {name = "decide", solve = K DECIDE};
+>>_ val ss = simpLib.++
+     (boolSimps.bool_ss,simpLib.safe_solver_ss decide);
+>> simpLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”)
+     (Context.snapshot());
+```
+
+### See also
+
+[`simpLib.add_safe_solver`](#simpLib.add_safe_solver),
+[`simpLib.solver_ss`](#simpLib.solver_ss).

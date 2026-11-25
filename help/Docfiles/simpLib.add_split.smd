@@ -1,0 +1,39 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_split`
+
+``` hol4
+simpLib.add_split : thm -> simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Adds a split rule to a simpset.
+
+`add_split th ss` adds a looper applying `splitLib.SPLIT_TAC [th]`. It is
+named `split name`, or `split_asm name` for an assumption rule, where
+`name` is the theorem's name in the theorem database or, failing that,
+the `Thy$c` name of the rule's case constant. A split looper with the
+same name is replaced.
+
+### Failure
+
+Fails if `th` is not a split rule.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.add_split (splitLib.type_split_of “:'a option”)
+     boolSimps.bool_ss;
+>> simpLib.GEN_SIMP_TAC {safe = false} ss []
+     ([], “P (case x of NONE => 0 | SOME n => n + 1) : bool”)
+     (Context.snapshot());
+```
+
+### See also
+
+[`splitLib.SPLIT_TAC`](#splitLib.SPLIT_TAC),
+[`simpLib.del_split`](#simpLib.del_split),
+[`simpLib.Split`](#simpLib.Split),
+[`simpLib.split_ss`](#simpLib.split_ss),
+[`simpLib.ExclX`](#simpLib.ExclX).

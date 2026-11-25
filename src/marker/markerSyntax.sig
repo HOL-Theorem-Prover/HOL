@@ -5,6 +5,7 @@ sig
   val stmarker_tm : term
   val AC_tm       : term
   val Cong_tm     : term
+  val Split_tm    : term
   val abbrev_tm   : term
   val label_tm    : term
 

@@ -1,0 +1,34 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `clear_rules`
+
+``` hol4
+simpLib.clear_rules : simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes the rules from a simpset, keeping its settings.
+
+`clear_rules ss` removes the rewrites, conversions, congruences, decision
+procedures, loopers and fragments of `ss`. It keeps the rewrite maker, the
+limit, the solvers, the subgoaler, the side-condition depth and the term
+order. Simplifying with `clear_rules ss` and theorems `ths` therefore uses
+`ths` alone, under the settings of `ss`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = boolSimps.bool_ss;
+>> simpLib.SIMP_CONV (simpLib.clear_rules ss)
+     [boolTheory.AND_CLAUSES] “p ∧ T ∧ (x:num = x)”;
+```
+
+### See also
+
+[`simpLib.set_cond_depth`](#simpLib.set_cond_depth),
+[`simpLib.set_subgoaler`](#simpLib.set_subgoaler).

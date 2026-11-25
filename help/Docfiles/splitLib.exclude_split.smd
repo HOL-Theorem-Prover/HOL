@@ -1,0 +1,30 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `exclude_split`
+
+``` hol4
+splitLib.exclude_split : string -> unit
+```
+
+------------------------------------------------------------------------
+
+Persistently retracts a `[split]` rule.
+
+`exclude_split "Thy.name"` removes the rule `name` of theory `Thy` from
+the rules of the `[split]` attribute, in the current theory and its
+descendants; `exclude_split "name"` refers to the current theory. The
+theorem itself is not deleted. Retracting a name that is not a split rule
+has no effect.
+
+To exclude a split rule from a single simplifier call, use
+`simpLib.ExclX ("split:" ^ name)`.
+
+### Failure
+
+Fails if the `[split]` attribute has not been enabled with
+`splitLib.enable_split_attribute`, or if the name is malformed.
+
+### See also
+
+[`splitLib.enable_split_attribute`](#splitLib.enable_split_attribute),
+[`simpLib.del_split`](#simpLib.del_split),
+[`simpLib.split_ss`](#simpLib.split_ss).

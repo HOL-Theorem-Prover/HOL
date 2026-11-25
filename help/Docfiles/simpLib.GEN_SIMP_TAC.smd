@@ -1,0 +1,56 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `GEN_SIMP_TAC`
+
+``` hol4
+simpLib.GEN_SIMP_TAC : simpLib.simp_mode ->
+  simpLib.simpset -> thm list -> tactic
+simpLib.GEN_SIMP_TAC_CHILD_FIRST : Traverse.child_first_policy ->
+  simpLib.simp_mode -> simpLib.simpset -> thm list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Simplifies a goal, then tries the simpset's solvers and loopers.
+
+`GEN_SIMP_TAC {safe} ss ths` simplifies the goal with `ss`, `ths` and the
+assumptions, as `simpLib.ASM_SIMP_TAC` does. It then tries the
+simpset's final solvers in order: the safe solvers if `safe` is true, the
+unsafe ones otherwise. If none solves the goal, it applies the first
+looper that succeeds and repeats on the resulting subgoals. If the
+simpset has a limit `n` (see `simpLib.limit`), at most `n` loopers are
+applied in one call.
+
+Side conditions of conditional rewrites are always handled by the
+unsafe solvers. Bounded rewrites in `ths` (e.g. `Once th`) are bounded
+across the whole call, including the subgoals produced by loopers.
+
+`GEN_SIMP_TAC_CHILD_FIRST policy` is the same, but simplifies subterms
+before the terms containing them.
+
+`simpLib.ASM_SIMP_TAC` behaves as `GEN_SIMP_TAC {safe = false}` when the
+simpset has solvers or loopers.
+
+### Failure
+
+Fails if a requirement (`Req0`, `ReqD`) or a directive in `ths` fails. May
+diverge if a looper succeeds without making progress and no limit is set.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.add_safe_solver
+     {name = "decide", solve = K DECIDE}
+     boolSimps.bool_ss;
+>> simpLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”)
+     (Context.snapshot());
+```
+
+### See also
+
+[`simpLib.add_looper`](#simpLib.add_looper),
+[`simpLib.add_unsafe_solver`](#simpLib.add_unsafe_solver),
+[`simpLib.add_safe_solver`](#simpLib.add_safe_solver),
+[`simpLib.GEN_GLOBAL_SIMP_TAC`](#simpLib.GEN_GLOBAL_SIMP_TAC),
+[`simpLib.SIMP_CONV_CHILD_FIRST`](#simpLib.SIMP_CONV_CHILD_FIRST),
+[`simpLib.mk_simpset`](#simpLib.mk_simpset).

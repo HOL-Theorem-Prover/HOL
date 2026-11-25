@@ -139,6 +139,12 @@ New features
 -   `listTheory.SUM_less_EVERY_less` bounds every element of a natural-number
     list by a strict upper bound on its sum.
 
+-   The simplifier gains solvers, loopers and case splitting, in the style of Isabelle's simplifier, and control over side conditions (depth limit, term order and subgoaler): see `simpLib.add_looper`, `add_unsafe_solver`, `add_safe_solver`, `set_subgoaler`, `set_cond_depth`, `set_term_ord` and `add_split`.
+    A simpset without these settings simplifies as before.
+    `simpLib` also provides child-first simplification (`SIMP_CONV_CHILD_FIRST`), simplification of assumptions and conclusion to a joint fixpoint (`GEN_GLOBAL_SIMP_TAC`), exclusion of loopers, solvers and split rules from one call (`ExclX`), and rewrites prepared once for use in several calls (`prepare_rewrite_bundle`).
+    The splitter is also available on its own, as `splitLib`, which can also enable a persistent `[split]` theorem attribute (`splitLib.enable_split_attribute`).
+    The theorem-list directives `Split` and `ExclX` are in `markerLib`, whose `directive` type gains `DSplit` and `DExclX`.
+
 -   Under Poly/ML, `Holmake` can keep a project's standard build
     products in a separate *artifact root*.  Set `objroot` in
     `holproject.toml`, pass `--objroot`, or set `HOLOBJROOT`:

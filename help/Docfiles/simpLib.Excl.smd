@@ -1,0 +1,43 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `Excl`
+
+``` hol4
+simpLib.Excl : string -> thm
+```
+
+------------------------------------------------------------------------
+
+Excludes named rewrites, conversions and decision procedures from one
+simplifier call.
+
+Passing `Excl name` in the theorem list of a simplification conversion or
+tactic has the effect of simplifying with `ss -* [name]`. The name is read
+as follows:
+
+- a name without dots, or of the form `name.` or `name.n` with `n` a
+  numeral, is unqualified;
+- `Thy.name` names `name` in theory `Thy`, which must be an ancestor of
+  the current theory;
+- `Thy.name.suffix` is read as theory `Thy` and name `name.suffix`.
+
+This removes the rewrites derived from the theorem `name` (from the given
+theory, if one is supplied), conversions named `name`, and the decision
+procedure whose name is exactly the string given. Kernel-style names
+(`Thy$name`) are not recognised.
+
+### Failure
+
+Never fails. The simplifier call fails if the theory is not an ancestor
+or the name has more than two dots. A name that matches nothing is ignored.
+
+### Example
+
+``` hol4
+>> SIMP_CONV bool_ss [] “p ∧ T”;
+>> QCONV (SIMP_CONV bool_ss [Excl "bool.AND_CLAUSES"]) “p ∧ T”;
+```
+
+### See also
+
+[`simpLib.SIMP_CONV`](#simpLib.SIMP_CONV),
+[`simpLib.ExclX`](#simpLib.ExclX).

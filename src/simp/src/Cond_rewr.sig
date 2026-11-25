@@ -41,6 +41,29 @@ sig
   val IMP_EQ_CANON   : controlled_thm -> controlled_thm list
   val COND_REWR_CONV : string * thm -> bool ->
                        (term list -> term -> thm) -> term list -> conv
+
+  (* COND_REWR_CONV's matcher, prepared once, behind two runners.  legacy
+     is COND_REWR_CONV (and the ordinary simplifier's runner).  configured takes the side-condition depth (NONE:
+     read stack_limit at each application) and the order deciding whether
+     a permutative rewrite applies. *)
+  type config =
+    {solver : term list -> term -> thm, stack : term list,
+     cond_depth : int option, term_ord : term * term -> order}
+  type runners =
+    {legacy : (term list -> term -> thm) -> term list -> conv,
+     configured : config -> conv}
+  val COND_REWR_CONVS : string * thm -> bool -> runners
+  (* A rewrite prepared with a use count, which it uses as given rather
+     than resetting it.  Each successful application decrements the
+     count.  runners gives the conversions without preparing them again.
+     Concurrent use must be synchronised by the caller. *)
+  type prepared
+  val prepare : string * thm -> BoundedRewrites.control -> prepared
+  val runners : prepared -> runners
+  (* The same rewrite with another use count; fails if one is bounded
+     and the other is not *)
+  val rebind : prepared -> BoundedRewrites.control -> prepared
+  val is_var_perm : term * term -> bool
   val QUANTIFY_CONDITIONS : controlled_thm -> controlled_thm list
   val stack_limit : int ref
 

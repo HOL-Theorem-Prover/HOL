@@ -23,10 +23,15 @@ sig
   val Cong   : thm -> thm
   val unCong : thm -> thm
 
+  val Split     : thm -> thm
+  val destSplit : thm -> thm
+
   val Excl   : string -> thm
   val destExcl : thm -> string option
   val ExclSF : string -> thm
   val destExclSF : thm -> string option
+  val ExclX  : string -> thm
+  val destExclX : thm -> string option
 
   val FRAG   : string -> thm
   val destFRAG : thm -> string option
@@ -42,7 +47,8 @@ sig
      Every consumer of a theorem list must classify through
      dest_directive, dropping or rejecting a directive it cannot honour
      rather than using it as a rewrite.  Hypothesis-carried wrappers
-     (Req0, ReqD, bounds) are reported before the payload's own head. *)
+     (Req0, ReqD, bounds) are reported before the payload's own head.
+     Split and ExclX are honoured by simpLib's tactics. *)
   datatype directive =
       DAC of thm * thm
     | DCong of thm
@@ -56,8 +62,12 @@ sig
     | DIgnAsm of string
     | DAbbr of string
     | DLabel of string
+    | DSplit of thm
+    | DExclX of string
   val dest_directive : thm -> directive option
   val is_directive   : thm -> bool
+  (* Removes Req0, ReqD and bound wrappers, however nested *)
+  val strip_wrappers : thm -> thm
 
   val ABB                 : term -> term -> tactic
   val ABB'                : {redex : term, residue : term} -> tactic
@@ -128,6 +138,15 @@ sig
   val NoAsms : thm
 
   val process_taclist_then : {arg: thm list} -> (thm list -> tactic) -> tactic
+  (* As process_taclist_then, but the continuation is given the theorem
+     arguments and the selected assumptions separately, so that it can
+     prepare the arguments once, and a function that selects the
+     assumptions of a later goal (e.g. a looper's) in the same way.  The
+     list's tactics and requirement checks run only once, and every
+     argument's checks apply. *)
+  val process_taclist_then_bind : {arg : thm list} ->
+    (thm list -> ((thm list -> tactic) -> tactic) -> thm list -> tactic) ->
+    tactic
 
   val suspend : string -> tactic
   val prim_resume : (thm * string * tactic) -> {updated_main: thm, subresult:thm}

@@ -1,0 +1,30 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `solver_ss`
+
+``` hol4
+simpLib.solver_ss : Traverse.ssolver -> simpLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Creates an anonymous fragment containing one unsafe solver.
+Installing it has the same effect as `add_unsafe_solver`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> val decide : Traverse.ssolver = {name = "decide", solve = K DECIDE};
+>> simpLib.SIMP_CONV
+     (simpLib.++ (boolSimps.bool_ss,simpLib.solver_ss decide))
+     [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
+```
+
+### See also
+
+[`simpLib.add_unsafe_solver`](#simpLib.add_unsafe_solver),
+[`simpLib.safe_solver_ss`](#simpLib.safe_solver_ss).

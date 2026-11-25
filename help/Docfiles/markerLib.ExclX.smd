@@ -1,0 +1,35 @@
+## `ExclX`
+
+``` hol4
+markerLib.ExclX : string -> thm
+markerLib.destExclX : thm -> string option
+```
+
+------------------------------------------------------------------------
+
+Makes an extended exclusion marker for the simplifier.
+
+`ExclX target` proves `marker$ExcludeX target`, with `target` stored as the
+name of a variable. `destExclX` returns that name from such a theorem, and
+`NONE` from any other. `markerLib.dest_directive` reports `ExclX target`
+as `DExclX target`.
+
+The marker is honoured by the simplifier; see `simpLib.ExclX` for the
+targets it accepts.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> markerLib.ExclX "split:COND";
+>> markerLib.destExclX it;
+```
+
+### See also
+
+[`simpLib.ExclX`](#simpLib.ExclX),
+[`simpLib.Excl`](#simpLib.Excl),
+[`markerLib.Split`](#markerLib.Split).

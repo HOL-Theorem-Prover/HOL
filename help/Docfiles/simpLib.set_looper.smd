@@ -1,0 +1,32 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_looper`
+
+``` hol4
+simpLib.set_looper : string * (simpLib.simpset -> tactic) ->
+  simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Replaces all the loopers of a simpset with one looper.
+
+`set_looper (name, mk) ss` removes every looper of `ss`, including split
+loopers, and adds `mk` as `simpLib.add_looper (name, mk)` does.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val cases = simpLib.++ (boolSimps.bool_ss,simpLib.split_ss);
+>>_ val conjunctions = simpLib.set_looper
+     ("conj", fn _ => CONJ_TAC) cases;
+```
+
+### See also
+
+[`simpLib.add_looper`](#simpLib.add_looper),
+[`simpLib.del_looper`](#simpLib.del_looper).

@@ -1,0 +1,32 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `del_looper`
+
+``` hol4
+simpLib.del_looper : string -> simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes a named looper from a simpset.
+
+`del_looper name ss` removes the looper `name` added by `add_looper`,
+`set_looper` or `looper_ss`. Split loopers are removed with `del_split`.
+
+### Failure
+
+Never fails. If there is no looper `name`, a warning is printed and `ss`
+is returned.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.add_looper ("conj", fn _ => CONJ_TAC)
+     boolSimps.bool_ss;
+>>_ val ss' = simpLib.del_looper "conj" ss;
+```
+
+### See also
+
+[`simpLib.add_looper`](#simpLib.add_looper),
+[`simpLib.del_split`](#simpLib.del_split).

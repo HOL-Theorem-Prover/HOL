@@ -1,0 +1,59 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `CONFIG_REDUCER`
+
+``` hol4
+Traverse.CONFIG_REDUCER :
+  Traverse.reducer_config_data -> Traverse.reducer
+Traverse.CONTEXT_REDUCER :
+  Traverse.reducer_context_data -> Traverse.reducer
+```
+
+------------------------------------------------------------------------
+
+Makes a decision procedure that is given the simpset's side-condition
+depth limit and permutative-rewrite order.
+
+``` hol4
+type reducer_config_data =
+  {name : string option, initial : context,
+   addcontext : context * thm list -> context,
+   apply : {solver : term list -> term -> thm,
+            conv : term list -> term -> thm, context : context,
+            stack : term list, cond_depth : int option,
+            term_ord : term * term -> order,
+            relation : term * (term -> thm)} -> conv}
+```
+
+These decision procedures are added to a fragment with
+`simpLib.dproc_ss` or `simpLib.SSFRAG`, and have type
+`Traverse.reducer`, as those made with `Traverse.REDUCER` do: `initial` is the starting context, `addcontext` adds
+theorems to it, and `apply` is called with the current context to give a
+conversion. `apply` also receives the simpset's side-condition depth limit
+(`NONE` if none is set with `simpLib.set_cond_depth`) and the order used
+for permutative rewrites (see `simpLib.set_term_ord`).
+
+`CONTEXT_REDUCER` is the same, but `cond_depth` is an `int`: an unset
+limit is given as the value of `Cond_rewr.stack_limit`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ exception NoContext;
+>>_ val beta_reducer = Traverse.CONFIG_REDUCER
+     {name = SOME "beta", initial = NoContext, addcontext = #1,
+      apply = fn _ => BETA_CONV};
+>> simpLib.SIMP_CONV
+     (simpLib.mk_simpset [simpLib.dproc_ss beta_reducer])
+     [] “(λx. x ∧ y) p”;
+```
+
+### See also
+
+[`simpLib.dproc_ss`](#simpLib.dproc_ss),
+[`simpLib.set_cond_depth`](#simpLib.set_cond_depth),
+[`simpLib.xtraversedata_for_ss`](#simpLib.xtraversedata_for_ss).

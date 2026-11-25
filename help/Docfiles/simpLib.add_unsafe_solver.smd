@@ -1,0 +1,58 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_unsafe_solver`
+
+``` hol4
+simpLib.add_unsafe_solver : Traverse.ssolver ->
+  simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Adds an unsafe solver to a simpset.
+
+Solvers have the types
+
+``` hol4
+type Traverse.ssolver =
+  {name : string, solve : simp_prover_ctxt -> term -> thm}
+type Traverse.simp_prover_ctxt =
+  {stack : term list, context_thms : thm list, recurse : term -> thm}
+```
+
+`solve ctxt c` must prove `c` or raise `HOL_ERR`. In `ctxt`, `stack` holds
+the side conditions already being attempted, `context_thms` the theorems
+in the simplifier's context (supplied theorems, assumptions and facts
+assumed by congruence rules), and `recurse c` simplifies `c`, returning
+`|- c = c'`.
+
+Unsafe solvers prove the side conditions of conditional rewrites that
+the subgoaler (see `simpLib.set_subgoaler`) does not reduce to `T`;
+they are tried on the subgoaler's result. They are also the final solvers of
+`simpLib.GEN_SIMP_TAC {safe = false}`. The solver is added after the
+existing unsafe solvers, unless one with the same name is already present,
+in which case the simpset is unchanged.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val decide : Traverse.ssolver = {name = "decide", solve = K DECIDE};
+>> simpLib.SIMP_CONV
+     (simpLib.add_unsafe_solver decide
+        boolSimps.bool_ss)
+     [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
+```
+
+### See also
+
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC),
+[`simpLib.add_safe_solver`](#simpLib.add_safe_solver),
+[`simpLib.set_unsafe_solvers`](#simpLib.set_unsafe_solvers),
+[`simpLib.remove_solver`](#simpLib.remove_solver),
+[`simpLib.solver_ss`](#simpLib.solver_ss),
+[`simpLib.mk_tactic_solver`](#simpLib.mk_tactic_solver),
+[`simpLib.set_subgoaler`](#simpLib.set_subgoaler).

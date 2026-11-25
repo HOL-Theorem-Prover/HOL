@@ -1,0 +1,56 @@
+>>__ load "splitLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `SPLIT_TAC`
+
+``` hol4
+splitLib.SPLIT_TAC : thm list -> tactic
+```
+
+------------------------------------------------------------------------
+
+Performs one case split with split rules.
+
+A split rule is a theorem without hypotheses of the form
+
+``` hol4
+|- !P ... . P (c a1 ... an) = rhs
+```
+
+where `P` is a Boolean-valued variable and `c` a constant. It is an
+assumption rule if `rhs` is a negation, and a conclusion rule otherwise.
+`splitLib.type_split_rules ty` gives both rules for the case constant of
+datatype `ty`; `splitLib.type_split_of ty` gives the conclusion rule.
+
+`SPLIT_TAC rules` rewrites the conclusion with one instance of a
+conclusion rule: the matching redex under the fewest binders it depends
+on, outermost and leftmost first, with `P` taken as the enclosing
+formula. If no conclusion rule applies, it rewrites the first assumption
+to which an assumption rule applies and strips the result, producing a
+goal per case.
+
+### Failure
+
+Fails if a rule is malformed, or if no rule applies.
+
+### Example
+
+``` hol4
+>>__ val c = Context.snapshot();
+>> splitLib.SPLIT_TAC [splitLib.type_split_of “:bool”]
+     ([], “P (if b then 1 else 2) : bool”) c;
+>> splitLib.SPLIT_TAC (splitLib.type_split_rules “:bool”)
+     ([“P (if b then 1 else 2) : bool”], “Q : bool”) c;
+```
+
+### Comments
+
+To split on a chosen term throughout a goal, use `Cases_on` or
+`CASE_TAC`.
+
+### See also
+
+[`simpLib.split_ss`](#simpLib.split_ss),
+[`simpLib.add_split`](#simpLib.add_split),
+[`simpLib.Split`](#simpLib.Split),
+[`bossLib.Cases_on`](#bossLib.Cases_on),
+[`BasicProvers.CASE_TAC`](#BasicProvers.CASE_TAC).

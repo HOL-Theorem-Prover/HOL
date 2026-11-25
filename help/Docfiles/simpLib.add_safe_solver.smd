@@ -1,0 +1,39 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_safe_solver`
+
+``` hol4
+simpLib.add_safe_solver : Traverse.ssolver ->
+  simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Adds a safe solver to a simpset.
+
+Safe solvers are the final solvers of `simpLib.GEN_SIMP_TAC {safe =
+true}`. They are not used for the side conditions of conditional rewrites.
+The solver is added after the existing safe solvers, unless one with the
+same name is already present, in which case the simpset is unchanged. See
+`simpLib.add_unsafe_solver` for the solver type.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val decide : Traverse.ssolver = {name = "decide", solve = K DECIDE};
+>>_ val ss = simpLib.add_safe_solver decide
+     boolSimps.bool_ss;
+>> simpLib.GEN_SIMP_TAC {safe = true} ss [] ([], “x < x + 1”)
+     (Context.snapshot());
+```
+
+### See also
+
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC),
+[`simpLib.add_unsafe_solver`](#simpLib.add_unsafe_solver),
+[`simpLib.set_safe_solvers`](#simpLib.set_safe_solvers),
+[`simpLib.safe_solver_ss`](#simpLib.safe_solver_ss).

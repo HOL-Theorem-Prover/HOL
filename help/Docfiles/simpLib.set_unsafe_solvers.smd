@@ -1,0 +1,31 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_unsafe_solvers`
+
+``` hol4
+simpLib.set_unsafe_solvers : Traverse.ssolver list ->
+  simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Replaces the unsafe solver list, retaining only the first solver of each
+name. The safe list is unchanged.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.add_unsafe_solver
+     (simpLib.mk_tactic_solver ("decide", DECIDE_TAC))
+     boolSimps.bool_ss;
+>>_ val no_unsafe_solvers = simpLib.set_unsafe_solvers [] ss;
+```
+
+### See also
+
+[`simpLib.add_unsafe_solver`](#simpLib.add_unsafe_solver),
+[`simpLib.set_safe_solvers`](#simpLib.set_safe_solvers).

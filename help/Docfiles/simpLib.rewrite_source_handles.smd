@@ -1,0 +1,55 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `rewrite_source_handles`
+
+``` hol4
+simpLib.rewrite_source_handles :
+  simpLib.simpset -> simpLib.rewrite_source list
+simpLib.source_rewrite :
+  simpLib.rewrite_source -> simpLib.thname option * thm
+simpLib.same_rewrite_source :
+  simpLib.rewrite_source * simpLib.rewrite_source -> bool
+simpLib.rewrite_source_compare :
+  simpLib.rewrite_source * simpLib.rewrite_source -> order
+simpLib.rewrite_views :
+  (simpLib.rewrite_source * thm) list -> simpLib.ssfrag
+simpLib.suspend_rewrite_sources :
+  simpLib.rewrite_source list -> simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Identifies the individual rewrites installed in a simpset.
+
+`rewrite_source_handles ss` returns a handle for each rewrite that `ss`
+made from a theorem, one per rewrite when a theorem gives several (for
+example, one per conjunct). Conversions and decision procedures have no
+handles. `source_rewrite h` returns the rewrite with the name of the
+theorem it was made from. `same_rewrite_source (h1, h2)` holds if `h1`
+and `h2` identify the same rewrite; this survives rebuilding the simpset
+(for example by `filter_rewrites`) as long as the rewrite is unchanged.
+`rewrite_source_compare` orders handles by installation.
+
+`rewrite_views [(h, th)]` is a fragment that adds `th` as an alias of the
+rewrite `h`: it has the same name, shares its remaining uses if `h` is
+bounded, and stops applying when `h` is removed or changed. A view whose
+`h` is not in the simpset, or whose `th` cannot be used as a rewrite, is
+ignored. `suspend_rewrite_sources hs ss` disables the rewrites `hs` and
+their aliases in `ss`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.++ (pureSimps.pure_ss,
+     simpLib.rewrites [boolTheory.AND_CLAUSES]);
+>> map simpLib.source_rewrite (simpLib.rewrite_source_handles ss);
+```
+
+### See also
+
+[`simpLib.prepare_rewrite_bundle`](#simpLib.prepare_rewrite_bundle),
+[`simpLib.filter_rewrites`](#simpLib.filter_rewrites).
