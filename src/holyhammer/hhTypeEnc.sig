@@ -13,7 +13,9 @@ sig
   (* The accepted slice vocabulary is precisely mono_native,
      mono_native_fool, mono_native_higher, mono_native_higher_fool,
      poly_native, mono_guards, mono_guards??, and the empty legacy
-     encoding. *)
+     encoding.  THF implies the higher encoding: the generator treats a
+     native encoding in THF as higher, and the problem header names the
+     requested encoding. *)
   val format_of_string : string -> hhTptpProblem.format
   val valid_format : string -> bool
   val of_string : string -> type_enc

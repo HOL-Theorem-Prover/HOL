@@ -313,6 +313,21 @@ struct
     (ignore (Type.dom_rng ty); true) handle HOL_ERR _ => false
   fun dom_rng ty = SOME (Type.dom_rng ty) handle HOL_ERR _ => NONE
 
+  (* The first [arity] domains of a function type and the type that
+     remains: the argument and result types of a symbol applied to
+     [arity] arguments. *)
+  fun split_fun arity ty =
+    let
+      fun consume 0 ty domains = (List.rev domains, ty)
+        | consume count ty domains =
+            (case dom_rng ty of
+                 SOME (domain, range) =>
+                   consume (count - 1) range (domain :: domains)
+               | NONE => fail "symbol arity exceeds its HOL function type")
+    in
+      consume arity ty []
+    end
+
   fun term_head tm = fst (strip_comb tm)
   fun is_generated_var tm =
     is_var tm andalso
@@ -868,11 +883,14 @@ struct
   fun symbol_table encoding : symbols =
     let
       val head = memoise Term.compare (encoded_symbol encoding)
+      (* A monomorphic encoding has one app symbol per signature, so its
+         declaration or guard axiom fixes the result type. *)
+      val mono_app = memoise signature_compare mono_app_symbol
       val (value, app) =
         case encoding of
             hhTypeEnc.Native {poly = false, ...} =>
-              (memoise Term.compare mono_value_symbol,
-               memoise signature_compare mono_app_symbol)
+              (memoise Term.compare mono_value_symbol, mono_app)
+          | hhTypeEnc.Guards {poly = false, ...} => (head, mono_app)
           | _ => (head, fn _ => "app_2E")
       val mangle = memoise Type.compare mangle_type
       val ty = memoise Type.compare (type_for mangle encoding)
@@ -1026,16 +1044,10 @@ struct
         case encoding of
             hhTypeEnc.Native {poly = true, ...} => generic_proxy_type head
           | _ => type_of head
-      fun consume 0 ty domains = (List.rev domains, ty)
-        | consume count ty domains =
-            (case dom_rng ty of
-                 SOME (domain, range) =>
-                   consume (count - 1) range (domain :: domains)
-               | NONE => fail "symbol arity exceeds its HOL function type")
       val (domains, result) =
         case encoding of
             hhTypeEnc.Native {higher = false, ...} =>
-              consume arity full_type []
+              split_fun arity full_type
           | _ => strip_fun full_type
       val ty =
         List.foldr (fn (domain, range) =>
@@ -1080,29 +1092,46 @@ struct
                 (map (#mangle symbols) distinct))
     end
 
-  fun gsy_line (symbols : symbols) encoding needs head =
+  (* The guard axiom [name] of [symbol] applied to arguments of the types
+     [domains], or NONE if its type [result] is not guarded. *)
+  fun guard_axiom (symbols : symbols) encoding needs
+                  (name, symbol, domains, result) =
+    if not (guarded_type encoding needs result) then NONE
+    else
+      let
+        val variables = ListPair.zip
+          (map (fn index => "G" ^ Int.toString index)
+             (List.tabulate (length domains, fn index => index)),
+           map (#ty symbols) domains)
+        val application = hhTptpProblem.Tm
+          ((symbol, []),
+           map (fn (name, _) => hhTptpProblem.Tm ((name, []), [])) variables)
+        val body = guard_atom symbols result application
+        val formula = if null variables then body else hhTptpProblem.Quant
+          (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
+      in
+        SOME (hhTptpProblem.FormLine (name, hhTptpProblem.Axiom, formula))
+      end
+
+  (* The guard axiom of a symbol applied to [arity] arguments, the arity
+     of all its occurrences: it guards the type that remains. *)
+  fun gsy_line (symbols : symbols) encoding needs arity head =
     let
-      val (domains, result) = strip_fun (type_of head)
+      val (domains, result) = split_fun arity (type_of head)
+      val symbol = #head symbols head
     in
-      if not (guarded_type encoding needs result) then NONE
-      else
-        let
-          val variables = ListPair.zip
-            (map (fn index => "G" ^ Int.toString index)
-               (List.tabulate (length domains, fn index => index)),
-             map (#ty symbols) domains)
-          val application = hhTptpProblem.Tm
-            ((#head symbols head, []),
-             map (fn (name, _) =>
-               hhTptpProblem.Tm ((name, []), [])) variables)
-          val body = guard_atom symbols result application
-          val formula = if null variables then body else hhTptpProblem.Quant
-            (true, map (fn (name, ty) => (name, SOME ty)) variables, body)
-        in
-          SOME (hhTptpProblem.FormLine
-            (aiLib.escape "gsy." ^ #head symbols head,
-             hhTptpProblem.Axiom, formula))
-        end
+      guard_axiom symbols encoding needs
+        (aiLib.escape "gsy." ^ symbol, symbol, domains, result)
+    end
+
+  (* The guard axiom of the app symbol of one signature. *)
+  fun app_guard_line (symbols : symbols) encoding needs
+                     (app_signature as (function_type, argument_type,
+                                        result_type)) =
+    let val symbol = #app symbols app_signature in
+      guard_axiom symbols encoding needs
+        (aiLib.escape "gsy." ^ symbol, symbol,
+         [function_type, argument_type], result_type)
     end
 
   fun witness_line (symbols : symbols) ty =
@@ -1221,8 +1250,6 @@ struct
                               (mk_imp (app p [x], app head [p])))] end
                         | NONE => [])
                   | _ => [])
-            | "pxy.true" => [("help.pxy.true", mk_eq (head, T))]
-            | "pxy.false" => [("help.pxy.false", mk_eq (head, F))]
             | _ => []
         end
     in
@@ -1363,14 +1390,23 @@ struct
   fun generated_problem format encoding0 needs
       ({conjecture, facts, used_app, used_pp} : fo_ir) direct_helpers =
     let
-      (* THF has its own arrow and $o, whatever the encoding's name says. *)
+      (* THF has its own arrow and $o, whatever the encoding's name says:
+         its terms are not first-orderized, so a symbol is applied to any
+         number of arguments and a Boolean term is a formula. *)
       val encoding =
         case (format, encoding0) of
-            (hhTptpProblem.THF _, hhTypeEnc.Native {poly = true, fool, ...}) =>
-              hhTypeEnc.Native {poly = true, higher = true, fool = fool}
+            (hhTptpProblem.THF _, hhTypeEnc.Native {poly, fool, ...}) =>
+              hhTypeEnc.Native {poly = poly, higher = true, fool = fool}
           | _ => encoding0
       val all_formulas = conjecture :: map #2 facts
       val symbols = symbol_table encoding
+      (* The distinct application signatures, in order of first
+         occurrence; only monomorphic encodings give them their own symbols. *)
+      val app_signatures =
+        if used_app andalso is_monomorphic encoding then
+          rev (#2 (List.foldl (fold_apps_formula add_app_signature)
+            (Redblackset.empty signature_compare, []) all_formulas))
+        else []
       val typed = format <> hhTptpProblem.FOF
       val guarded = case encoding of hhTypeEnc.Guards _ => true | _ => false
       fun declared head =
@@ -1404,18 +1440,21 @@ struct
       val all_types =
         if typed orelse guarded then distinct_formula_types all_formulas
         else []
+      (* First-orderization applies every occurrence of a symbol to the
+         same number of arguments; declarations and guard axioms use it.
+         A higher encoding applies a symbol to any number. *)
+      val head_arities =
+        case encoding of
+            hhTypeEnc.Native {higher = true, ...} =>
+              Redblackmap.mkDict Term.compare
+          | _ => List.foldl head_arities_formula
+              (Redblackmap.mkDict Term.compare) all_formulas
+      fun head_arity head =
+        Option.getOpt (Redblackmap.peek (head_arities, head), 0)
       val decls =
         if not typed then []
         else
           let
-            val head_arities =
-              case encoding of
-                  hhTypeEnc.Native {higher = false, ...} =>
-                    List.foldl head_arities_formula
-                      (Redblackmap.mkDict Term.compare) all_formulas
-                | _ => Redblackmap.mkDict Term.compare
-            fun head_arity head =
-              Option.getOpt (Redblackmap.peek (head_arities, head), 0)
             val sym_decls = map (fn head => hhTptpProblem.SymDecl
               (aiLib.escape "sy." ^ #head symbols head,
                #head symbols head,
@@ -1424,7 +1463,6 @@ struct
             val app_decls =
               case encoding of
                   hhTypeEnc.Native {poly = false, ...} =>
-                    if not used_app then [] else
                     map (fn app_signature as (function_type, argument_type,
                                               result_type) =>
                       let val symbol = #app symbols app_signature in
@@ -1435,10 +1473,7 @@ struct
                               hhTptpProblem.TyFun
                                 (#ty symbols argument_type,
                                  #ty symbols result_type)))
-                      end) (rev (#2 (List.foldl
-                        (fold_apps_formula add_app_signature)
-                        (Redblackset.empty signature_compare, [])
-                        all_formulas)))
+                      end) app_signatures
                 | hhTypeEnc.Native {higher = false, ...} =>
                     if used_app then
                       let
@@ -1480,7 +1515,11 @@ struct
             app_decls @ value_decls @ pp_decls
           end
       val gsy = if guarded then
-        List.mapPartial (gsy_line symbols encoding needs) declaration_heads
+        List.mapPartial (fn head =>
+          gsy_line symbols encoding needs (head_arity head) head)
+          declaration_heads @
+        List.mapPartial (app_guard_line symbols encoding needs)
+          app_signatures
         else []
       val guard_types =
         List.filter (guarded_type encoding needs) all_types

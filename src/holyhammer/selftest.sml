@@ -1250,6 +1250,167 @@ fun advance_to target =
 fun power_above n =
   let fun up p = if p > n then p else up (10 * p) in up 10 end
 
+(* A sort checker for monomorphic TFF problems (TF0 and TX0): every
+   symbol has a single declaration and every application, equation, and
+   atom is well sorted.  It mirrors the checks Vampire and E apply. *)
+fun mono_tff_errors (problem : hhTptpProblem.problem) =
+  let
+    open hhTptpProblem
+    val bool_sort = TyCon ("$o", [])
+    fun strip (TyFun (domain, range)) =
+          let val (domains, result) = strip range in
+            (domain :: domains, result)
+          end
+      | strip ty = ([], ty)
+    val lines = List.concat (map #2 problem)
+    val errors = ref ([] : string list)
+    fun error message = errors := message :: !errors
+    val table = List.foldl (fn (SymDecl (_, symbol, ty), table) =>
+        (case Redblackmap.peek (table, symbol) of
+             SOME old =>
+               (if old = ty then ()
+                else error ("conflicting declarations of " ^ symbol);
+                table)
+           | NONE => Redblackmap.insert (table, symbol, ty))
+      | (_, table) => table) (Redblackmap.mkDict String.compare) lines
+    fun sort_of env (Tm ((symbol, _), args)) =
+          let val arg_sorts = map (sort_of env) args in
+            case (List.find (fn (name, _) => name = symbol) env, args) of
+                (SOME (_, ty), []) => SOME ty
+              | (SOME _, _) => (error ("applied variable " ^ symbol); NONE)
+              | (NONE, _) =>
+                if symbol = "$true" orelse symbol = "$false" then
+                  SOME bool_sort
+                else if symbol = "$ite" then
+                  (case arg_sorts of
+                       [SOME test, SOME left, SOME right] =>
+                         if test = bool_sort andalso left = right then
+                           SOME left
+                         else (error "ill-sorted $ite"; NONE)
+                     | _ => NONE)
+                else
+                  case Redblackmap.peek (table, symbol) of
+                      NONE => (error ("undeclared " ^ symbol); NONE)
+                    | SOME ty =>
+                        let val (domains, result) = strip ty in
+                          if length domains = length args andalso
+                             ListPair.all (fn (domain, actual) =>
+                               actual = NONE orelse actual = SOME domain)
+                               (domains, arg_sorts)
+                          then SOME result
+                          else (error ("ill-sorted application of " ^
+                                       symbol); NONE)
+                        end
+          end
+      | sort_of _ (TmAbs _) = (error "lambda in TFF"; NONE)
+    fun formula env (Quant (_, bound, body)) =
+          formula (map (fn (name, ty) =>
+            (name, case ty of SOME ty => ty
+                            | NONE => TyCon ("$i", []))) bound @ env) body
+      | formula env (TyQuant (_, _, body)) = formula env body
+      | formula env (Conn (Equal, [Atom left, Atom right])) =
+          (case (sort_of env left, sort_of env right) of
+               (SOME left_sort, SOME right_sort) =>
+                 if left_sort = right_sort then ()
+                 else error "ill-sorted equation"
+             | _ => ())
+      | formula env (Conn (_, bodies)) = List.app (formula env) bodies
+      | formula env (Atom tm) =
+          (case sort_of env tm of
+               SOME sort =>
+                 if sort = bool_sort then () else error "non-Boolean atom"
+             | NONE => ())
+    val _ = List.app (fn FormLine (_, _, body) => formula [] body
+                       | _ => ()) lines
+  in
+    List.rev (!errors)
+  end
+
+(* An arity checker.  A first-order (FOF or TF1) problem applies every
+   symbol to one number of arguments, type arguments included, a
+   declared symbol to the number its type declares, and never a bound
+   variable: Zipperposition rejects a symbol at two arities, and E reads
+   it as two symbols.  FOF also never uses one symbol both as a
+   predicate and as a function.  A THF symbol takes at most the type
+   arguments and arguments its declaration allows. *)
+fun symbol_arity_errors format (problem : hhTptpProblem.problem) =
+  let
+    open hhTptpProblem
+    val higher = case format of THF _ => true | _ => false
+    fun declared_arity (TyPi (vars, ty)) = length vars + declared_arity ty
+      | declared_arity (TyFun (_, range)) = 1 + declared_arity range
+      | declared_arity _ = 0
+    val lines = List.concat (map #2 problem)
+    val errors = ref ([] : string list)
+    fun error message = errors := message :: !errors
+    val declared = List.foldl
+      (fn (SymDecl (_, symbol, ty), table) =>
+            Redblackmap.insert (table, symbol, declared_arity ty)
+        | (_, table) => table) (Redblackmap.mkDict String.compare) lines
+    val arities = ref (Redblackmap.mkDict String.compare)
+    fun record symbol arity =
+      case Redblackmap.peek (!arities, symbol) of
+          NONE => arities := Redblackmap.insert (!arities, symbol, arity)
+        | SOME old =>
+            if old = arity then ()
+            else error (symbol ^ " at arities " ^ Int.toString old ^
+                        " and " ^ Int.toString arity)
+    fun at_most symbol arity =
+      case Redblackmap.peek (declared, symbol) of
+          SOME allowed =>
+            if arity <= allowed then ()
+            else error (symbol ^ " applied to " ^ Int.toString arity ^
+                        " of " ^ Int.toString allowed ^ " arguments")
+        | NONE =>
+            if String.isPrefix "$" symbol then ()
+            else error ("undeclared " ^ symbol)
+    val roles = ref (Redblackmap.mkDict String.compare)
+    fun role symbol predicate =
+      case Redblackmap.peek (!roles, symbol) of
+          NONE => roles := Redblackmap.insert (!roles, symbol, predicate)
+        | SOME old =>
+            if old = predicate then ()
+            else error (symbol ^ " as a predicate and as a function")
+    fun term bound predicate (Tm ((symbol, tys), args)) =
+          (if Lib.mem symbol bound then
+             (if higher orelse null args then ()
+              else error ("applied variable " ^ symbol))
+           else
+             (if format = FOF then role symbol predicate else ();
+              (if higher then at_most else record)
+                symbol (length tys + length args));
+           List.app (term bound false) args)
+      | term bound _ (TmAbs ((name, _), body)) =
+          if higher then term (name :: bound) false body
+          else error "lambda in a first-order format"
+    fun formula bound (Quant (_, vars, body)) =
+          formula (map #1 vars @ bound) body
+      | formula bound (TyQuant (_, _, body)) = formula bound body
+      | formula bound (Conn (Equal, sides)) =
+          List.app (fn Atom tm => term bound false tm
+                     | side => formula bound side) sides
+      | formula bound (Conn (_, bodies)) = List.app (formula bound) bodies
+      | formula bound (Atom tm) = term bound true tm
+    fun line (SymDecl (_, symbol, ty)) =
+          if higher then () else record symbol (declared_arity ty)
+      | line (FormLine (_, _, body)) = formula [] body
+      | line (TypeDecl _) = ()
+  in
+    List.app line lines;
+    List.rev (!errors)
+  end
+
+(* Mono TFF is sort checked, which covers arities; other formats are
+   arity checked. *)
+fun problem_errors (hhTptpProblem.TFF {poly = false, ...}) problem =
+      mono_tff_errors problem
+  | problem_errors format problem = symbol_arity_errors format problem
+
+fun expect_well_formed label errors =
+  (tprint ("hhProblemGen problems are well formed: " ^ label);
+   if null errors then OK ()
+   else die ("FAILED: " ^ String.concatWith "; " errors))
+
 fun test_hhProblemGen () =
   let
     open boolSyntax hhTptpProblem hhProblemGen
@@ -1395,13 +1556,24 @@ fun test_hhProblemGen () =
         {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
          lam_trans = hhLamTrans.Lifting, mono_iters = 3, mono_instances = 100}
         proxy_order_input) = ["not", "eq"])
+    (* The errors of every problem this section generates, each labelled
+       with its problem. *)
+    val problem_errors_found = ref ([] : string list)
+    fun checked label format generated =
+      (case problem_errors format generated of
+           [] => ()
+         | errors => problem_errors_found := !problem_errors_found @
+             map (fn error => label () ^ ": " ^ error) errors;
+       generated)
     fun problem format encoding terms =
       string_of_problem format "hhProblemGen pass 6--8"
-        (generate_problem
-          {format = format, type_enc = hhTypeEnc.of_string encoding,
-           lam_trans = hhLamTrans.Lifting, mono_iters = 3,
-           mono_instances = 100}
-          terms)
+        (checked (fn () => format_name format ^ " " ^ encoding ^ " " ^
+                    Parse.term_to_string (#conjecture terms)) format
+          (generate_problem
+            {format = format, type_enc = hhTypeEnc.of_string encoding,
+             lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+             mono_instances = 100}
+            terms))
     fun occurrences needle text =
       let
         fun loop haystack count =
@@ -1411,6 +1583,20 @@ fun test_hhProblemGen () =
                 else loop (Substring.triml (size needle) rest) (count + 1)
       in
         loop (Substring.full text) 0
+      end
+    (* Whether an app symbol applies to a term with the given head. *)
+    fun app_applies head text =
+      let
+        fun identifier c = Char.isAlphaNum c orelse c = #"_"
+        fun loop haystack =
+          case Substring.position ("(" ^ head) haystack of
+              (prefix, rest) =>
+                not (Substring.isEmpty rest) andalso
+                (String.isPrefix "app_"
+                   (Substring.string (Substring.taker identifier prefix))
+                 orelse loop (Substring.triml 1 rest))
+      in
+        loop (Substring.full text)
       end
     val binary_num = Type.mk_type ("fun", [num, unary_num])
     val pxy_f = Term.mk_var ("pxy.f", binary_num)
@@ -1459,8 +1645,8 @@ fun test_hhProblemGen () =
       (Term.mk_comb (function_pred, Term.mk_comb (pxy_f, x)))
     val _ = expect "hhProblemGen respects final application arities"
       (String.isSubstring "pxy_2Ef(" no_function_variable andalso
-       not (String.isSubstring "app_2E(pxy_2Ef" no_function_variable) andalso
-       String.isSubstring "app_2E(pxy_2Ef" with_function_variable)
+       not (app_applies "pxy_2Ef" no_function_variable) andalso
+       app_applies "pxy_2Ef" with_function_variable)
     val _ = expect "hhProblemGen switches to Min_App_Op at forty-five facts"
       (occurrences "pxy_2Ef(X,Y)" forty_facts = 0 andalso
        occurrences "pxy_2Ef(X,Y)" forty_five = 46)
@@ -1472,21 +1658,21 @@ fun test_hhProblemGen () =
          partial_forty_five andalso
        occurrences "pxy_2Ef(X)" partial_forty_five = 46 andalso
        not (String.isSubstring "pxy_2Ef(X,Y)" partial_forty_five))
-    (* The COND conjecture adds six helpers (if_True, if_False, bool_cases,
-       pxy.true, pxy.false, eq_ext) after the main facts, so 38 user facts
-       give 44 facts at firstorderize and 39 give 45.  The helpers alone then
+    (* The COND conjecture adds four helpers (if_True, if_False, bool_cases,
+       eq_ext) after the main facts, so 40 user facts give 44 facts at
+       firstorderize and 41 give 45.  The helpers alone then
        decide whether Min_App_Op applies. *)
     fun pxy_facts count = List.tabulate (count, fn index =>
       ("f" ^ Int.toString index, full_formula))
     val cond_conjecture = mk_forall (function_var,
       mk_conj (full_formula, mk_eq (cond_tm, x)))
     val below_threshold = problem tf1 "poly_native"
-      {conjecture = cond_conjecture, facts = pxy_facts 38}
+      {conjecture = cond_conjecture, facts = pxy_facts 40}
     val crossing_threshold = problem tf1 "poly_native"
-      {conjecture = cond_conjecture, facts = pxy_facts 39}
+      {conjecture = cond_conjecture, facts = pxy_facts 41}
     val _ = expect "hhProblemGen recomputes arities when helpers cross 45"
       (occurrences "pxy_2Ef(X,Y)" below_threshold = 0 andalso
-       occurrences "pxy_2Ef(X,Y)" crossing_threshold = 40)
+       occurrences "pxy_2Ef(X,Y)" crossing_threshold = 42)
     val z = Term.mk_var ("Z", num)
     val ternary_num = Type.mk_type ("fun", [num, binary_num])
     (* pxy.s and pxy.t take three arguments; pxy.t is over-applied, so the main
@@ -1511,9 +1697,15 @@ fun test_hhProblemGen () =
       (String.isSubstring "pxy_2Es : ty_2Enum_2Enum > " helper_arity andalso
        String.isSubstring "pxy_2Es(X)" helper_arity andalso
        not (String.isSubstring "pxy_2Es(X,Y)" helper_arity))
+    (* THF terms are not first-orderized: pxy.s is applied to two and to
+       three arguments, and Boolean terms are formulas.  So mono_native
+       must declare THF's arrow and $o, as mono_native_higher does. *)
+    val _ = expect "hhProblemGen gives THF mono_native THF's arrow and $o"
+      (problem th0 "mono_native" (input helper_arity_goal) =
+       problem th0 "mono_native_higher" (input helper_arity_goal))
     val _ = expect "hhProblemGen inserts pp for non-FOOL boolean terms"
-      (String.isSubstring "pp_2E(app_2E" bool_term andalso
-       not (String.isSubstring "pp_2E(app_2E" fool_bool_term))
+      (String.isSubstring "pp_2E(app_" bool_term andalso
+       not (String.isSubstring "pp_2E(app_" fool_bool_term))
     val _ = expect
       "hhProblemGen mangles mono symbols, sorts, and type variables"
       (String.isSubstring "c_2Elist_2ENIL" mono_native andalso
@@ -1614,6 +1806,20 @@ fun test_hhProblemGen () =
          cond_helpers andalso
        String.isSubstring "((HB = pxy_2Etrue) | (HB = pxy_2Efalse))"
          cond_guards)
+    (* bool_cases is guarded, so it reaches a Boolean application such as
+       app(pxy.not, P) only through the guard axiom of its typed app
+       symbol: ![P]: gd_bool(P) => (app(pxy.not, P) = pxy.true |
+       app(pxy.not, P) = pxy.false) needs gd_bool(app(pxy.not, P)). *)
+    val cond_not = problem fof "mono_guards??"
+      (input (mk_conj (mk_eq (cond_tm, x), applied_not)))
+    val not_app = Substring.string (Substring.taker
+      (fn c => Char.isAlphaNum c orelse c = #"_")
+      (#1 (Substring.position "(pxy_2Enot,P)" (Substring.full cond_not))))
+    val _ = expect "hhProblemGen guards the results of typed app symbols"
+      (String.isPrefix "app_" not_app andalso
+       String.isSubstring "help_2Ebool__cases" cond_not andalso
+       String.isSubstring ("(![G0, G1]: gd_2Ety__2Emin__2Ebool(" ^ not_app ^
+         "(G0,G1)))") cond_not)
     val _ = expect "hhProblemGen injects EQ_EXT iff app occurs"
       (String.isSubstring "help_2Eeq__ext" app_helpers andalso
        not (String.isSubstring "help_2Eeq__ext" no_helpers))
@@ -1628,10 +1834,6 @@ fun test_hhProblemGen () =
       (input (Term.mk_comb (quantifier_use, universal)))
     val ex_helpers = problem fof "mono_guards"
       (input (Term.mk_comb (quantifier_use, existential)))
-    val true_helpers = problem fof "mono_guards"
-      (input (Term.mk_comb (use_bool, T)))
-    val false_helpers = problem fof "mono_guards"
-      (input (Term.mk_comb (use_bool, F)))
     fun logical_helper constant =
       let val use = Term.mk_var ("logical_helper",
         Type.mk_type ("fun", [Term.type_of constant, Type.bool])) in
@@ -1653,8 +1855,6 @@ fun test_hhProblemGen () =
        String.isSubstring "help_2Epxy_2Eimp" imp_helpers andalso
        String.isSubstring "help_2Epxy_2Eall" all_helpers andalso
        String.isSubstring "help_2Epxy_2Eex" ex_helpers andalso
-       String.isSubstring "help_2Epxy_2Etrue" true_helpers andalso
-       String.isSubstring "help_2Epxy_2Efalse" false_helpers andalso
        not (String.isSubstring "help_2Epxy_2Eall" no_helpers) andalso
        not (String.isSubstring "help_2Epxy_2Eex" no_helpers))
     (* Combs mode retains schematic proxy laws that have no instance. *)
@@ -1662,10 +1862,10 @@ fun test_hhProblemGen () =
     val poly_quantifier_use = Term.mk_var ("poly_quantifier_use",
       Type.mk_type ("fun", [Term.type_of poly_universal, Type.bool]))
     val combs_all = string_of_problem tf0 "combs pool"
-      (generate_problem
+      (checked (fn () => "combs pool") tf0 (generate_problem
         {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
          lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = 100}
-        (input (Term.mk_comb (poly_quantifier_use, poly_universal))))
+        (input (Term.mk_comb (poly_quantifier_use, poly_universal)))))
     (* A rigid type variable keeps the proxy laws at its function types
        (pxy.all at several types) and EQ_EXT at app's types, all through
        the pool of the main problem. *)
@@ -1722,10 +1922,10 @@ fun test_hhProblemGen () =
     val _ = expect "hhProblemGen memo fixture draws no type variable"
       (counter () = memo_start + 1)
     val comb_problem = string_of_problem tf0 "combin helpers"
-      (generate_problem
+      (checked (fn () => "combin helpers") tf0 (generate_problem
         {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
          lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = 100}
-        (input lambda))
+        (input lambda)))
     val _ = expect "hhProblemGen fetches combinator helpers only for combs"
       (String.isSubstring "help_2Ecombin_2EI" comb_problem andalso
        not (String.isSubstring "help_2Ecombin_2EI" mono_native))
@@ -1781,10 +1981,9 @@ fun test_hhProblemGen () =
           {format = format, type_enc = hhTypeEnc.of_string encoding,
            lam_trans = hhLamTrans.mode_of_string mode, mono_iters = 3,
            mono_instances = instances}
-        val temporary = OS.FileSys.tmpName ()
-        val _ = export_pb options temporary exported
-        val actual = String.concat (read_lines temporary)
-        val _ = OS.FileSys.remove temporary
+        val generated = checked (fn () => name) format
+          (force_tail (prepare_pb (new_export_memo ()) options exported))
+        val actual = format_pb options generated
         val path = join "test-data/problems" name
       in
         expect_equal ("hhProblemGen golden " ^ name)
@@ -1844,6 +2043,30 @@ fun test_hhProblemGen () =
          "fof(sy_2Efixture, axiom, p).",
          "fof(gsy_2Efixture, axiom, p).",
          "fof(wit_2Efixture, axiom, p)."])
+    fun f_of args = Atom (Tm (("f", []), args))
+    val unary_and_binary = [("S", [FormLine ("a", Axiom, Quant (true,
+      [("X", NONE)], Conn (And, [f_of [Tm (("X", []), [])],
+        f_of [Tm (("X", []), []), Tm (("c", []), [])]])))])]
+    val _ = expect "hhProblemGen arity checker finds a symbol at two arities"
+      (symbol_arity_errors fof unary_and_binary = ["f at arities 1 and 2"])
+    val i = TyCon ("$i", [])
+    val c = Tm (("c", []), [])
+    val predicate_and_function = [("S", [FormLine ("a", Axiom,
+      Conn (And, [Atom c, Atom (Tm (("g", []), [c]))]))])]
+    val _ = expect "hhProblemGen arity checker finds FOF symbols in two roles"
+      (symbol_arity_errors fof predicate_and_function =
+         ["c as a predicate and as a function"])
+    (* A THF lambda may apply its bound variable. *)
+    val over_applied = [("S", [SymDecl ("sy_2Ec", "c", i),
+      SymDecl ("sy_2Ef", "f", TyFun (i, i)),
+      FormLine ("a", Axiom, Conn (Equal,
+        [Atom (TmAbs (("X", TyFun (i, i)), Tm (("X", []), [c]))),
+         Atom (Tm (("f", []), [c, c]))]))])]
+    val _ = expect "hhProblemGen arity checker bounds THF applications"
+      (symbol_arity_errors th0 over_applied =
+         ["f applied to 2 of 1 arguments"])
+    val _ = expect_well_formed "goldens and section problems"
+      (!problem_errors_found)
   in
     ()
   end
@@ -1877,15 +2100,18 @@ fun test_hhProblemGen_let_chain () =
          var i)
     val p = Term.mk_var ("p", Type.--> (num, Type.bool))
     fun problem (format, encoding) tm =
-      string_of_problem format "let chain"
-        (hhProblemGen.generate_problem
-          {format = format, type_enc = hhTypeEnc.of_string encoding,
-           lam_trans = hhLamTrans.Lifting, mono_iters = 3,
-           mono_instances = 100}
-          {conjecture = Term.mk_comb (p, tm), facts = []})
+      hhProblemGen.generate_problem
+        {format = format, type_enc = hhTypeEnc.of_string encoding,
+         lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+         mono_instances = 100}
+        {conjecture = Term.mk_comb (p, tm), facts = []}
     (* Unfolded, either chain prints g 2^12 times. *)
-    fun translates setting tm =
-      let val text = problem setting tm in
+    fun translates name (setting as (format, _)) tm =
+      let
+        val generated = problem setting tm
+        val text = string_of_problem format "let chain" generated
+      in
+        expect_well_formed name (problem_errors format generated);
         String.size text < 50000 andalso
         String.isSubstring "help_2Ebool_2ELET" text
       end
@@ -1896,11 +2122,11 @@ fun test_hhProblemGen_let_chain () =
       double (var 1))
   in
     expect "hhProblemGen keeps and defines a chain of copying lets in TF0"
-      (translates tf0 (chain 0));
+      (translates "TF0 let chain" tf0 (chain 0));
     expect "hhProblemGen keeps and defines a chain of copying lets in TX0"
-      (translates tx0 (chain 0));
+      (translates "TX0 let chain" tx0 (chain 0));
     expect "hhProblemGen keeps and defines a chain of aliased copying lets"
-      (translates tf0 (aliased 0));
+      (translates "TF0 aliased let chain" tf0 (aliased 0));
     expect "hhProblemGen presimp keeps LET_THM's LET f x"
       (Term.aconv (hhProblemGen.beta_eta_contract true let_thm) let_thm);
     expect "hhProblemGen presimp unfolds a single-use let of a compound value"
@@ -1909,83 +2135,6 @@ fun test_hhProblemGen_let_chain () =
   end
 
 val _ = test_hhProblemGen_let_chain ()
-
-(* A sort checker for monomorphic TFF problems (TF0 and TX0): every
-   symbol has a single declaration and every application, equation, and
-   atom is well sorted.  It mirrors the checks Vampire and E apply. *)
-fun mono_tff_errors (problem : hhTptpProblem.problem) =
-  let
-    open hhTptpProblem
-    val bool_sort = TyCon ("$o", [])
-    fun strip (TyFun (domain, range)) =
-          let val (domains, result) = strip range in
-            (domain :: domains, result)
-          end
-      | strip ty = ([], ty)
-    val lines = List.concat (map #2 problem)
-    val errors = ref ([] : string list)
-    fun error message = errors := message :: !errors
-    val table = List.foldl (fn (SymDecl (_, symbol, ty), table) =>
-        (case Redblackmap.peek (table, symbol) of
-             SOME old =>
-               (if old = ty then ()
-                else error ("conflicting declarations of " ^ symbol);
-                table)
-           | NONE => Redblackmap.insert (table, symbol, ty))
-      | (_, table) => table) (Redblackmap.mkDict String.compare) lines
-    fun sort_of env (Tm ((symbol, _), args)) =
-          let val arg_sorts = map (sort_of env) args in
-            case (List.find (fn (name, _) => name = symbol) env, args) of
-                (SOME (_, ty), []) => SOME ty
-              | (SOME _, _) => (error ("applied variable " ^ symbol); NONE)
-              | (NONE, _) =>
-                if symbol = "$true" orelse symbol = "$false" then
-                  SOME bool_sort
-                else if symbol = "$ite" then
-                  (case arg_sorts of
-                       [SOME test, SOME left, SOME right] =>
-                         if test = bool_sort andalso left = right then
-                           SOME left
-                         else (error "ill-sorted $ite"; NONE)
-                     | _ => NONE)
-                else
-                  case Redblackmap.peek (table, symbol) of
-                      NONE => (error ("undeclared " ^ symbol); NONE)
-                    | SOME ty =>
-                        let val (domains, result) = strip ty in
-                          if length domains = length args andalso
-                             ListPair.all (fn (domain, actual) =>
-                               actual = NONE orelse actual = SOME domain)
-                               (domains, arg_sorts)
-                          then SOME result
-                          else (error ("ill-sorted application of " ^
-                                       symbol); NONE)
-                        end
-          end
-      | sort_of _ (TmAbs _) = (error "lambda in TFF"; NONE)
-    fun formula env (Quant (_, bound, body)) =
-          formula (map (fn (name, ty) =>
-            (name, case ty of SOME ty => ty
-                            | NONE => TyCon ("$i", []))) bound @ env) body
-      | formula env (TyQuant (_, _, body)) = formula env body
-      | formula env (Conn (Equal, [Atom left, Atom right])) =
-          (case (sort_of env left, sort_of env right) of
-               (SOME left_sort, SOME right_sort) =>
-                 if left_sort = right_sort then ()
-                 else error "ill-sorted equation"
-             | _ => ())
-      | formula env (Conn (_, bodies)) = List.app (formula env) bodies
-      | formula env (Atom tm) =
-          (case sort_of env tm of
-               SOME sort =>
-                 if sort = bool_sort then () else error "non-Boolean atom"
-             | NONE => ())
-    val _ = List.app (fn FormLine (_, _, body) => formula [] body
-                       | _ => ()) lines
-  in
-    List.rev (!errors)
-  end
-
 
 (* Lambda lifting runs before monomorphization.  MAP_ID's lifted identity
    is therefore polymorphic, and the conjecture grounds it at num and at
@@ -2027,9 +2176,9 @@ fun test_hhProblemGen_mono_extensionality () =
   let
     open hhTptpProblem
     val goal = ``MAP (\x : num. x) l = l``
+    val tx0 = hhTypeEnc.format_of_string "tx0"
     val problem = hhProblemGen.generate_problem
-      {format = hhTypeEnc.format_of_string "tx0",
-       type_enc = hhTypeEnc.of_string "mono_native_fool",
+      {format = tx0, type_enc = hhTypeEnc.of_string "mono_native_fool",
        lam_trans = hhLamTrans.Lifting, mono_iters = 3,
        mono_instances = 100} {conjecture = goal, facts = []}
     val num_to_num =
@@ -2040,7 +2189,8 @@ fun test_hhProblemGen_mono_extensionality () =
       | ext_at_num _ = false
   in
     expect "hhProblemGen instantiates EQ_EXT at mono app types"
-      (List.exists ext_at_num (List.concat (map #2 problem)))
+      (List.exists ext_at_num (List.concat (map #2 problem)));
+    expect_well_formed "TX0 extensionality" (problem_errors tx0 problem)
   end
 
 val _ = test_hhProblemGen_mono_extensionality ()
@@ -2063,11 +2213,16 @@ fun test_hhProblemGen_declaration_names () =
           name = aiLib.escape "sy." ^ symbol
       | named_once _ = true
     fun check (format, encoding) =
-      let val lines = List.concat (map #2 (problem_of format encoding)) in
+      let
+        val problem = problem_of format encoding
+        val lines = List.concat (map #2 problem)
+      in
         expect ("hhProblemGen escapes declaration names once in " ^ format)
           (List.exists (fn TypeDecl _ => true | _ => false) lines andalso
            List.exists (fn SymDecl _ => true | _ => false) lines andalso
-           List.all named_once lines)
+           List.all named_once lines);
+        expect_well_formed (format ^ " LENGTH")
+          (problem_errors (hhTypeEnc.format_of_string format) problem)
       end
     (* FOF has no declarations: a gsy. line's symbol is one the printed
        problem uses. *)
@@ -2085,7 +2240,8 @@ fun test_hhProblemGen_declaration_names () =
     List.app check [("tf0", "mono_native"), ("tf1", "poly_native")];
     expect "hhProblemGen escapes gsy line names once"
       (not (null gsy_symbols) andalso
-       List.all (fn symbol => Lib.mem symbol words) gsy_symbols)
+       List.all (fn symbol => Lib.mem symbol words) gsy_symbols);
+    expect_well_formed "fof LENGTH" (problem_errors FOF guards)
   end
 
 val _ = test_hhProblemGen_declaration_names ()
@@ -2102,11 +2258,11 @@ fun test_hhProblemGen_bounded_names () =
     val goal = boolSyntax.mk_eq
       (listSyntax.mk_length (Term.mk_var ("x", nest 12)),
        listSyntax.mk_length (Term.mk_var ("y", nest 13)))
-    fun check (format, encoding) =
+    fun check (name, encoding) =
       let
+        val format = hhTypeEnc.format_of_string name
         val problem = hhProblemGen.generate_problem
-          {format = hhTypeEnc.format_of_string format,
-           type_enc = hhTypeEnc.of_string encoding,
+          {format = format, type_enc = hhTypeEnc.of_string encoding,
            lam_trans = hhLamTrans.Lifting, mono_iters = 3,
            mono_instances = 100} {conjecture = goal, facts = []}
         val symbols = List.mapPartial
@@ -2114,20 +2270,21 @@ fun test_hhProblemGen_bounded_names () =
             | SymDecl (_, symbol, _) => SOME symbol
             | _ => NONE) (List.concat (map #2 problem))
       in
-        expect ("hhProblemGen bounds mangled names in " ^ format)
+        expect ("hhProblemGen bounds mangled names in " ^ name)
           (length symbols > 4 andalso
            List.all (fn symbol => size symbol <= 80) symbols andalso
-           length (Lib.mk_set symbols) = length symbols andalso
-           null (mono_tff_errors problem))
+           length (Lib.mk_set symbols) = length symbols);
+        expect_well_formed (name ^ " nested lists")
+          (problem_errors format problem)
       end
     (* FOF has no declarations: read the guard predicates and witness
        constants off the printed problem. *)
     val fof = hhTptpProblem.FOF
-    val fof_text = string_of_problem fof "bounded names"
-      (hhProblemGen.generate_problem
-        {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
-         lam_trans = hhLamTrans.Lifting, mono_iters = 3,
-         mono_instances = 100} {conjecture = goal, facts = []})
+    val fof_problem = hhProblemGen.generate_problem
+      {format = fof, type_enc = hhTypeEnc.of_string "mono_guards",
+       lam_trans = hhLamTrans.Lifting, mono_iters = 3,
+       mono_instances = 100} {conjecture = goal, facts = []}
+    val fof_text = string_of_problem fof "bounded names" fof_problem
     val guard_symbols = List.filter (fn word =>
         String.isPrefix "gd_2E" word orelse String.isPrefix "wit_2E" word)
       (String.tokens (fn c => not (Char.isAlphaNum c orelse c = #"_"))
@@ -2137,7 +2294,8 @@ fun test_hhProblemGen_bounded_names () =
     expect "hhProblemGen bounds guard and witness names in fof"
       (List.exists (String.isPrefix "gd_2E") guard_symbols andalso
        List.exists (String.isPrefix "wit_2E") guard_symbols andalso
-       List.all (fn symbol => size symbol <= 80) guard_symbols)
+       List.all (fn symbol => size symbol <= 80) guard_symbols);
+    expect_well_formed "fof nested lists" (problem_errors fof fof_problem)
   end
 
 val _ = test_hhProblemGen_bounded_names ()

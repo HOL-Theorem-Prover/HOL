@@ -26,17 +26,13 @@ tff(sy_2Eapp, type,
     app_2E : !>[A : $tType, B : $tType]: ((ty_2Emin_2Efun(A,B) * A) > B)).
 tff(sy_2Epp, type,
     pp_2E : ty_2Emin_2Ebool > $o).
-% Helpers (9)
+% Helpers (7)
 tff(help_2Eif__True, axiom,
     ((![A_27a : $tType]: (![HX : A_27a]: (![HY : A_27a]: (c_2Ebool_2ECOND(A_27a,pxy_2Etrue,HX,HY) = HX)))))).
 tff(help_2Eif__False, axiom,
     ((![A_27a : $tType]: (![HX : A_27a]: (![HY : A_27a]: (c_2Ebool_2ECOND(A_27a,pxy_2Efalse,HX,HY) = HY)))))).
 tff(help_2Ebool__cases, axiom,
     ((![HB : ty_2Emin_2Ebool]: ((HB = pxy_2Etrue) | (HB = pxy_2Efalse))))).
-tff(help_2Epxy_2Etrue, axiom,
-    ((pp_2E(pxy_2Etrue) <=> pp_2E(pxy_2Etrue)))).
-tff(help_2Epxy_2Efalse, axiom,
-    ((pp_2E(pxy_2Efalse) <=> pp_2E(pxy_2Efalse)))).
 tff(help_2Epxy_2Enot, axiom,
     ((![HP : ty_2Emin_2Ebool]: (pp_2E(app_2E(ty_2Emin_2Ebool,ty_2Emin_2Ebool,pxy_2Enot,HP)) <=> (~ pp_2E(HP)))))).
 tff(help_2Eeq__ext, axiom,
