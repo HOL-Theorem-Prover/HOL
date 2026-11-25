@@ -612,28 +612,29 @@ fun write_modules {theories, directory, base_state, output, limit} =
         val directory = absolute directory
         val output = absolute output
         val bindings = core_bindings ()
-        (* A theory whose header can't be read is skipped, not the
-           whole list: its descendants then have no canonical data, so
-           no module of theirs is saved either. *)
+        (* A theory whose header or .dat can't be read is skipped, not
+           the whole list: its descendants then have no canonical data,
+           so no module of theirs is saved either. *)
+        fun skip what sml =
+          (TextIO.output (TextIO.stdErr,
+                          "theory modules: " ^ what ^ " " ^ sml ^ "\n");
+           NONE)
         fun entry sml =
           let
             val base = OS.Path.base sml
           in
             case sml_header (base ^ ".sml") of
-                NONE =>
-                (TextIO.output (TextIO.stdErr,
-                                "theory modules: no theory header in " ^
-                                sml ^ "\n");
-                 NONE)
+                NONE => skip "no theory header in" sml
               | SOME (thy, hash) =>
                 if TheoryReader.is_canonical thy then NONE
                 else
-                  let val dat_digest = file_digest (base ^ ".dat")
-                  in
-                    SOME {base = base, thy = thy, hash = hash,
-                          dat_digest = dat_digest,
-                          file = module_file base_id (thy, dat_digest)}
-                  end
+                  case SOME (file_digest (base ^ ".dat"))
+                         handle IO.Io _ => NONE | OS.SysErr _ => NONE of
+                      NONE => skip "no readable .dat for" sml
+                    | SOME dat_digest =>
+                      SOME {base = base, thy = thy, hash = hash,
+                            dat_digest = dat_digest,
+                            file = module_file base_id (thy, dat_digest)}
           end
         fun missing (e : entry) =
           not (exists (OS.Path.concat (directory, #file e)))
