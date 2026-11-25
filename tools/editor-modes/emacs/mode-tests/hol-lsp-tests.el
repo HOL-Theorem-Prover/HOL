@@ -186,6 +186,75 @@ file's own directory -- not a VC root, and not the file itself."
                   '(:theorem "a%b" :step 0 :context nil :error nil))
                  "a%%b — step 0")))
 
+(ert-deftest hol-lsp-jbool-reads-json-false-as-false ()
+  ;; `false' arrives from eglot as `:json-false', which is not nil in
+  ;; Lisp -- so a bare `(plist-get r :tornStart)' is true either way.
+  (should (hol-lsp--jbool t))
+  (should-not (hol-lsp--jbool :json-false))
+  (should-not (hol-lsp--jbool nil)))
+
+(ert-deftest hol-lsp-decls-header-counts-what-is-shown ()
+  (should (string-match-p
+           "last declaration"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "val x = 3: int\n")]
+              :omitted 0 :tornStart :json-false :tornEnd :json-false))))
+  (should (string-match-p
+           "3 declarations"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "a") (:text "b") (:text "c")]
+              :omitted 0 :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-header-says-what-was-dropped ()
+  (should (string-match-p
+           "2 earlier omitted"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "a")] :omitted 2
+              :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-header-warns-about-a-torn-selection ()
+  ;; The one thing the body cannot say for itself, and the difference
+  ;; between a short answer and a wrong one.
+  (let ((both (hol-lsp--decls-header
+               '(:status "ok" :results [(:text "a")] :omitted 0
+                 :tornStart t :tornEnd t))))
+    (should (string-match-p "starts and ends" both))
+    (should (string-match-p "part-way through a declaration" both)))
+  (should (string-match-p
+           "⚠ selection ends part-way"
+           (hol-lsp--decls-header
+            '(:status "ok" :results [(:text "a")] :omitted 0
+              :tornStart :json-false :tornEnd t))))
+  (should-not (string-match-p
+               "⚠"
+               (hol-lsp--decls-header
+                '(:status "ok" :results [(:text "a")] :omitted 0
+                  :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-header-escapes-percent ()
+  ;; Same reason as the goal-state header: it is read for mode-line
+  ;; constructs.  Nothing here interpolates user text today, so this
+  ;; pins the guard rather than a symptom.
+  (should-not (string-match-p
+               "[^%]%[^%]"
+               (hol-lsp--decls-header
+                '(:status "ok" :results [] :omitted 0
+                  :tornStart :json-false :tornEnd :json-false)))))
+
+(ert-deftest hol-lsp-decls-pending-with-nothing-is-a-refusal ()
+  ;; "Ask again when the compile is done", said about declarations.  A
+  ;; pending that still carries results is an answer, not a refusal.
+  (should (hol-lsp--answer-refused-p
+           '(decls :status "pending" :results [] :omitted 0)))
+  (should-not (hol-lsp--answer-refused-p
+               '(decls :status "pending" :results [(:text "a")]
+                 :omitted 0)))
+  (should-not (hol-lsp--answer-refused-p
+               '(decls :status "ok" :results [(:text "a")] :omitted 0)))
+  ;; And a goal-state answer is still judged by its own rule.
+  (should (hol-lsp--answer-refused-p '(goals :status "pending")))
+  (should-not (hol-lsp--answer-refused-p '(goals :theorem "foo" :step 1))))
+
 (ert-deftest hol-lsp-pending-is-not-a-goal-state ()
   ;; The server answers `{"status":"pending"}' -- with no theorem and
   ;; no step in it -- while the compile has not reached the proof.

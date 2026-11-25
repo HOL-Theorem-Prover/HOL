@@ -1,0 +1,537 @@
+(* Checked quadratic-field arithmetic and curve certificates.
+   See pairingCurveCertificateLib.sig for argument order and branch layout.
+   FIELD_CONV and SCALAR_CONV support numeric PolyModRing (GF p) [1;0;1],
+   with canonical ascending lists ([] zero), not arbitrary extension towers.
+   Supply closed prime and field proofs, plus matching curve and membership
+   proofs for scalars. SCALAR_CERTIFICATE_TAC / SCALAR_STEP_TAC and
+   POWER_CERTIFICATE_TAC / POWER_STEP_TAC expose bounded operation proofs.
+   Candidate coordinates, inverses and power trajectories are never theorems:
+   checked operations against the existing quotient field justify each step. *)
+
+structure pairingCurveCertificateLib :> pairingCurveCertificateLib =
+struct
+
+open HolKernel boolLib bossLib Conv
+open fieldTheory fieldInstancesTheory polyModuloRingTheory
+open ellipticCertificatesTheory shortWeierstrassTheory shortWeierstrassGroupTheory
+open polynomialSyntax
+open certificateComputeLib polynomialCertificateLib
+
+val coefficient_type = listSyntax.mk_list_type numSyntax.num
+val infinity = shortWeierstrassSyntax.mk_ECInfinity coefficient_type
+val affine = inst [alpha |-> coefficient_type]
+  shortWeierstrassSyntax.ECAffine_tm
+val prime_tm = prim_mk_const {Thy = "divides", Name = "prime"}
+
+val ERR = mk_HOL_ERR "pairingCurveCertificateLib"
+
+fun CERTIFICATE_CHUNKS_TAC certificate step counts residuals =
+  let
+    val (initial, last) = Portable.front_last counts
+    fun chunk (n, rest) =
+      certificate THENL (List.tabulate (n, K step) @ [rest])
+  in
+    List.foldr chunk
+      (certificate THENL (List.tabulate (last, K step) @ residuals)) initial
+  end
+
+fun field_conv prime field =
+  let
+    val _ = null (hyp prime) andalso null (hyp field)
+      orelse raise ERR "FIELD_CONV" "Expected closed certificates"
+    val pterm = rand (concl prime)
+    val p = integer pterm
+    val f = polynomial [1,0,1]
+    val base = mk_GF pterm
+    val r = mk_poly_mod_ring (base,f)
+    val _ = aconv (concl field) (mk_Field r)
+      orelse raise ERR "FIELD_CONV" "Expected the numeric quadratic quotient field"
+    val remainder = polynomialCertificateLib.REMAINDER_CONV prime f
+    val bounded = polynomialCertificateLib.BOUNDED_CONV ()
+    val coefficient_ring = MATCH_MP field_is_ring (MATCH_MP GF_field prime)
+    val monic = EQT_ELIM (bounded (mk_poly_monic (base,f)))
+    val leading = MP
+      (SPEC f (MATCH_MP polyMonicTheory.poly_monic_ulead coefficient_ring))
+      monic
+    val degree = bounded (mk_poly_deg (base,f))
+    (* A sum (or a constant product) is already below the modulus degree.
+       Its checked reduction needs no quotient witness or polynomial product. *)
+    val xvar = mk_var ("x",listSyntax.mk_list_type numSyntax.num)
+    val short_remainder_rule = GEN xvar
+      (CONV_RULE
+        (LAND_CONV (REWRITE_CONV [leading,degree]))
+        (SPECL [xvar,f]
+          (MATCH_MP polyDivisionTheory.poly_mod_less coefficient_ring)))
+    val sum_monoid = mk_ring_sum r
+    val prod_monoid = mk_ring_prod r
+    val sumop = mk_monoid_op sum_monoid
+    val prodop = mk_monoid_op prod_monoid
+    val negop = mk_monoid_inv sum_monoid
+    val invop = mk_monoid_inv prod_monoid
+    val powop = mk_monoid_exp prod_monoid
+    val sumpow = mk_monoid_exp sum_monoid
+    val zero = mk_monoid_id sum_monoid
+    val one = mk_monoid_id prod_monoid
+    val carrier = mk_ring_carrier r
+    val yvar = mk_var ("y",type_of xvar)
+    val add_rule = SIMP_CONV (srw_ss()) [poly_mod_ring_def]
+      (list_mk_comb (sumop,[xvar,yvar]))
+    val mult_rule = SIMP_CONV (srw_ss()) [poly_mod_ring_def]
+      (list_mk_comb (prodop,[xvar,yvar]))
+    val zero_rule = (REWRITE_CONV [poly_mod_ring_ids] THENC bounded) zero
+    val one_rule = (REWRITE_CONV [poly_mod_ring_ids] THENC bounded) one
+    val exp_one_rule = MATCH_MP field_exp_1 field
+    val exp_add_rule = MATCH_MP field_exp_add field
+    val sum_inverse_rule = ISPEC r sw_field_sum_inv_witness
+    val prod_inverse_rule = ISPEC r sw_field_prod_inv_witness
+    val element_rewrite = REWRITE_CONV [poly_mod_ring_element]
+    val membership_check = element_rewrite THENC bounded
+    val choose_branch = REWRITE_CONV [COND_CLAUSES]
+    (* Expand one curve operation at its head, never rewrite through its
+       branches or let bodies before their operands have been evaluated. *)
+    val curve_rules = List.concat (map
+      (fn th => BODY_CONJUNCTS
+        (INST [mk_var ("r",type_of r) |-> r]
+          (INST_TYPE [alpha |-> listSyntax.mk_list_type numSyntax.num]
+            (SPEC_ALL th))))
+      [sw_add_def,sw_slope_def,sw_add_x_def,sw_add_y_def])
+    val curve_program = map
+      (fn th => let val (head,args) = strip_comb (lhs (concl th))
+                in (head,length args,REWR_CONV th) end) curve_rules
+    fun expand_curve expression =
+      let val (head,args) = strip_comb expression in
+        case List.find (fn (h,n,_) => is_const head andalso same_const head h andalso
+          length args = n) curve_program of
+          SOME _ =>
+            SOME (FIRST_CONV
+              (map #3 (List.filter
+                (fn (h,n,_) => same_const head h andalso length args = n)
+                curve_program)) expression)
+        | NONE => NONE
+      end
+    fun literal_pair x =
+      case coefficients x of
+        [] => (0,0)
+      | [a] => (a,0)
+      | [a,b] => (a,b)
+      | _ => raise ERR "FIELD_CONV" "Noncanonical quadratic representative"
+    fun neg_candidate x =
+      polynomial (trim (map (fn a => IntInf.mod(~a,p)) (coefficients x)))
+    fun inv_candidate x =
+      let
+        val (a,b) = literal_pair x
+        val d = inverse_candidate p (IntInf.mod(a*a+b*b,p))
+      in polynomial (trim [IntInf.mod(a*d,p),IntInf.mod(~b*d,p)]) end
+    (* Normalize the polynomial operand once. Only a genuinely quadratic
+       product needs REMAINDER_CONV's full division witness. *)
+    fun evaluate_operation expression =
+      let
+        val expanded = FIRST_CONV
+          [REWR_CONV add_rule,REWR_CONV mult_rule] expression
+        val operand = RATOR_CONV (RAND_CONV bounded) (rhs (concl expanded))
+        val reduced = rhs (concl operand)
+        val x = rand (rator reduced)
+        val result =
+          if length (coefficients x) <= 2 then
+            let
+              val rule = SPEC x short_remainder_rule
+              val premise = fst (dest_imp (concl rule))
+            in MP rule (EQT_ELIM (bounded premise)) end
+          else remainder reduced
+      in TRANS expanded (TRANS operand result) end
+    fun finish tm =
+      let
+        (* Reuse checked witnesses within one addition, without retaining its
+           intermediate coordinates for the lifetime of a scalar converter. *)
+        val membership = Conv.memoize SOME (Redblackmap.mkDict Term.compare)
+          (aconv T) (ERR "FIELD_CONV" "Unproved field membership")
+          membership_check
+        val operation = Conv.memoize SOME (Redblackmap.mkDict Term.compare)
+          (K true) UNCHANGED evaluate_operation
+        fun member x = EQT_ELIM (membership (pred_setSyntax.mk_in (x,carrier)))
+        val negation = Conv.memoize SOME (Redblackmap.mkDict Term.compare)
+          (K true) UNCHANGED
+          (fn expression =>
+            let
+              val x = rand expression
+              val y = neg_candidate x
+              val rule = SPECL [x,y] sum_inverse_rule
+              val sum = operation (list_mk_comb (sumop,[x,y]))
+              val sum_zero = TRANS sum (SYM zero_rule)
+              val premise = CONJ field (LIST_CONJ [member x,member y,sum_zero])
+            in MP rule premise end)
+        fun normalize expression =
+          if numSyntax.is_numeral expression orelse can coefficients expression
+             orelse aconv expression r
+          then REFL expression
+          else if boolSyntax.is_let expression then
+            (* Evaluate shared bindings before substitution, preserving literal operands. *)
+            (RAND_CONV normalize THENC REWR_CONV LET_THM THENC
+             BETA_CONV THENC normalize) expression
+          else if boolSyntax.is_cond expression then
+            let
+              val (condition,_,_) = boolSyntax.dest_cond expression
+              val decision = normalize condition
+            in
+              (RATOR_CONV (RATOR_CONV (RAND_CONV (K decision))) THENC
+               choose_branch THENC normalize) expression
+            end
+          else
+            (case expand_curve expression of
+               SOME expansion =>
+                 TRANS expansion (normalize (rhs (concl expansion)))
+             | NONE =>
+                 let
+                   val children =
+                     let val (head,args) = strip_comb expression in
+                       if length args = 2 andalso
+                          List.exists (aconv head) [sumop,prodop,powop,sumpow]
+                       then BINOP_CONV normalize expression
+                       else if length args = 1 andalso
+                               (aconv head negop orelse aconv head invop)
+                       then RAND_CONV normalize expression
+                       else if is_comb expression then COMB_CONV normalize expression
+                       else if is_abs expression then ABS_CONV normalize expression
+                       else REFL expression
+                     end
+                   val evaluated = step (rhs (concl children))
+                 in TRANS children evaluated end)
+        and checked expression =
+          let val result = normalize expression in
+            if aconv (rhs (concl result)) T then EQT_ELIM result
+            else raise ERR "FIELD_CONV"
+              ("Unproved field witness: " ^ term_to_string (rhs (concl result)))
+          end
+        and step expression =
+          let
+            val (h,args) =
+              if is_comb expression andalso
+                 (aconv (rator expression) negop orelse
+                  aconv (rator expression) invop)
+              then (rator expression,[rand expression])
+              else if is_comb expression andalso is_comb (rator expression)
+              then (rator (rator expression),
+                    [rand (rator expression),rand expression])
+              else (expression,[])
+          in
+            if (aconv h sumop orelse aconv h prodop) andalso length args = 2
+            then operation expression
+            else if aconv h negop andalso length args = 1
+            then negation expression
+            else if aconv h invop andalso length args = 1 then
+              let
+                val x = hd args
+                val y = inv_candidate x
+                val rule = SPECL [x,y] prod_inverse_rule
+                val premise = CONJ field (LIST_CONJ
+                  [member x,
+                   checked (boolSyntax.mk_neg (boolSyntax.mk_eq (x,zero))),
+                   member y,
+                   checked (boolSyntax.mk_eq
+                     (list_mk_comb (prodop,[x,y]),one))])
+              in MP rule premise end
+            else if aconv h powop andalso length args = 2 then
+              power (hd args) (integer (List.nth(args,1)))
+            else if aconv h sumpow andalso length args = 2 then
+              let
+                val x = hd args
+                val k = integer (List.nth(args,1))
+              in
+                if k = 0 then
+                  REWRITE_CONV [monoidTheory.monoid_exp_0] expression
+                else
+                  let
+                    val previous = literal (k-1)
+                    val rule = ISPECL [sum_monoid,x,previous]
+                      monoidTheory.monoid_exp_SUC
+                    val rule = CONV_RULE
+                      (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) rule
+                  in TRANS rule (normalize (rhs (concl rule))) end
+              end
+            else if aconv expression zero then zero_rule
+            else if aconv expression one then one_rule
+            else if type_of expression = numSyntax.num
+            then QCONV certificateComputeLib.NAT_CONV expression
+            else if type_of expression = bool then membership_check expression
+            else REFL expression
+          end
+        and power x k =
+          let val expression = list_mk_comb (powop,[x,literal k]) in
+            if k = 0 then
+              (REWRITE_CONV [monoidTheory.monoid_exp_0] THENC normalize) expression
+            else if k = 1 then
+              let val rule = SPEC x exp_one_rule
+              in MP rule (member x) end
+            else if IntInf.mod(k,2) = 1 then
+              let
+                val rule = ISPECL [prod_monoid,x,literal (k-1)]
+                  monoidTheory.monoid_exp_SUC
+                val rule = CONV_RULE
+                  (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) rule
+                val substituted = SUBS [power x (k-1)] rule
+              in TRANS substituted (normalize (rhs (concl substituted))) end
+            else
+              let
+                val half = literal (IntInf.div(k,2))
+                val law = SPECL [half,half]
+                  (MP (SPEC x exp_add_rule) (member x))
+                val law = CONV_RULE
+                  (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) law
+                val substituted = SUBS [power x (IntInf.div(k,2))] law
+              in TRANS substituted (normalize (rhs (concl substituted))) end
+          end
+      in normalize tm end
+  in finish end
+
+(* Retain only the last field's immutable program and closed setup proofs.
+   Membership and operation witnesses are allocated inside finish, so no
+   inverse witness or intermediate coordinate crosses conversion calls. *)
+val FIELD_CONV =
+  let
+    val previous = ref (NONE : (term * term * conv) option)
+  in
+    fn prime => fn field =>
+      let
+        val _ = null (hyp prime) andalso null (hyp field)
+          orelse raise ERR "FIELD_CONV" "Expected closed certificates"
+        val key = (concl prime,concl field)
+      in
+        case !previous of
+          SOME (p,f,convert) =>
+            if aconv (#1 key) p andalso aconv (#2 key) f then convert
+            else
+              let val convert = field_conv prime field
+              in previous := SOME (#1 key,#2 key,convert); convert end
+        | NONE =>
+            let val convert = field_conv prime field
+            in previous := SOME (#1 key,#2 key,convert); convert end
+      end
+  end
+
+fun SCALAR_CONV prime field curve member =
+  let
+    val arithmetic = FIELD_CONV prime field
+    val addition = shortWeierstrassSyntax.sw_add_tm
+    fun add expression =
+      let
+        val (head,args) = strip_comb expression
+        val _ = length args = 5 andalso same_const head addition
+          orelse raise ERR "SCALAR_CONV" "Expected a full curve addition"
+      in arithmetic expression end
+    val scalar = ellipticCertificateLib.BINARY_SCALAR_CONV add curve member
+    fun finish expression =
+      let
+        val result = scalar expression
+        val point = rhs (concl result)
+        val (head,args) = strip_comb point
+        val _ =
+          if aconv point infinity then ()
+          else if is_const head andalso same_const head affine andalso
+                  length args = 2 andalso List.all (can coefficients) args
+          then ()
+          else raise ERR "SCALAR_CONV" "Point arithmetic did not normalize"
+      in result end
+  in finish end
+
+(* Milestone coordinates are only proposals. The shared tactic emits separate
+   implication goals, reconstructed by the checked addition conversion above;
+   callers enumerate their branches explicitly to bound each proof step. *)
+fun addition_candidate prime =
+  let
+    val p = integer (rand (concl prime))
+    fun residue n = IntInf.mod(n,p)
+    fun pair tm =
+      case coefficients tm of
+        [] => (0,0)
+      | [x] => (x,0)
+      | [x,y] => (x,y)
+      | _ => raise ERR "SCALAR_CERTIFICATE_TAC" "Nonquadratic coordinate"
+    fun literal (x,y) = polynomial (trim [x,y])
+    fun plus ((a,b),(c,d)) = (residue(a+c),residue(b+d))
+    fun neg (a,b) = (residue(~a),residue(~b))
+    fun minus ((a,b),(c,d)) = (residue(a-c),residue(b-d))
+    fun times ((a,b),(c,d)) =
+      (residue(a*c-b*d),residue(a*d+b*c))
+    fun square (a,b) = (residue(a*a-b*b),residue(2*a*b))
+    fun scale n (a,b) = (residue(n*a),residue(n*b))
+    fun inv (a,b) =
+      let val d = inverse_candidate p (residue(a*a+b*b))
+      in (residue(a*d),residue(~b*d)) end
+    type point_value =
+      ((IntInf.int * IntInf.int) * (IntInf.int * IntInf.int)) option
+    (* Candidate-only caches retain decoded inputs, never theorems. The first
+       affine input is the fixed generator; the latest output supplies the
+       next operation without decoding four freshly encoded numerals. *)
+    val fixed = ref (NONE : (term * point_value) option)
+    val latest = ref (NONE : (term * point_value) option)
+    fun decode_point tm =
+      if aconv tm infinity then NONE
+      else
+        case strip_comb tm of
+          (head,[x,y]) =>
+            if is_const head andalso same_const head affine
+            then SOME (pair x,pair y)
+            else raise ERR "SCALAR_CERTIFICATE_TAC" "Expected literal point"
+        | _ => raise ERR "SCALAR_CERTIFICATE_TAC" "Expected literal point"
+    fun point tm =
+      case !latest of
+        SOME (previous,value) =>
+          if aconv tm previous then value else fixed_point tm
+      | NONE => fixed_point tm
+    and fixed_point tm =
+      case !fixed of
+        SOME (generator,value) =>
+          if aconv tm generator then value else decode_point tm
+      | NONE =>
+          let
+            val value = decode_point tm
+            val _ = if isSome value then fixed := SOME (tm,value) else ()
+          in value end
+    fun output value tm = (latest := SOME (tm,value); tm)
+    fun propose expression =
+      case strip_comb expression of
+        (_,[_,a,_,u,v]) =>
+          let
+            val first = point u
+            val second = if aconv u v then first else point v
+          in
+            case (first,second) of
+              (NONE,_) => output second v
+            | (_,NONE) => output first u
+            | (SOME(x1,y1),SOME(x2,y2)) =>
+                if x1=x2 andalso y1=neg y2 then output NONE infinity
+                else
+                  let
+                    val (numerator,denominator) =
+                      if x1=x2 then
+                        (plus(scale 3 (square x1),pair a),scale 2 y1)
+                      else (minus(y2,y1),minus(x2,x1))
+                    val m = times(numerator,inv denominator)
+                    val x3 = minus(minus(square m,x1),x2)
+                    val y3 = minus(times(m,minus(x1,x3)),y1)
+                  in
+                    output (SOME (x3,y3))
+                      (list_mk_comb(affine,[literal x3,literal y3]))
+                  end
+          end
+      | _ => raise ERR "SCALAR_CERTIFICATE_TAC" "Expected full curve addition"
+  in propose end
+
+fun SCALAR_CERTIFICATE_TAC prime field curve member =
+  ellipticCertificateLib.BINARY_SCALAR_OPERATION_CERTIFICATE_TAC
+    16 (addition_candidate prime) curve member
+
+fun SCALAR_STEP_TAC prime field curve member =
+  ellipticCertificateLib.BINARY_SCALAR_STEP_TAC
+    (FIELD_CONV prime field) curve member
+
+(* Only the immutable field program is shared with FIELD_CONV. Power
+   candidates and their prefix values live in a single bounded preparation. *)
+fun power_setup prime field =
+  let
+    val _ = null (hyp prime) andalso null (hyp field)
+      orelse raise ERR "POWER_CERTIFICATE_TAC" "Expected closed certificates"
+    val pterm = rand (concl prime)
+    val p = integer pterm
+    val f = polynomial [1,0,1]
+    val base = mk_GF pterm
+    val r = mk_poly_mod_ring (base,f)
+    val _ = aconv (concl prime) (mk_comb (prime_tm,pterm)) andalso
+            aconv (concl field) (mk_Field r)
+      orelse raise ERR "POWER_CERTIFICATE_TAC" "Mismatched field certificates"
+    val arithmetic = FIELD_CONV prime field
+    val prod_monoid = mk_ring_prod r
+  in (mk_ring_carrier r,p,arithmetic,
+      mk_monoid_exp prod_monoid,mk_monoid_op prod_monoid) end
+
+fun power_arguments powop tm =
+  if is_comb tm andalso is_comb (rator tm) andalso
+     aconv (rator (rator tm)) powop
+  then (rand (rator tm),integer (rand tm))
+  else raise ERR "POWER_CERTIFICATE_TAC" "Expected a literal field power"
+
+fun quadratic_pair p tm =
+  let
+    val pair =
+      case coefficients tm of
+        [] => (0,0)
+      | [a] => (a,0)
+      | [a,b] => (a,b)
+      | _ => raise ERR "POWER_CERTIFICATE_TAC" "Nonquadratic representative"
+    val (a,b) = pair
+    val _ = a >= 0 andalso a < p andalso b >= 0 andalso b < p andalso
+            aconv tm (polynomial (trim [a,b]))
+      orelse raise ERR "POWER_CERTIFICATE_TAC" "Noncanonical representative"
+  in pair end
+
+fun POWER_CERTIFICATE_TAC prime field (asl,w) _ =
+  let
+    val (carrier,p,arithmetic,powop,_) = power_setup prime field
+    val power = find_term (can (power_arguments powop)) w
+    val (x,n) = power_arguments powop power
+    val base = quadratic_pair p x
+    val _ = EQT_ELIM
+      (arithmetic (pred_setSyntax.mk_in (x,carrier)))
+    val prefix = rator power
+    fun times ((a,b),(c,d)) =
+      (IntInf.mod(a*c-b*d,p),IntInf.mod(a*d+b*c,p))
+    val {equations,seed=seed_eq,continuation} =
+      certificateComputeLib.BINARY_MILESTONES
+        {operations=true,width=16,prefix=prefix,exponent=n,assumptions=asl,
+         zero=(1,0),decode=quadratic_pair p,
+         encode=fn (a,b) => polynomial (trim [a,b]),
+         double=fn value => times (value,value),
+         add_base=fn value => times (value,base)}
+    val final =
+      if not (null equations) then ASSUME (List.last equations)
+      else case seed_eq of
+        SOME eq => ASSUME eq
+      | NONE => arithmetic power
+  in
+    certificateComputeLib.MILESTONE_GOALS
+      {goal = (asl,w), equations = equations, seed = seed_eq,
+       continuation = continuation, final = final}
+  end
+
+fun POWER_STEP_TAC prime field =
+  REPEAT DISCH_TAC THEN
+  (fn (asl,w) =>
+    let
+      val (carrier,p,arithmetic,powop,_) = power_setup prime field
+      val power = lhs w
+      val (x,k) = power_arguments powop power
+      val _ = quadratic_pair p x
+      val member = EQT_ELIM
+        (arithmetic (pred_setSyntax.mk_in (x,carrier)))
+      fun seed n =
+        let val expression = list_mk_comb (powop,[x,literal n]) in
+          case List.find (fn a => is_eq a andalso aconv (lhs a) expression) asl of
+            SOME a =>
+              let val _ = quadratic_pair p (rhs a) in ASSUME a end
+          | NONE => raise ERR "POWER_STEP_TAC" "Missing preceding power equality"
+        end
+      val checked =
+        if k=0 then
+          (REWRITE_CONV [monoidTheory.monoid_exp_0] THENC arithmetic) power
+        else
+          let
+            val even = IntInf.mod(k,2)=0
+            val previous = if even then IntInf.div(k,2) else k-1
+            val left = seed previous
+            val right = if even then left
+                        else MP (SPEC x (MATCH_MP field_exp_1 field)) member
+            val add_rule = MP (SPEC x (MATCH_MP field_exp_add field)) member
+            val law = SPECL [literal previous,
+                            literal (if even then previous else 1)] add_rule
+            val normalized = CONV_RULE
+              (LAND_CONV (RAND_CONV certificateComputeLib.NAT_CONV)) law
+            val substituted = CONV_RULE
+              (RAND_CONV
+                (LAND_CONV (REWR_CONV left) THENC
+                 RAND_CONV (REWR_CONV right))) normalized
+          in TRANS substituted (arithmetic (rhs (concl substituted))) end
+    in
+      (CONV_TAC (LAND_CONV (K checked)) THEN REFL_TAC) (asl,w)
+    end)
+
+end
