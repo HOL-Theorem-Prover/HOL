@@ -19,21 +19,28 @@ From this directory (`src/holyhammer/`):
     ../../bin/Holmake smoke.exe    && ./smoke.exe      # e2e, needs provers
 
 `selftest.exe` runs every `test_*` section (each a top-level `fun`
-called at the bottom of `selftest.sml`, using `testutils`).  There is
-no per-test flag; comment out the top-level call to isolate a section.
-The selftest launches no real prover except in the `hhEval` integration
-section, which runs only with `HHEVAL_INTEGRATION_TEST` set and E
-installed; live proof search is exercised by `smoke.exe` alone.  Under
-the whole-tree build the full selftest runs only when `HOLSELFTESTLEVEL`
-is set (see `Holmakefile`).
+called at the bottom of `selftest.sml`, using `testutils` and the
+helpers of `hhTestLib`, which `evaluation/selftest.sml` shares).  There
+is no per-test flag; comment out the top-level call to isolate a
+section.  The selftest launches no real prover; live proof search is
+exercised by `smoke.exe` alone, which runs each tested prover alone, the
+schedule (and its cache), the MePo/MaSh/MeSh selectors, every typed
+slice, and unprovable goals, printing one line per check.  It fails,
+naming them, when E, Vampire or Zipperposition is absent; Z3 is only
+run, when present, by the runner check.  Under the whole-tree build the
+full selftest runs only when `HOLSELFTESTLEVEL` is set (see
+`Holmakefile`).
 
 Prover-parsing tests are hermetic: they replay recorded prover stdout
 from `test-data/` rather than invoking a binary.  When you change output
 parsing, add/refresh a recording there instead of depending on a live
 prover.
 
-`eval/` is scratch output for evaluation runs and is gitignored — never
-rely on its contents being present or committed.
+`evaluation/` holds the evaluation harness `hhEval` with its own
+`Holmakefile`, selftest and `README`; it is not in the build sequence,
+and nothing in the library may depend on it.  `eval/` is its default
+scratch output directory and is gitignored — never rely on its contents
+being present or committed.
 
 ## Module map (pipeline order)
 
@@ -80,9 +87,9 @@ rely on its contents being present or committed.
   `hh` tactic, `hh_pb`, and `main_hh` / `main_hh_lemmas` (premise
   selection).  This is the TacticToe integration surface and must keep
   working; consume `main_hh_lemmas` for lemma lists.
-- **`hhEval`** — headless, resumable evaluation harness (Bushy/Chainy
-  regimes, Deps/kNN selectors, Prover/Sched engines) writing a JSONL
-  journal; `run_smoke` backs `smoke.exe`.
+- **`evaluation/hhEval`** (outside the library) — headless, resumable
+  evaluation harness (Bushy/Chainy regimes, Deps/kNN/MePo/MaSh/MeSh
+  selectors, Prover/Sched engines) writing a JSONL journal.
 
 ## Reused infrastructure (do not rebuild here)
 

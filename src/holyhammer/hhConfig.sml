@@ -234,9 +234,6 @@ fun config_entries () =
     first_hits (read_config user @ system)
   end
 
-fun default_eval_dir () =
-  join (join (join (holdir ()) "src") "holyhammer") "eval"
-
 type option_spec =
   {name : string,
    default : unit -> string,
@@ -412,7 +409,6 @@ val option_specs : option_spec list =
     valid = Option.isSome o bool_value}]
 
 val defaults =
-  ("eval.dir", default_eval_dir) ::
   map (fn ({name, default, ...} : option_spec) => (name, default)) option_specs
 
 val runtime = ref ([] : (string * string) list)

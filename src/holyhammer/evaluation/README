@@ -1,0 +1,46 @@
+HOLyHammer evaluation harness
+=============================
+
+`hhEval` evaluates HOLyHammer over whole theories: each goal of a theory
+is attempted under a list of conditions (Bushy or Chainy regime; Deps,
+kNN, MePo, MaSh, MeSh or per-slice premise selection; one prover alone
+or the full schedule), and every result is appended to a per-theory
+JSONL journal, so that an interrupted run resumes where it stopped.
+`report` summarises an experiment as `summary.json` and `report.md`.
+
+This directory is not part of the default build and is not in sigobj;
+nothing in `src/holyhammer` depends on it.
+
+Build and test, from this directory:
+
+    ../../../bin/Holmake
+    d=$(mktemp -d)
+    HOL4_HAMMER_DIR=$d HOL4_SCRATCH=$d/scratch ./selftest.exe; rm -rf "$d"
+
+The selftest launches no prover unless `HHEVAL_INTEGRATION_TEST` is set,
+in which case it runs a small evaluation of `pair` and `option` with E
+into the directory named by `HOL4_HAMMER_EVAL_DIR`.
+
+The report checks of the selftest read the hand-written journals in
+`test-data/hheval-report/journal`: `list.jsonl` and `arithmetic.jsonl`
+hold prover cells of two conditions (E and Vampire on dependencies),
+`sched.jsonl` schedule cells.
+
+To use the harness in a HOL session:
+
+    loadPath := Globals.HOLDIR ^ "/src/holyhammer/evaluation" :: !loadPath;
+    load "hhEval";
+    val condition : hhEval.condition =
+      {cond_id = "bushy-deps-e", regime = hhEval.Bushy,
+       selector = hhEval.Deps, engine = hhEval.Prover hhConfig.Eprover,
+       timeout = 5, reconstruct = true};
+    hhEval.run_eval {expname = "trial", ncore = 4, thyl = ["pair"],
+                     conditions = [condition]};
+    hhEval.report (hhEval.experiment_dir "trial");
+
+An experiment lives in `hhEval.experiment_dir name`, below the
+configuration key `eval.dir` (environment `HOL4_HAMMER_EVAL_DIR`), by
+default `$HOLDIR/src/holyhammer/eval`.  `eval.sample` = n evaluates about
+one goal in n, chosen by a hash of its name.  Each theory is evaluated by a
+worker process running a script written next to the theory's sources,
+which is removed when the worker ends.

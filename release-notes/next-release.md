@@ -330,13 +330,14 @@ New tools
     `mash`, `mesh`, and `none`; its empty default retains each slice's tested
     filter, while a nonempty value overrides the whole schedule.
 
--   `hhEval` is a resumable HOLyHammer evaluation harness.  `run_eval`
+-   `hhEval` (in `src/holyhammer/evaluation`, which the default build
+    leaves out) is a resumable HOLyHammer evaluation harness.  `run_eval`
     evaluates experimental conditions (regime, premise selector, single
     prover or full schedule) over a set of theories in parallel, recording
     each result in per-theory JSONL journals; `report` summarizes an
     experiment as `summary.json` and `report.md`.  `smoke.exe` in
-    `src/holyhammer` runs a fixed end-to-end smoke suite against the
-    installed provers.
+    `src/holyhammer` runs a fixed end-to-end smoke suite against E,
+    Vampire and Zipperposition, all of which it requires.
 
 -   `statementDossierLib` generates Markdown and standalone HTML reports
     of stored theorem statements, their trust tags, assumptions, defining

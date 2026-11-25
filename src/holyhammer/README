@@ -148,7 +148,12 @@ A prover is found by the first of:
      `$HOME/.hol4/hammer/provers`: the newest version directory holding
      the binary for this platform.
 
-To check the installed provers end to end:
+To check E, Vampire and Zipperposition end to end (the check fails
+when any of them is absent):
 
     cd src/holyhammer
     ../../bin/Holmake smoke.exe && ./smoke.exe
+
+The evaluation harness `hhEval`, which runs HOLyHammer over whole theories
+and reports on the results, is in `evaluation/` (see its `README`); it is
+not part of the default build.
