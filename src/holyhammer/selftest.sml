@@ -84,17 +84,17 @@ fun with_hh_options settings action =
     handle exn => (restore (); raise exn)
   end
 
-(* An installation root/dir/<platform>/probe-exec. *)
-fun install_probe root dir =
+(* An installation root/dir/<platform>/name. *)
+fun install_probe name root dir =
   let
     val bin = join (join root dir) (hhConfig.platform ())
-    val file = join bin "probe-exec"
+    val file = join bin name
   in
     mkdirs bin; make_executable file; file
   end
 
-fun find_probe env_var prover =
-  hhConfig.find_exec prover env_var ["probe-exec"]
+(* The children run with this environment variable unset. *)
+val unset_env_var = "HHCONFIG_UNSET_EXECUTABLE"
 
 fun test_child root =
   let
@@ -106,14 +106,20 @@ fun test_child root =
     val env_exec = join root "env-exec"
     val path_dir = join root "path"
     val path_exec = join path_dir "probe-exec"
-    val state_exec = install_probe (join (hhConfig.state_dir ()) "provers")
-                                   "e-3.0"
-    val _ = install_probe (join hammer "provers") "e-9.0"
-    val user_exec = install_probe (join hammer "provers") "e-10.0"
+    val path_ho = join (join root "path2") "probe-ho"
+    val state_exec =
+      install_probe "probe-exec" (join (hhConfig.state_dir ()) "provers")
+        "e-3.0"
+    val user_install = install_probe "probe-exec" (join hammer "provers")
+    val _ = user_install "e-9.0"
+    val user_exec = user_install "e-10.0"
+    val _ = user_install "e-2.0"
     val _ = make_executable config_exec
     val _ = make_executable env_exec
     val _ = mkdirs path_dir
     val _ = make_executable path_exec
+    val _ = mkdirs (join root "path2")
+    val _ = make_executable path_ho
     val config_contents =
       ("# user configuration\n\
        \priority = user # comments are ignored\n\
@@ -289,7 +295,11 @@ fun test_child root =
           handle Feedback.HOL_ERR _ => true) andalso
        ((hhConfig.snapshot_with [("no_such_option", "1")]; false)
           handle Feedback.HOL_ERR _ => true))
-    fun find_e () = find_probe "HOL4_EPROVER_EXECUTABLE" "e"
+    fun find_e () =
+      hhConfig.find_exec "e" "HOL4_EPROVER_EXECUTABLE" ["probe-exec"]
+    val _ = expect "PATH prefers an earlier name to an earlier directory"
+      (is_some path_ho (hhConfig.find_exec "probe" unset_env_var
+                          ["probe-ho", "probe-exec"]))
     fun found_without file expected =
       (OS.FileSys.remove file; is_some expected (find_e ()))
     val _ = expect "configured executable precedes the environment"
@@ -344,7 +354,8 @@ fun run_parent () =
     (* the children must not see the caller's prover installations *)
     val clean_env =
       "/usr/bin/env -u HOL4_VAMPIRE_EXECUTABLE" ^
-      " -u HOL4_ZIPPERPOSITION_EXECUTABLE -u HOL4_Z3_TPTP_EXECUTABLE"
+      " -u HOL4_ZIPPERPOSITION_EXECUTABLE -u HOL4_Z3_TPTP_EXECUTABLE" ^
+      " -u " ^ unset_env_var
     val command =
       clean_env ^ " HOL4_HAMMER_PRIORITY=environment" ^
       " HOL4_HAMMER_MANGLED_KEY=environment" ^
@@ -354,7 +365,7 @@ fun run_parent () =
       " HOL4_HAMMER_DIR=" ^ join root "state" ^
       " HHCONFIG_TEST_ROOT=" ^ root ^
       " HOLDIR=" ^ holdir ^
-      " PATH=" ^ path ^
+      " PATH=" ^ path ^ ":" ^ join root "path2" ^
       " ./selftest.exe"
     val env_command =
       clean_env ^ " -u HOL4_EPROVER_EXECUTABLE -u HOL4_HAMMER_DIR" ^
@@ -378,10 +389,12 @@ fun run_parent () =
 fun test_environment_default root value =
   let
     val user_dir = join (join (join root "home") ".hol4") "hammer"
-    val user_exec = install_probe (join user_dir "provers") "probe-1.0"
+    val user_exec =
+      install_probe "default-exec" (join user_dir "provers") "probe-1.0"
     val _ = expect "user installation is found in the default state directory"
       (hhConfig.state_dir () = user_dir andalso
-       is_some user_exec (find_probe "" "probe"))
+       is_some user_exec
+         (hhConfig.find_exec "probe" unset_env_var ["default-exec"]))
     val options : hhConfig.hh_options = hhConfig.snapshot ()
     val _ = expect "environment overrides the built-in default"
       (is_some value (hhConfig.get "eval.dir"))

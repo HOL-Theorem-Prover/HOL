@@ -127,7 +127,9 @@ installs the tested versions:
 It installs each prover in `<prover>-<version>/<platform>/`, where
 `<platform>` is such as `x86_64-linux` or `arm64-darwin`, below the first
 of: its `--dest` argument, `$HOL4_HAMMER_DIR/provers`, and
-`$HOME/.hol4/hammer/provers`.  Alternatively, put a supported binary on
+`$HOME/.hol4/hammer/provers`.  A `--dest` outside the installation
+directories listed below is not searched: name the binary with
+`prover.<name>.executable`.  Alternatively, put a supported binary on
 `PATH`: `eprover-ho` or `eprover`, `vampire`, `zipperposition`, or
 `z3_tptp`, Z3's TPTP front end built from `examples/tptp` in the Z3 sources
 (tested with 4.11.2).  The plain `z3` binary does not read TPTP and is never
