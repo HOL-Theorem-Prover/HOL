@@ -1,0 +1,23 @@
+INCLUDES = ../field ../finitefield ../polynomial ../linear ../ring \
+           ../primality/examples \
+           $(HOLDIR)/src/num/extra_theories \
+           $(HOLDIR)/src/num/theories/cv_compute/automation
+
+ifeq ($(HOLSELFTESTLEVEL),1)
+all: namedPrimeFieldsTheory.uo pairingQuadraticFieldsTheory.uo selftest.exe
+else
+all: $(DEFAULT_TARGETS) selftest.exe
+endif
+.PHONY: all
+
+selftest.exe: selftest.uo polynomialCertificateLib.uo pairingFieldCertificateLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: field-certificates-selftest.log
+
+field-certificates-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif
+
+EXTRA_CLEANS = selftest.exe field-certificates-selftest.log
