@@ -261,7 +261,8 @@ structure Refute_ModelFinder_Util :> Refute_ModelFinder_Util = struct
      that thread has used [budget] of CPU time, so that a proof needing
      milliseconds still gets them on a loaded machine.  Work that uses no
      CPU (blocked on a lock, say) is stopped after [backstop_factor] times
-     [budget] of wall time.
+     [budget] of wall time, or never when that is past the largest time
+     Time can hold.
 
      A watcher thread reads the caller's clock in wall slices of the CPU
      budget left and interrupts the caller at most once, deciding under
@@ -289,7 +290,10 @@ structure Refute_ModelFinder_Util :> Refute_ModelFinder_Util = struct
             val started = Time.now ()
             val limit = Time.toReal budget
             val backstop =
-              Time.+ (started, Time.fromReal (backstop_factor * limit))
+              SOME (Time.+ (started, Time.fromReal (backstop_factor * limit)))
+              handle Time.Time => NONE
+            fun reached now =
+              case backstop of SOME b => Time.>= (now, b) | NONE => false
             val clock = Refute_ThreadClock.start ()
             val lock = Mutex.mutex ()
             val wake = ConditionVar.conditionVar ()
@@ -302,7 +306,7 @@ structure Refute_ModelFinder_Util :> Refute_ModelFinder_Util = struct
                   val left = limit - Refute_ThreadClock.seconds clock
                   val now = Time.now ()
                 in
-                  if left <= 0.0 orelse Time.>= (now, backstop) then
+                  if left <= 0.0 orelse reached now then
                     (state := Fired;
                      Standard_Thread.interrupt_unsynchronized caller)
                   else
@@ -312,8 +316,9 @@ structure Refute_ModelFinder_Util :> Refute_ModelFinder_Util = struct
                         (Real.max (left, Refute_ThreadClock.tick)))
                     in
                       ignore (ConditionVar.waitUntil (wake, lock,
-                        if Time.< (slice, backstop) then slice
-                        else backstop));
+                        case backstop of
+                            SOME b => if Time.< (slice, b) then slice else b
+                          | NONE => slice));
                       watch ()
                     end
                 end

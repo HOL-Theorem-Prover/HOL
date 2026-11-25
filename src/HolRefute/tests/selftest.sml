@@ -3310,6 +3310,23 @@ val _ = test "a spent inner budget raises before the work starts" (fn () =>
     not (!started)
   end)
 
+(* The largest budget [upd_tac_timeout] accepts is the largest number of
+   seconds Time can hold; its wall backstop, 20 times that, is past it. *)
+val _ = test "an inner proof under the largest budget runs its work" (fn () =>
+  let
+    fun representable s = (ignore (seconds s); true) handle Time.Time => false
+    fun narrow lo hi =
+      if hi <= lo * 1.000001 then lo
+      else
+        let val mid = (lo + hi) / 2.0 in
+          if representable mid then narrow mid hi else narrow lo mid
+        end
+    fun widen s =
+      if representable (2.0 * s) then widen (2.0 * s) else narrow s (2.0 * s)
+  in
+    within (seconds (widen 1.0)) (fn () => true) ()
+  end)
+
 (* only Linux reports a thread's CPU time; elsewhere the process's counts *)
 val _ =
   if not (OS.FileSys.access ("/proc/thread-self", [])) then ()
