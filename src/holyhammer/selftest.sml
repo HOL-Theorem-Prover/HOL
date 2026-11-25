@@ -1208,6 +1208,21 @@ fun test_hhTranslate_lifted_axioms () =
 
 val _ = test_hhTranslate_lifted_axioms ()
 
+(* The fresh-name counter: counter () draws one name and returns its
+   number; advance_to target draws names until the next one drawn is
+   numbered target; power_above n is the least power of ten above n. *)
+fun counter () =
+  valOf (Int.fromString (String.extract (Type.dest_vartype
+    (Type.gen_tyvar ()), size "%%gen_tyvar%%", NONE)))
+
+fun advance_to target =
+  let
+    fun advance n = if n <= 0 then () else (Type.gen_tyvar (); advance (n - 1))
+  in advance (target - (counter () + 1)) end
+
+fun power_above n =
+  let fun up p = if p > n then p else up (10 * p) in up 10 end
+
 fun test_hhProblemGen () =
   let
     open boolSyntax hhTptpProblem hhProblemGen
@@ -1632,6 +1647,9 @@ fun test_hhProblemGen () =
        String.isSubstring "help_2Epxy_2Eall_2E2" combs_all andalso
        String.isSubstring "help_2Eeq__ext_2E2" combs_all andalso
        String.isSubstring "var_2E_27a" combs_all)
+    (* The memo fixture draws no type variable: its renders are compared
+       with fresh ones as strings. *)
+    val memo_start = counter ()
     val memo = new_export_memo ()
     val output1 = OS.FileSys.tmpName ()
     val output2 = OS.FileSys.tmpName ()
@@ -1674,6 +1692,8 @@ fun test_hhProblemGen () =
     val _ = expect "hhProblemGen export memo agrees with fresh across formats"
       (render memo higher_export_options changed_facts =
        render (new_export_memo ()) higher_export_options changed_facts)
+    val _ = expect "hhProblemGen memo fixture draws no type variable"
+      (counter () = memo_start + 1)
     val comb_problem = string_of_problem tf0 "combin helpers"
       (generate_problem
         {format = tf0, type_enc = hhTypeEnc.of_string "mono_native",
@@ -2103,21 +2123,6 @@ val _ = test_hhProblemGen_bounded_names ()
    reproducible whenever its counter window stays within one digit length
    (also when two windows differ in digit length), and always draws the
    same number of names. *)
-(* The fresh-name counter: counter () draws one name and returns its
-   number; advance_to target draws names until the next one drawn is
-   numbered target; power_above n is the least power of ten above n. *)
-fun counter () =
-  valOf (Int.fromString (String.extract (Type.dest_vartype
-    (Type.gen_tyvar ()), size "%%gen_tyvar%%", NONE)))
-
-fun advance_to target =
-  let
-    fun advance n = if n <= 0 then () else (Type.gen_tyvar (); advance (n - 1))
-  in advance (target - (counter () + 1)) end
-
-fun power_above n =
-  let fun up p = if p > n then p else up (10 * p) in up 10 end
-
 fun test_hhProblemGen_counter_window () =
   let
     open boolSyntax
@@ -6773,8 +6778,6 @@ fun test_schedule_run_in parser =
       in
         (result, failure, rev (!events), files)
       end
-    val plain = {opts = options 8 5, ranks = rankings, legacies = gave_up,
-                 monos = gave_up, wrap = fn f => f (), steer = ignore}
     fun has_event prefix events = List.exists (String.isPrefix prefix) events
     fun clean files =
       List.all (fn (name, _) => not (String.isSuffix ".tmp" name)) files
@@ -6800,9 +6803,13 @@ fun test_schedule_run_in parser =
            legacies = gave_up, monos = gave_up, wrap = fn f => f (),
            steer = ignore}
     val _ = expect "run_in: an export error is raised before any event"
-      (not (Option.isSome absent) andalso Option.isSome absent_failure andalso
+      (not (Option.isSome absent) andalso
+       (case absent_failure of
+            SOME exn =>
+              String.isSubstring "NO_SUCH_THEOREM" (Feedback.exn_to_string exn)
+          | NONE => false) andalso
        null absent_events andalso clean absent_files andalso
-       all_exited recorded)
+       not (null (recorded ())) andalso all_exited recorded)
 
     (* An interrupt of the caller while a worker of the export is held:
        Interrupt is raised before any event, the workers have exited and
