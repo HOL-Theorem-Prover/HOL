@@ -59,9 +59,13 @@ repository.
   among them `Refute_ModelFinder_Model.lookup_term_postprocessor`, a
   registry entry point kept out of the signature for want of a user;
   `Refute_QC.strategy_run`, because an expired deadline's verdict has no
-  public route that is not decided by the same budget it tests; and
+  public route that is not decided by the same budget it tests;
   `Refute_Core.normal_conv`, because the shape a goal is normalised to
-  is not visible through `Refute`.
+  is not visible through `Refute`; and
+  `Refute_ModelFinder_Util.apply_within_budget` with its clock
+  `Refute_ThreadClock`, for the inner-proof budget tests, because the
+  budget is CPU time, which only a loaded machine would show through
+  `Refute`.
 - The root CLAUDE.md's `--seq=tools/sequences/upto-parallel` pass does not
   reach this directory and adds no signal: it stops before
   `src/parallel_builds`, which is what pulls in HolRefute (POLY-only
@@ -139,10 +143,10 @@ repository.
   user's theory on any path (success, failure, timeout, interrupt); if safe
   cleanup is unavailable, report inapplicable instead.
   `theory_tests/refuteMfClean*` and `refuteRegistrationClean*` check this.
-- Ancestry: refuteTheory's parents are real, words, rat, finite_map and
-  listRange (the declared `sorting` folds into `finite_map`); its
-  `Ancestors` declaration is exact and the selftest asserts the parent
-  set.
+- Ancestry: refuteTheory's parents are words, frac, finite_map,
+  finite_set and listRange (the declared `sorting` folds into
+  `finite_map`); its `Ancestors` declaration is exact and the selftest
+  asserts the parent set.
 
 ## Testing Guidelines
 
