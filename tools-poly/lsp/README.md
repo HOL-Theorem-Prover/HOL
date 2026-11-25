@@ -1449,6 +1449,127 @@ end, and anything in the same flow above them goes out of sight.
   publishes both as ordinary diagnostics; a client reading
   `textDocument/publishDiagnostics` needs no work for this.
 
+## What a declaration came out as (`$/hol/declResults`)
+
+Between declarations there is no goal state, and `$/hol/goalState`
+says so with `null`.  A cursor parked there is asking a different
+question, though — *what did the thing above me come out as* — and
+this request answers it: the `val name = value : type` lines a REPL
+would have printed for the declaration, theorems included.
+
+```json
+{
+  "jsonrpc": "2.0", "id": <n>,
+  "method": "$/hol/declResults",
+  "params": {
+    "textDocument": {"uri": "file:///path/to/Script.sml"},
+    "range": {"start": {"line": <0-based>, "character": <0-based>},
+              "end":   {"line": <0-based>, "character": <0-based>}},
+    "width": <optional; columns to render at, as for $/hol/goalState>
+  }
+}
+```
+
+A **range** rather than a position, because what the user indicated is
+what gets told back to them.  An empty range is a cursor, and the two
+mean different things:
+
+- **Cursor between declarations** — the last declaration above it that
+  has anything to say.  "Above it" counts a cursor sitting exactly on
+  a declaration's last byte as past that declaration, which is what
+  makes a cursor just after a `QED` answer with the theorem.  Walking
+  past the ones with nothing to say is what makes a cursor after
+  `val y = 5;` answer about `y` rather than about the semicolon.
+- **Cursor inside a declaration** — `null`.  A cursor in a
+  declaration's interior is editing it, not asking about it.
+- **Selection** — every declaration it contains whole, in source
+  order.  A selection that lies *within* one declaration (a
+  subexpression, say) is `null` for the same reason a cursor inside
+  one is.
+
+```json
+{
+  "status": "ok",
+  "results": [
+    {"range": {"start": {...}, "end": {...}},
+     "text": "val y = 5: int\n"}
+  ],
+  "omitted": 0,
+  "tornStart": false,
+  "tornEnd": false
+}
+```
+
+- `status` — `"ok"`, or `"pending"` with no results when a compile
+  owns the process state.  The same refusal `$/hol/goalState` makes,
+  and it passes on its own.
+- `results` — one entry per declaration, in source order, each with
+  that declaration's span (so a client can point back at it) and the
+  lines it bound.
+- `omitted` — how many declarations were dropped off the **front**.  A
+  selection of more than ten answers with the last ten: a reader who
+  selected a page of script is asking what it ended up with.
+- `tornStart` / `tornEnd` — the selection began or ended part-way
+  through a declaration.  A client should say so; it is the difference
+  between a short answer and a wrong one.
+
+### Where the values come from
+
+Not from re-running anything.  Each compile already hands the server
+what every declaration bound (`onDecCompleted`'s `bindings`, which is
+the list `$/eval`'s `printBindings` renders), and the server keeps it
+beside the per-declaration snapshots as `declBindings`, keyed by the
+declaration's `HOLSourceAST.decSpan` stop.  A later parse of the
+buffer computes the same number, so matching a declaration to its
+bindings is an equality test.
+
+Printing happens when asked rather than when compiled: a theorem's
+`val` line is a term print, and making every compile pay for one per
+declaration — for an answer almost no declaration is ever asked for —
+is the wrong trade.  The handler restores the snapshot taken just
+after the last declaration it is about to print, so terms render in
+the grammar that was live when the declaration ran.
+
+Two things are left out, both deliberately.  A declaration that bound
+nothing (`open`, a bare `;`, an `Overload`) has nothing to print, and
+one that bound more than a dozen values is an `open` in disguise — a
+`Theory` header expands to four of them — so it is passed over rather
+than answered with a few thousand lines of library.
+
+An edit that moves a declaration moves its `decSpan` stop with it, so
+its recorded bindings stop matching until the next compile reaches it.
+That is the right answer: they were made from text the user has since
+replaced.
+
+Because the stop is the whole of the match, **two declarations must
+not share one**, and one pair can: the parser synthesises a zero-width
+end-of-theory declaration at `(size, size)`, so in a file that does
+not end in a newline it sits on the last real declaration's stop.  It
+binds nothing, so as the newer entry at that byte it hid the
+declaration the user was looking at and the pane answered about the
+one above it — in a file whose last declaration was still being typed,
+which is when it is asked about most.  A declaration is therefore
+recorded only if it has source text of its own (`start < stop`); the
+resume snapshot is still taken for the synthetic one, which is what
+keeps an append off the from-boot path.
+
+### Client cookbook
+
+The pane that shows a goal state is the pane that shows this — it is
+one question, *what is the state at the cursor*, and between
+declarations the answer is what the declarations came out as.  So ask
+for both and render whichever answers:
+
+- no selection: `$/hol/goalState` first, `$/hol/declResults` if it
+  answers `null`;
+- a selection: the other way round, because a selection is an explicit
+  question about declarations.  Falling back to `goalState` is what
+  keeps a selection *inside* one proof body showing goals.
+
+`hol-mode`'s `hol-lsp--goals-answer` is exactly that, and
+`hol-lsp--render-decls` puts the result in `*HOL Goals*` with the
+torn-selection warning on the header line.
+
 ## Trying a tactic (`$/hol/tryTactic`)
 
 What a candidate tactic would do at a point in a proof, committing

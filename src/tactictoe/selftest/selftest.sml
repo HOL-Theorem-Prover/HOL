@@ -206,7 +206,7 @@ fun boss_reports phase spec =
      handle smlTimeout.FunctionTimeout =>
               SOME ("the boss reported nothing within " ^ secs budget)
           | e =>
-              let val m = exnMessage e in
+              let val m = Feedback.exn_to_string e in
                 if String.isSubstring "external worker" m andalso
                    String.isSubstring phase m
                 then NONE

@@ -20,6 +20,11 @@ sig
      added in its place *)
   val cv_rep_delete : string -> unit
 
+  (* Removes a stored from/to translation of a type ("thy.name"), here and
+     in descendant theories, to choose between two that unrelated
+     ancestors give for the same type *)
+  val cv_from_to_delete : string -> unit
+
   datatype pat = datatype cv_trans_dtype.pat
 
   val cv_eqs_for  : term -> thm list

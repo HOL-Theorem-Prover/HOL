@@ -18,4 +18,8 @@ sig
   (* define_from_to can raise this *)
   exception Missing_from_to of hol_type
 
+  (* whether an error is from_to_thm_for's report of different
+     translations of a type from unrelated theories *)
+  val is_clash : Feedback.hol_error -> bool
+
 end

@@ -406,4 +406,10 @@ in
        end)
 end;
 
+fun RING_USING_TAC equations (asl, goal) =
+  RING_TAC
+    (List.filter
+       (fn tm => not (is_eq tm) orelse List.exists (aconv tm) equations) asl,
+     goal);
+
 end (* struct *)
