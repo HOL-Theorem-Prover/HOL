@@ -2266,7 +2266,9 @@ val _ = test_hhProblemGen_bounded_names ()
    So the bytes are a function of the counter state: the same export is
    reproducible whenever its counter window stays within one digit length
    (also when two windows differ in digit length), and always draws the
-   same number of names. *)
+   same number of names.  The export of a monomorphic goal, whose
+   instances do not depend on that order, keeps its bytes also when its
+   names straddle a power of ten. *)
 fun test_hhProblemGen_counter_window () =
   let
     open boolSyntax
@@ -2284,34 +2286,49 @@ fun test_hhProblemGen_counter_window () =
         val l = Term.mk_var ("l", list_ty from)
         val tm = Term.list_mk_comb (map_at from to, [f, l])
       in mk_eq (tm, tm) end
-    val goal = list_mk_conj (map (fn (from, to) => map_eq from to)
-      [(num, Type.bool), (Type.bool, num), (num, num), (alpha, num),
-       (num, alpha), (alpha, beta)])
-    val premises = [("MAP_APPEND", DB.fetch "list" "MAP_APPEND")]
-    val options = {format = hhTypeEnc.format_of_string "tf0",
-      type_enc = hhTypeEnc.of_string "mono_native",
-      lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = 3}
-    val power = power_above (counter () + 2000)
-    fun export start =
+    val capped =
+      (list_mk_conj (map (fn (from, to) => map_eq from to)
+         [(num, Type.bool), (Type.bool, num), (num, num), (alpha, num),
+          (num, alpha), (alpha, beta)]),
+       [("MAP_APPEND", DB.fetch "list" "MAP_APPEND")], 3)
+    val monomorphic =
+      (``MAP (\y. y + 1n) (l ++ m) = MAP SUC (l ++ m)``,
+       map (fn name => (name, DB.fetch "list" name))
+         ["MAP_APPEND", "LENGTH_MAP", "MAP_MAP_o", "APPEND_ASSOC",
+          "APPEND_NIL", "LENGTH_APPEND", "REVERSE_APPEND"], 100)
+    val power = power_above (counter () + 4000)
+    fun export (goal, premises, cap) start =
       let
         val file = OS.FileSys.tmpName ()
         fun finish () = OS.FileSys.remove file handle _ => ()
+        val options = {format = hhTypeEnc.format_of_string "tf0",
+          type_enc = hhTypeEnc.of_string "mono_native",
+          lam_trans = hhLamTrans.Combs, mono_iters = 3, mono_instances = cap}
         val _ = advance_to start
         val first = counter ()
-        val used_text =
+        val result =
           (hhProblemGen.export_pb options file (goal, premises);
-           (counter () - first - 1, String.concat (aiLib.bare_readl file)))
+           (counter () - first - 1, String.concat (aiLib.bare_readl file),
+            first))
           handle e => (finish (); raise e)
       in
-        finish (); used_text
+        finish (); result
       end
-    (* The first window ends below the next power of ten; the second
-       starts just above it, so its names have one more digit. *)
-    val (used1, text1) = export (power - 1500)
-    val (used2, text2) = export (power + 10)
+    (* Two windows end below the next power of ten; the third draws names
+       on both sides of it, and the fourth starts above it, so its names
+       have one more digit. *)
+    val (used1, text1, _) = export capped (power - 3000)
+    val (used2, text2, _) = export monomorphic (power - 1500)
+    val (used3, text3, first3) =
+      export monomorphic (power - 1 - used2 div 2)
+    val (used4, text4, _) = export capped (power + used2 + 10)
   in
     expect "hhProblemGen counter window: same bytes and name count"
-      (text1 = text2 andalso used1 = used2 andalso used1 > 0)
+      (text1 = text4 andalso used1 = used4 andalso used1 > 0);
+    expect "hhProblemGen counter window: a straddled power of ten keeps \
+      \monomorphic bytes"
+      (first3 + 1 < power andalso power <= first3 + used3 andalso
+       text2 = text3 andalso used2 = used3)
   end
 
 val _ = test_hhProblemGen_counter_window ()
@@ -5387,65 +5404,16 @@ fun test_hhPool () =
 
 val _ = test_hhPool ()
 
+(* The export worker pool.  Fixture: a goal with rigid type variables that
+   clash with the premises', ground MAP uses at several types so that the
+   mono_instances cap of 3 binds, and a lambda that is not eta-reducible;
+   the premises include o_DEF and S_DEF, so that helper lambda translation
+   draws names.  The schedule mixes mono, poly and ?? encodings with legacy
+   items; the generated jobs are those of index 0, 2, 3 and 5. *)
 fun test_schedule_pool () =
   let
     open StagedFixture
-    val pool_ranking = map (fn fact => "listTheory." ^ fact)
-      ["MAP_APPEND", "LENGTH_MAP", "MAP_MAP_o", "APPEND_ASSOC",
-       "APPEND_NIL", "LENGTH_APPEND", "REVERSE_APPEND"]
-    val pool_goal : Term.term list * Term.term =
-      ([], ``MAP (\y. y + 1n) (l ++ m) = MAP SUC (l ++ m)``)
-    fun mono prover filter nfacts : hhProver.slice =
-      {prover = prover, format = "tf0", type_enc = "mono_native",
-       lam_trans = "combs", nfacts = nfacts, filter = filter,
-       extra_opts = [], slice_size = 1}
-    val schedule =
-      [(e, mono Eprover "knn" 3), (e, legacy Eprover "knn" 2),
-       (vampire, mono Vampire "knn" 5), (e, mono Eprover "knn" 7),
-       (vampire, legacy Vampire "knn" 4), (e, mono Eprover "knn" 4)]
-    val generated_count = 4
-    (* Four consecutive generated jobs (no legacy item between them). *)
-    val consecutive =
-      [(e, mono Eprover "knn" 3), (vampire, mono Vampire "knn" 5),
-       (e, mono Eprover "knn" 7), (vampire, mono Vampire "knn" 4)]
-    val silent : hhSchedule.export_observer =
-      {generated = fn _ => (), copied = fn _ => ()}
-    fun no_temporaries root =
-      List.all (not o String.isSuffix ".tmp") (root_files root)
-    val plain = {fork = hhPool.default_fork, before_finish = fn _ => ()}
-    (* The test hooks are global (hhSchedule_Test) and read once when an
-       export starts; they are set for one export and restored after it.
-       Concurrent exports must therefore start under the hooks they want
-       and restore in the reverse order (see the concurrent test). *)
-    fun using {fork, before_finish} observer root options goal rankings
-        schedule =
-      Portable.bracket
-        (fn () => (!hhSchedule_Test.fork, !hhSchedule_Test.before_finish))
-        (fn (old_fork, old_before) =>
-           (hhSchedule_Test.fork := old_fork;
-            hhSchedule_Test.before_finish := old_before))
-        (fn _ =>
-           (hhSchedule_Test.fork := fork;
-            hhSchedule_Test.before_finish := before_finish;
-            hhSchedule.export_problems_observed observer root options goal
-              rankings schedule))
-    (* A fixture: the goal, premise rankings and schedule of an export,
-       and the explicit mono_instances cap, if any. *)
-    type fixture =
-      {label : string, goal : Abbrev.goal,
-       rankings : (string * string list) list,
-       schedule : (hhProver.prover_config * hhProver.slice) list,
-       cap : int option}
-    val pool_fixture : fixture =
-      {label = "pool", goal = pool_goal,
-       rankings = [("knn", pool_ranking)], schedule = schedule, cap = NONE}
-    (* The TASK_13 fixture (v2): a goal with rigid type variables that
-       clash with the premises', ground MAP uses at several types so that
-       a small mono_instances cap binds, and a lambda that is not
-       eta-reducible; the premises include o_DEF and S_DEF, so that helper
-       lambda translation draws names.  Mono, poly and ?? encodings and the
-       lifting modes. *)
-    val v2_fixture : fixture =
+    val pool_goal : Abbrev.goal =
       let
         fun arrow x y = Type.--> (x, y)
         val a = Type.alpha
@@ -5455,11 +5423,12 @@ fun test_schedule_pool () =
         fun at tm ty = Term.inst (Type.match_type (Term.type_of tm) ty) tm
         fun map_at from to = at listSyntax.map_tm
           (arrow (arrow from to) (arrow (lst from) (lst to)))
+        fun map_of from to (f, l) =
+          Term.list_mk_comb (map_at from to, [f, l])
         fun map_eq from to =
           let
-            val f = Term.mk_var ("h", arrow from to)
-            val l = Term.mk_var ("n", lst from)
-            val tm = Term.list_mk_comb (map_at from to, [f, l])
+            val tm = map_of from to
+              (Term.mk_var ("h", arrow from to), Term.mk_var ("n", lst from))
           in boolSyntax.mk_eq (tm, tm) end
         val l = Term.mk_var ("l", lst a)
         val m = Term.mk_var ("m", lst a)
@@ -5467,80 +5436,92 @@ fun test_schedule_pool () =
         val g = Term.mk_var ("g", arrow b a)
         val lb = Term.mk_var ("lb", lst b)
         val y = Term.mk_var ("y", b)
-        val map_f = Term.list_mk_comb (map_at a b, [f, listSyntax.mk_append
-          (l, m)])
-        val goal0 = boolSyntax.mk_eq (map_f, listSyntax.mk_append
-          (Term.list_mk_comb (map_at a b, [f, l]),
-           Term.list_mk_comb (map_at a b, [f, m])))
+        val append = boolSyntax.mk_eq
+          (map_of a b (f, listSyntax.mk_append (l, m)),
+           listSyntax.mk_append (map_of a b (f, l), map_of a b (f, m)))
         val lambda = Term.mk_abs (y, Term.mk_comb (g,
           Term.mk_comb (f, Term.mk_comb (g, y))))
-        val goal5 = boolSyntax.mk_eq
-          (Term.list_mk_comb (map_at b a, [lambda, lb]),
-           Term.list_mk_comb (map_at b a, [g, Term.list_mk_comb
-             (map_at a b, [f, Term.list_mk_comb (map_at b a, [g, lb])])]))
-        val goal = boolSyntax.list_mk_conj
+        val composed = boolSyntax.mk_eq (map_of b a (lambda, lb),
+          map_of b a (g, map_of a b (f, map_of b a (g, lb))))
+      in
+        ([], boolSyntax.list_mk_conj
           (map (fn (from, to) => map_eq from to)
              [(num, Type.bool), (Type.bool, num), (num, num), (a, num),
-              (num, a)] @ [goal0, goal5])
-        fun gen format type_enc lam_trans nfacts : hhProver.slice =
-          {prover = Eprover, format = format, type_enc = type_enc,
-           lam_trans = lam_trans, nfacts = nfacts, filter = "knn",
-           extra_opts = [], slice_size = 1}
-        val ranking = map (fn (theory, fact) => theory ^ "Theory." ^ fact)
-          [("list", "MAP_APPEND"), ("list", "LENGTH_MAP"),
-           ("list", "MAP_MAP_o"), ("list", "APPEND_ASSOC"),
-           ("combin", "o_THM"), ("combin", "K_THM"), ("combin", "I_THM"),
-           ("combin", "S_THM"), ("list", "FOLDL"), ("combin", "o_DEF"),
-           ("combin", "S_DEF")]
-      in
-        {label = "pool v2", goal = ([], goal),
-         rankings = [("knn", ranking)],
-         schedule =
-           [(e, gen "tf0" "mono_native" "combs" 11),
-            (e, legacy Eprover "knn" 4),
-            (e, gen "tf1" "poly_native" "combs" 11),
-            (vampire, gen "th1" "poly_native" "combs_and_lifting" 11),
-            (vampire, legacy Vampire "knn" 6),
-            (e, gen "fof" "mono_guards??" "combs" 11)],
-         cap = SOME 3}
+              (num, a)] @ [append, composed]))
       end
+    val pool_ranking = map (fn (theory, fact) => theory ^ "Theory." ^ fact)
+      [("list", "MAP_APPEND"), ("list", "LENGTH_MAP"), ("list", "MAP_MAP_o"),
+       ("list", "APPEND_ASSOC"), ("combin", "o_THM"), ("combin", "K_THM"),
+       ("combin", "I_THM"), ("combin", "S_THM"), ("list", "FOLDL"),
+       ("combin", "o_DEF"), ("combin", "S_DEF")]
+    val rankings = [("knn", pool_ranking)]
+    fun gen format type_enc lam_trans : hhProver.slice =
+      {prover = Eprover, format = format, type_enc = type_enc,
+       lam_trans = lam_trans, nfacts = 11, filter = "knn", extra_opts = [],
+       slice_size = 1}
+    val schedule =
+      [(e, gen "tf0" "mono_native" "combs"),
+       (e, legacy Eprover "knn" 4),
+       (e, gen "tf1" "poly_native" "combs"),
+       (vampire, gen "th1" "poly_native" "combs_and_lifting"),
+       (vampire, legacy Vampire "knn" 6),
+       (e, gen "fof" "mono_guards??" "combs")]
+    val jobs = [0, 2, 3, 5]
+    (* The generated jobs, consecutive (no legacy item between them). *)
+    val consecutive = map (fn index => List.nth (schedule, index)) jobs
+    val silent : hhSchedule.export_observer =
+      {generated = fn _ => (), copied = fn _ => ()}
+    fun no_temporaries root =
+      List.all (not o String.isSuffix ".tmp") (root_files root)
+    val plain = {fork = hhPool.default_fork, before_finish = fn _ => ()}
+    fun options workers debug = options_capped 8 workers debug NONE (SOME 3)
+    (* The test hooks are global (hhSchedule_Test) and read once when an
+       export starts; they are set for one export and restored after it.
+       Concurrent exports must therefore start under the hooks they want
+       and restore in the reverse order (see the concurrent test). *)
+    fun using {fork, before_finish} observer root workers goal rankings
+        schedule =
+      Portable.bracket
+        (fn () => (!hhSchedule_Test.fork, !hhSchedule_Test.before_finish))
+        (fn (old_fork, old_before) =>
+           (hhSchedule_Test.fork := old_fork;
+            hhSchedule_Test.before_finish := old_before))
+        (fn _ =>
+           (hhSchedule_Test.fork := fork;
+            hhSchedule_Test.before_finish := before_finish;
+            hhSchedule.export_problems_observed observer root
+              (options workers NONE) goal rankings schedule))
+    (* An export of the fixture's rankings into root. *)
+    fun export_into hooks observer workers root sched =
+      using hooks observer root workers pool_goal rankings sched
     (* One export at a given counter start: its files (relative paths with
-       their bytes) and the number of names drawn, counted by one read of
-       the counter after the run. *)
-    fun export_of (fx : fixture) hooks workers start =
+       their bytes), the number of names drawn, counted by one read of the
+       counter after the run, and the counter reading before it. *)
+    fun export_of goal hooks workers start =
       let
         val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
         val _ = advance_to start
         val first = counter ()
-        val _ = using hooks silent
-          root (options_capped 8 workers NONE NONE (#cap fx)) (#goal fx)
-          (#rankings fx) (#schedule fx)
+        val _ = using hooks silent root workers goal rankings schedule
         val used = counter () - first - 1
         val files = tree root
       in
         (remove_tree root; (files, used, first))
       end
-    val export = export_of pool_fixture
-    (* The counter only moves forward, so the runs of one start follow one
-       another: each begins where the previous one ended, used + 2 draws
-       later (the draws of the export and one for each of the two readings
-       of the counter).  The serial draw count, measured by a probe, places
-       a start so that run j (0 is the serial one) draws names on both
-       sides of a power of ten: it draws first+1 to first+used and the
-       power lies in between.  Powers are crossed once, so the runs that
-       follow are past it and must still give the serial bytes. *)
-    fun straddles boundary (first, used) =
-      first + 1 < boundary andalso boundary <= first + used
-    (* Forced completion orders: the finishing work of index i waits for
-       its gate; a controller thread opens the gates in the given order
-       and waits for each job to finish before opening the next.  The
-       indices of the generated jobs are 0, 2, 3 and 5.  The window is the
-       number of workers and counts every item, the legacy ones too, so an
-       order must let the head of the queue finish before a later job is
-       admitted: with four workers job 0 is done before job 5 starts, and
-       with two workers job 0 before job 3 and job 2 before job 5. *)
-    val jobs = [0, 2, 3, 5]
-    fun forced fx order workers start =
+    val export = export_of pool_goal
+    (* Serial equivalence.  The counter only moves forward, so the runs of
+       one start follow one another, each beginning where the previous one
+       ended; their names must stay within one digit length (the cap
+       binds, so the bytes depend on the order of the names).  Forced
+       completion orders: the finishing work of index i waits for its
+       gate; a controller thread opens the gates in the given order and
+       waits for each job to finish before opening the next.  The window
+       is the number of workers and counts every item, the legacy ones
+       too, so an order must let the head of the queue finish before a
+       later job is admitted: with four workers job 0 is done before job 5
+       starts, and with two workers job 0 before job 3 and job 2 before
+       job 5. *)
+    fun forced order workers start =
       let
         val m = new_monitor ()
         val opened = ref ([] : int list)
@@ -5558,80 +5539,43 @@ fun test_schedule_pool () =
              monitor_do m (fn () => opened := i :: !opened);
              monitor_until m "job never finished"
                (fn () => member (!done_) i))) order, [])
-        val result = export_of fx
+        val result = export
           {fork = hhPool.default_fork, before_finish = gate} workers start
         val _ = monitor_until m "controller did not finish"
           (fn () => length (!done_) = length order)
       in
         (result, rev (!done_))
       end
-    fun check_fixture (fx : fixture) decades =
+    val _ =
       let
-        val prefix = #label fx ^ ": "
-        val (_, probe_used, _) = export_of fx plain 1 (quiet_start ())
-        (* The runs of the first start (the serial one, the two natural
-           ones and the six forced ones) stay below the power. *)
-        val span = 12 * (probe_used + 2)
-        val power = power_above (counter () + span + 2000)
-        fun crossing_start power run =
-          power - run * (probe_used + 2) - probe_used div 2
-        val starts =
-          [(power - span - 1000, NONE), (crossing_start power 0, SOME 0)] @
-          (if decades then [(crossing_start (10 * power) 3, SOME 3)] else [])
-        fun check_start (start, crossing) =
+        val start = quiet_start ()
+        val boundary = power_above start
+        val windows = ref ([] : (int * int) list)
+        fun note (result as (_, used, first)) =
+          (windows := (first, used) :: !windows; result)
+        val (serial_files, serial_used, _) = note (export plain 1 start)
+        val _ = expect "pool: the baseline exports every file"
+          (length serial_files = length schedule andalso serial_used > 0)
+        fun same what (files, used, _) =
+          expect ("pool: " ^ what ^ " gives the serial bytes and counter")
+            (files = serial_files andalso used = serial_used)
+        fun ordered order workers =
           let
-            val label = Int.toString start
-            val boundary = if start > power then 10 * power else power
-            val crossed = ref ([] : bool list)
-            fun note (result as (_, used, first)) =
-              (crossed := straddles boundary (first, used) :: !crossed;
-               result)
-            val (serial_files, serial_used, _) =
-              note (export_of fx plain 1 start)
-            val _ = expect (prefix ^ "the baseline exports every file at \
-                \start " ^ label)
-              (length serial_files = length (#schedule fx) andalso
-               serial_used > 0)
-            fun same what (files, used, _) =
-              expect (prefix ^ what ^ " gives the serial bytes and counter \
-                \at start " ^ label)
-                (files = serial_files andalso used = serial_used)
-            val _ = same "natural completion, 2 workers"
-              (note (export_of fx plain 2 start))
-            val _ = same "natural completion, 4 workers"
-              (note (export_of fx plain 4 start))
-            fun ordered order workers =
-              let val (result, seen) = forced fx order workers start in
-                (expect (prefix ^ "the gates opened in order " ^
-                   String.concatWith "," (map Int.toString order) ^
-                   " at start " ^ label)
-                   (seen = order);
-                 same ("forced order " ^ String.concatWith ","
-                   (map Int.toString order) ^ ", " ^ Int.toString workers ^
-                   " workers") (note result))
-              end
-            val _ =
-              (ordered [3, 2, 0, 5] 4;
-               ordered [2, 3, 0, 5] 4;
-               ordered [0, 5, 3, 2] 4;
-               ordered [2, 0, 3, 5] 4;
-               ordered [2, 0, 5, 3] 2;
-               ordered [0, 2, 3, 5] 2)
-            val runs = rev (!crossed)
+            val (result, seen) = forced order workers start
+            val text = String.concatWith "," (map Int.toString order)
           in
-            case crossing of
-                NONE => expect (prefix ^ "no run straddles a power of ten \
-                    \at start " ^ label)
-                  (not (List.exists (fn x => x) runs))
-              | SOME run => expect (prefix ^ "run " ^ Int.toString run ^
-                  " draws names on both sides of a power of ten at start " ^
-                  label) (List.nth (runs, run))
+            expect ("pool: the gates opened in order " ^ text) (seen = order);
+            same ("forced order " ^ text ^ ", " ^ Int.toString workers ^
+                  " workers") (note result)
           end
       in
-        List.app check_start starts
+        same "natural completion, 2 workers" (note (export plain 2 start));
+        same "natural completion, 4 workers" (note (export plain 4 start));
+        ordered [3, 2, 0, 5] 4;
+        ordered [2, 0, 5, 3] 2;
+        expect "pool: no run straddles a power of ten"
+          (List.all (fn (first, used) => first + used < boundary) (!windows))
       end
-    val _ = check_fixture pool_fixture true
-    val _ = check_fixture v2_fixture false
     (* Cap: workers never exceed the generated jobs; one worker is inline
        (no thread is started). *)
     val forks = ref 0
@@ -5643,7 +5587,7 @@ fun test_schedule_pool () =
     val _ = export counting 16 (quiet_start ())
     val _ = expect "pool: one worker runs inline, a pool starts a thread per \
       \generated job and no more"
-      (inline_forks = 0 andalso !forks = generated_count)
+      (inline_forks = 0 andalso !forks = length jobs)
     (* Failures and interrupts. *)
     fun with_root f =
       let val root = hhSchedule.new_problem_dir (hhConfig.state_dir ()) in
@@ -5657,15 +5601,9 @@ fun test_schedule_pool () =
     fun survivor_text label =
       "hhProblemGen: " ^ label ^ ": hhProblemGen: lambda survived \
       \first-order lambda handling: " ^ Parse.term_to_string survivor
-    fun path_of root index =
-      hhSchedule.problem_path root (#2 (List.nth (schedule, index)))
-    fun present root index = OS.FileSys.access (path_of root index, [])
-    fun raw_export_on sched hooks observer workers root rankings_list =
-      using hooks observer root (options_with 8 workers NONE NONE) pool_goal
-        rankings_list sched
-    fun raw_export hooks = raw_export_on schedule hooks
-    fun run_export hooks observer workers root rankings_list =
-      raw_export hooks observer workers root rankings_list
+    fun present root index =
+      OS.FileSys.access
+        (hhSchedule.problem_path root (#2 (List.nth (schedule, index))), [])
     (* A fork wrapper that signals, through a monitor, when the function of
        the n-th started thread has returned (the job's outcome is then
        recorded and its slot freed). *)
@@ -5696,6 +5634,7 @@ fun test_schedule_pool () =
        slice_size = 1}
     val failing_schedule =
       List.take (schedule, 3) @ [(e, later_filter)] @ List.drop (schedule, 4)
+    val failing_rankings = rankings @ [("mepo", bad_ranking)]
     fun early_error label failure expected = with_root (fn root =>
       let
         val (fork, threads, wait_for) = signalling_fork ()
@@ -5705,11 +5644,8 @@ fun test_schedule_pool () =
            copied = fn _ => ()}
         fun fail_two index = if index = 2 then raise failure else ()
         val outcome =
-          (using
-             {fork = fork, before_finish = fail_two} observer root
-             (options_with 8 4 NONE NONE) pool_goal
-             [("knn", pool_ranking), ("mepo", bad_ranking)]
-             failing_schedule; "ok")
+          (using {fork = fork, before_finish = fail_two} observer root 4
+             pool_goal failing_rankings failing_schedule; "ok")
           handle Fail text => text | Feedback.HOL_ERR _ => "prepare"
       in
         expect label
@@ -5734,11 +5670,8 @@ fun test_schedule_pool () =
       let
         val (fork, threads) = recording_fork (fn start => start)
         val outcome =
-          (using
-             {fork = fork, before_finish = fn _ => ()} silent root
-             (options_with 8 4 NONE NONE) pool_goal
-             [("knn", pool_ranking), ("mepo", bad_ranking)]
-             failing_schedule; "ok")
+          (using {fork = fork, before_finish = fn _ => ()} silent root 4
+             pool_goal failing_rankings failing_schedule; "ok")
           handle Feedback.HOL_ERR _ => "prepare"
       in
         expect "pool: a prepare error publishes the prefix and stops workers"
@@ -5757,8 +5690,8 @@ fun test_schedule_pool () =
            if !calls = 3 then raise Fail "no thread" else start f)
         val (fork, threads) = recording_fork failing
         val outcome =
-          (run_export {fork = fork, before_finish = fn _ => ()} silent 4 root
-             [("knn", pool_ranking)]; "ok")
+          (export_into {fork = fork, before_finish = fn _ => ()} silent 4
+             root schedule; "ok")
           handle Fail "no thread" => "no thread"
       in
         expect "pool: a partial launch raises and publishes the prefix"
@@ -5782,8 +5715,7 @@ fun test_schedule_pool () =
         fun release () = monitor_do m (fn () => released := true)
         fun arrived_count n =
           monitor_until m "jobs did not arrive" (fn () => !arrived = n)
-        fun all_arrived () = arrived_count generated_count
-      in (gate, release, all_arrived, arrived_count, fn () => !arrived) end
+      in (gate, release, arrived_count, fn () => !arrived) end
     (* An interrupt while the workers are busy: the caller is interrupted,
        the workers are interrupted, stopped and their files removed, and no
        file appears later.  Four consecutive generated jobs on four
@@ -5792,14 +5724,13 @@ fun test_schedule_pool () =
        caller is awaiting job 0 or about to. *)
     val _ = with_root (fn root =>
       let
-        val (gate, release, _, arrived_count, _) = gated ()
+        val (gate, release, arrived_count, _) = gated ()
         val (fork, threads) = recording_fork (fn start => start)
         val result = ref NONE
         val caller = Thread.fork (fn () =>
           result := SOME (Exn.capture (fn () =>
-            raw_export_on consecutive
-              {fork = fork, before_finish = gate} silent 4 root
-              [("knn", pool_ranking)]) ()), [])
+            export_into {fork = fork, before_finish = gate} silent 4 root
+              consecutive) ()), [])
         val _ = arrived_count 4
         val _ = Thread.interrupt caller
         val _ = await_exits "caller did not exit" (fn () => [caller])
@@ -5819,7 +5750,7 @@ fun test_schedule_pool () =
        blocks awaiting the first and prepares no fourth. *)
     val _ = with_root (fn root =>
       let
-        val (gate, release, _, arrived_count, arrived) = gated ()
+        val (gate, release, arrived_count, arrived) = gated ()
         val (fork, threads) = recording_fork (fn start => start)
         val submitted = new_monitor ()
         val third_submitted = ref false
@@ -5833,9 +5764,8 @@ fun test_schedule_pool () =
                   monitor_do submitted (fn () => third_submitted := true)
                 else ())
               val outcome = Exn.capture (fn () =>
-                using {fork = fork, before_finish = gate}
-                  silent root (options_with 8 2 NONE NONE) pool_goal
-                  [("knn", pool_ranking)] consecutive) ()
+                export_into {fork = fork, before_finish = gate} silent 2 root
+                  consecutive) ()
             in
               (hhSchedule_Test.after_submit := old_after;
                Exn.release outcome)
@@ -5856,7 +5786,7 @@ fun test_schedule_pool () =
        workers of the first are busy. *)
     val _ = with_root (fn first_root => with_root (fn second_root =>
       let
-        val (gate, release, _, arrived_count, _) = gated ()
+        val (gate, release, arrived_count, _) = gated ()
         val first = ref NONE
         val second_outcome = ref (Exn.Res ())
         (* Far from a power of ten, so that the interleaved draws of the
@@ -5868,30 +5798,26 @@ fun test_schedule_pool () =
            restores its own. *)
         val caller = Thread.fork (fn () =>
           first := SOME (Exn.capture (fn () =>
-            raw_export_on consecutive
-              {fork = hhPool.default_fork, before_finish = gate}
-              silent 4 first_root [("knn", pool_ranking)]) ()), [])
+            export_into {fork = hhPool.default_fork, before_finish = gate}
+              silent 4 first_root consecutive) ()), [])
         (* Four consecutive generated jobs on four workers: the fourth
            arrival implies that every prepare of the first invocation is
            done and its caller is awaiting the first job. *)
         val _ = arrived_count 4
         val _ = second_outcome := Exn.capture (fn () =>
-          raw_export plain silent 3 second_root [("knn", pool_ranking)]) ()
+          export_into plain silent 3 second_root schedule) ()
         val _ = release ()
         val _ = await_exits "caller did not exit" (fn () => [caller])
         fun complete root sched =
           List.all (fn (_, slice) => OS.FileSys.access
             (hhSchedule.problem_path root slice, [])) sched andalso
           no_temporaries root
-        fun generated_text root sched indices =
-          map (fn index => String.concat (aiLib.bare_readl
-                 (hhSchedule.problem_path root
-                    (#2 (List.nth (sched, index)))))) indices
+        fun generated_text root =
+          map (fn (_, slice) => String.concat (aiLib.bare_readl
+                 (hhSchedule.problem_path root slice))) consecutive
         val (serial_files, _, _) = export plain 1 concurrent_start
-        val (first_serial, _, _) = export_of
-          {label = "pool", goal = pool_goal,
-           rankings = [("knn", pool_ranking)], schedule = consecutive,
-           cap = NONE} plain 1 concurrent_start
+        val first_serial = with_root (fn root =>
+          (export_into plain silent 1 root consecutive; tree root))
       in
         expect "pool: two concurrent invocations both complete"
           ((case (!first, !second_outcome) of
@@ -5899,8 +5825,7 @@ fun test_schedule_pool () =
               | _ => false) andalso complete first_root consecutive andalso
            complete second_root schedule andalso
            List.all (String.isPrefix "% generated by hhProblemGen")
-             (generated_text first_root consecutive [0, 1, 2, 3] @
-              generated_text second_root schedule jobs));
+             (generated_text first_root @ generated_text second_root));
         expect "pool: two concurrent invocations give the serial bytes"
           (tree first_root = first_serial andalso
            tree second_root = serial_files)
@@ -5918,18 +5843,12 @@ fun test_schedule_pool () =
           let
             val _ = Theory.new_constant ("hh_pinned_only", num)
             val constant = Term.mk_const ("hh_pinned_only", num)
-            val fx : fixture =
-              {label = "pinned", goal = ([], boolSyntax.mk_eq (constant,
-                 numSyntax.mk_plus (constant, numSyntax.zero_tm))),
-               rankings = #rankings pool_fixture, schedule = schedule,
-               cap = NONE}
+            val goal = ([], boolSyntax.mk_eq (constant,
+                         numSyntax.mk_plus (constant, numSyntax.zero_tm)))
             val start = quiet_start ()
-            val forks = ref 0
-            val counting = {fork = fn f => (forks := !forks + 1;
-                                            hhPool.default_fork f),
-                            before_finish = fn _ => ()}
-            val (inline_files, _, _) = export_of fx counting 1 start
-            val (pinned_files, _, _) = export_of fx counting 2 start
+            val _ = forks := 0
+            val (inline_files, _, _) = export_of goal counting 1 start
+            val (pinned_files, _, _) = export_of goal counting 2 start
           in
             (inline_files, pinned_files, !forks, Context.is_pinned ())
           end) ()
@@ -5960,46 +5879,39 @@ fun test_schedule_pool () =
     val _ =
       let
         val start = quiet_start ()
-        val (serial_files, serial_used, _) = export plain 1 start
+        val (_, serial_used, _) = export plain 1 start
         val draw = {fork = hhPool.default_fork,
                     before_finish = fn _ => ignore (Type.gen_tyvar ())}
         val (_, drawn_used, _) = export draw 2 start
       in
         expect "pool: a draw on a worker is detected by the counter check"
-          (drawn_used = serial_used + generated_count)
+          (drawn_used = serial_used + length jobs)
       end
     (* Draw-freedom of the tail itself, in every mode (the before_finish
-       control above sees only the pooled path): for each generated slice
-       of the fixtures, forcing the tail draws no fresh name, so the
-       second counter read is one past the first. *)
-    val _ = List.app (fn (fx : fixture) =>
-      List.app (fn (config, slice : hhProver.slice) =>
-        case hhSlice.encoding_of slice of
-            hhSlice.Legacy => ()
-          | hhSlice.Generated {format, type_enc, lam_trans} =>
-              let
-                val (hyps, concl) = #goal fx
-                val ranking = #2 (valOf (List.find (fn (name, _) =>
-                  name = #filter slice) (#rankings fx)))
-                val named = List.filter (null o Thm.hyp o #2)
-                  (mlThmData.thml_of_namel
-                    (aiLib.first_n (#nfacts slice) ranking))
-                val options =
-                  {format = format, type_enc = type_enc,
-                   lam_trans = lam_trans, mono_iters = 3,
-                   mono_instances = Option.getOpt (#cap fx, 11)}
-                val tail = hhProblemGen.prepare_pb
-                  (hhProblemGen.new_export_memo ()) options
-                  (boolSyntax.list_mk_imp (hyps, concl), named)
-                val c0 = counter ()
-                val _ = hhProblemGen.force_tail tail
-                val c1 = counter ()
-              in
-                expect ("pool: the tail draws no fresh name, " ^ #label fx ^
-                        " " ^ #format slice ^ " " ^ #type_enc slice ^ " " ^
-                        #lam_trans slice)
-                  (c1 = c0 + 1)
-              end) (#schedule fx)) [pool_fixture, v2_fixture]
+       control above sees only the pooled path): for each generated slice,
+       forcing the tail draws no fresh name, so the second counter read is
+       one past the first. *)
+    fun tail_draws (format, type_enc, lam_trans) nfacts =
+      let
+        val named = List.filter (null o Thm.hyp o #2)
+          (mlThmData.thml_of_namel (aiLib.first_n nfacts pool_ranking))
+        val tail = hhProblemGen.prepare_pb (hhProblemGen.new_export_memo ())
+          {format = format, type_enc = type_enc, lam_trans = lam_trans,
+           mono_iters = 3, mono_instances = 3}
+          (#2 pool_goal, named)
+        val c0 = counter ()
+        val _ = hhProblemGen.force_tail tail
+      in
+        counter () - c0 - 1
+      end
+    val _ = List.app (fn (_, slice : hhProver.slice) =>
+      case hhSlice.encoding_of slice of
+          hhSlice.Legacy => raise Fail "a legacy job"
+        | hhSlice.Generated {format, type_enc, lam_trans} =>
+            expect ("pool: the tail draws no fresh name, " ^ #format slice ^
+                    " " ^ #type_enc slice ^ " " ^ #lam_trans slice)
+              (tail_draws (format, type_enc, lam_trans) (#nfacts slice) = 0))
+      consecutive
     (* A tail failing at index 2 (the injected failure) while the later
        tails succeed: the exception is the text, the prefix is published,
        nothing else is, and only the prepares the window admits happened:
@@ -6016,10 +5928,8 @@ fun test_schedule_pool () =
             raise hhProblemGen.Lambda_survived (["conjecture"], survivor)
           else ()
         val outcome =
-          (using
-             {fork = hhPool.default_fork, before_finish = fail_two}
-             observer root (options_with 8 workers NONE NONE) pool_goal
-             [("knn", pool_ranking)] schedule; "ok")
+          (export_into {fork = hhPool.default_fork, before_finish = fail_two}
+             observer workers root schedule; "ok")
           handle Fail text => text
       in
         expect ("pool: a tail failure, " ^ Int.toString workers ^
@@ -6036,46 +5946,35 @@ fun test_schedule_pool () =
        inline one. *)
     val _ =
       let
-        fun output_of workers =
-          let
-            val file = OS.FileSys.tmpName ()
-            val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-            val _ = smlRedirect.hide_in_file file (fn () =>
-              using plain silent root (options_with 8 workers NONE NONE)
-                pool_goal [("knn", pool_ranking)] schedule) ()
-            val text = String.concat (aiLib.bare_readl file)
-          in
-            (OS.FileSys.remove file; remove_tree root; text)
-          end
-        val inline_output = output_of 1
-        val pooled_output = output_of 4
+        fun output_of workers = with_root (fn root =>
+          let val file = join root "output" in
+            smlRedirect.hide_in_file file (fn () =>
+              export_into plain silent workers root schedule) ();
+            String.concat (aiLib.bare_readl file)
+          end)
       in
         expect "pool: workers write nothing to the output"
-          (inline_output = "" andalso pooled_output = "")
+          (output_of 1 = "" andalso output_of 4 = "")
       end
     (* Root removal: with_problem_dir removes the root of a pooled export,
        after a failure too; a debug root is kept and clean. *)
-    fun reserved_export workers debug parent rankings_list schedule =
+    fun reserved_export debug parent rankings schedule =
       let
         val seen = ref ""
-        val outcome = (hhSchedule.with_problem_dir parent
-          (options_with 8 workers debug NONE) (fn root =>
+        val outcome = (hhSchedule.with_problem_dir parent (options 3 debug)
+          (fn root =>
             (seen := root;
-             using plain silent
-               root (options_with 8 workers debug NONE) pool_goal
-               rankings_list schedule)); "ok")
+             hhSchedule.export_problems_observed silent root (options 3 debug)
+               pool_goal rankings schedule)); "ok")
           handle Feedback.HOL_ERR _ => "prepare"
       in (outcome, !seen) end
-    val _ =
+    val _ = with_root (fn parent => with_root (fn debug =>
       let
-        val parent = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-        val (ok, root) = reserved_export 3 NONE parent
-          [("knn", pool_ranking)] schedule
-        val (bad, bad_root) = reserved_export 3 NONE parent
-          [("knn", pool_ranking), ("mepo", bad_ranking)] failing_schedule
-        val debug = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-        val (kept, kept_root) = reserved_export 3 (SOME debug) parent
-          [("knn", pool_ranking)] schedule
+        val (ok, root) = reserved_export NONE parent rankings schedule
+        val (bad, bad_root) =
+          reserved_export NONE parent failing_rankings failing_schedule
+        val (kept, kept_root) =
+          reserved_export (SOME debug) parent rankings schedule
       in
         expect "pool: with_problem_dir removes pooled roots, debug roots stay"
           (ok = "ok" andalso root <> "" andalso not (is_dir root) andalso
@@ -6084,10 +5983,8 @@ fun test_schedule_pool () =
            is_dir kept_root andalso
            String.isPrefix debug kept_root andalso
            length (root_files kept_root) = length schedule andalso
-           no_temporaries kept_root andalso null (list_directory parent));
-        remove_tree parent;
-        remove_tree debug
-      end
+           no_temporaries kept_root andalso null (list_directory parent))
+      end))
   in
     ()
   end
