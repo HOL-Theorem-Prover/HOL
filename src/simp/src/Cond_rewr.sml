@@ -295,6 +295,10 @@ fun ac_term_ord(tm1,tm2) =
 
    fun COND_REWR_CONV nm_th bounded = #legacy (COND_REWR_CONVS nm_th bounded)
 
+   fun bounded_apply r conv tm =
+     if !r = 0 then failwith "exceeded rewrite bound"
+     else conv tm before Portable.dec r
+
 
 val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",
                               Ty = bool --> bool}

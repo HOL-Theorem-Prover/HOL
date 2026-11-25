@@ -35,7 +35,7 @@ fun ERR x = liteLib.STRUCT_ERR "simpLib" x
 fun option_cases f e (SOME x) = f x
   | option_cases f e NONE = e;
 
-fun f oo g = fn x => flatten (map f (g x));
+val op oo = Cond_rewr.oo
 
 (*---------------------------------------------------------------------------*)
 (* Representation of conversions manipulated by the simplifier.              *)
@@ -58,6 +58,21 @@ type relsimpdata = {refl: thm, trans:thm, weakenings:thm list,
 (* Make a rewrite rule into a conversion.                                    *)
 (*---------------------------------------------------------------------------*)
 
+(* The net key only needs the left side of the final equation. Preserve
+   the lhs failure on malformed equations. *)
+fun rewrite_key_lhs tm =
+  if is_comb tm then
+    let val (f,r) = dest_comb tm in
+      if is_comb f then
+        let val (c,l) = dest_comb f in
+          if same_const c boolSyntax.equality then l
+          else if same_const c boolSyntax.implication then rewrite_key_lhs r
+          else lhs tm
+        end
+      else lhs tm
+    end
+  else lhs tm
+
 fun split_name {Thy,Name} = (SOME Thy, Name)
 fun mk_rewr_convdata build (nmopt,(thm,tag)) = let
   val th = SPEC_ALL thm
@@ -67,8 +82,7 @@ fun mk_rewr_convdata build (nmopt,(thm,tag)) = let
         | SOME (thypart,b) => (thypart, "rewrite:"^b)
 in
   SOME (build {thypart = thypart, name = nm,
-               key = SOME (free_varsl (hyp th),
-                           lhs(#2 (strip_imp(concl th)))),
+               key = SOME (free_varsl (hyp th), rewrite_key_lhs (concl th)),
                nmopt = nmopt, th = th, tag = tag}) before
   trace(2, Trace.LZ_TEXT(fn () =>
                            "New rewrite: " ^ Hol_pp.thm_to_string th))
@@ -190,15 +204,14 @@ fun partition_ssfrags name_of names frags =
     fun at_least 0 _ = true
       | at_least _ [] = false
       | at_least n (_::rest) = at_least (n - 1) rest
+    fun contains (_ : string) [] = false
+      | contains n (wanted::rest) = n = wanted orelse contains n rest
+    fun selected f =
+      case name_of f of SOME n => contains n names | NONE => false
   in
-    case names of
-        [selected] =>
-          List.partition
-            (fn f => case name_of f of
-                         SOME name =>
-                           Portable.pointer_eq (name,selected) orelse
-                           name = selected
-                       | NONE => false) frags
+    case frags of
+        [] => ([],[])
+      | [f] => if selected f then ([f],[]) else ([],[f])
       | _ =>
           (* Sorting the names pays off only for a large enough scan. *)
           if at_least 16 names andalso at_least 64 frags then
@@ -208,11 +221,14 @@ fun partition_ssfrags name_of names frags =
                 (fn f => case name_of f of n as SOME _ => member n
                                          | NONE => false) frags
             end
-          else
-            List.partition
-              (fn f => case name_of f of SOME name => Lib.mem name names
-                                       | NONE => false) frags
+          else List.partition selected frags
   end
+
+fun drop_named name_of nms =
+    List.filter (fn x => case name_of x of SOME n => not (Lib.mem n nms)
+                                         | NONE => true)
+
+fun frag_names name_of frags = Lib.mk_set (List.mapPartial name_of frags)
 
 fun is_excluded excluded nameopt =
     case nameopt of
@@ -224,6 +240,75 @@ fun include_name excluded nameopt =
         SOME n => (Binaryset.delete(excluded, n)
                    handle NotFound => excluded)
       | NONE => excluded
+
+(* ---------------------------------------------------------------------
+ * Operations that rebuild a simpset from its history.  [added] gives the
+ * fragment a history item adds, if any; [rebuild] replays a history and
+ * restores the simpset's limit.
+ * ---------------------------------------------------------------------*)
+
+type ('s,'h,'f) history_ops =
+  {history : 's -> 'h list, excluded : 's -> string Binaryset.set,
+   added : 'h -> 'f option, frag_name : 'f -> string option,
+   setexcluded : string Binaryset.set -> 's -> 's, add : 's * 'f -> 's}
+
+fun remove_ssfrags (_ : ('s,'h,'f) history_ops) _ [] _ = raise Conv.UNCHANGED
+  | remove_ssfrags {history,excluded,added,frag_name,setexcluded,...}
+                   rebuild names ss =
+    let
+      val member = names_member names
+      fun removes item =
+        case added item of SOME f => member (frag_name f) | NONE => false
+      val items = history ss
+      val history' =
+        case names of
+            [_] =>
+              (* A missing singleton name needs no copy of the history. *)
+              if List.exists removes items then
+                List.filter (not o removes) items
+              else raise Conv.UNCHANGED
+          | _ =>
+              let
+                val changed = ref false
+                fun keep item =
+                  if removes item then (changed := true; false) else true
+                val retained = List.filter keep items
+              in
+                if !changed then retained else raise Conv.UNCHANGED
+              end
+    in
+      setexcluded (excluded ss) (rebuild history')
+    end
+
+(* Like [remove_ssfrags], but additionally records the names so that any
+   subsequent [++] of a fragment with one of those names is silently
+   skipped.  [force_add] is the override that bypasses (and clears) this
+   prohibition for a given fragment.  Never raises Conv.UNCHANGED.
+
+   Desired invariant on every simpset:
+       no ADDFRAG in [history] has a name in [excluded].
+   The other simpset operations all preserve this invariant, so in
+   principle we could filter [history] against [names] alone here.  We
+   defensively filter against [excluded] and [names] instead so that this
+   function stays correct in isolation even if some future operation
+   accidentally introduces an ADDFRAG of an already-excluded name. *)
+fun exclude_ssfrags ({history,excluded,added,frag_name,setexcluded,...}
+                       : ('s,'h,'f) history_ops) rebuild names ss =
+    let
+      val excluded' = Binaryset.addList (excluded ss, names)
+      val isexcl = name_set_member excluded' o frag_name
+      fun filterthis item =
+        case added item of SOME f => not (isexcl f) | NONE => true
+    in
+      setexcluded excluded' (rebuild (List.filter filterthis (history ss)))
+    end
+
+(* Force-include a fragment, even if its name is in the simpset's
+   excluded set, and remove that name from the excluded set so that
+   subsequent [++] of the same fragment also succeeds. *)
+fun force_add ({excluded,frag_name,setexcluded,add,...}
+                 : ('s,'h,'f) history_ops) ss f =
+    add (setexcluded (include_name (excluded ss) (frag_name f)) ss, f)
 
 (*---------------------------------------------------------------------------*)
 (* Names of the conversions in a simpset's net                               *)
@@ -326,26 +411,26 @@ fun munge_simpset_name p =
     end
 
 (* ---------------------------------------------------------------------
- * USER_CONV wraps a bit of tracing around a user conversion: [enter]
- * before applying it, [leave] with its result and [failed] with the
- * exception it raised.
+ * USER_CONV wraps a bit of tracing around a user conversion.
  * ---------------------------------------------------------------------*)
 
-fun user_conv_tracing {name,trace=trace_level} =
+fun user_conv {name,trace=trace_level} =
   let val trace_string1 = "trying "^name^" on"
       val trace_string2 = name^" ineffectual"
       val trace_string3 = name^" left term unchanged"
       val trace_string4 = name^" raised an unusual exception (ignored)"
-  in
-    {enter = fn tm => trace(trace_level+2,Trace.REDUCE(trace_string1,tm)),
-     leave = fn (tm, thm) =>
-       (trace(trace_level,Trace.PRODUCE(tm,name,thm)); thm),
-     failed =
-       fn e as HOL_ERR _ =>
-            (trace (trace_level+2,Trace.TEXT trace_string2); raise e)
-        | e as Conv.UNCHANGED =>
-            (trace (trace_level+2,Trace.TEXT trace_string3); raise e)
-        | e => (trace (trace_level, Trace.TEXT trace_string4); raise e)}
+  in fn conv => fn tm =>
+      let val _ = trace(trace_level+2,Trace.REDUCE(trace_string1,tm))
+          val thm = conv tm
+      in
+        trace(trace_level,Trace.PRODUCE(tm,name,thm));
+        thm
+      end
+      handle e as HOL_ERR _ =>
+             (trace (trace_level+2,Trace.TEXT trace_string2); raise e)
+           | e as Conv.UNCHANGED =>
+             (trace (trace_level+2,Trace.TEXT trace_string3); raise e)
+           | e => (trace (trace_level, Trace.TEXT trace_string4); raise e)
   end
 
  val any = mk_var("x",Type.alpha);
@@ -592,6 +677,113 @@ fun tactic_only name =
                name ^ " is a tactic directive; it cannot be honoured by a " ^
                "conversion or rule")
 
+fun extension_only name =
+    raise ERR ("process_tags",
+               name ^ " is honoured only by the extension simplifier " ^
+               "(simpExtLib)")
+
+datatype exclusion_request = LiteralExclusion of string
+                           | ExtendedExclusion of string
+
+(* Sort a theorem-list argument by directive, keeping argument order.
+   Requirement directives are honoured only by the tactics, which strip
+   them (mk_require_tac) before reaching here; one arriving anyway would
+   be used as a rewrite and carry its marker$ hypothesis into every
+   result, so it is an error unless [report] is off, for an assumption
+   that is itself a requirement marker (its hypothesis is already the
+   goal's).  Assumption-policy directives are the tactic layer's too, but
+   rule-level calls inside a tactic (SIMP_RULE within FULL_SIMP_TAC) still
+   see them, so they are dropped.  Bounded rewrites are honoured by the
+   rewriter and pass through.  Split and ExclX need [extension]; ignoring
+   one would silently change the result, so without it they are errors.
+
+   When no directive matched, [ss] itself is returned rather than an equal
+   rebuilt simpset: the extension's global simplification tactic keys a
+   traversal cache on the simpset's physical identity. *)
+fun process_tags {frag_of, remove_ssfrags, add, force_add, cong_ac,
+                  extension, exclude} ss thl =
+    let
+      open markerLib
+      val report = case extension of SOME {report,...} => report
+                                   | NONE => true
+      (* A further bound is not itself a content directive. Look through
+         all bounds to classify, but retain the original real rewrite so
+         DEST_BOUNDED selects the same allowance as before preparation. *)
+      fun bounds_on_directive th =
+        case dest_directive th of
+            SOME (DBounded (plain,_)) => bounds_on_directive plain
+          | NONE => false
+          | _ => true
+      fun sort (th, acc as (congs, splits, acs, excls, exclfrags, frags,
+                            rest)) =
+          case dest_directive th of
+              NONE =>
+                (congs, splits, acs, excls, exclfrags, frags, th :: rest)
+            | SOME (DCong c) =>
+                (normCong c :: congs, splits, acs, excls, exclfrags, frags,
+                 rest)
+            | SOME (DSplit sp) =>
+                if isSome extension then
+                  (congs, sp :: splits, acs, excls, exclfrags, frags, rest)
+                else extension_only "Split"
+            | SOME (DAC p) =>
+                (congs, splits, p :: acs, excls, exclfrags, frags, rest)
+            | SOME (DExcl nm) =>
+                (congs, splits, acs, LiteralExclusion nm :: excls,
+                 exclfrags, frags, rest)
+            | SOME (DExclX nm) =>
+                if isSome extension then
+                  (congs, splits, acs, ExtendedExclusion nm :: excls,
+                   exclfrags, frags, rest)
+                else extension_only "ExclX"
+            | SOME (DExclSF nm) =>
+                (congs, splits, acs, excls, nm :: exclfrags, frags, rest)
+            | SOME (DFRAG nm) =>
+                (congs, splits, acs, excls, exclfrags, frag_of nm :: frags,
+                 rest)
+            | SOME (DBounded (plain,_)) =>
+                (* In the extension, bounds on directives do not turn them
+                   into rewrite facts. Genuine rewrite bounds retain their
+                   controls. *)
+                if isSome extension andalso bounds_on_directive plain
+                then sort (plain,acc)
+                else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
+            | SOME (DReq0 _) =>
+                if report then tactic_only "Req0"
+                else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
+            | SOME (DReqD _) =>
+                if report then tactic_only "ReqD"
+                else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
+            | SOME DNoAsms => acc
+            | SOME (DIgnAsm _) => acc
+            | SOME (DAbbr _) => acc
+            | SOME (DLabel _) => acc
+      val (congs, splits, acs, excludes, exclfrags, frags, rst) =
+          List.foldr sort ([], [], [], [], [], [], []) thl
+    in
+      if null congs andalso null splits andalso null acs andalso
+         null excludes andalso null frags andalso null exclfrags
+      then (ss, rst)
+      else
+        let
+          val base =
+            if null exclfrags then ss
+            else remove_ssfrags exclfrags ss handle Conv.UNCHANGED => ss
+          (* Cong/AC is named but never user-excludable; SF-derived frags
+             go through force_add so they override any active exclusion. *)
+          val withCongAc = add (base, cong_ac congs acs)
+          val withFrags =
+            List.foldl (fn (f,ss) => force_add ss f) withCongAc frags
+          val withSplits =
+            case extension of
+                NONE => withFrags
+              | SOME {add_split,...} =>
+                  List.foldl (fn (sp,ss) => add_split sp ss) withFrags splits
+        in
+          (exclude withSplits excludes, rst)
+        end
+    end
+
 fun SIMP_CONV {process_tags, qconv} ss l tm =
   let val (ss', l') = process_tags ss l
   in Conv.TRY_CONV (qconv ss' l') tm
@@ -688,13 +880,17 @@ fun stdcon (c : simptac_config) th =
         (caa_tac0 (not (#oldestfirst c)) c)
         th
 
-fun global_simp_tac {prepare, allasms, asm_simp_tac} cfg ss0 =
+fun popper_of (cfg : simptac_config) =
+    if #oldestfirst cfg then pop_last_assum else pop_assum
+
+fun global_simp_tac {process_tags, add_rewrites, allasms, asm_simp_tac}
+                    cfg ss0 =
     markerLib.mk_require_tac (
       markerLib.ABBRS_THEN (
         markerLib.LLABEL_RES_THEN (
           fn thl =>
              let
-               val ss = prepare ss0 thl
+               val ss = add_rewrites (process_tags ss0 thl)
                val allasms = allasms ()
              in
                rpt (CHANGED_TAC (allasms cfg ss)) THEN

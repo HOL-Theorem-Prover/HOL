@@ -53,6 +53,11 @@ sig
     {legacy : (term list -> term -> thm) -> term list -> conv,
      configured : config -> conv}
   val COND_REWR_CONVS : string * thm -> bool -> runners
+  (* Apply a bounded rewrite's conversion: fail once its count is 0, and
+     take one off the count each time it succeeds *)
+  val bounded_apply : int ref -> conv -> conv
+  (* Compose rewrite makers *)
+  val oo : ('b -> 'c list) * ('a -> 'b list) -> 'a -> 'c list
   val is_var_perm : term * term -> bool
   val QUANTIFY_CONDITIONS : controlled_thm -> controlled_thm list
   val stack_limit : int ref

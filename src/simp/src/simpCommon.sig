@@ -48,6 +48,22 @@ sig
       stdconvdata -> 'f
   val partition_ssfrags :
       ('f -> string option) -> string list -> 'f list -> 'f list * 'f list
+  (* How the history operations below take a simpset apart *)
+  type ('s,'h,'f) history_ops =
+    {history : 's -> 'h list, excluded : 's -> string Binaryset.set,
+     added : 'h -> 'f option, frag_name : 'f -> string option,
+     setexcluded : string Binaryset.set -> 's -> 's, add : 's * 'f -> 's}
+  (* [rebuild] replays a history, keeping the simpset's limit.  Removing
+     names that match no fragment raises Conv.UNCHANGED. *)
+  val remove_ssfrags :
+      ('s,'h,'f) history_ops -> ('h list -> 's) -> string list -> 's -> 's
+  val exclude_ssfrags :
+      ('s,'h,'f) history_ops -> ('h list -> 's) -> string list -> 's -> 's
+  val force_add : ('s,'h,'f) history_ops -> 's -> 'f -> 's
+  (* Leave out the items named in the list *)
+  val drop_named : ('a -> string option) -> string list -> 'a list -> 'a list
+  (* The distinct names of the named fragments *)
+  val frag_names : ('f -> string option) -> 'f list -> string list
   val same_frag : ('f -> string option) -> 'f -> 'f -> bool
 
   (* Fragment-name sets, where "" stands for the anonymous fragments *)
@@ -65,9 +81,8 @@ sig
       (string option * string) list -> string option -> string -> bool
   val munge_simpset_name : string -> string option * string
 
-  val user_conv_tracing :
-      {name : string, trace : int} ->
-      {enter : term -> unit, leave : term * thm -> thm, failed : exn -> thm}
+  (* Trace a user conversion's attempt and its outcome *)
+  val user_conv : {name : string, trace : int} -> conv -> conv
   val any : term
   val mk_ac : thm * thm -> (thname option * controlled_thm) list ->
               (thname option * controlled_thm) list
@@ -88,6 +103,20 @@ sig
             lookup_named_frag : string -> 'f option,
             register_frag : 'f -> 'f} -> 'f -> thm
   val tactic_only : string -> 'a
+
+  datatype exclusion_request = LiteralExclusion of string
+                             | ExtendedExclusion of string
+  (* Apply a theorem list's directives to a simpset and return it with the
+     remaining theorems; the simpset itself if no directive matched *)
+  val process_tags :
+      {frag_of : string -> 'f,
+       remove_ssfrags : string list -> 's -> 's,
+       add : 's * 'f -> 's,
+       force_add : 's -> 'f -> 's,
+       cong_ac : thm list -> (thm * thm) list -> 'f,
+       extension : {report : bool, add_split : thm -> 's -> 's} option,
+       exclude : 's -> exclusion_request list -> 's} ->
+      's -> thm list -> 's * thm list
   val SIMP_CONV : {process_tags : 's -> thm list -> 's * thm list,
                    qconv : 's -> thm list -> conv} -> 's -> thm list -> conv
   val SIMP_PROVE : {process_tags : 's -> thm list -> 's * thm list,
@@ -104,6 +133,9 @@ sig
   val BF_ASSUME_TAC : bool -> thm -> tactic
   val caa_tac0 : bool -> simptac_config -> thm -> tactic
   val stdcon : simptac_config -> thm -> tactic
+  (* pop_last_assum when the configuration takes the oldest assumption
+     first, else pop_assum *)
+  val popper_of : simptac_config -> thm_tactic -> tactic
   val full_simp_tacs :
       {simp_rule : 's -> thm list -> thm -> thm,
        asm_simp_tac : 's -> thm list -> tactic} ->
@@ -112,7 +144,8 @@ sig
        NO_STRIP_FULL_SIMP_TAC : 's -> thm list -> tactic,
        NO_STRIP_REV_FULL_SIMP_TAC : 's -> thm list -> tactic}
   val global_simp_tac :
-      {prepare : 's -> thm list -> 's,
+      {process_tags : 's -> thm list -> 's * thm list,
+       add_rewrites : 's * thm list -> 's,
        allasms : unit -> simptac_config -> 's -> tactic,
        asm_simp_tac : 's -> thm list -> tactic} ->
       simptac_config -> 's -> thm list -> tactic

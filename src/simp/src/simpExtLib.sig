@@ -275,6 +275,11 @@ sig
      TraverseExt.XTRAVERSE. *)
   val traverseconfig_for_ss: simpset -> TraverseExt.traverse_config
   val xtraversedata_for_ss: simpset -> TraverseExt.xtraverse_data
+  (* The traversal SIMP_QCONV runs: the simpset's reducers and travrules,
+     with TraverseExt.TRAVERSE or, when the simpset carries settings a
+     conversion consumes, TraverseExt.XTRAVERSE with them. *)
+  val traversal_for_ss: simpset -> TraverseExt.traverse_data *
+                        (TraverseExt.traverse_data -> thm list -> conv)
 
 
    (* ---------------------------------------------------------------------

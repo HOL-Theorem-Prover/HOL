@@ -5,7 +5,6 @@ struct
 open HolKernel boolLib liteLib Trace
 
 (* Preserve the observable diagnostic origin of the conditional engine. *)
-fun WRAP_ERR x = STRUCT_WRAP "Cond_rewr" x
 fun ERR x = STRUCT_ERR "Cond_rewr" x
 
 type config = Cond_rewr.config
@@ -35,12 +34,10 @@ fun bind (shape : runners) control =
   case control of
       BoundedRewrites.UNBOUNDED => shape
     | BoundedRewrites.BOUNDED r =>
-        {legacy = fn solver => fn stack => fn tm =>
-           if !r = 0 then failwith "exceeded rewrite bound"
-           else #legacy shape solver stack tm before Portable.dec r,
-         configured = fn ctxt => fn tm =>
-           if !r = 0 then failwith "exceeded rewrite bound"
-           else #configured shape ctxt tm before Portable.dec r}
+        {legacy = fn solver => fn stack =>
+           Cond_rewr.bounded_apply r (#legacy shape solver stack),
+         configured = fn ctxt =>
+           Cond_rewr.bounded_apply r (#configured shape ctxt)}
 fun prepare nmth control =
   let
     val bounded = is_bounded control

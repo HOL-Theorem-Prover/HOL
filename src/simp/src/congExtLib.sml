@@ -12,34 +12,20 @@ congLibFn
      type simpset = simpExtLib.simpset
      val lift = TraverseExt.lift
      val addctxt = TraverseExt.addctxt
-     fun eq_reducer_wrapper reducer =
+     fun wrap_apply f reducer =
        let
          val {name,initial,addcontext,apply} =
              TraverseExt.reducer_config_data reducer
-         fun wrapped (args as {relation=(_,refl),...}) tm =
-           let
-             val eqthm = apply args tm
-             val relthm = refl tm
-           in
-             CONV_RULE (RAND_CONV (REWR_CONV eqthm)) relthm
-           end
        in
          TraverseExt.CONFIG_REDUCER
-           {name=name, addcontext=addcontext, apply=wrapped, initial=initial}
+           {name=name, initial=initial, addcontext=addcontext,
+            apply=fn args as {relation=(_,refl),...} => f refl (apply args)}
        end
      val CONGPROC = Opening.THREADED_CONGPROC
-     (* Match SIMP_QCONV: only conversion-consumed settings opt into
-        per-application context refresh. *)
      fun traversal ss =
        let
-         val config = simpExtLib.traverseconfig_for_ss ss
          val ({rewriters,dprocs,travrules,...},traverse) =
-           case config of
-               {subgoaler=NONE,solvers=[],cond_depth=NONE,term_ord=NONE} =>
-                 (simpExtLib.traversedata_for_ss ss, TraverseExt.TRAVERSE)
-             | _ =>
-                 (#1 (simpExtLib.xtraversedata_for_ss ss),
-                  fn data => TraverseExt.XTRAVERSE (data,config))
+             simpExtLib.traversal_for_ss ss
        in
          ({rewriters=rewriters, dprocs=dprocs, travrules=travrules}, traverse)
        end

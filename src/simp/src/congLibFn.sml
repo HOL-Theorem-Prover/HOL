@@ -44,8 +44,8 @@ end
 
 
 (* The engine a congruence library runs on.  lift turns the library's own
-   cong_reducer into an engine reducer; eq_reducer_wrapper makes a simpset
-   reducer, which proves equations, prove the reflexive relation instead;
+   cong_reducer into an engine reducer; wrap_apply f r rebuilds r with its
+   apply function wrapped by f, which is given the relation's reflexivity;
    traversal projects a simpset's reducers and travrules together with the
    traversal to run them with. *)
 functor congLibFn
@@ -54,7 +54,9 @@ functor congLibFn
          type simpset
          val lift : Traverse.reducer -> reducer
          val addctxt : Abbrev.thm list -> reducer -> reducer
-         val eq_reducer_wrapper : reducer -> reducer
+         val wrap_apply :
+             ((Abbrev.term -> Abbrev.thm) -> Abbrev.conv -> Abbrev.conv) ->
+             reducer -> reducer
          val CONGPROC : ({Rinst:Abbrev.term,arg:Abbrev.term} -> Abbrev.thm) ->
                         Abbrev.thm -> Opening.congproc
          val traversal :
@@ -71,6 +73,19 @@ local open Trace Cond_rewr in end
 
 type reducer = E.reducer
 type simpset = E.simpset
+
+(* A simpset reducer proves equations; prove the relation from reflexivity
+   instead.  The reducer runs first, then reflexivity, then REWR_CONV's
+   matcher. *)
+val eq_reducer_wrapper =
+    E.wrap_apply
+      (fn refl => fn eqconv => fn tm =>
+          let
+            val eqthm = eqconv tm
+            val relthm = refl tm
+          in
+            CONV_RULE (RAND_CONV (REWR_CONV eqthm)) relthm
+          end)
 
 
 (*
@@ -314,9 +329,9 @@ fun CONGRUENCE_SIMP_QCONV relation (cs as (CS csdata)) ss =
       weakenprocs=[]};
     val (traversedata, traverse) = E.traversal ss
     val data = {rewriters= (#cong_reducer csdata)::
-          (map E.eq_reducer_wrapper (#rewriters traversedata)),
+          (map eq_reducer_wrapper (#rewriters traversedata)),
           dprocs= #dprocs csdata @
-                  map E.eq_reducer_wrapper (#dprocs traversedata),
+                  map eq_reducer_wrapper (#dprocs traversedata),
           relation=relation, limit= #limit csdata,
           travrules=merge_travrules
             ([eq_congsTravrule,#travrules traversedata] @
