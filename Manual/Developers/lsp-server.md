@@ -294,7 +294,7 @@ In addition to the usual LSP commands, the server supports the following extensi
 * The `$/hol/retryCompile` notification asks the server to compile a file
   it has blocked, without waiting for the header to change.  It is for the
   case where the missing ancestor has been built outside the editor.
-    * `uri: URI` - the file to compile
+    * `textDocument: TextDocumentIdentifier` - the file to compile
 
 * > **TODO** superseded, and never implemented in this form.  The
   > shipped request is `$/hol/goalState`, which answers the same
