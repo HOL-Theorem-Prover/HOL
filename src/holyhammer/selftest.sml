@@ -4702,6 +4702,58 @@ fun test_schedule_isolation parser =
       (not (List.exists is_dir roots) andalso is_dir (OS.Path.dir (hd roots)))
   end
 
+(* Two runs at once, as hh_fork makes, each with a goal Metis proves only
+   from its own lemma, 20 times (in under a second).  Both verify, and
+   neither prints, even with the Metis trace on: the output of both is
+   captured, and expect checks that fd 1 is the run's own again. *)
+fun test_schedule_concurrent_runs parser =
+  let
+    val name = "hh-schedule-concurrent"
+    fun config prover recording =
+      printer_config name [fixture_slice prover ["0", recording] 1]
+        (fn _ => ()) parser
+    val add1 = ([], Thm.concl (DB.fetch "arithmetic" "ADD1"))
+    val append = ([], Thm.concl (DB.fetch "list" "LENGTH_APPEND"))
+    fun verified prover goal lemma =
+      let
+        val (result, events) =
+          run_schedule_on goal (fixture_options [prover] 1 1 5 false "" NONE)
+      in
+        #stopped result = hhSchedule.MaxProofs andalso
+        not (List.exists (String.isPrefix "not-replayed|") events) andalso
+        case #suggestions result of
+            [suggestion] => #lemmas suggestion = [lemma]
+          | _ => false
+      end
+    fun round () =
+      let
+        val first = ref NONE
+        val thread = Thread.fork (fn () => first := SOME
+          (verified Z3 add1 "arithmeticTheory.ADD1"), [])
+        val second = verified Vampire append "listTheory.LENGTH_APPEND"
+        val _ = await_schedule_test "concurrent run did not finish"
+          (fn () => not (Thread.isActive thread))
+      in
+        !first = SOME true andalso second
+      end
+    val output = OS.FileSys.tmpName ()
+    val trace = HOLFlags.current_trace "metis.trace"
+    fun rounds () =
+      with_fixtures [(Z3, config Z3 "schedule-add1.out"),
+                     (Vampire, config Vampire "schedule-length-append.out")]
+        (fn () => List.all round (List.tabulate (20, fn _ => ())))
+    val all_verified =
+      (HOLFlags.set_trace "metis.trace" 1;
+       smlRedirect.hide_in_file output rounds ()
+       before HOLFlags.set_trace "metis.trace" trace)
+      handle e => (HOLFlags.set_trace "metis.trace" trace; raise e)
+    val printed = String.concat (read_lines output)
+  in
+    OS.FileSys.remove output;
+    expect "concurrent runs verify their own proofs" all_verified;
+    expect "concurrent runs print nothing" (printed = "")
+  end
+
 fun test_schedule_timeout parser =
   let
     val name = "hh-schedule-timeout"
@@ -5398,6 +5450,7 @@ fun test_hhSchedule () =
           val _ = test_schedule_cache parser
           val _ = test_schedule_cancelled_cache parser
           val _ = test_schedule_isolation parser
+          val _ = test_schedule_concurrent_runs parser
           val _ = test_schedule_timeout parser
           val _ = test_schedule_filter_rankings parser
           val _ = test_schedule_deadline_recon parser
