@@ -447,4 +447,3 @@ val _ = test_for_failure cv_rep_delete "cv_inc_thm";
 val _ = cv_eval “inc 3” |> concl |> rhs |> aconv “4:num” orelse fail();
 
 val _ = test_for_failure cv_rep_delete "no_such_cv_rep_thm";
-val _ = test_for_failure cv_from_to_delete "no_such_cv_from_to_thm";

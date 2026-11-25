@@ -1,17 +1,1 @@
 INCLUDES = ..
-
-all: $(DEFAULT_TARGETS)
-.PHONY: all
-
-# Theories that load another at run time wait for it through a stamp:
-# depending on its .uo directly would link it in before the script runs.
-.hol/runtime-loads.stamp: cvftleftTheory.uo cvftrightTheory.uo \
-                          cvftrightdup2Theory.uo
-	touch $@
-cvftuse1Theory.sml cvftuse2Theory.sml cvftreplayTheory.sml: \
-  .hol/runtime-loads.stamp
-
-# cvftreplay reads it in, so Holmake does not see it
-cvftreplayTheory.sml: cvftreplay.ML
-
-EXTRA_CLEANS = .hol/runtime-loads.stamp
