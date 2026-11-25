@@ -114,14 +114,4 @@ sig
     {expname : string, ncore : int, thyl : string list,
      conditions : condition list} -> unit
 
-  (* The kind of condition a smoke goal is run under: one prover alone,
-     the schedule, or one prover with a learned premise selector. *)
-  datatype smoke_kind =
-      SmokeProver of hhProver.prover
-    | SmokeSched
-    | SmokeMepo
-    | SmokeMash
-    | SmokeMesh
-  val smoke_goals : (string * string * smoke_kind) list
-  val run_smoke : {expdir : string, timeout : int} -> journal_entry list
 end

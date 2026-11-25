@@ -146,3 +146,7 @@ To check the installed provers end to end:
 
     cd src/holyhammer
     ../../bin/Holmake smoke.exe && ./smoke.exe
+
+The evaluation harness `hhEval`, which runs HOLyHammer over whole theories
+and reports on the results, is in `evaluation/` (see its `README`); it is
+not part of the default build.

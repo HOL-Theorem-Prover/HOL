@@ -2,7 +2,7 @@ all: $(DEFAULT_TARGETS) hhNames.uo hhPool.uo hhStature.uo hhMePo.uo \
      hhFactIndex.uo hhLearn.uo hhTptpProblem.uo hhTypeEnc.uo \
      hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
      hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo \
-     hhEval.uo selftest.exe smoke.exe
+     selftest.exe smoke.exe
 
 hhTptpProblem.uo: hhTptpProblem.sml hhTptpProblem.ui
 
@@ -39,9 +39,6 @@ hhCache.uo: hhCache.sml hhCache.ui hhConfig.uo hhProver.uo
 hhSchedule.uo: hhSchedule.sml hhSchedule.ui hhPool.uo hhConfig.uo hhProver.uo \
                hhSlice.uo hhCache.uo hhProblemGen.uo
 
-hhEval.uo: hhEval.sml hhEval.ui hhConfig.uo hhProver.uo hhSlice.uo \
-           hhFactIndex.uo hhSchedule.uo holyHammer.uo
-
 holyHammer.uo: holyHammer.sml holyHammer.ui hhConfig.uo hhProver.uo \
                hhSlice.uo hhSchedule.uo hhLearn.uo
 
@@ -49,9 +46,10 @@ selftest.uo: selftest.sml hhNames.uo hhStature.uo hhMePo.uo hhLearn.uo \
              hhTptpProblem.uo hhTypeEnc.uo \
              hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
              hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo \
-             hhEval.uo holyHammer.uo
+             holyHammer.uo hhTestLib.uo
 
-smoke.uo: smoke.sml hhEval.uo
+smoke.uo: smoke.sml hhConfig.uo hhProver.uo hhSlice.uo hhLearn.uo \
+          hhSchedule.uo holyHammer.uo
 .PHONY: all
 
 selftest.exe: selftest.uo

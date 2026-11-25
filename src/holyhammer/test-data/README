@@ -31,5 +31,4 @@ reconstruction deadline test parses itself, to have lists to tell apart.
 
 `hhproblemgen-roundtrip.out` is TSTP output for the parse-back tests.
 `problems/` holds golden TPTP problems emitted by `hhTptpProblem` and
-`hhProblemGen` for FOF, TF0, TX0, TF1, TH0, and TH1.  `hheval-report/`
-holds `hhEval` journals for the report test.
+`hhProblemGen` for FOF, TF0, TX0, TF1, TH0, and TH1.
