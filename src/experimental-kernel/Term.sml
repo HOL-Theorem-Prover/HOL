@@ -73,20 +73,35 @@ in
 end
 
 fun uptodate_term tm = let
+  val tsig = termsig ()    (* one snapshot for the whole traversal *)
+  (* constants (with their types) already found up to date during this
+     traversal, in a direct-mapped cache indexed by the id's epoch, so that
+     the repeated constants of a large term cost two pointer comparisons *)
+  val csize = 1024
+  val cache = Array.array (csize, NONE)
   fun recurse tmlist =
       case tmlist of
         [] => true
-      | tm :: rest => let
-        in
-          case tm of
-            Var(s, ty) => uptodate_type ty andalso recurse rest
-          | Const(info, ty) =>
-              KernelSig.uptodate_id (termsig()) info andalso
-              uptodate_type (to_hol_type ty) andalso
-              recurse rest
-          | App(f, x) => recurse (f::x::rest)
-          | Abs(v, body) => recurse (v::body::rest)
-        end
+      | tm :: rest =>
+        case tm of
+          Var(s, ty) => uptodate_type ty andalso recurse rest
+        | Const(info, ty) => let
+          val slot = KernelSig.epoch_of info mod csize
+          val hit = case Array.sub (cache, slot) of
+            SOME (info', ty') =>
+            Portable.pointer_eq (info', info) andalso
+            Portable.pointer_eq (ty', ty)
+          | NONE => false
+          in
+            if hit then recurse rest
+            else if KernelSig.uptodate_id tsig info andalso
+                    uptodate_type (to_hol_type ty)
+            then (Array.update (cache, slot, SOME (info, ty));
+                  recurse rest)
+            else false
+          end
+        | App(f, x) => recurse (f::x::rest)
+        | Abs(v, body) => recurse (v::body::rest)
 in
   recurse [tm]
 end
