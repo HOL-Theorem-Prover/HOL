@@ -102,16 +102,17 @@ fun test_child root =
     val _ = make_executable path_exec
     val _ = mkdirs (join root "path2")
     val _ = make_executable path_ho
+    val config_settings =
+      "# user configuration\n\
+      \priority = user # comments are ignored\n\
+      \integer = 42\n\
+      \enabled = YeS\n\
+      \path.value = ~/.fixture\n\
+      \plain = key = value\n\
+      \timeout = 21\n\
+      \cores = 3\n"
     val config_contents =
-      ("# user configuration\n\
-       \priority = user # comments are ignored\n\
-       \integer = 42\n\
-       \enabled = YeS\n\
-       \path.value = ~/.fixture\n\
-       \plain = key = value\n\
-       \timeout = 21\n\
-       \cores = 3\n\
-       \prover.e.executable = " ^ config_exec ^ "\n")
+      config_settings ^ "prover.e.executable = " ^ config_exec ^ "\n"
     val _ = aiLib.write_file config config_contents
     val _ = expect "state directory" (OS.FileSys.isDir (hhConfig.state_dir ()))
     val _ = expect "comment and assignment parsing"
@@ -271,19 +272,25 @@ fun test_child root =
           handle Feedback.HOL_ERR _ => true) andalso
        ((hhConfig.snapshot_with [("no_such_option", "1")]; false)
           handle Feedback.HOL_ERR _ => true))
-    fun find_e () =
-      hhConfig.find_exec "e" "HOL4_EPROVER_EXECUTABLE" ["probe-exec"]
+    fun find_e env_var = hhConfig.find_exec "e" env_var ["probe-exec"]
     val _ = expect "PATH prefers an earlier name to an earlier directory"
       (is_some path_ho (hhConfig.find_exec "probe" unset_env_var
                           ["probe-ho", "probe-exec"]))
     fun found_without file expected =
-      (OS.FileSys.remove file; is_some expected (find_e ()))
+      (OS.FileSys.remove file; is_some expected (find_e unset_env_var))
     val _ = expect "configured executable precedes the environment"
-      (is_some config_exec (find_e ()))
+      (is_some config_exec (find_e "HOL4_EPROVER_EXECUTABLE"))
+    val _ = OS.FileSys.remove config_exec
+    val _ = expect "a configured path that is no executable is final"
+      (find_e "HOL4_EPROVER_EXECUTABLE" = NONE)
+    val _ = aiLib.write_file config config_settings
     val _ = expect "environment executable precedes PATH"
-      (found_without config_exec env_exec)
+      (is_some env_exec (find_e "HOL4_EPROVER_EXECUTABLE"))
+    val _ = OS.FileSys.remove env_exec
+    val _ = expect "an environment path that is no executable is final"
+      (find_e "HOL4_EPROVER_EXECUTABLE" = NONE)
     val _ = expect "PATH precedes the installations"
-      (found_without env_exec path_exec)
+      (is_some path_exec (find_e unset_env_var))
     val _ = expect "state installation precedes the user's"
       (found_without path_exec state_exec)
     val _ = expect "newest user installation is found"

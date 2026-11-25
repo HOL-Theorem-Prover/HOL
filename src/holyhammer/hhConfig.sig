@@ -90,9 +90,11 @@ sig
   val snapshot_with : (string * string) list -> hh_options
 
   val platform : unit -> string
-  (* find_exec prover env_var names: the config file's
-     prover.<prover>.executable, then env_var, the first of names on PATH,
-     and the newest <prover>-<version>/<platform>/ holding one of names in
-     the state directory's provers, then in ~/.hol4/hammer/provers. *)
+  (* find_exec prover env_var names: the path the config file's
+     prover.<prover>.executable gives, else env_var's, when either is set
+     (NONE if it is no executable file); otherwise the first of names on
+     PATH, else the newest <prover>-<version>/<platform>/ holding one of
+     names in the state directory's provers, then in
+     ~/.hol4/hammer/provers. *)
   val find_exec : string -> string -> string list -> string option
 end
