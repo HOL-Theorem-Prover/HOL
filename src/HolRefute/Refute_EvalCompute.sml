@@ -9,8 +9,52 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
      (src/compute/src/equations.sml:185).  So nothing is caught here:
      every exception escaping evaluation is an evaluator defect and must
      reach the GaveUp handlers in [run] rather than be filed as a stuck
-     candidate.  Stuckness is read off the shape of tm' instead. *)
-  fun eval_rhs env tm = rhs_of (eval (instantiate env tm))
+     candidate.  Stuckness is read off the shape of tm' instead.  The one
+     exception caught is the step budget's own, below. *)
+
+  (* A candidate's evaluation stops after this many rewrite steps and
+     leaves the candidate unevaluated, so the search reads it as stuck.  A
+     candidate computing a hash function by rewriting ran for millions of
+     steps without finishing while its terms filled the heap; the
+     evaluations seen deciding candidates take under 10,000 steps.
+     [computeLib.CBVn_CONV] can't bound it: it sets the global
+     [computeLib.stoppers] for the length of its call, which races with
+     backends evaluating on other threads, and its stopper only refuses a
+     rewrite, so the evaluation goes on with the others. *)
+  val evaluation_steps = 1000000
+
+  exception OutOfSteps
+
+  val steps_left : int ref Thread_Data.var = Thread_Data.var ()
+
+  (* One stopper, put in [computeLib.stoppers] when this structure loads
+     and never replaced from here, counts the steps of a thread evaluating
+     under a budget and hands every other thread's to the stopper it found
+     there, so evaluation outside the search is unchanged.  A
+     [Lib.with_flag] on [computeLib.stoppers] elsewhere puts its own
+     stopper there for the length of its call: [CBVn_CONV]'s calls this
+     one, [RESTR_EVAL_CONV]'s doesn't, so while one of the latter runs on
+     another thread the steps go uncounted, and counting resumes once it
+     restores this stopper. *)
+  local
+    val previous = !computeLib.stoppers
+    fun stop head =
+      case Thread_Data.get steps_left of
+          SOME left =>
+            if !left <= 0 then raise OutOfSteps
+            else (left := !left - 1; false)
+        | NONE => (case previous of SOME f => f head | NONE => false)
+  in
+    val _ = computeLib.stoppers := SOME stop
+  end
+
+  fun eval_rhs env tm =
+    let val instance = instantiate env tm in
+      rhs_of
+        (Thread_Data.setmp steps_left (SOME (ref evaluation_steps))
+           eval instance)
+      handle OutOfSteps => instance
+    end
 
   datatype boolean_value = IsTrue | IsFalse | IsStuck
 

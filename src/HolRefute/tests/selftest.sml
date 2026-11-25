@@ -5811,6 +5811,21 @@ val _ = test "a looping srw_ss conversion stops at the step limit" (fn () =>
       | NONE => false
   end)
 
+(* A candidate whose evaluation takes 10^8 rewrite steps.  Its evaluation
+   is cut at the step budget and the candidate counts as stuck, so the
+   search ends without a verdict instead of evaluating until the
+   deadline. *)
+val _ = test "a candidate's evaluation stops at its step budget" (fn () =>
+  let
+    val outcome =
+      refute (exhaustive |> upd_substrate Compute |> upd_size 1
+                         |> upd_timeout 60.0)
+             ``n < 2 ==> FUNPOW SUC 100000000 n = 0``
+  in
+    unknown_with "search space not exhausted" outcome andalso
+    not (unknown_with "timed out" outcome)
+  end)
+
 (* ------------------------------------------------------------------- *)
 (* Potential counterexamples and retries.  Registers a restricted       *)
 (* ``:num list`` generator, so this stays last.                         *)
