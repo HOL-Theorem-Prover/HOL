@@ -8,7 +8,6 @@ sig
      minimization_timeout at hhConfig.default_minimize_timeout.  Every
      replay limit and time is in CPU seconds of the thread running the
      replay (smlTimeout.thread_timeout). *)
-  val reconstruct_flag : bool ref
   val minimization_timeout : real ref
   val reconstruction_timeout : real ref
 

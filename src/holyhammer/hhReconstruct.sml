@@ -18,7 +18,6 @@ val ERR = mk_HOL_ERR "hhReconstruct"
    Settings
    -------------------------------------------------------------------------- *)
 
-val reconstruct_flag = ref true
 val minimization_timeout = ref hhConfig.default_minimize_timeout
 val reconstruction_timeout = ref hhConfig.default_preplay_timeout
 
@@ -185,36 +184,32 @@ fun preplay preplay_timeout lemmas g =
 
 fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
                           minimize_deadline} : settings) lemmas g =
-  if not (!reconstruct_flag)
-  then (print_endline (mk_metis_call lemmas);
-        raise ERR "hh_minimize" "reconstruction off")
-  else
-    let
-      fun result stac (tac, time) : reconstruction =
-        {stac = stac, tac = tac, t_replay = time}
-    in
-      (* Replay before minimising: a list Metis cannot replay fails at
-         once instead of being minimised attempt by attempt. *)
-      case preplay preplay_timeout lemmas g of
-          NONE => raise ERR "hh_reconstruct" "reconstruction failed"
-        | SOME (replayed, full) =>
-            if not minimize then result (mk_metis_call replayed) full
-            else
-              let
-                val (kept, best) = minimize_lemmas minimize_timeout
-                  minimize_deadline g replayed full
-                val raw = mk_metis_call kept
-                val pretty =
-                  psMinimize.unsafe_prettify_stac
-                    (mk_metis_call (map bound_name kept))
-              in
-                (* The short names are resolved in the current namespace,
-                   so the printed form is verified on its own. *)
-                case replay preplay_timeout pretty g of
-                    SOME found => result pretty found
-                  | NONE => result raw best
-              end
-    end
+  let
+    fun result stac (tac, time) : reconstruction =
+      {stac = stac, tac = tac, t_replay = time}
+  in
+    (* Replay before minimising: a list Metis cannot replay fails at once
+       instead of being minimised attempt by attempt. *)
+    case preplay preplay_timeout lemmas g of
+        NONE => raise ERR "hh_reconstruct" "reconstruction failed"
+      | SOME (replayed, full) =>
+          if not minimize then result (mk_metis_call replayed) full
+          else
+            let
+              val (kept, best) = minimize_lemmas minimize_timeout
+                minimize_deadline g replayed full
+              val raw = mk_metis_call kept
+              val pretty =
+                psMinimize.unsafe_prettify_stac
+                  (mk_metis_call (map bound_name kept))
+            in
+              (* The short names are resolved in the current namespace,
+                 so the printed form is verified on its own. *)
+              case replay preplay_timeout pretty g of
+                  SOME found => result pretty found
+                | NONE => result raw best
+            end
+  end
 
 fun hh_reconstruct lemmas g =
   let
