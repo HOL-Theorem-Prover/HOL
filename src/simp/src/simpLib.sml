@@ -354,8 +354,6 @@ fun getlimit (SS ss) = #limit ss
        flatten (map (mk_named_rewrs mk_rewrs') (ac_rewrites ac @ crewrs))
    val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
    val net = net_add_convs initial_net newconvdata
-   fun travrel (TRAVRULES{relations,...}) = relations
-   val sset_rels = travrel travrules
    (* give the existing dprocs the rewrs as additional context -
       assume the provided dprocs in the frag have already been
       primed *)
@@ -364,10 +362,6 @@ fun getlimit (SS ss) = #limit ss
        if null dprocs' then []
        else map (Traverse.addctxt (map #2 rewrs)) dprocs'
    val new_dprocs = existing_dprocs @ dprocs @ relreducers
-
-   val reltravs = map rsd_travrules relsimps
-   val relrels = List.concat (map travrel reltravs)
-   val relations = sset_rels @ relrels
  in
    SS {
        mk_rewrs    = mk_rewrs,
@@ -376,8 +370,9 @@ fun getlimit (SS ss) = #limit ss
        limit       = limit,
        dprocs      = new_dprocs,
        excluded    = excluded,
-       travrules   = merge_travrules
-                         (travrules::mk_travrules relations congs::reltravs)
+       travrules   = simpCommon.frag_travrules
+                       {travrules = travrules, congs = congs,
+                        threaded_congs = [], relsimps = relsimps}
    }
  end
 

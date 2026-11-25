@@ -1578,8 +1578,6 @@ fun mk_tactic_solver (name,tac) =
      net_add_convs initial_net view_convs
      |> itlist (net_add_conv o #1) native
      |> (fn net => net_add_convs net convs)
-   fun travrel (TRAVRULES{relations,...}) = relations
-   val sset_rels = travrel travrules
    (* give the existing dprocs the rewrs as additional context -
       assume the provided dprocs in the frag have already been
       primed *)
@@ -1625,9 +1623,6 @@ fun mk_tactic_solver (name,tac) =
        in map (TraverseExt.addctxt context_thms) dprocs' @ dprocs @ relreducers
        end
 
-   val reltravs = map rsd_travrules relsimps
-   val relrels = List.concat (map travrel reltravs)
-   val relations = sset_rels @ relrels
    val strategy = #strategy sset
    val strategy =
      if null (#loopers ssf) andalso null (#unsafe_solvers ssf) andalso
@@ -1652,11 +1647,9 @@ fun mk_tactic_solver (name,tac) =
          (List.foldr (fn ((data,_),sources) => retain_source (data,sources))
             view_rewrites native) convs
      val travrules =
-       merge_travrules
-         (travrules::mk_travrules relations congs::
-          (if null threaded_congs then reltravs
-           else Travrules.mk_threaded_travrules relations
-                                            threaded_congs::reltravs))
+       simpCommon.frag_travrules
+         {travrules = travrules, congs = congs,
+          threaded_congs = threaded_congs, relsimps = relsimps}
    in
      SS {mk_rewrs = mk_rewrs, history = history, initial_net = net,
          rewrite_sources = rewrite_sources, native_sources = native_sources,

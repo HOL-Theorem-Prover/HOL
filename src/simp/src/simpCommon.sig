@@ -92,6 +92,12 @@ sig
 
   val equality_po : Travrules.preorder
   val rsd_travrules : relsimpdata -> Travrules.travrules
+  (* A simpset's travrules after adding a fragment's congruences,
+     threaded congruences and relation simpsets *)
+  val frag_travrules :
+      {travrules : Travrules.travrules, congs : thm list,
+       threaded_congs : thm list, relsimps : relsimpdata list} ->
+      Travrules.travrules
   val rsd_reducer : relsimpdata -> Traverse.reducer
   val relsimp_weakener :
       relsimpdata -> Travrules.preorder list * thm list * Traverse.reducer

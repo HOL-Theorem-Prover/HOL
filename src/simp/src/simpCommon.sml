@@ -631,6 +631,20 @@ fun user_conv {name,trace=trace_level} =
  fun rsd_reducer rsd =
      mk_reducer (rsd_rel rsd) (#subsets rsd) (#rewrs rsd)
 
+ fun frag_travrules {travrules, congs, threaded_congs, relsimps} =
+   let
+     fun rels (Travrules.TRAVRULES {relations,...}) = relations
+     val reltravs = map rsd_travrules relsimps
+     val relations = rels travrules @ List.concat (map rels reltravs)
+     val threaded =
+         if null threaded_congs then reltravs
+         else Travrules.mk_threaded_travrules relations threaded_congs
+              :: reltravs
+   in
+     Travrules.merge_travrules
+       (travrules :: Travrules.mk_travrules relations congs :: threaded)
+   end
+
  fun relsimp_weakener (rsd as {refl,trans,weakenings,subsets,rewrs}) = let
    val rel_t = rsd_rel rsd
    val rel_po = rsd_po rsd
