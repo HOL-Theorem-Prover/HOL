@@ -2112,12 +2112,6 @@ fun counter () =
   valOf (Int.fromString (String.extract (Type.dest_vartype
     (Type.gen_tyvar ()), size "%%gen_tyvar%%", NONE)))
 
-(* The same for the term-variable counter (Term.genvar), which a proof
-   replay draws from as well. *)
-fun genvar_counter () =
-  valOf (Int.fromString (String.extract (#1 (Term.dest_var
-    (Term.genvar Type.alpha)), size "%%genvar%%", NONE)))
-
 fun advance_to target =
   let
     fun advance n = if n <= 0 then () else (Type.gen_tyvar (); advance (n - 1))
@@ -6819,64 +6813,16 @@ fun test_schedule_pool () =
     ()
   end
 
-(* The hoisted named fetch (once per filter at its largest count, prefixes
-   by name) gives the theorems of the lazy fetch of each selection, and a
-   missing theorem raises when the hoisted fetch is made. *)
-fun test_schedule_hoisted_fetch () =
-  let
-    open StagedFixture
-    val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    val options = options_with 1 1 NONE NONE
-    val twice = ["listTheory.APPEND_NIL", "listTheory.APPEND_NIL",
-                 "listTheory.APPEND_ASSOC", "listTheory.LENGTH_APPEND"]
-    val rankings = [("knn", ranking), ("mepo", twice)]
-    val schedule =
-      [(e, legacy Eprover "knn" 2), (vampire, legacy Vampire "knn" 2),
-       (e, generated Eprover "knn" 3), (e, legacy Eprover "mepo" 3),
-       (vampire, generated Vampire "mepo" 2),
-       (e, generated Eprover "mepo" 4)]
-    val works = hhSchedule.ordered_work root options rankings schedule
-    val keys = List.mapPartial
-      (fn {kind = hhSchedule.CopyLegacy _, ...} => NONE
-        | {key, ...} => SOME key) works
-    fun same left right =
-      length left = length right andalso
-      ListPair.all (fn ((n1, th1), (n2, th2)) =>
-        n1 = n2 andalso Term.aconv (Thm.concl th1) (Thm.concl th2))
-        (left, right)
-    val lazy = hhSchedule.lazy_named rankings
-    val hoisted = hhSchedule.hoisted_named rankings works
-    val _ = expect "hoisted fetch gives the theorems of each lazy selection"
-      (length keys = 5 andalso
-       List.all (fn key => same (lazy key) (hoisted key)) keys)
-    val _ = expect "hoisted fetch keeps a repeated name once per position"
-      (map #1 (hoisted ("mepo", 2)) =
-         ["listTheory.APPEND_NIL", "listTheory.APPEND_NIL"] andalso
-       length (hoisted ("mepo", 3)) = 3)
-    val missing = [("knn", ranking @ ["listTheory.NO_SUCH_THEOREM"])]
-    val short = [(e, legacy Eprover "knn" 2), (e, generated Eprover "knn" 4)]
-    val missing_works = hhSchedule.ordered_work root options missing short
-    val _ = expect "a missing theorem raises when the hoisted fetch is made"
-      ((ignore (hhSchedule.hoisted_named missing missing_works); false)
-       handle _ => true)
-    val _ = expect "a missing theorem raises at first use of the lazy fetch"
-      (length (hhSchedule.lazy_named missing ("knn", 2)) = 2 andalso
-       ((ignore (hhSchedule.lazy_named missing ("knn", 4)); false)
-        handle _ => true))
-  in
-    remove_tree root
-  end
-
-(* The pipelined run_in (selected by hhSchedule_Test.export_choice).  Fixture:
-   two fixture provers and five slices (two legacy, three generated) over
-   the premises of a goal that Metis proves from LENGTH_APPEND.  Every
-   prover reads its whole problem file when it starts; the blocking export
-   of the same schedule, at a fresh counter start, gives the expected
-   bytes.  Each run is on its own thread, so that a hang fails the test. *)
-fun test_schedule_pipelined parser =
+(* run_in around its export and its launch.  Fixture: two fixture provers
+   and five slices (two legacy, three generated) over the premises of a
+   goal that Metis proves from LENGTH_APPEND, exported by two workers.
+   Each run is on its own thread, so that a hang fails the test. *)
+fun test_schedule_run_in parser =
   let
     val gave_up = ["0", "e-gave-up.out"]
     val proof = ["0", "schedule-length-append.out"]
+    (* A prover that runs for 30 s unless killed. *)
+    val sleeper = ["30", "e-gave-up.out"]
     val goal : Abbrev.goal = ([], ``LENGTH (l ++ m) = LENGTH l + LENGTH m``)
     fun names bad = map (fn fact => "listTheory." ^ fact)
       ["LENGTH_APPEND", "APPEND_NIL", "APPEND_ASSOC", "MAP_APPEND",
@@ -6886,1185 +6832,190 @@ fun test_schedule_pipelined parser =
       {prover = prover, format = format, type_enc = type_enc,
        lam_trans = lam_trans, nfacts = count, filter = "knn",
        extra_opts = extra, slice_size = 1}
-    fun legacy prover count extra = slice prover "fof" "" "" count extra
+    fun legacy extra prover count = slice prover "fof" "" "" count extra
     fun mono extra prover count =
       slice prover "tf0" "mono_native" "combs" count extra
-    (* recording is the extra options of the legacy slices, monos those of
+    (* legacies are the extra options of the legacy slices, monos those of
        the others. *)
-    fun with_provers_mono monos recording note f =
+    fun with_provers legacies monos f =
       with_fixtures
-        [(Vampire, printer_config_formats ["fof", "tf0"] "hh-pipe-v"
-                [legacy Vampire 2 recording, mono monos Vampire 3,
-                 mono monos Vampire 5] note parser),
-         (Eprover, printer_config_formats ["fof", "tf0"] "hh-pipe-e"
-                [legacy Eprover 2 recording, mono monos Eprover 7] note
-                parser)]
+        [(Vampire, printer_config_formats ["fof", "tf0"] "hh-run-v"
+            [legacy legacies Vampire 2, mono monos Vampire 3,
+             mono monos Vampire 5] ignore parser),
+         (Eprover, printer_config_formats ["fof", "tf0"] "hh-run-e"
+            [legacy legacies Eprover 2, mono monos Eprover 7] ignore parser)]
         f
-    fun with_provers recording note f =
-      with_provers_mono gave_up recording note f
-    (* A prover that runs for 30 s unless killed. *)
-    val sleeper = ["30", "e-gave-up.out"]
-    (* The options of a run and its max_proofs. *)
-    fun options_cores cores slices timeout max_proofs debug
-        : hhConfig.hh_options * int =
-      ({timeout = timeout,
-       provers = [Eprover, Vampire], slices = slices, cores = cores,
-       export_workers = 2, filter = "", max_facts = NONE, format = "",
-       type_enc = "", lam_trans = "", mono_iters = 3, mono_instances = NONE,
-       minimize = true, preplay_timeout = 1.0, minimize_timeout = 1.0,
-       cache = false, cache_dir = "", cache_max_entries = 100,
-       debug_dir = debug, preplay_drop_one = false, verbose = false},
-       max_proofs)
-    val options = options_cores 8
-    val tree = StagedFixture.tree
-    val quiet_start = StagedFixture.quiet_start
-    fun new_root () = hhSchedule.new_problem_dir (hhConfig.state_dir ())
-    fun relative root path = String.extract (path, size root + 1, NONE)
-    fun exists_prefix prefix events =
-      List.exists (String.isPrefix prefix) events
-    (* The selector and the test hooks are set for one run. *)
-    fun with_hooks {pipelined, before_finish, before_prepare} f =
-      with_ref (hhSchedule_Test.export_choice,
-                if pipelined then hhSchedule_Test.ForcePipelined
-                else hhSchedule_Test.ForceBlocking) (fn () =>
-        with_ref (hhSchedule_Test.before_finish, before_finish) (fn () =>
-          with_ref (hhSchedule_Test.before_prepare, before_prepare) f))
-    fun hooks pipelined = {pipelined = pipelined, before_finish = fn _ => (),
-                           before_prepare = fn _ => ()}
-    (* The relative paths and generated-ness of the work of a schedule. *)
-    fun is_generated ({kind = hhSchedule.ExportGenerated _, ...} :
-                        hhSchedule.work) = true
-      | is_generated _ = false
-    fun work_list (opts, _) =
+    fun options cores slices : hhConfig.hh_options =
+      {timeout = 30, provers = [Eprover, Vampire], slices = slices,
+       cores = cores, export_workers = 2, filter = "", max_facts = NONE,
+       format = "", type_enc = "", lam_trans = "", mono_iters = 3,
+       mono_instances = NONE, minimize = true, preplay_timeout = 1.0,
+       minimize_timeout = 1.0, cache = false, cache_dir = "",
+       cache_max_entries = 100, debug_dir = NONE, preplay_drop_one = false,
+       verbose = false}
+    val (fork, recorded) = recording_fork (fn default => default)
+    (* run_in on its own thread, with wrap around it: the result or the
+       failure, the events and the files left in the root.  steer runs on
+       another thread with the caller of run_in. *)
+    fun run {opts, ranks, legacies, monos, wrap, steer} =
       let
-        val root = new_root ()
-        val works = with_provers gave_up ignore (fn () =>
-          hhSchedule.ordered_work root opts rankings
-            (hhSlice.mk_schedule opts))
-      in
-        (remove_tree root;
-         map (fn w => (#index w, relative root (#path w), is_generated w))
-           works)
-      end
-    (* The files of the blocking export of the schedule from a counter
-       start, and the number of names it drew. *)
-    fun expected (opts, _) start =
-      let
-        val root = new_root ()
-        val schedule = with_provers gave_up ignore (fn () =>
-          hhSlice.mk_schedule opts)
-        val _ = advance_to start
-        val first = counter ()
-        val _ = StagedFixture.quiet (fn () =>
-          hhSchedule.export_problems root opts goal rankings schedule)
-        val used = counter () - first - 1
-        val files = tree root
-      in
-        (remove_tree root; (files, used))
-      end
-    (* The state of a run, shared with the thread that steers it. *)
-    fun new_state () =
-      {root = new_root (), m = new_monitor (), released = ref false,
-       events = ref ([] : string list),
-       entered = ref ([] : (string * string * bool) list),
-       reached = ref false, caller = ref (NONE : Thread.thread option),
-       seen = ref (NONE : Thread.thread option), monos = ref gave_up,
-       returned = ref false}
-    fun attempt f = (SOME (f ()), NONE) handle exn => (NONE, SOME exn)
-    (* Runs run_in on its own thread, bounded by a wait; the result and
-       the failure, if any. *)
-    fun run st recording (opts, max_proofs) rks hooks' wrap start =
-      let
-        val {root, m, released, events, entered, caller, seen, ...} = st
-        fun note (request : hhProver.run_request) =
-          let val path = #problem request in
-            monitor_do m (fn () =>
-              entered := (relative root path,
-                          String.concat (read_lines path), !released) ::
-                         !entered)
-          end
+        val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
+        val m = new_monitor ()
+        val outcome = ref NONE
+        val events = ref ([] : string list)
         fun progress event =
           monitor_do m (fn () =>
             events := observe_schedule_event event :: !events)
-        val {pipelined, before_finish, before_prepare} = hooks'
-        val tag_prepare = fn i =>
-          ((if Option.isSome (!seen) then ()
-            else seen := SOME (Thread.self ()));
-           before_prepare i)
-        val outcome = ref NONE
-        val done_ = new_monitor ()
-        val _ = advance_to start
-        val _ = Thread.fork (fn () =>
-          (caller := SOME (Thread.self ());
-           outcome := SOME (attempt (fn () =>
-             wrap (fn () =>
-               with_provers_mono (!(#monos st)) recording note (fn () =>
-                 with_hooks {pipelined = pipelined,
-                             before_finish = before_finish,
-                             before_prepare = tag_prepare} (fn () =>
-                   hhSchedule.run_in root
-                     {options = opts, max_proofs = max_proofs, goal = goal,
-                      rankings = rks,
-                      progress = SOME progress}))))) ;
-           monitor_do done_ (fn () => #returned st := true)), [])
-        val _ = monitor_until done_ "run_in did not finish"
+        val caller = Thread.fork (fn () =>
+          let
+            val r = (SOME (wrap (fn () =>
+                       with_ref (hhSchedule_Test.fork, fork) (fn () =>
+                         with_provers legacies monos (fn () =>
+                           hhSchedule.run_in root
+                             {options = opts, max_proofs = 1, goal = goal,
+                              rankings = ranks, progress = SOME progress})))),
+                     NONE)
+                    handle exn => (NONE, SOME exn)
+          in
+            monitor_do m (fn () => outcome := SOME r)
+          end, [])
+        val _ = steer caller
+        val _ = monitor_until m "run_in did not finish"
           (fn () => Option.isSome (!outcome))
+        val files = StagedFixture.tree root
+        val _ = remove_tree root
+        val (result, failure) = valOf (!outcome)
       in
-        valOf (!outcome)
+        (result, failure, rev (!events), files)
       end
-    val no_wrap = fn f => f ()
-    fun same_thread (seen : Thread.thread option ref,
-                     caller : Thread.thread option ref) =
-      case (!seen, !caller) of
-          (SOME a, SOME b) => Thread.equal (a, b)
-        | _ => false
-    fun tmp_clean_names files =
+    val plain = {opts = options 8 5, ranks = rankings, legacies = gave_up,
+                 monos = gave_up, wrap = fn f => f (), steer = ignore}
+    fun has_event prefix events = List.exists (String.isPrefix prefix) events
+    fun clean files =
       List.all (fn (name, _) => not (String.isSuffix ".tmp" name)) files
-    fun lookup files path =
-      Option.map #2 (List.find (fn (name, _) => name = path) files)
-
-    (* The export states of the last pipelined run, by relative path. *)
-    fun export_states root =
-      map (fn (path, state) => (relative root path, state))
-        (!hhSchedule_Test.export_states)
-    fun state_of root path = lookup (export_states root) path
-    fun all_ready root =
-      List.all (fn (_, state) => state = hhSchedule_Test.Ready)
-        (export_states root)
-    fun none_pending root =
-      List.all (fn (_, state) => state <> hhSchedule_Test.Pending)
-        (export_states root)
-
-    (* Readiness: a generated job held before its publication keeps
-       neither the earlier legacy slice nor the later files back. *)
-    fun readiness () =
-      let
-        val opts = options 5 30 1 NONE
-        val works = work_list opts
-        val n = length works
-        val (held, held_path, _) =
-          valOf (List.find (fn (_, _, generated) => generated) works)
-        val admitted = Int.min (n - 1, held + 2)
-        val start = quiet_start ()
-        val (want, _) = expected opts start
-        val st = new_state ()
-        val {m, released, entered, events, root, ...} = st
-        val gate = fn i =>
-          if i = held then
-            monitor_until m "the held job was never released"
-              (fn () => !released)
-          else ()
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "slices did not start while the job was held"
-             (fn () => length (!entered) >= admitted);
-           monitor_do m (fn () => released := true)), [])
-        val (result, failure) =
-          run st gave_up opts rankings
-            {pipelined = true, before_finish = gate,
-             before_prepare = fn _ => ()} no_wrap start
-        val seen = rev (!entered)
-        val early = List.filter (fn (_, _, late) => not late) seen
-        val files = tree root
-        val _ = remove_tree root
-      in
-        (expect "pipelined: the run completes with every slice"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Exhausted andalso
-            length (#slices_run (valOf result)) = n andalso
-            length seen = n andalso
-            schedule_events_sane (rev (!events)));
-         expect "pipelined: slices start while a job is held"
-           (length early = admitted andalso
-            List.exists (fn (path, _, _) =>
-              path = #2 (hd works)) early andalso
-            List.exists (fn (path, _, _) =>
-              List.exists (fn (index, p, _) => index > held andalso p = path)
-                works) early andalso
-            List.exists (fn (path, _, late) => path = held_path andalso late)
-              seen);
-         expect "pipelined: each prover reads the whole blocking file"
-           (List.all (fn (path, text, _) => lookup want path = SOME text)
-              seen);
-         expect "pipelined: the published files are the blocking files"
-           (files = want andalso tmp_clean_names files);
-         expect "pipelined: every problem ends Ready"
-           (all_ready root))
-      end
-
-    (* A replay beside the producer.  The replay starts as soon as the
-       proof is found; the last prepare is held until it has verified, so
-       the replay runs while the producer still has a prepare to do, and
-       another thread draws many names from the global counter (a replay
-       draws some).  The producer draws from a supply of its own, so
-       the global counter shows nothing of its prepares (the readings at
-       them are consecutive, up to the last one taken before the draws)
-       and the files are the blocking files for the same counter start,
-       whatever was drawn meanwhile.  The start is
-       given as a function of the number of names the blocking export
-       draws: one far from a power of ten, and one that puts a power of ten
-       inside the producer's window, where the bytes depend on the order of
-       the names. *)
-    fun replay_beside_prepares label start_of =
-      let
-        val opts = options 5 30 10 NONE
-        val works = work_list opts
-        val last = length works - 1
-        val (_, used) = expected opts (quiet_start ())
-        val start = start_of used
-        val (want, _) = expected opts start
-        val st = new_state ()
-        val {m, released, reached, events, root, ...} = st
-        val before_genvars = genvar_counter ()
-        val at_verified = ref 0
-        val readings = ref ([] : int list)
-        val drew = ref 0
-        val hold = fn i =>
-          (readings := counter () :: !readings;
-           if i = last then
-            (monitor_do m (fn () => reached := true);
-             monitor_until m "the last prepare was never released"
-               (fn () => !released))
-           else ())
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "no proof was found"
-             (fn () => exists_prefix "found|" (!events));
-           monitor_until m "the last prepare was not reached"
-             (fn () => !reached);
-           let val b = counter () in
-             ignore (List.tabulate (500, fn _ => Type.gen_tyvar ()));
-             drew := counter () - b
-           end;
-           monitor_until m "the replay did not verify"
-             (fn () => exists_prefix "verified|" (!events));
-           at_verified := genvar_counter ();
-           monitor_do m (fn () => released := true)), [])
-        val (result, failure) =
-          run st proof opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} no_wrap start
-        val files = tree root
-        val _ = remove_tree root
-        fun consecutive (a :: (rest as b :: _)) = b = a + 1 andalso
-              consecutive rest
-          | consecutive _ = true
-      in
-        (expect ("pipelined: " ^ label ^ ", names are drawn globally while " ^
-                 "the last prepare is held, and the producer shows no draw")
-           (!drew >= 500 andalso length (!readings) = length works andalso
-            consecutive (rev (!readings)));
-         expect ("pipelined: " ^ label ^ ", a replay verifies while the " ^
-                 "last prepare is held and draws names")
-           (not (Option.isSome failure) andalso
-            length (#suggestions (valOf result)) = 1 andalso
-            !at_verified > before_genvars + 1);
-         expect ("pipelined: " ^ label ^ ", files beside a real replay " ^
-                 "equal the blocking ones")
-           (files = want);
-         expect ("pipelined: " ^ label ^ ", every problem ends Ready")
-           (all_ready root))
-      end
-
-    (* The producer draws its fresh names from a supply of its own: seen
-       from the global counter, nothing is drawn while it prepares (the
-       readings at the prepares are consecutive), and when it has ended the
-       counter is past the names it used, so that a later draw cannot
-       repeat one. *)
-    fun private_names () =
-      let
-        val opts = options 5 30 1 NONE
-        val works = work_list opts
-        val (_, used) = expected opts (quiet_start ())
-        val start = quiet_start ()
-        val st = new_state ()
-        val readings = ref ([] : int list)
-        val read = fn _ => readings := counter () :: !readings
-        val (result, failure) =
-          run st gave_up opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = read} no_wrap start
-        val after = counter ()
-        val seen = rev (!readings)
-        val _ = remove_tree (#root st)
-        fun consecutive (a :: (rest as b :: _)) = b = a + 1 andalso
-              consecutive rest
-          | consecutive _ = true
-      in
-        (expect "pipelined: the run completes"
-           (not (Option.isSome failure) andalso
-            length seen = length works);
-         expect "pipelined: the producer's prepares draw no global name"
-           (consecutive seen);
-         expect "pipelined: the counter ends past the producer's names"
-           (* the seed is the draw before the first reading *)
-           (after > hd seen - 1 + used - 1));
-        ()
-      end
-
-    (* Slices are bounded while the producer is unfinished: with 3 cores
-       and two pool workers one slice runs at once, and the bound is
-       lifted when the producer ends.  The last prepare is held for a
-       while, the provers sleep. *)
-    fun bounded_slices bounded =
-      let
-        val opts = options_cores 3 5 3 1 NONE
-        val works = work_list opts
-        val last = length works - 1
-        val st = new_state ()
-        val {m, released, reached, entered, root, ...} = st
-        val while_held = ref 0
-        val _ = #monos st := sleeper
-        val hold = fn i =>
-          if i = last then
-            (monitor_do m (fn () => reached := true);
-             monitor_until m "the last prepare was never released"
-               (fn () => !released))
-          else ()
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "the last prepare was not reached"
-             (fn () => !reached);
-           OS.Process.sleep (Time.fromMilliseconds 600);
-           monitor_do m (fn () => (while_held := length (!entered);
-                                   released := true))), [])
-        val (result, failure) = with_ref (hhSchedule_Test.bound_slices,
-                                          bounded) (fn () =>
-          run st sleeper opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} no_wrap (quiet_start ()))
-        val total = length (!entered)
-        val _ = remove_tree root
-      in
-        (expect "pipelined: the run ends at the deadline"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Timeout);
-         if bounded then
-           (expect "bound: one slice runs while the producer is unfinished"
-              (!while_held = 1);
-            expect "bound: the others start when it has ended"
-              (total >= 2))
-         else
-           expect "bound off: several slices run while it is unfinished"
-              (!while_held >= 2))
-      end
-
-    (* An export error with the last prepare not yet done (it fails after
-       a proof was found): the run raises the error and does not hang. *)
-    fun replay_after_error () =
-      let
-        val opts = options 5 30 10 NONE
-        val works = work_list opts
-        val last = length works - 1
-        val (_, last_path, _) = List.last works
-        val st = new_state ()
-        val {m, events, root, ...} = st
-        val fail = fn i =>
-          if i = last then
-            (monitor_until m "no proof was found"
-               (fn () => exists_prefix "found|" (!events));
-             raise Fail "injected prepare failure")
-          else ()
-        val (_, failure) =
-          run st proof opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = fail} no_wrap (quiet_start ())
-        val states_ok = none_pending root andalso
-          state_of root last_path = SOME hhSchedule_Test.Failed
-        val _ = remove_tree root
-      in
-        (expect "pipelined: an export error ends the run with the error"
-           (case failure of
-                SOME exn => contains "injected prepare failure"
-                              (General.exnMessage exn)
-              | NONE => false);
-         expect "pipelined: an unfinished problem ends Failed" states_ok)
-      end
-
-    (* The producer is cancelled at the soft deadline: the replay runs and
-       the later file is not made.  The
-       hold is at index 1, reached right after the first file, and lasts
-       past the deadline of 1 s (the check of the producer precedes the
-       hold), so the producer stops at the next prepare; the replay then
-       has the grace time left to verify. *)
-    fun replay_after_cancel () =
-      let
-        val opts = options 5 1 1 NONE
-        val works = work_list opts
-        val st = new_state ()
-        val {m, released, reached, root, ...} = st
-        val hold = fn i =>
-          if i = 1 then
-            (monitor_do m (fn () => reached := true);
-             monitor_until m "the held prepare was never released"
-               (fn () => !released))
-          else ()
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "the hold was not reached" (fn () => !reached);
-           OS.Process.sleep (Time.fromMilliseconds 1100);
-           monitor_do m (fn () => released := true)), [])
-        val (result, failure) =
-          run st proof opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} no_wrap (quiet_start ())
-        val (_, last_path, _) = List.last works
-        val made = OS.FileSys.access (join root last_path, [])
-        val states_ok = none_pending root andalso
-          state_of root last_path = SOME hhSchedule_Test.Cancelled andalso
-          state_of root (#2 (hd works)) = SOME hhSchedule_Test.Ready
-        val _ = remove_tree root
-      in
-        (expect "pipelined: cancellation at the deadline lets the replay run"
-           (not (Option.isSome failure) andalso not made andalso
-            length (#suggestions (valOf result)) = 1);
-         expect "pipelined: the unprepared problems end Cancelled"
-           states_ok)
-      end
-
-    (* ---- Stop, cancellation and the error race (TASK_24). ---- *)
-
-    (* The test hooks of the launch and of the slice workers, and a fork
-       that records the threads of the export pool, for one run. *)
-    fun with_test_hooks {launch, claim, fork} f =
-      with_ref (hhSchedule_Test.launch_point, launch) (fn () =>
-        with_ref (hhSchedule_Test.before_claim, claim) (fn () =>
-          with_ref (hhSchedule_Test.fork, fork) f))
-    fun producer_gone seen =
-      case !seen of
-          NONE => true
-        | SOME thread => not (Thread.isActive thread)
-    fun has_event prefix events = exists_prefix prefix (!events)
-    fun event_count prefix events =
-      length (List.filter (String.isPrefix prefix) (!events))
-    (* A wait that no interrupt can cut: a loop that allocates and never
-       blocks models a long prepare without a cancellation point. *)
-    fun spin_until flag =
-      let
-        val limit = Time.+ (Time.now (), Time.fromSeconds 30)
-        fun loop () =
-          if !flag then ()
-          else if Time.>= (Time.now (), limit) then raise Fail "spin limit"
-          else (ignore (List.tabulate (20, Int.toString)); loop ())
-      in loop () end
-    fun until_stopped stopped = await_until "no stop" stopped
-    fun hooked fork = with_test_hooks
-      {launch = fn _ => (), claim = fn _ => (), fork = fork}
     (* The caller of run_in as the interactive one is: interrupts are
        asynchronous. *)
     fun asynchronous f =
       (Thread.setAttributes [Thread.InterruptState Thread.InterruptAsynch];
        f ())
 
-    (* A verified first proof with max_proofs = 1 while an export is in
-       flight (the tail of the last generated problem is held) and work
-       is queued (each worker is held at its second claim until the run
-       stops): the queued work never starts, the held tail is cancelled
-       and its file is not made, and every thread has exited when run_in
-       returns. *)
-    fun stop_after_proof () =
+    val (empty, _, empty_events, _) =
+      run {opts = options 8 0, ranks = rankings, legacies = gave_up,
+           monos = gave_up, wrap = fn f => f (), steer = ignore}
+    val _ = expect "run_in: an empty schedule is exhausted at once"
+      (#stopped (valOf empty) = hhSchedule.Exhausted andalso
+       null (#slices_run (valOf empty)) andalso
+       empty_events = ["schedule-done|exhausted"])
+
+    (* A theorem that cannot be fetched fails the export: the error is
+       raised on the caller before any search, with no event, and no
+       temporary is left. *)
+    val (absent, absent_failure, absent_events, absent_files) =
+      run {opts = options 8 5, ranks = [("knn", names "NO_SUCH_THEOREM")],
+           legacies = gave_up, monos = gave_up, wrap = fn f => f (),
+           steer = ignore}
+    val _ = expect "run_in: an export error is raised before any event"
+      (not (Option.isSome absent) andalso Option.isSome absent_failure andalso
+       null absent_events andalso clean absent_files andalso
+       all_exited recorded)
+
+    (* An interrupt of the caller while a worker of the export is held:
+       Interrupt is raised before any event, the workers have exited and
+       no temporary is left. *)
+    val held = new_monitor ()
+    val reached = ref false
+    val released = ref false
+    fun gate _ =
+      (monitor_do held (fn () => reached := true);
+       monitor_until held "the held tail was never released"
+         (fn () => !released))
+    fun interrupt_held caller =
+      (monitor_until held "no tail was held" (fn () => !reached);
+       Thread.interrupt caller;
+       await_until "the caller did not exit"
+         (fn () => not (Thread.isActive caller));
+       monitor_do held (fn () => released := true))
+    val (cut, cut_failure, cut_events, cut_files) =
+      run {opts = options 8 5, ranks = rankings, legacies = gave_up,
+           monos = gave_up,
+           wrap = fn f => with_ref (hhSchedule_Test.before_finish, gate) f,
+           steer = interrupt_held}
+    val _ = expect "run_in: an interrupt of the export is raised before any \
+                   \event"
+      (not (Option.isSome cut) andalso
+       (case cut_failure of SOME Interrupt => true | _ => false) andalso
+       null cut_events andalso clean cut_files andalso all_exited recorded)
+
+    (* A verified first proof (max_proofs 1) stops the run with work still
+       queued: each slice worker is held at its second claim until the run
+       stops, so the queued slices never start. *)
+    val claims = new_monitor ()
+    val claimers = ref ([] : Thread.thread list)
+    fun claim stopped =
       let
-        val opts = options_cores 2 5 30 1 NONE
-        val works = work_list opts
-        val (held, held_path, _) =
-          List.last (List.filter (fn (_, _, generated) => generated) works)
-        val st = new_state ()
-        val {m, released, entered, root, ...} = st
-        val _ = (#monos st) := sleeper
-        val (fork, recorded) = recording_fork (fn default => default)
-        val callers = ref ([] : Thread.thread list)
-        val gate = fn i =>
-          if i = held then
-            monitor_until m "the held tail was never released"
-              (fn () => !released)
+        val me = Thread.self ()
+        val again = monitor_do claims (fn () =>
+          List.exists (fn other => Thread.equal (other, me)) (!claimers)
+          orelse (claimers := me :: !claimers; false))
+      in
+        if again then await_until "no stop" stopped else ()
+      end
+    val (stop, _, stop_events, _) =
+      run {opts = options 2 5, ranks = rankings, legacies = proof,
+           monos = sleeper,
+           wrap = fn f => with_ref (hhSchedule_Test.before_claim, claim) f,
+           steer = ignore}
+    val started = length (List.filter (String.isPrefix "started|")
+                            stop_events)
+    val _ = expect "run_in: a verified first proof stops the queued work"
+      (#stopped (valOf stop) = hhSchedule.MaxProofs andalso
+       length (#suggestions (valOf stop)) = 1 andalso
+       started >= 1 andalso started <= 2 andalso
+       length (#slices_run (valOf stop)) = started andalso
+       #t_total (valOf stop) < 20.0 andalso schedule_events_sane stop_events)
+
+    (* An interrupt of the caller at each launch point, raised by the hook
+       or a real one (asynchronous, sent by the caller to itself): the run
+       ends Interrupted, with ScheduleDone. *)
+    fun at_launch (kind, fire, mode) point =
+      let
+        val fired = ref false
+        fun launch name =
+          if name = point andalso not (!fired) then (fired := true; fire ())
           else ()
-        val claim = fn stopped =>
-          let
-            val me = Thread.self ()
-            val again = monitor_do m (fn () =>
-              if List.exists (fn other => Thread.equal (other, me))
-                   (!callers) then true
-              else (callers := me :: !callers; false))
-          in
-            if again then until_stopped stopped else ()
-          end
-        val (result, failure) =
-          run st proof opts rankings
-            {pipelined = true, before_finish = gate,
-             before_prepare = fn _ => ()}
-            (with_test_hooks {launch = fn _ => (), claim = claim,
-                              fork = fork})
-            (quiet_start ())
-        val files = tree root
-        val started = length (!entered)
-        val _ = remove_tree root
+        val (result, failure, events, _) =
+          run {opts = options 8 5, ranks = rankings, legacies = gave_up,
+               monos = gave_up,
+               wrap = fn f => mode (fn () =>
+                 with_ref (hhSchedule_Test.launch_point, launch) f),
+               steer = ignore}
       in
-        (expect "stop: a verified first proof stops the run (max_proofs 1)"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.MaxProofs andalso
-            length (#suggestions (valOf result)) = 1 andalso
-            schedule_events_sane (rev (!(#events st))));
-         expect "stop: queued work stays unstarted"
-           (started >= 1 andalso started <= 2 andalso
-            length (#slices_run (valOf result)) = started);
-         expect "stop: the export in flight is cancelled"
-           (not (!released) andalso lookup files held_path = NONE andalso
-            state_of root held_path = SOME hhSchedule_Test.Cancelled andalso
-            none_pending root andalso tmp_clean_names files);
-         expect "stop: the producer and the pool threads have exited"
-           (producer_gone (#seen st) andalso all_exited recorded andalso
-            #t_total (valOf result) < 20.0))
+        expect ("run_in: an interrupt (" ^ kind ^ ") at launch point " ^
+                point ^ " ends the run Interrupted")
+          (not (Option.isSome failure) andalso !fired andalso
+           #stopped (valOf result) = hhSchedule.Interrupted andalso
+           has_event "schedule-done|interrupted" events andalso
+           schedule_events_sane events)
       end
-
-    (* Soft timeout with only pending work: every problem waits for the
-       export, which is held in a wait; the deadline cancels it at once
-       (before the hard deadline, 3 s here) and nothing runs. *)
-    fun soft_timeout_pending () =
-      let
-        val opts = options 5 1 1 NONE
-        val st = new_state ()
-        val {m, released, reached, root, ...} = st
-        val hold = fn i =>
-          if i = 0 then
-            (monitor_do m (fn () => reached := true);
-             monitor_until m "the held prepare was never released"
-               (fn () => !released))
-          else ()
-        val (fork, recorded) = recording_fork (fn default => default)
-        val launched = ref NONE
-        val stamp = fn name =>
-          if name = "worker-forked" andalso not (Option.isSome (!launched))
-          then launched := SOME (Time.now ()) else ()
-        val (result, failure) =
-          run st gave_up opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold}
-            (with_test_hooks {launch = stamp, claim = fn _ => (),
-                              fork = fork})
-            (quiet_start ())
-        val returned = Time.now ()
-        val files = tree root
-        val states = export_states root
-        val _ = remove_tree root
-        (* The hard deadline is 3 s after the launch. *)
-        val in_time = case !launched of
-            SOME at =>
-              Time.< (returned, Time.+ (at, Time.fromMilliseconds 2000))
-          | NONE => false
-      in
-        (expect "stop: the soft deadline cancels a producer that waits"
-           (not (Option.isSome failure) andalso !reached andalso
-            #stopped (valOf result) = hhSchedule.Timeout andalso
-            in_time andalso
-            null (#slices_run (valOf result)) andalso null files);
-         expect "stop: the cancelled problems end Cancelled"
-           (not (null states) andalso
-            List.all (fn (_, state) => state = hhSchedule_Test.Cancelled)
-              states andalso
-            has_event "schedule-done|timeout" (#events st) andalso
-            producer_gone (#seen st) andalso all_exited recorded))
-      end
-
-    (* Hard timeout with running work: the provers ignore the soft
-       deadline and are killed at the hard one; the producer, held at the
-       last prepare, has been cancelled by then. *)
-    fun hard_timeout_running () =
-      let
-        val opts = options 5 1 1 NONE
-        val works = work_list opts
-        val last = length works - 1
-        val st = new_state ()
-        val {m, released, root, ...} = st
-        val hold = fn i =>
-          if i = last then
-            monitor_until m "the held prepare was never released"
-              (fn () => !released)
-          else ()
-        val (result, failure) =
-          run st sleeper opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} no_wrap (quiet_start ())
-        val files = tree root
-        val _ = remove_tree root
-      in
-        (expect "stop: the hard deadline kills the running provers"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Timeout andalso
-            #t_total (valOf result) > 2.5 andalso
-            #t_total (valOf result) < 15.0 andalso
-            has_event "schedule-done|timeout" (#events st) andalso
-            event_count "started|" (#events st) >= 1);
-         expect "stop: the held producer has exited and nothing is left"
-           (producer_gone (#seen st) andalso tmp_clean_names files))
-      end
-
-    (* The first fatal export error wins over a run that is still
-       searching: running provers are killed, the error is raised on the
-       caller and no ScheduleDone is reported. *)
-    fun error_wins () =
-      let
-        val opts = options 5 30 1 NONE
-        val works = work_list opts
-        val last = length works - 1
-        val st = new_state ()
-        val {m, entered, root, ...} = st
-        val fail = fn i =>
-          if i = last then
-            (monitor_until m "no slice started"
-               (fn () => length (!entered) >= 1);
-             raise Fail "injected export error")
-          else ()
-        val (fork, recorded) = recording_fork (fn default => default)
-        val begun = Time.now ()
-        val (result, failure) =
-          run st sleeper opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = fail} (hooked fork) (quiet_start ())
-        val took = Time.toReal (Time.- (Time.now (), begun))
-        val files = tree root
-        val _ = remove_tree root
-      in
-        (expect "error: an export error is raised on the caller"
-           (not (Option.isSome result) andalso
-            (case failure of
-                 SOME exn => contains "injected export error"
-                               (General.exnMessage exn)
-               | NONE => false));
-         expect "error: no ScheduleDone and the provers are killed"
-           (not (has_event "schedule-done|" (#events st)) andalso
-            took < 20.0 andalso not (has_event "verified|" (#events st)));
-         expect "error: everything has stopped"
-           (producer_gone (#seen st) andalso all_exited recorded andalso
-            tmp_clean_names files andalso none_pending root))
-      end
-
-    (* The other order: a caller interrupt arrives while the producer is
-       in a prepare that cannot be cut (it spins), so the run is stopping
-       when the prepare then fails.  The late error is dropped, the run
-       ends Interrupted, and it does not return before the prepare ends:
-       the response is bounded by one prepare, and no later prepare is
-       started. *)
-    fun stop_wins second =
-      let
-        val opts = options 5 30 1 NONE
-        val held = 2
-        val st = new_state ()
-        val {m, released, reached, events, caller, entered, root, ...} = st
-        val prepared = ref ([] : int list)
-        val early_done = ref true
-        val spin = fn i =>
-          (monitor_do m (fn () => prepared := i :: !prepared);
-           if i = held then
-             (monitor_do m (fn () => reached := true);
-              spin_until released;
-              raise Fail "late export error")
-           else ())
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "the prepare was not reached" (fn () => !reached);
-           monitor_until m "no slice started"
-             (fn () => length (!entered) >= 1);
-           Thread.interrupt (valOf (!caller));
-           (* A second interrupt arrives during the cleanup; with
-              asynchronous interrupts it is raised once that has ended. *)
-           if second then
-             (OS.Process.sleep (Time.fromMilliseconds 200);
-              Thread.interrupt (valOf (!caller)))
-           else ();
-           OS.Process.sleep (Time.fromMilliseconds 500);
-           monitor_do m (fn () =>
-             (early_done := !(#returned st);
-              released := true))), [])
-        val (fork, recorded) = recording_fork (fn default => default)
-        val (result, failure) =
-          run st sleeper opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = spin}
-            (fn f => (if second then asynchronous else (fn g => g ()))
-                       (fn () => hooked fork f))
-            (quiet_start ())
-        (* What had exited when run_in returned. *)
-        val gone = producer_gone (#seen st) andalso all_exited recorded
-        val files = tree root
-        val states = export_states root
-        val works = work_list opts
-        val later = List.filter (fn (i, _, _) => i > held) works
-        val _ = remove_tree root
-        val outcome_ok =
-          if second then
-            (* The second interrupt is raised after the cleanup. *)
-            not (Option.isSome result) andalso
-            (case failure of SOME Interrupt => true | _ => false)
-          else
-            not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Interrupted andalso
-            has_event "schedule-done|interrupted" (#events st) andalso
-            schedule_events_sane (rev (!events))
-        val label = if second then "a second interrupt" else "an interrupt"
-      in
-        (expect ("interrupt: with " ^ label ^
-                 ", the late export error of a stopped run is dropped")
-           outcome_ok;
-         expect "interrupt: the run waits for the prepare in progress"
-           (not (!early_done));
-         expect "interrupt: no prepare starts after the stop"
-           (List.all (fn i => i <= held) (!prepared) andalso
-            List.all (fn (_, path, _) =>
-              lookup states path = SOME hhSchedule_Test.Cancelled)
-              later andalso
-            none_pending root andalso tmp_clean_names files);
-         expect "interrupt: the producer and the pool had exited at return"
-           gone)
-      end
-
-    (* A caller interrupt during the export: the producer is interrupted
-       where it waits (here: the hook), the provers are killed and the run
-       ends Interrupted before it returns. *)
-    fun interrupt_during_export () =
-      let
-        val opts = options 5 30 1 NONE
-        val st = new_state ()
-        val {m, released, reached, caller, entered, root, ...} = st
-        val hold = fn i =>
-          if i = 2 then
-            (monitor_do m (fn () => reached := true);
-             monitor_until m "the held prepare was never released"
-               (fn () => !released))
-          else ()
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "the prepare was not reached" (fn () => !reached);
-           monitor_until m "no slice started"
-             (fn () => length (!entered) >= 1);
-           Thread.interrupt (valOf (!caller))), [])
-        val (fork, recorded) = recording_fork (fn default => default)
-        val (result, failure) =
-          run st sleeper opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} (hooked fork) (quiet_start ())
-        val _ = remove_tree root
-      in
-        (expect "interrupt: an interrupt of the caller stops the producer"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Interrupted andalso
-            #t_total (valOf result) < 15.0 andalso
-            schedule_events_sane (rev (!(#events st))));
-         expect "interrupt: the producer and the pool have exited"
-           (producer_gone (#seen st) andalso all_exited recorded))
-      end
-
-    (* An interrupt of the caller at each launch point: the run ends
-       Interrupted, with ScheduleDone, and every thread it forked has
-       exited, also the producer that was forked and the ones that were
-       not.  The producer is held at its first prepare.  The interrupt is
-       a raise of Interrupt by the hook, or a real one: the caller runs
-       with asynchronous interrupts and interrupts itself, so that it
-       arrives wherever the masking lets it. *)
-    fun interrupt_during_launch () =
-      let
-        val points = ["recon-registered", "recon-forked",
-                      "producer-registered", "producer-forked",
-                      "worker-registered", "worker-forked"]
-        fun scenario (kind, fire, mode) point =
-          let
-            val opts = options 5 30 1 NONE
-            val st = new_state ()
-            val {m, released, root, ...} = st
-            val fired = ref false
-            val launch = fn name =>
-              if name = point andalso not (!fired) then
-                (fired := true; fire ())
-              else ()
-            val hold = fn i =>
-              if i = 0 then
-                monitor_until m "the held prepare was never released"
-                  (fn () => !released)
-              else ()
-            val (fork, recorded) = recording_fork (fn default => default)
-            val (result, failure) =
-              run st gave_up opts rankings
-                {pipelined = true, before_finish = fn _ => (),
-                 before_prepare = hold}
-                (fn f => mode (fn () =>
-                   with_test_hooks {launch = launch, claim = fn _ => (),
-                                    fork = fork} f))
-                (quiet_start ())
-            val states = export_states root
-            val _ = remove_tree root
-          in
-            expect ("interrupt (" ^ kind ^ ") at launch point " ^ point ^
-                    ": Interrupted, then ScheduleDone, all exited")
-              (not (Option.isSome failure) andalso !fired andalso
-               #stopped (valOf result) = hhSchedule.Interrupted andalso
-               has_event "schedule-done|interrupted" (#events st) andalso
-               schedule_events_sane (rev (!(#events st))) andalso
-               producer_gone (#seen st) andalso all_exited recorded andalso
-               List.all (fn (_, state) => state <> hhSchedule_Test.Pending)
-                 states)
-          end
-      in
-        (List.app (scenario ("raised", fn () => raise Interrupt, fn f => f ()))
-           points;
-         List.app (scenario ("asynchronous",
-                             fn () => Thread.interrupt (Thread.self ()),
-                             asynchronous))
-           points)
-      end
-
-    (* The producer is interrupted on its own (not by the run): a stop,
-       not a quiet end of the export.  It is held at a prepare, the
-       interrupt reaches it there, the run ends Interrupted with
-       ScheduleDone and the unexported problems are Cancelled. *)
-    fun producer_interrupted () =
-      let
-        val opts = options 5 30 1 NONE
-        val held = 2
-        val st = new_state ()
-        val {m, released, reached, seen, events, root, ...} = st
-        val hold = fn i =>
-          if i = held then
-            (monitor_do m (fn () => reached := true);
-             monitor_until m "the held prepare was never released"
-               (fn () => !released))
-          else ()
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "the prepare was not reached" (fn () => !reached);
-           Thread.interrupt (valOf (!seen))), [])
-        val (fork, recorded) = recording_fork (fn default => default)
-        val (result, failure) =
-          run st gave_up opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = hold} (hooked fork) (quiet_start ())
-        val states = export_states root
-        val works = work_list opts
-        val unexported = List.filter (fn (i, _, _) => i >= held) works
-        val _ = remove_tree root
-      in
-        (expect "interrupt: an interrupt of the producer stops the run"
-           (not (Option.isSome failure) andalso
-            #stopped (valOf result) = hhSchedule.Interrupted andalso
-            has_event "schedule-done|interrupted" (#events st) andalso
-            schedule_events_sane (rev (!events)));
-         expect "interrupt: the problems left by the producer are Cancelled"
-           (List.all (fn (_, path, _) =>
-              lookup states path = SOME hhSchedule_Test.Cancelled)
-              unexported andalso none_pending root);
-         expect "interrupt: the producer and the pool have exited"
-           (producer_gone seen andalso all_exited recorded))
-      end
-
-    (* An export error is recorded first and the caller is interrupted
-       afterwards, while the cleanup is still waiting (the slice workers
-       are held uncuttably once the run is stopping): the error is the
-       result, not the interrupt. *)
-    fun error_then_interrupt () =
-      let
-        val opts = options 5 30 1 NONE
-        val last = length (work_list opts) - 1
-        val st = new_state ()
-        val {m, released, reached, caller, entered, events, root, ...} = st
-        val fail = fn i =>
-          if i = last then
-            (monitor_until m "no slice started"
-               (fn () => length (!entered) >= 1);
-             raise Fail "injected export error")
-          else ()
-        (* A worker held where it claims after the stop. *)
-        val claim = fn stopped =>
-          if stopped () then
-            (monitor_do m (fn () => reached := true);
-             spin_until released)
-          else ()
-        val _ = Thread.fork (fn () =>
-          (monitor_until m "no worker was held" (fn () => !reached);
-           Thread.interrupt (valOf (!caller));
-           OS.Process.sleep (Time.fromMilliseconds 300);
-           monitor_do m (fn () => released := true)), [])
-        val (fork, recorded) = recording_fork (fn default => default)
-        val (result, failure) =
-          run st sleeper opts rankings
-            {pipelined = true, before_finish = fn _ => (),
-             before_prepare = fail}
-            (with_test_hooks {launch = fn _ => (), claim = claim,
-                              fork = fork})
-            (quiet_start ())
-        val _ = remove_tree root
-      in
-        (expect "error: an export error recorded before an interrupt wins"
-           (not (Option.isSome result) andalso
-            (case failure of
-                 SOME exn => contains "injected export error"
-                               (General.exnMessage exn)
-               | NONE => false) andalso
-            not (has_event "schedule-done|" events));
-         expect "error: ... and every thread has exited"
-           (producer_gone (#seen st) andalso all_exited recorded))
-      end
-
-    (* An export error after a verified proof, with max_proofs not
-       reached, wins: only a stop beats an error.  The last problem is
-       generated and its tail is held until the proof is verified (the
-       replay starts once the last prepare is done), and then fails.  The
-       run raises the error, with no ScheduleDone; the Verified event
-       stays observable. *)
-    fun error_after_proof () =
-      let
-        val opts = options 5 30 10 NONE
-        val works = work_list opts
-        val last = length works - 1
-        val st = new_state ()
-        val {m, events, root, ...} = st
-        val fail = fn i =>
-          if i = last then
-            (monitor_until m "no proof was verified"
-               (fn () => exists_prefix "verified|" (!events));
-             raise Fail "injected tail failure")
-          else ()
-        val (fork, recorded) = recording_fork (fn default => default)
-        val (result, failure) =
-          run st proof opts rankings
-            {pipelined = true, before_finish = fail,
-             before_prepare = fn _ => ()} (hooked fork) (quiet_start ())
-        val _ = remove_tree root
-      in
-        (expect "error: the last problem is generated"
-           (#3 (List.last works));
-         expect "error: an export error after a verified proof wins"
-           (not (Option.isSome result) andalso
-            (case failure of
-                 SOME exn => contains "injected tail failure"
-                               (General.exnMessage exn)
-               | NONE => false) andalso
-            not (has_event "schedule-done|" events));
-         expect "error: the earlier Verified stays observable"
-           (has_event "verified|" events);
-         expect "error: after a verified proof every thread has exited"
-           (producer_gone (#seen st) andalso all_exited recorded))
-      end
-
-    (* Overlapping invocations with different goals, each its own root:
-       both verify their own goal. *)
-    fun overlapping () =
-      let
-        val goal_b : Abbrev.goal =
-          ([], ``LENGTH (l ++ m ++ n) = LENGTH l + LENGTH m + LENGTH n``)
-        val opts = options 5 30 1 NONE
-        val finished = new_monitor ()
-        fun invocation goal =
-          let
-            val root = new_root ()
-            val out = ref NONE
-            val _ = Thread.fork (fn () =>
-              (out := SOME (attempt (fn () =>
-                 hhSchedule.run_in root
-                   {options = #1 opts, max_proofs = #2 opts, goal = goal,
-                    rankings = rankings,
-                    progress = SOME (fn _ => ())}));
-               monitor_do finished (fn () => ())), [])
-          in
-            (root, out)
-          end
-        fun proves (goal : Abbrev.goal) (result : hhSchedule.result) =
-          case #suggestions result of
-              [suggestion] =>
-                ((ignore (Tactical.TAC_PROOF (goal, #tac suggestion)); true)
-                 handle Interrupt => raise Interrupt | _ => false)
-            | _ => false
-        val ((root_a, out_a), (root_b, out_b)) =
-          with_provers proof ignore (fn () =>
-            with_hooks (hooks true) (fn () =>
-              let
-                val a = invocation goal
-                val b = invocation goal_b
-                val _ = monitor_until finished "overlapping runs did not end"
-                  (fn () => Option.isSome (!(#2 a)) andalso
-                            Option.isSome (!(#2 b)))
-              in (a, b) end))
-        val tree_a = tree root_a
-        val tree_b = tree root_b
-        val _ = (remove_tree root_a; remove_tree root_b)
-        fun ok goal out =
-          case valOf (!out) of
-              (SOME result, NONE) =>
-                #stopped result = hhSchedule.MaxProofs andalso
-                proves goal result
-            | _ => false
-      in
-        (expect "overlap: each invocation verifies its own goal"
-           (ok goal out_a andalso ok goal_b out_b);
-         expect "overlap: each root holds its files, none temporary"
-           (tmp_clean_names tree_a andalso tmp_clean_names tree_b andalso
-            not (null tree_a) andalso not (null tree_b)))
-      end
-
-    (* Where the export runs. *)
-    fun selection () =
-      let
-        fun scenario opts rks pipelined wrap =
-          let
-            val st = new_state ()
-            val (result, failure) =
-              run st gave_up opts rks (hooks pipelined) wrap
-                (quiet_start ())
-            val files = tree (#root st)
-            val _ = remove_tree (#root st)
-          in
-            (st, result, failure, files)
-          end
-        val normal = options 5 30 1 NONE
-        val debug = OS.FileSys.tmpName ()
-        val _ = remove_tree debug
-        val (blocking, _, _, _) = scenario normal rankings false no_wrap
-        val (piped, piped_result, _, _) =
-          scenario normal rankings true no_wrap
-        val (debugged, _, _, _) =
-          scenario (options 5 30 1 (SOME debug)) rankings true no_wrap
-        val (pinned, _, _, _) = scenario normal rankings true
-          (fn f => Context.with_context (Context.snapshot ()) f ())
-        val (empty, empty_result, _, _) =
-          scenario (options 0 30 1 NONE) rankings true no_wrap
-        val missing = [("knn", names "NO_SUCH_THEOREM")]
-        val (absent, _, absent_failure, absent_files) =
-          scenario normal missing true no_wrap
-        val _ = remove_tree debug
-      in
-        (expect "pipelined: the export is on the caller by default"
-           (same_thread (#seen blocking, #caller blocking));
-         expect "pipelined: the selected export runs on its own thread"
-           (Option.isSome (!(#seen piped)) andalso
-            not (same_thread (#seen piped, #caller piped)) andalso
-            #stopped (valOf piped_result) = hhSchedule.Exhausted);
-         expect "pipelined: debug_dir keeps the blocking export"
-           (same_thread (#seen debugged, #caller debugged));
-         expect "pipelined: a pinned caller keeps the blocking export"
-           (same_thread (#seen pinned, #caller pinned));
-         expect "pipelined: an empty schedule behaves as before"
-           (#stopped (valOf empty_result) = hhSchedule.Exhausted andalso
-            null (#slices_run (valOf empty_result)) andalso
-            not (Option.isSome (!(#seen empty))));
-         expect "pipelined: a missing theorem raises before any file"
-           (Option.isSome absent_failure andalso null absent_files andalso
-            null (!(#events absent)) andalso
-            not (Option.isSome (!(#seen absent)))))
-      end
+    val points = ["recon-registered", "recon-forked", "worker-registered",
+                  "worker-forked"]
+    val _ = List.app (at_launch ("raised", fn () => raise Interrupt,
+                                 fn f => f ())) points
+    val _ = List.app (at_launch ("asynchronous",
+                                 fn () => Thread.interrupt (Thread.self ()),
+                                 asynchronous)) points
   in
-    (List.app (fn _ => readiness ()) [1, 2, 3, 4, 5];
-     replay_beside_prepares "far from a power of ten" (fn _ => quiet_start ());
-     replay_beside_prepares "across a power of ten" (fn used =>
-       power_above (quiet_start () + used) - used div 2);
-     private_names ();
-     bounded_slices true;
-     bounded_slices false;
-     replay_after_error ();
-     replay_after_cancel ();
-     stop_after_proof ();
-     soft_timeout_pending ();
-     hard_timeout_running ();
-     error_wins ();
-     stop_wins false;
-     stop_wins true;
-     interrupt_during_export ();
-     interrupt_during_launch ();
-     producer_interrupted ();
-     error_then_interrupt ();
-     error_after_proof ();
-     overlapping ();
-     selection ())
+    ()
   end
 
 val _ = test_schedule_pool ()
 (* Once, like test_hhSchedule: not in the hermetic children. *)
 val _ = case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
             SOME _ => ()
-          | NONE => test_schedule_pipelined (#parse_output (prover Eprover))
-fun with_choice choice f =
-  with_ref (hhSchedule_Test.export_choice, choice) f
-
-(* The policy that picks the export of a run_in: the structural reasons in
-   their order of precedence, the measured region (see
-   hhSchedule.export_mode), and the selector that forces either export.
-   Options that the policy does not look at do not change the choice. *)
-fun test_export_mode () =
-  let
-    open hhSchedule
-    val plain = hhConfig.snapshot_with [("debug_dir", "")]
-    val debug = hhConfig.snapshot_with [("debug_dir", "debug-dir")]
-    fun mode_with proofs options pinned length =
-      export_mode {pinned = pinned, options = options, max_proofs = proofs,
-                   schedule_length = length}
-    val mode = mode_with 1
-    val forced = with_choice hhSchedule_Test.ForcePipelined
-    val blocked = with_choice hhSchedule_Test.ForceBlocking
-    fun varied (cores, timeout, _) =
-      hhConfig.snapshot_with [("debug_dir", ""), ("cores", cores),
-        ("timeout", timeout)]
-    val pipelined_cells = [("1", "30", "1"), ("2", "30", "1"),
-                           ("3", "30", "1"), ("4", "30", "1"),
-                           ("4", "31", "1"), ("4", "60", "1"),
-                           ("4", "300", "1")]
-    val unmeasured_cores = [("5", "30", "1"), ("16", "30", "1"),
-                            ("16", "5", "1"), ("5", "60", "1")]
-    val unmeasured_timeout = [("1", "29", "1"), ("1", "31", "1"),
-                              ("1", "60", "1"), ("2", "31", "1"),
-                              ("2", "60", "1"), ("3", "31", "1"),
-                              ("3", "60", "1"), ("3", "29", "1"),
-                              ("4", "29", "1"), ("4", "5", "1"),
-                              ("4", "1", "1"), ("1", "60", "4"),
-                              ("2", "29", "1")]
-    val more_proofs = [("1", "30", "2"), ("2", "30", "2"),
-                       ("3", "30", "4"), ("4", "30", "4"),
-                       ("4", "60", "2")]
-    fun all_modes cells m =
-      List.all (fn c as (_, _, proofs) =>
-        mode_with (valOf (Int.fromString proofs)) (varied c) false 24 = m)
-        cells
-    fun policy f = with_choice hhSchedule_Test.Policy f
-  in
-    policy (fn () =>
-      (expect "export_mode: the measured cases pipeline"
-         (all_modes pipelined_cells Pipelined);
-       expect "export_mode: unmeasured core counts block"
-         (all_modes unmeasured_cores (Blocking UnmeasuredCores));
-       expect "export_mode: an unmeasured timeout blocks"
-         (all_modes unmeasured_timeout (Blocking UnmeasuredTimeout));
-       expect "export_mode: more than one proof blocks"
-         (all_modes more_proofs (Blocking MoreProofs));
-       expect "export_mode: cores are named before the timeout"
-         (mode (varied ("16", "5", "1")) false 24 =
-            Blocking UnmeasuredCores);
-       expect "export_mode: the other options do not change the choice"
-         (mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
-            ("timeout", "30"), ("export_workers", "1"),
-            ("slices", "3")]) false 24 = Pipelined andalso
-          List.all (fn w =>
-            mode (hhConfig.snapshot_with [("debug_dir", ""), ("cores", "4"),
-              ("timeout", "30"),
-              ("export_workers", w)]) false 24 = Pipelined) ["0", "64"])));
-    expect "export_mode: the selector forces the pipelined export"
-      (forced (fn () =>
-         all_modes (unmeasured_cores @ unmeasured_timeout @ more_proofs)
-           Pipelined));
-    expect "export_mode: the selector forces the blocking export"
-      (blocked (fn () =>
-         all_modes pipelined_cells (Blocking Forced)));
-    expect "export_mode: debug_dir keeps the blocking export"
-      (mode debug false 24 = Blocking Debugging andalso
-       forced (fn () => mode debug false 24 = Blocking Debugging));
-    expect "export_mode: a pinned caller keeps the blocking export"
-      (mode plain true 24 = Blocking PinnedCaller andalso
-       forced (fn () => mode plain true 24 = Blocking PinnedCaller));
-    expect "export_mode: an empty schedule comes first"
-      (mode debug true 0 = Blocking EmptySchedule andalso
-       forced (fn () => mode plain false 0 = Blocking EmptySchedule));
-    expect "export_mode: pinned comes before debug_dir"
-      (mode debug true 24 = Blocking PinnedCaller);
-    expect "export_mode: the selector is restored"
-      (!hhSchedule_Test.export_choice = hhSchedule_Test.Policy)
-  end
-
-val _ = test_export_mode ()
-val _ = test_schedule_hoisted_fetch ()
+          | NONE => test_schedule_run_in (#parse_output (prover Eprover))
 val _ = test_schedule_knn_anchor_export ()
 val _ = test_schedule_mono_cap_export ()
-val _ = with_choice hhSchedule_Test.ForceBlocking test_hhSchedule
-
-(* The scheduler tests run once more on the pipelined path (the selector
-   is restored afterwards, whatever happens). *)
-val _ = with_choice hhSchedule_Test.ForcePipelined test_hhSchedule
+val _ = test_hhSchedule ()
 
 fun test_main_hh_lemmas_hook parser =
   let
@@ -8141,8 +7092,6 @@ fun test_holyHammer_scheduler_api () =
         end
 
 val _ = test_holyHammer_scheduler_api ()
-val _ =
-  with_choice hhSchedule_Test.ForcePipelined test_holyHammer_scheduler_api
 
 fun test_hhEval_integration () =
   case OS.Process.getEnv "HHCONFIG_TEST_ROOT" of
