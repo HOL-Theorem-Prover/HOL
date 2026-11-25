@@ -322,6 +322,7 @@ Incompatibilities
 
 -   The `cv_compute` translator no longer picks by load order between two from/to translations of a type (the `cv_from_to` theorems that `define_from_to` saves) that come from theories neither of which is an ancestor of the other.
     When both match a type and give different translations (whether or not their premises could be proved for it), using the type is now an error naming both theorems; keep one by removing the other with the new `cv_transLib.cv_from_to_delete "thy.name"`, which holds in descendant theories too.
+    For a datatype, `define_from_to` also saves a `cv_rep` theorem for its constructors and case constant, so remove the other theory's with `cv_rep_delete` as well.
     As with `cv_rep`, a translation added in a descendant of both, or in the current theory or session (`cv_memLib.cv_from_to_add`), does not settle such a clash; it still takes precedence over the translations of the theories it descends from.
 
 -   AKS's `computeBasic` no longer defines numeric modular exponentiation;
