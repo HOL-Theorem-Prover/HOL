@@ -1541,6 +1541,18 @@ its recorded bindings stop matching until the next compile reaches it.
 That is the right answer: they were made from text the user has since
 replaced.
 
+Because the stop is the whole of the match, **two declarations must
+not share one**, and one pair can: the parser synthesises a zero-width
+end-of-theory declaration at `(size, size)`, so in a file that does
+not end in a newline it sits on the last real declaration's stop.  It
+binds nothing, so as the newer entry at that byte it hid the
+declaration the user was looking at and the pane answered about the
+one above it — in a file whose last declaration was still being typed,
+which is when it is asked about most.  A declaration is therefore
+recorded only if it has source text of its own (`start < stop`); the
+resume snapshot is still taken for the synthetic one, which is what
+keeps an append off the from-boot path.
+
 ### Client cookbook
 
 The pane that shows a goal state is the pane that shows this — it is

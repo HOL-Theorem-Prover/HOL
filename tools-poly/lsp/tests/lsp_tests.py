@@ -4556,6 +4556,104 @@ def test_declResults_caps_at_ten_keeping_the_later_ones():
         c.close()
 
 
+# A file whose last declaration is not followed by a newline, which is
+# every file while its last declaration is being typed.  The parser
+# puts a zero-width end-of-theory declaration at `(size, size)`, so
+# there it lands on the last real declaration's `decSpan` stop -- the
+# one `declBindings` is keyed by.
+_DECLRESULTS_EOF_HEAD = (
+    "Theory declresults_eof\n"       # 0
+    "Ancestors arithmetic\n"         # 1
+    "\n"                             # 2
+    "Theorem thatthm:\n"             # 3
+    "  T\n"                          # 4
+    "Proof\n"                        # 5
+    "  rw[]\n"                       # 6
+    "QED\n"                          # 7
+    "\n")                            # 8
+
+
+def test_declResults_answers_for_an_unterminated_last_declaration():
+    """A cursor at the end of the file's last declaration answers about
+    *it*, not about the one above it, when there is no final newline.
+
+    The end-of-theory declaration the parser synthesises at EOF is
+    zero-width, so without a newline it shares the declaration's stop;
+    it binds nothing, and as the newer entry at that byte it used to
+    hide the answer and send the walk one declaration further up."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_eof.sml"
+        # Line 9 is `val x = 10' and the file stops at its last byte.
+        src = _DECLRESULTS_EOF_HEAD + "val x = 10"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_declresults(c, 361, uri, (9, 10), (9, 10))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("x" in texts[0] and "10" in texts[0]
+                    and "int" in texts[0],
+                    f"the REPL line for `val x = 10' ({texts[0]!r})")
+        # The positive control for the failure this guards: the
+        # theorem above it is what the walk used to land on.
+        assert_true("thatthm" not in texts[0],
+                    f"not the declaration above it ({texts[0]!r})")
+    finally:
+        c.close()
+
+
+def test_declResults_survives_the_final_newline_arriving():
+    """And it stays answered once the user ends the line.
+
+    Typing the newline puts the edit exactly at that declaration's
+    stop, so the resumed compile skips the declaration and nothing
+    re-records what it bound.  A wrong entry made while the file had no
+    final newline therefore stood for the rest of the session -- this
+    is the half of the bug that did not heal on its own."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_eof_nl.sml"
+        src = _DECLRESULTS_EOF_HEAD + "val x = 10"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "first compileCompleted")
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, src + "\n", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "second compileCompleted")
+        r = _send_declresults(c, 371, uri, (9, 10), (9, 10))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 1,
+                    f"one declaration answered ({r!r})")
+        assert_true("x" in texts[0] and "10" in texts[0],
+                    f"still the REPL line for `val x = 10' ({texts[0]!r})")
+        # And the declaration typed after it answers for itself.
+        idx_before2 = c.total_msgs()
+        src2 = _DECLRESULTS_EOF_HEAD + "val x = 10\nval y = 11"
+        _did_change_full(c, uri, src2, 3)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before2),
+                    "third compileCompleted")
+        r2 = _send_declresults(c, 372, uri, (10, 10), (10, 10))
+        t2 = _declresults_texts(r2)
+        assert_true(t2 is not None and len(t2) == 1,
+                    f"one declaration answered ({r2!r})")
+        assert_true("y" in t2[0] and "11" in t2[0],
+                    f"the REPL line for `val y = 11' ({t2[0]!r})")
+        # The one above it is still its own answer, not `y''s and not
+        # the theorem's.
+        r3 = _send_declresults(c, 373, uri, (9, 10), (9, 10))
+        t3 = _declresults_texts(r3)
+        assert_true(t3 is not None and len(t3) == 1
+                    and "x" in t3[0] and "10" in t3[0],
+                    f"and `val x = 10' above it ({r3!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_outside_proof():
     """Slice B: cursor outside any `Proof … QED` block returns null."""
     c = Client("/tmp")
@@ -13908,6 +14006,10 @@ TESTS = [
                                      test_declResults_reports_a_torn_selection),
     ("declResults_caps_at_ten_keeping_the_later_ones",
                                      test_declResults_caps_at_ten_keeping_the_later_ones),
+    ("declResults_answers_for_an_unterminated_last_declaration",
+                                     test_declResults_answers_for_an_unterminated_last_declaration),
+    ("declResults_survives_the_final_newline_arriving",
+                                     test_declResults_survives_the_final_newline_arriving),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
                                      test_goalState_between_two_theorems),

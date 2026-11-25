@@ -4494,8 +4494,26 @@ fun start {diag, dbg, warnings} = let
       (* Both halves of "this declaration has finished": what it bound,
          which is kept whatever happened, and the resume snapshot,
          which is not.  See `captureSnap`. *)
-      fun onDecDone {stop, bindings} = (
-        trees := addDeclBinding {endByte = stop, values = bindings} (!trees);
+      fun onDecDone {start, stop, bindings} = (
+        (* Only a declaration that has source text of its own.  The
+           parser synthesises a zero-width end-of-theory declaration
+           at `(size, size)` (`finishTheory`), and `declBindings` is
+           keyed by the stop alone, so a file that does not end in a
+           newline -- which is every file while its last declaration
+           is being typed -- has the synthetic dec land on the last
+           real one's stop and, being the newer entry, win.  It binds
+           nothing, so the pane walked past the declaration the user
+           was looking at and answered about the one above it.
+
+           Recording it is worth nothing even when it collides with
+           nothing: a zero-width declaration has no text for a cursor
+           to be at the end of.  The resume snapshot below is a
+           different matter and is still taken for it -- an append is
+           exactly an edit at that byte, and resuming from there is
+           what keeps a file being extended off the from-boot path. *)
+        if start < stop then
+          trees := addDeclBinding {endByte = stop, values = bindings} (!trees)
+        else ();
         captureSnap stop)
       and captureSnap endByte = let
         val () = lastDecEnd := endByte

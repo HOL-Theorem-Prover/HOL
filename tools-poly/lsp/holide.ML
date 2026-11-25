@@ -72,8 +72,15 @@ val initialize:
        renders, and so the raw material for showing what a REPL would
        have printed for this declaration.  Empty for a dec that binds
        no value (`open`, a bare `;`, a pragma), and for one that failed
-       before it got that far. *)
-    onDecCompleted: {stop: int,
+       before it got that far.
+
+       `start` is the other end of that same span, and is there so a
+       reader can tell a declaration with source text of its own from
+       a synthetic one: the parser's end-of-theory dec is zero-width
+       at the very end of the file, so anything keyed by `stop` alone
+       collides with the last real declaration whenever the file does
+       not end in a newline. *)
+    onDecCompleted: {start: int, stop: int,
                      bindings: (string * PolyML.NameSpace.Values.value) list}
                     -> unit,
     (* Skip `finish` / `emitBuilt` / `onDecCompleted` for decs whose
@@ -1231,7 +1238,8 @@ fun initialize {
         if !hardError then retryAsCheat () else ();
         emitBuilt ();
         ptRef := [];
-        onDecCompleted {stop = stopByte, bindings = rev (!decValues)};
+        onDecCompleted {start = decStart, stop = stopByte,
+                        bindings = rev (!decValues)};
         case stopAfter of
             SOME b => if stopByte >= b then () else loop ()
           | NONE => loop ())
