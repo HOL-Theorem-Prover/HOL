@@ -3558,10 +3558,11 @@ val _ = test "an inner proof's budget is its thread's CPU time" (fn () =>
      other_thread ())
   end)
 
-(* Work that never ends by itself stops at the wall backstop, and the
-   largest budget [upd_tac_timeout] accepts (the largest number of seconds
-   Time can hold; its backstop, 20 times that, is past it) still runs its
-   work. *)
+(* Work that never ends by itself stops at the wall backstop (under a
+   budget of several ticks, which the CPU time the call uses before the
+   work blocks can't reach), and the largest budget [upd_tac_timeout]
+   accepts (the largest number of seconds Time can hold; its backstop, 20
+   times that, is past it) still runs its work. *)
 val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
   let
     fun representable s = (ignore (seconds s); true) handle Time.Time => false
@@ -3575,9 +3576,9 @@ val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
     fun widen s =
       if representable (2.0 * s) then widen (2.0 * s) else narrow s (2.0 * s)
   in
-    (case run 0.01 block () of
+    (case run 0.05 block () of
          Returned _ => false
-       | Stopped {elapsed, ...} => past_backstop 0.01 elapsed) andalso
+       | Stopped {elapsed, ...} => past_backstop 0.05 elapsed) andalso
     within (seconds (widen 1.0)) (fn () => true) ()
   end)
 
