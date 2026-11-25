@@ -4,18 +4,8 @@
 (* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 
-fun join a b = OS.Path.concat (a, b)
-
-(* Applies f to a fresh directory, which is removed afterwards. *)
-fun with_fresh_dir f =
-  let
-    val dir = OS.FileSys.tmpName ()
-    val _ = OS.FileSys.remove dir handle OS.SysErr _ => ()
-    val _ = OS.FileSys.mkDir dir
-  in
-    (f dir before hhConfig.remove_tree dir)
-    handle error => (hhConfig.remove_tree dir; raise error)
-  end
+val join = hhTestLib.join
+val with_fresh_dir = hhTestLib.with_fresh_dir
 
 fun installed prover = isSome (hhProver.probe (hhProver.config_of prover))
 

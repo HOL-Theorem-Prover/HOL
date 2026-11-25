@@ -898,13 +898,9 @@ fun test_hhEval_chainy_pools () =
    no user configuration applies. *)
 fun run_hermetic_child () =
   let
-    val root = OS.FileSys.tmpName ()
-    val _ = OS.FileSys.remove root handle OS.SysErr _ => ()
-    val _ = OS.FileSys.mkDir root
-    val status = OS.Process.system
+    val status = with_fresh_dir (fn root => OS.Process.system
       ("/usr/bin/env -u HOL4_HAMMER_EVAL_DIR HHCONFIG_TEST_ROOT=" ^ root ^
-       " HOLDIR=" ^ join root "holdir" ^ " ./selftest.exe")
-    val _ = hhConfig.remove_tree root
+       " HOLDIR=" ^ join root "holdir" ^ " ./selftest.exe"))
   in
     tprint "hhEval hermetic selftests";
     if OS.Process.isSuccess status then OK ()

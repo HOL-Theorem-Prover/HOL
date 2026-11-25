@@ -47,7 +47,7 @@ selftest.uo: selftest.sml hhStature.uo hhMePo.uo hhLearn.uo \
              holyHammer.uo hhTestLib.uo
 
 smoke.uo: smoke.sml hhConfig.uo hhProver.uo hhSlice.uo hhLearn.uo \
-          hhSchedule.uo holyHammer.uo
+          hhSchedule.uo holyHammer.uo hhTestLib.uo
 .PHONY: all
 
 selftest.exe: selftest.uo

@@ -28,6 +28,30 @@ in
        OS.Process.exit OS.Process.failure)
 end
 
+(* f dir for a fresh directory dir under the state directory, which is
+   removed afterwards, also when f raises. *)
+fun with_fresh_dir f =
+  let val dir = hhSchedule.new_problem_dir (hhConfig.state_dir ()) in
+    (f dir before hhConfig.remove_tree dir)
+    handle error => (hhConfig.remove_tree dir; raise error)
+  end
+
+(* The text that write file writes to a fresh file. *)
+fun written_by write = with_fresh_dir (fn dir =>
+  let val file = join dir "written" in
+    write file; String.concat (aiLib.bare_readl file)
+  end)
+
+(* f (), with stdout sent to a fresh file: its result and what it
+   printed. *)
+fun capture_stdout f = with_fresh_dir (fn dir =>
+  let
+    val file = join dir "stdout"
+    val result = smlRedirect.hide_in_file file f ()
+  in
+    (result, String.concat (aiLib.bare_readl file))
+  end)
+
 fun expect message truth =
   (check_stdout ("before \"" ^ message ^ "\"");
    testutils.tprint message;
