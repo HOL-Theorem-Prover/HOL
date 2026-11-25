@@ -1521,6 +1521,12 @@ fun test_hhProblemGen () =
       (String.isSubstring "pxy_2Es : ty_2Enum_2Enum > " helper_arity andalso
        String.isSubstring "pxy_2Es(X)" helper_arity andalso
        not (String.isSubstring "pxy_2Es(X,Y)" helper_arity))
+    (* THF terms are not first-orderized: pxy.s is applied to two and to
+       three arguments, and Boolean terms are formulas.  So mono_native
+       must declare THF's arrow and $o, as mono_native_higher does. *)
+    val _ = expect "hhProblemGen gives THF mono_native THF's arrow and $o"
+      (problem th0 "mono_native" (input helper_arity_goal) =
+       problem th0 "mono_native_higher" (input helper_arity_goal))
     val _ = expect "hhProblemGen inserts pp for non-FOOL boolean terms"
       (String.isSubstring "pp_2E(app_2E" bool_term andalso
        not (String.isSubstring "pp_2E(app_2E" fool_bool_term))

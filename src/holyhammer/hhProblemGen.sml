@@ -1382,11 +1382,13 @@ struct
   fun generated_problem format encoding0 needs
       ({conjecture, facts, used_app, used_pp} : fo_ir) direct_helpers =
     let
-      (* THF has its own arrow and $o, whatever the encoding's name says. *)
+      (* THF has its own arrow and $o, whatever the encoding's name says:
+         its terms are not first-orderized, so a symbol is applied to any
+         number of arguments and a Boolean term is a formula. *)
       val encoding =
         case (format, encoding0) of
-            (hhTptpProblem.THF _, hhTypeEnc.Native {poly = true, fool, ...}) =>
-              hhTypeEnc.Native {poly = true, higher = true, fool = fool}
+            (hhTptpProblem.THF _, hhTypeEnc.Native {poly, fool, ...}) =>
+              hhTypeEnc.Native {poly = poly, higher = true, fool = fool}
           | _ => encoding0
       val all_formulas = conjecture :: map #2 facts
       val symbols = symbol_table encoding
