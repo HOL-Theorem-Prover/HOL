@@ -17,7 +17,9 @@ usage() {
   cat <<EOF
 Usage: $prog [--dest DIR] [--only PROVER] [--force] [--list]
 
-Download e, vampire, and zipperposition for the current platform.
+Download e, vampire, and zipperposition for the current platform into
+DIR/<prover>-<version>/<platform>/, where DIR defaults to
+\$HOL4_HAMMER_DIR/provers, else \$HOME/.hol4/hammer/provers.
 PROVER is one of: e, vampire, zipperposition.
 EOF
 }
@@ -144,23 +146,10 @@ if $list; then
   exit 0
 fi
 
-writable_destination() {
-  candidate=$1
-  if [ -d "$candidate" ]; then
-    [ -w "$candidate" ]
-  else
-    parent=${candidate%/*}
-    [ "$parent" != "$candidate" ] && [ -d "$parent" ] && [ -w "$parent" ]
-  fi
-}
-
 if [ -n "$dest_arg" ]; then
   dest=$dest_arg
 elif [ -n "${HOL4_HAMMER_DIR:-}" ]; then
   dest=$HOL4_HAMMER_DIR/provers
-elif [ -n "${HOLDIR:-}" ] &&
-     writable_destination "$HOLDIR/src/holyhammer/provers"; then
-  dest=$HOLDIR/src/holyhammer/provers
 else
   [ -n "${HOME:-}" ] || fail "HOME is not set; use --dest DIR"
   dest=$HOME/.hol4/hammer/provers

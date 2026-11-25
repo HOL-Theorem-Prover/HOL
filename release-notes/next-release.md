@@ -389,7 +389,9 @@ Incompatibilities
     Z3 is no longer in the default prover set: `z3` remains registered but
     has no scheduler slices, and it is found only as Z3's TPTP front end,
     `z3_tptp`.  The prover scripts in `src/holyhammer/provers` have been
-    removed.
+    removed, and prover binaries copied there are no longer found:
+    install them with `tools/download-provers`, put them on `PATH`, or
+    set `prover.<name>.executable`.
 
 -   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
     Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.
