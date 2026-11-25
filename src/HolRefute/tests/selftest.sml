@@ -3315,12 +3315,13 @@ val _ = test "a spent inner budget raises before the work starts" (fn () =>
 val _ = test "an inner proof under the largest budget runs its work" (fn () =>
   let
     fun representable s = (ignore (seconds s); true) handle Time.Time => false
+    (* until no real lies between [lo], representable, and [hi], not *)
     fun narrow lo hi =
-      if hi <= lo * 1.000001 then lo
-      else
-        let val mid = (lo + hi) / 2.0 in
-          if representable mid then narrow mid hi else narrow lo mid
-        end
+      let val mid = (lo + hi) / 2.0 in
+        if mid <= lo orelse mid >= hi then lo
+        else if representable mid then narrow mid hi
+        else narrow lo mid
+      end
     fun widen s =
       if representable (2.0 * s) then widen (2.0 * s) else narrow s (2.0 * s)
   in
