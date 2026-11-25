@@ -601,11 +601,12 @@ val scope_limit_hint =
    a monotonic type lets the scope search collapse cardinalities -- so
    answering true on no evidence would let Refute skip a scope that can hold
    a counterexample and report None unsoundly, whereas answering false costs
-   nothing but scopes.  Whether a deadline is reached is a wall-clock
-   question and untestable without a race; that abandonment degrades to
-   false is not, so the polarity lives here, in one named place a test can
-   call, rather than inline in a handler nothing can reach.  Anything else
-   is re-raised: only these two are abandonment. *)
+   nothing but scopes.  Whether the budget runs out (the thread's CPU time,
+   or the wall-time backstop, as [apply_within_budget] keeps it) depends on
+   scheduling and is untestable without a race; that abandonment degrades
+   to false is not, so the polarity lives here, in one named place a test
+   can call, rather than inline in a handler nothing can reach.  Anything
+   else is re-raised: only these two are abandonment. *)
 fun abandoned_mono_verdict report exn =
   case exn of
       Timeout.TIMEOUT _ => (report ("timeout", ""); false)

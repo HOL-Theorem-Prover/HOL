@@ -3286,15 +3286,18 @@ val _ = test "an inner proof that waits runs past its CPU budget" (fn () =>
 
 (* The watcher sleeps at most the CPU budget left, in wall time, and the
    work cannot use more CPU than the wall time that passes, so the work
-   overruns by at most a tick of the clock and the watcher's wake-up; the
-   wall backstop (4 s here) would let it compute far longer. *)
+   overruns by at most a tick of the clock and the watcher's wake-up: the
+   clock, which counts in ticks, reads at most one tick past the budget
+   (half a tick of slack for rounding).  The wall backstop (4 s here) would
+   let it compute far longer. *)
 val _ = test "an inner proof that computes stops at its CPU budget" (fn () =>
   let
     val clock = Clock.start ()
     val stopped = times_out (fn () => within (seconds 0.2) spin 0)
     val used = Clock.seconds clock
   in
-    stopped andalso used >= 0.2 - Clock.tick andalso used < 0.2 + 0.1
+    stopped andalso used >= 0.2 - Clock.tick andalso
+    used <= 0.2 + 1.5 * Clock.tick
   end)
 
 val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
@@ -3311,14 +3314,26 @@ val _ = test "a spent inner budget raises before the work starts" (fn () =>
 val _ =
   if not (OS.FileSys.access ("/proc/thread-self", [])) then ()
   else
+    (* The work waits until the other thread has computed twice the
+       budget, so a clock that charged it would stop the work. *)
     test "another thread computing doesn't count against an inner proof"
       (fn () =>
         let
           val stop = ref false
-          fun spinner () = if !stop then () else spinner ()
+          val spun = ref 0.0
+          fun spinner () =
+            let
+              val clock = Clock.start ()
+              fun loop () =
+                if !stop then () else (spun := Clock.seconds clock; loop ())
+            in
+              loop ()
+            end
+          fun wait_for_spinner () =
+            !spun >= 0.1 orelse (idle 0.01 (); wait_for_spinner ())
           val _ = Thread.fork (spinner, [])
         in
-          (within (seconds 0.05) (idle 0.3) () before stop := true)
+          (within (seconds 0.05) wait_for_spinner () before stop := true)
           handle e => (stop := true; raise e)
         end)
 
