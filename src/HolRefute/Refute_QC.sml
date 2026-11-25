@@ -95,6 +95,15 @@ structure Refute_QC :> Refute_QC = struct
   fun has_generator ty =
     (Refute_Gen.spec_of ty; true) handle Refute_Gen.NoGenerator _ => false
 
+  (* A [Split] needs the scrutinee's value to be a constructor term, but
+     every substrate computes a [:num] as a numeral: native code as an
+     [IntInf.int], [EVAL] as [NUMERAL ...], never [SUC n].  So [0] and
+     [SUC] are not split on; the premise is bound or guarded like any
+     other numeral equation. *)
+  fun split_constructor tm =
+    if Refute_Util.same_type (Term.type_of tm) numSyntax.num then NONE
+    else fully_applied_constructor tm
+
   (* A registered generator, an [abstract_generator] wrapper, or a
      TypeBase datatype all make [spec_of] succeed and must win over
      transport (the firing condition); only then is the model finder's
@@ -232,7 +241,8 @@ structure Refute_QC :> Refute_QC = struct
      try_eq (lhs, x), x a free not in frees(lhs) U bound:
        gen_all ((frees a \\ bound) \\ {x})
          (Bind (x, lhs, fallback, compile concl (frees a U bound) rest))
-     try_eq (lhs, C a1 ... an), C a fully-applied TypeBase constructor:
+     try_eq (lhs, C a1 ... an), C a fully-applied TypeBase constructor
+       whose type is not num (split_constructor):
        gen_all (frees lhs \\ bound)
          (Split (lhs, [(C, [v1 ... vn],
            compile concl (frees lhs U {vs} U bound)
@@ -699,7 +709,7 @@ structure Refute_QC :> Refute_QC = struct
               {missing = length (vars_of bound lhs), functional = true,
                generator = false, outputs = length arguments,
                recursive = false})
-            (fully_applied_constructor rhs)
+            (split_constructor rhs)
 
       fun equality_score bound assumption =
         case Lib.total boolSyntax.dest_eq assumption of
@@ -838,7 +848,7 @@ structure Refute_QC :> Refute_QC = struct
                       (Bind (rhs, lhs, fallback, continuation ())))
                   end
                 else
-                  case fully_applied_constructor rhs of
+                  case split_constructor rhs of
                     NONE => NONE
                   | SOME (constructor, arguments) =>
                       let

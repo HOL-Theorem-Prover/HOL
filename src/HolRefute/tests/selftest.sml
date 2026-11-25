@@ -2694,6 +2694,29 @@ val _ = test "word64 random draws agree across substrates" (fn () =>
       | _ => false
   end)
 
+(* A premise [n = 0] (or [n = SUC m]) is bound, not split on: every
+   substrate computes a num as a numeral, never a constructor term, so a
+   [Split] on [0] could not be compiled to native code ("unknown
+   constructor num$0"). *)
+local
+  fun refuted_on_both goal =
+    List.all (fn (substrate, name) =>
+      List.all (fn cfg =>
+        refute (cfg |> upd_substrate substrate) goal
+        |> cex_where (fn c => #substrate c = name andalso is_genuine c
+                              andalso certifies goal c))
+        [exhaustive, random |> upd_seed (SOME 1)])
+      [(NativeSML, "native"), (Compute, "compute")]
+in
+  val _ = test "native code refutes a zero premise" (fn () =>
+    List.all refuted_on_both
+      [``(n : num) = 0 ==> F``, ``(n : num) = SUC m ==> F``])
+  val _ = test "native code refutes a negated zero equation" (fn () =>
+    refuted_on_both ``(n : num) <> 0``)
+  val _ = test "native code refutes a zero premise under a conditional"
+    (fn () => refuted_on_both ``(if b then 1 else 0) = (0 : num) ==> b``)
+end
+
 (* Compute defines its enumerator programs inside the theory bracket, so
    the smart-generator goal is what actually drives the revert. *)
 val _ = test "compute leaves the theory untouched" (fn () =>
