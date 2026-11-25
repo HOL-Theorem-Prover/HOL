@@ -299,10 +299,10 @@ fun matrix_slice prover format type_enc lam_trans nfacts : hhProver.slice =
    lam_trans = lam_trans, nfacts = nfacts, filter = "none", extra_opts = [],
    slice_size = 1}
 
-(* The complete typed-slice encoding matrix.  The final three rows
-   deliberately retain the parser-rejected table triples: a substitution
-   removes a slice from the schedule, but must not remove its encoding from
-   the soundness checks. *)
+(* The complete typed-slice encoding matrix.  The final three rows are the
+   table triples that the portfolio's substitutions replaced (see
+   hhProver.portfolio): a substitution removes a slice from the schedule,
+   but must not remove its encoding from the soundness checks. *)
 val matrix =
   let open hhConfig in
     [matrix_slice Vampire "tx0" "mono_native_fool" "lifting" 96,
@@ -311,9 +311,9 @@ val matrix =
      matrix_slice Eprover "th0" "mono_native_higher" "keep_lams" 512,
      matrix_slice Eprover "tx0-" "mono_native_fool" "combs_and_lifting"
        1024,
+     matrix_slice Vampire "tx0" "mono_native_fool" "combs" 512,
      matrix_slice Vampire "tf1" "poly_native" "lifting" 512,
      matrix_slice Eprover "tf0" "mono_native" "combs_and_lifting" 1024,
-     matrix_slice Vampire "tx0" "mono_native_fool" "combs" 512,
      matrix_slice Zipperposition "fof" "mono_guards??" "lifting" 32]
   end
 
