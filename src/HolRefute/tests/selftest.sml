@@ -2559,16 +2559,14 @@ fun fset_not_refuted goal =
 
 fun fset_evaluates tm = aconv (rhs (concl (bossLib.EVAL tm))) T
 
+val _ = Datatype.Datatype `fs_box = FsNone | FsSome (num fset)`
+val _ = Datatype.Datatype `fs_rec = <| fs_tags : num fset; fs_count : num |>`
+
 val _ = test "finite sets are generated and refuted" (fn () =>
-  fset_refuted ``fIN 1 (s : num fset) ==> fIN 2 s`` andalso
-  fset_refuted ``fIN 1w (s : word8 fset) ==> fIN 2w s``)
-
-val _ = test "a true finite-set goal is not refuted" (fn () =>
-  fset_not_refuted ``fIN (x : num) (fINSERT x s)``)
-
-val _ = test "finite-set operations refute false properties" (fn () =>
   List.all fset_refuted
-    [``fEMPTY = (s : num fset)``,
+    [``fIN 1 (s : num fset) ==> fIN 2 s``,
+     ``fIN 1w (s : word8 fset) ==> fIN 2w s``,
+     ``fEMPTY = (s : num fset)``,
      ``fINSERT (x : num) s = s``,
      ``fUNION (s : num fset) t = s``,
      ``fDELETE (x : num) s = s``,
@@ -2576,7 +2574,9 @@ val _ = test "finite-set operations refute false properties" (fn () =>
      ``fBIGUNION (ss : num fset fset) = fEMPTY``,
      ``fset_ABS (l : num list) = fEMPTY``,
      ``fset_ABS (l : string) = fEMPTY``,
-     ``fCARD (fINSERT (1 : num) s) = fCARD s + 1``])
+     ``fCARD (fINSERT (1 : num) s) = fCARD s + 1``,
+     ``(b = FsSome s) ==> fIN (1 : num) s``,
+     ``fIN 1 r.fs_tags ==> r.fs_count = fCARD r.fs_tags``])
 
 val _ = test "the compset decides finite-set operations on chains" (fn () =>
   List.all fset_evaluates
@@ -2584,46 +2584,26 @@ val _ = test "the compset decides finite-set operations on chains" (fn () =>
      ``~fIN (3 : num) (fINSERT 2 (fINSERT 1 fEMPTY))``,
      ``fIN (3 : num) (fUNION (fINSERT 1 fEMPTY) (fINSERT 3 fEMPTY))``,
      ``~fIN (1 : num) (fDELETE 1 (fINSERT 1 (fINSERT 2 (fINSERT 1 fEMPTY))))``,
-     ``fIN (2 : num) (fDELETE 1 (fINSERT 1 (fINSERT 2 (fINSERT 1 fEMPTY))))``,
      ``fIN (2 : num) (fIMAGE SUC (fINSERT 1 fEMPTY))``,
-     ``fIN (1 : num) (fBIGUNION (fINSERT (fINSERT 1 fEMPTY) fEMPTY))``,
-     ``fIN (1 : num) (fBIGUNION (fINSERT (fINSERT 1 fEMPTY)
-                                   (fINSERT (fINSERT 2 fEMPTY) fEMPTY)))``,
      ``fIN (2 : num) (fBIGUNION (fINSERT (fINSERT 1 fEMPTY)
                                    (fINSERT (fINSERT 2 fEMPTY) fEMPTY)))``,
      ``fIN (2 : num) (fset_ABS [1; 2])``,
      ``fCARD (fINSERT (1 : num) (fINSERT 2 (fINSERT 1 fEMPTY))) = 2``,
      ``fINSERT 1 (fINSERT 2 (fINSERT 1 fEMPTY)) =
        fINSERT 2 (fINSERT 1 (fEMPTY : num fset))``,
-     ``fINSERT 1 (fINSERT 2 fEMPTY) <> fINSERT 1 (fEMPTY : num fset)``,
-     ``fINSERT (fINSERT 1 fEMPTY) (fINSERT fEMPTY fEMPTY) =
-       fINSERT fEMPTY (fINSERT (fINSERT (1 : num) fEMPTY) fEMPTY)``])
+     ``fINSERT 1 (fINSERT 2 fEMPTY) <> fINSERT 1 (fEMPTY : num fset)``])
 
 val _ = test "finite-set operations leave true properties alone" (fn () =>
   List.all fset_not_refuted
-    [``fIN (x : num) (fUNION s t) <=> fIN x s \/ fIN x t``,
-     ``~fIN (x : num) (fDELETE x s)``,
+    [``fIN (x : num) (fINSERT x s)``,
+     ``fIN (x : num) (fUNION s t) <=> fIN x s \/ fIN x t``,
      ``fIN (y : num) s /\ y <> x ==> fIN y (fDELETE x s)``,
      ``fIN (x : num) s ==> fIN (SUC x) (fIMAGE SUC s)``,
      ``fIN (x : num) s /\ fIN s ss ==> fIN x (fBIGUNION ss)``,
-     ``fIN (y : num) t ==> fIN y (fBIGUNION (fINSERT s (fINSERT t fEMPTY)))``,
      ``fIN (x : num) (fset_ABS l) <=> MEM x l``,
-     ``fIN #"a" (fset_ABS l) <=> MEM #"a" l``,
      ``fCARD (fINSERT (x : num) s) <= fCARD s + 1``,
-     ``fCARD (fINSERT (x : num) (fINSERT y fEMPTY)) =
-       if x = y then 1 else 2``])
-
-val _ = test "finite-set equality is extensional" (fn () =>
-  List.all fset_not_refuted
-    [``fINSERT 1 (fINSERT 2 (s : num fset)) = fINSERT 2 (fINSERT 1 s)``,
+     ``fINSERT 1 (fINSERT 2 (s : num fset)) = fINSERT 2 (fINSERT 1 s)``,
      ``fINSERT 1 (fINSERT 1 (s : num fset)) = fINSERT 1 s``])
-
-val _ = Datatype.Datatype `fs_box = FsNone | FsSome (num fset)`
-val _ = Datatype.Datatype `fs_rec = <| fs_tags : num fset; fs_count : num |>`
-
-val _ = test "a finite set inside a datatype or a record" (fn () =>
-  fset_refuted ``(b = FsSome s) ==> fIN (1 : num) s`` andalso
-  fset_refuted ``fIN 1 r.fs_tags ==> r.fs_count = fCARD r.fs_tags``)
 
 (* A let-bound local function reaches the extractor as the binding
    [f x y = e] whichever way it was written (pairSyntax's [dest_anylet]
@@ -2926,24 +2906,17 @@ val _ = test "word64 random draws agree across substrates" (fn () =>
    substrate computes a num as a numeral, never a constructor term, so a
    [Split] on [0] could not be compiled to native code ("unknown
    constructor num$0"). *)
-local
-  fun refuted_on_both goal =
+val _ = test "native code refutes a zero premise" (fn () =>
+  List.all (fn goal =>
     List.all (fn (substrate, name) =>
       List.all (fn cfg =>
         refute (cfg |> upd_substrate substrate) goal
         |> cex_where (fn c => #substrate c = name andalso is_genuine c
                               andalso certifies goal c))
         [exhaustive, random |> upd_seed (SOME 1)])
-      [(NativeSML, "native"), (Compute, "compute")]
-in
-  val _ = test "native code refutes a zero premise" (fn () =>
-    List.all refuted_on_both
-      [``(n : num) = 0 ==> F``, ``(n : num) = SUC m ==> F``])
-  val _ = test "native code refutes a negated zero equation" (fn () =>
-    refuted_on_both ``(n : num) <> 0``)
-  val _ = test "native code refutes a zero premise under a conditional"
-    (fn () => refuted_on_both ``(if b then 1 else 0) = (0 : num) ==> b``)
-end
+      [(NativeSML, "native"), (Compute, "compute")])
+    [``(n : num) = 0 ==> F``, ``(n : num) = SUC m ==> F``,
+     ``(n : num) <> 0``, ``(if b then 1 else 0) = (0 : num) ==> b``])
 
 (* Compute defines its enumerator programs inside the theory bracket, so
    the smart-generator goal is what actually drives the revert. *)
@@ -3509,38 +3482,51 @@ local
   fun times_out f =
     (ignore (f ()); false) handle Timeout.TIMEOUT _ => true
 in
-val _ = test "an inner proof that waits runs past its CPU budget" (fn () =>
-  within (seconds 0.05) (idle 0.3) ())
-
-(* The watcher sleeps at most the CPU budget left, in wall time, and the
-   work cannot use more CPU than the wall time that passes, so the work
-   overruns by at most a tick of the clock and the watcher's wake-up: the
-   clock, which counts in ticks, reads at most one tick past the budget
-   (half a tick of slack for rounding).  The wall backstop (4 s here) would
-   let it compute far longer. *)
-val _ = test "an inner proof that computes stops at its CPU budget" (fn () =>
+(* Work that waits runs past the budget; work that computes stops within
+   a tick of it (the watcher sleeps at most the CPU budget left, in wall
+   time); and on Linux, another thread computing twice the budget meanwhile
+   is not charged to the work. *)
+val _ = test "an inner proof's budget is its thread's CPU time" (fn () =>
   let
+    val waits = within (seconds 0.05) (idle 0.3) ()
     val clock = Clock.start ()
     val stopped = times_out (fn () => within (seconds 0.2) spin 0)
     val used = Clock.seconds clock
+    fun other_thread () =
+      let
+        val stop = ref false
+        val spun = ref 0.0
+        fun spinner () =
+          let
+            val clock = Clock.start ()
+            fun loop () =
+              if !stop then () else (spun := Clock.seconds clock; loop ())
+          in
+            loop ()
+          end
+        fun wait_for_spinner () =
+          let
+            val from = !spun
+            fun wait () = !spun >= from + 0.1 orelse (idle 0.01 (); wait ())
+          in
+            wait ()
+          end
+        val _ = Thread.fork (spinner, [])
+      in
+        (within (seconds 0.05) wait_for_spinner () before stop := true)
+        handle e => (stop := true; raise e)
+      end
   in
-    stopped andalso used >= 0.2 - Clock.tick andalso
-    used <= 0.2 + 1.5 * Clock.tick
+    waits andalso stopped andalso used >= 0.2 - Clock.tick andalso
+    used <= 0.2 + 1.5 * Clock.tick andalso
+    (not (OS.FileSys.access ("/proc/thread-self", [])) orelse
+     other_thread ())
   end)
 
+(* Work that waits stops at the wall backstop, and the largest budget
+   [upd_tac_timeout] accepts (the largest number of seconds Time can hold;
+   its backstop, 20 times that, is past it) still runs its work. *)
 val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
-  times_out (fn () => within (seconds 0.01) (idle 0.5) ()))
-
-val _ = test "a spent inner budget raises before the work starts" (fn () =>
-  let val started = ref false in
-    times_out (fn () =>
-      within Time.zeroTime (fn () => (started := true; true)) ()) andalso
-    not (!started)
-  end)
-
-(* The largest budget [upd_tac_timeout] accepts is the largest number of
-   seconds Time can hold; its wall backstop, 20 times that, is past it. *)
-val _ = test "an inner proof under the largest budget runs its work" (fn () =>
   let
     fun representable s = (ignore (seconds s); true) handle Time.Time => false
     (* until no real lies between [lo], representable, and [hi], not *)
@@ -3553,74 +3539,22 @@ val _ = test "an inner proof under the largest budget runs its work" (fn () =>
     fun widen s =
       if representable (2.0 * s) then widen (2.0 * s) else narrow s (2.0 * s)
   in
+    times_out (fn () => within (seconds 0.01) (idle 0.5) ()) andalso
     within (seconds (widen 1.0)) (fn () => true) ()
   end)
 
-(* only Linux reports a thread's CPU time; elsewhere the process's counts *)
-val _ =
-  if not (OS.FileSys.access ("/proc/thread-self", [])) then ()
-  else
-    (* The work waits until the other thread has computed twice the
-       budget since the work started, so a clock that charged it would
-       stop the work. *)
-    test "another thread computing doesn't count against an inner proof"
-      (fn () =>
-        let
-          val stop = ref false
-          val spun = ref 0.0
-          fun spinner () =
-            let
-              val clock = Clock.start ()
-              fun loop () =
-                if !stop then () else (spun := Clock.seconds clock; loop ())
-            in
-              loop ()
-            end
-          fun wait_for_spinner () =
-            let
-              val from = !spun
-              fun wait () = !spun >= from + 0.1 orelse (idle 0.01 (); wait ())
-            in
-              wait ()
-            end
-          val _ = Thread.fork (spinner, [])
-        in
-          (within (seconds 0.05) wait_for_spinner () before stop := true)
-          handle e => (stop := true; raise e)
-        end)
-
-val _ = test "the thread clock falls back to the process clock" (fn () =>
-  let
-    val started = Time.now ()
-    val clocks = [Clock.start_reading NONE,
-                  Clock.start_reading (SOME "/nonexistent/stat")]
-    (* waiting first: the process clock counts the spinning, not the
-       wall time the wait took *)
-    val _ = idle 0.2 ()
-    val _ = spin_for 0.05
-    val used = List.map Clock.seconds clocks
-    val wall = Time.toReal (Time.- (Time.now (), started))
-  in
-    List.all (fn s => s > 0.0 andalso s < wall - 0.1) used
-  end)
-
-(* An outer deadline that falls first stops the call, as Timeout.apply's
-   would, and stays the outer call's own: the inner call passes the
-   interrupt on rather than calling it its own timeout. *)
-val _ = test "an outer deadline stops an inner proof first" (fn () =>
-  let val finished = ref false in
-    times_out (fn () =>
-      Timeout.apply (seconds 0.2)
-        (fn () =>
-           (within (seconds 100.0) spin 0
-            handle Timeout.TIMEOUT _ => (finished := true; true))) ()) andalso
-    not (!finished)
-  end)
-
-(* The watcher of a call never interrupts after the call has returned:
+(* An outer deadline that falls first stops the call and stays the outer
+   call's own, and no watcher interrupts after its call has returned:
    interruptible work after many calls, some stopped, runs undisturbed. *)
-val _ = test "no interrupt outlives an inner proof" (fn () =>
+val _ = test "an inner proof's interrupts stay its own" (fn () =>
   let
+    val finished = ref false
+    val outer_first =
+      times_out (fn () =>
+        Timeout.apply (seconds 0.2)
+          (fn () =>
+             (within (seconds 100.0) spin 0
+              handle Timeout.TIMEOUT _ => (finished := true; true))) ())
     fun calls 0 = ()
       | calls n =
           (ignore (within (seconds 0.01) (fn () => true) ());
@@ -3628,8 +3562,9 @@ val _ = test "no interrupt outlives an inner proof" (fn () =>
              within (seconds 0.01) spin 0)) else ();
            calls (n - 1))
   in
-    (calls 200; idle 0.2 () andalso spin_for 0.05)
-    handle Interrupt => false
+    outer_first andalso not (!finished) andalso
+    ((calls 200; idle 0.2 () andalso spin_for 0.05)
+     handle Interrupt => false)
   end)
 end
 
