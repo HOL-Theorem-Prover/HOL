@@ -3315,7 +3315,8 @@ val _ =
   if not (OS.FileSys.access ("/proc/thread-self", [])) then ()
   else
     (* The work waits until the other thread has computed twice the
-       budget, so a clock that charged it would stop the work. *)
+       budget since the work started, so a clock that charged it would
+       stop the work. *)
     test "another thread computing doesn't count against an inner proof"
       (fn () =>
         let
@@ -3330,7 +3331,12 @@ val _ =
               loop ()
             end
           fun wait_for_spinner () =
-            !spun >= 0.1 orelse (idle 0.01 (); wait_for_spinner ())
+            let
+              val from = !spun
+              fun wait () = !spun >= from + 0.1 orelse (idle 0.01 (); wait ())
+            in
+              wait ()
+            end
           val _ = Thread.fork (spinner, [])
         in
           (within (seconds 0.05) wait_for_spinner () before stop := true)
