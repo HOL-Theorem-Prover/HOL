@@ -555,6 +555,18 @@ val _ = check "Overloaded names left in the patterns fix the type"
   (contains typed_md "case (x :(num + num) option) of" andalso
    contains typed_md "| _ => 1")
 
+(* The same when a compound pattern prints through such a name. *)
+val _ = save_thm ("compound_result", REFL
+  ``case (x:num option) of NONE => 2 | SOME 0 => 1 | SOME (SUC k) => 2``)
+val _ = temp_overload_on ("foo", ``SOME (0:num)``)
+val _ = temp_overload_on ("foo", ``F``)
+val compound_md = #1 (generate (basic ["compound_result"]))
+val _ = temp_remove_ovl_mapping "foo" {Name = "F", Thy = "bool"}
+val _ = temp_clear_overloads_on "foo"
+val _ = check "Compound patterns printed through overloaded names fix the type"
+  (contains compound_md "case (x :num option) of" andalso
+   contains compound_md "| _ => 2")
+
 (* A printed _ would bind the free _0 the merged arms return, so the case
    fails the check and prints every arm. *)
 val uscore = mk_var ("_0", ``:num``)

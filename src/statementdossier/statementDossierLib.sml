@@ -144,10 +144,10 @@ fun theorem_terms th = hyp th @ [concl th]
    these: when _ is overloaded, when a pattern variable has the name of
    a constant, or when a right-hand side has a free variable named like
    one the parser makes of a printed _ (_0, _1, ...), which the _ would
-   capture.  What it splits on is printed with
-   its type when a constant in the patterns has an overloaded name,
-   which arms that are no longer printed may have been all that
-   resolved. *)
+   capture.  What it splits on is printed with its type when a term in
+   the patterns prints through an overloaded name with several
+   meanings, which arms that are no longer printed may have been all
+   that resolved. *)
 fun wildcard_case t =
   let
     fun uscore_name s =
@@ -222,7 +222,7 @@ fun wildcard_case t =
           else
             SOME (split_on,
                   List.exists
-                    (List.exists ambiguous o find_terms is_const o #1) rows,
+                    (List.exists ambiguous o find_terms (K true) o #1) rows,
                   rows)
       | NONE => refuse "the arms give another term"
   end
@@ -1636,8 +1636,8 @@ fun render ({about = extra_about, omit_types, reader_view,
       else (0, 0)
     val () =
       if merged_cases + failed_cases = 0 then ()
-      else print ("statementDossierLib: case expressions in the statements \
-                  \and definitions printed with fewer arms: " ^
+      else print ("statementDossierLib: distinct case expressions in the \
+                  \statements and definitions printed with fewer arms: " ^
                   Int.toString merged_cases ^
                   "; printed in full as the merged arms failed the check: " ^
                   Int.toString failed_cases ^ "\n")
@@ -2176,11 +2176,11 @@ fun render ({about = extra_about, omit_types, reader_view,
                   \assumptions are shown beside each statement. Their absence \
                   \alone is not an independent proof audit."]] @
       (if merged_cases = 0 then [] else
-         [Para [Text ("In " ^ Int.toString merged_cases ^ " case \
-                      \expressions of the statements and definitions, the \
-                      \arms that pattern completion made of a catch-all \
-                      \are printed as that one arm, arms that share a \
-                      \right-hand side using none of their pattern \
+         [Para [Text ("In " ^ Int.toString merged_cases ^ " distinct \
+                      \case expressions of the statements and definitions, \
+                      \the arms that pattern completion made of a \
+                      \catch-all are printed as that one arm, arms that \
+                      \share a right-hand side using none of their pattern \
                       \variables as one final catch-all, and pattern \
                       \variables an arm does not use as `_`; each was \
                       \checked to read back as the stored term.")]]) @

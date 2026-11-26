@@ -32,13 +32,14 @@ the printed arms compile, as the parser compiles a `case`, back to the
 stored term up to bound variable names, no right-hand side has a free
 variable the parser would take a `_` to bind (`_0`, `_1`, ...), no
 pattern variable has the name of a constant, and `_` is not overloaded;
-otherwise the expression prints in full. When a constant left in the
-patterns has an overloaded name, which the dropped arms may have been
-all that resolved, the case gives the type of what it splits on, as in
-`case (v :value) of`. About says how many case expressions of the
-statements and definitions print with fewer arms, and the run prints how
-many did and how many failed that check. Set the flag
-`statementdossier.case_wildcards` to false to print every arm.
+otherwise the expression prints in full. When a term left in the
+patterns prints through an overloaded name with several meanings, which
+the dropped arms may have been all that resolved, the case gives the
+type of what it splits on, as in `case (v :value) of`. About says how
+many distinct case expressions of the statements and definitions print
+with fewer arms, and the run prints how many did and how many failed
+that check. Set the flag `statementdossier.case_wildcards` to false to
+print every arm.
 
 ## Example
 
