@@ -1917,6 +1917,16 @@ val _ = section "narrowing backend"
 
 val nar = narrowing |> upd_substrate NativeSML
 
+(* A true goal's narrowing search must run through its size: a search the
+   deadline ended would leave the goal unrefuted having covered nothing
+   in particular.  At size 5 each such goal here takes under 0.2 s; one
+   takes 2.6 s at size 6. *)
+fun narrowed_through cfg goal =
+  refute_noting (cfg |> upd_size 5) goal (fn outcome =>
+    outcome == NoCounterexample orelse
+    unknown_with "searched up to size 5" outcome andalso
+    not (unknown_with "timed out" outcome))
+
 fun has_hole tm = String.isSubstring "_" (Parse.term_to_string tm)
 
 val _ = test "a ground hit is certified" (fn () =>
@@ -2078,8 +2088,7 @@ val _ = test "an existential under a bounded implication is refuted"
        ``!n : num. n < 5 ==> ?b : bool. if b then n = 0 else n = 1``,
        ``!x : num. x < 5 ==> ?y : word8. w2n y + 1 = x``] andalso
     List.all (fn goal =>
-      List.all (fn cfg => not_refuted (refute (cfg |> upd_timeout 3.0) goal))
-        [narrowing, nar])
+      List.all (fn cfg => narrowed_through cfg goal) [narrowing, nar])
       [``!x : num. 0 < x ==> ?y. y + 1 = x``,
        ``!z : num. z = 3 ==> !x : num. x < 5 ==> 0 < x ==> ?y. y + 1 = x``,
        ``!x : num. 0 < x ==> ?!y. y + 1 = x``,
@@ -2130,8 +2139,7 @@ val _ = test "records with a function field are narrowed" (fn () =>
       refuted cfg store andalso refuted cfg ranged andalso
       refuted cfg exists andalso refuted cfg domain andalso
       refuted cfg owner andalso
-      List.all (fn goal => not_refuted (refute (cfg |> upd_timeout 3.0) goal))
-        true_goals)
+      List.all (fn goal => narrowed_through cfg goal) true_goals)
       [narrowing, nar]
   end)
 
@@ -2554,14 +2562,13 @@ val _ = test "native handles MEM, option maps and compound updates" (fn () =>
 (* Native exhaustive and random testing, and narrowing, all through
    extraction: a counterexample from each, certified. *)
 val native_small = native |> upd_size 3
-val narrowing_small = nar |> upd_timeout 3.0
 
 fun native_refuted goal =
   let
     fun certified c = native_genuine c andalso Option.isSome (#cert c)
   in
     both_strategies native_small goal certified andalso
-    refute_noting narrowing_small goal (cex_where certified)
+    refute_noting nar goal (cex_where certified)
   end
 
 fun native_not_refuted goal =
@@ -2569,7 +2576,7 @@ fun native_not_refuted goal =
   andalso
   refute_noting (native_small |> only [Random] |> upd_seed (SOME 1)) goal
     not_refuted andalso
-  refute_noting narrowing_small goal not_refuted
+  narrowed_through nar goal
 
 (* Finite sets are fEMPTY/fINSERT chains: native code reads a set through
    its elements, and the compset through chain rules (Refute_EvalFset), so
@@ -2584,7 +2591,7 @@ fun fset_refuted goal =
       #substrate c = name andalso is_genuine c andalso
       Option.isSome (#cert c)))
     fset_substrates andalso
-  refute_noting narrowing_small goal (cex_where (fn c =>
+  refute_noting nar goal (cex_where (fn c =>
     native_genuine c andalso Option.isSome (#cert c)))
 
 (* A refusal or a timeout would leave a goal unrefuted too, so every back
@@ -2858,7 +2865,7 @@ fun fmap_searched goal =
     refute_noting (uncertified |> only [Exhaustive]) goal searched andalso
     refute_noting (uncertified |> only [Random] |> upd_seed (SOME 1)) goal
       searched andalso
-    refute_noting (narrowing_small |> upd_certify false) goal searched
+    narrowed_through (nar |> upd_certify false) goal
   end
 
 val _ = test "native finite-map equality is extensional" (fn () =>
@@ -2881,14 +2888,14 @@ fun set_refuted goal =
     fun certified c = native_genuine c andalso Option.isSome (#cert c)
   in
     both_strategies set_native goal certified andalso
-    refute narrowing_small goal |> cex_where certified
+    refute_noting nar goal (cex_where certified)
   end
 
 fun set_not_refuted goal =
-  not_refuted (refute (set_native |> only [Exhaustive]) goal) andalso
-  not_refuted (refute (set_native |> only [Random] |> upd_seed (SOME 1))
-                 goal) andalso
-  not_refuted (refute narrowing_small goal)
+  refute_noting (set_native |> only [Exhaustive]) goal not_refuted andalso
+  refute_noting (set_native |> only [Random] |> upd_seed (SOME 1)) goal
+    not_refuted andalso
+  narrowed_through nar goal
 
 val _ = test "sets and DRESTRICT are extracted" (fn () =>
   List.all set_refuted
