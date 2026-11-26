@@ -372,9 +372,10 @@ val portfolio =
       lambda bodies with loose bound variables, refuting consistent
       axioms, so its TH0 problems are lambda-lifted. *)
    mk_slice Vampire ("th0", "mono_native_higher", "lifting") "knn" 512,
-   (* Substitution: E 3.2.5-ho rejects the generated TF0 polymorphic proxy
-      declaration used by combs_and_lifting.  TX0- preserves that lambda
-      mode and is its parser-supported candidate. *)
+   (* Substitution: E 3.2.5-ho was recorded rejecting the TF0
+      combs_and_lifting problems generated at the time; it reads and
+      proves the current ones, but the slice stays TX0- (same lambda
+      mode) until the portfolio is re-evaluated. *)
    mk_slice Eprover ("tx0-", "mono_native_fool", "combs_and_lifting") "knn"
      1024,
    mk_slice Vampire ("tx0", "mono_native_fool", "combs") "knn" 512,
