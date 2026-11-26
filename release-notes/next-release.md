@@ -299,7 +299,8 @@ New tools
     Executables can be selected through
     `prover.<name>.executable` in the hammer configuration or the
     `HOL4_<PROVER>_EXECUTABLE` environment variables (for E,
-    `HOL4_EPROVER_EXECUTABLE`); a path set there that names no
+    `HOL4_EPROVER_EXECUTABLE`); an empty value counts as unset, a name
+    without a slash is looked up on `PATH`, and a value that names no
     executable leaves the prover unavailable.
 
 -   HOLyHammer now runs its provers through a parallel slice scheduler and

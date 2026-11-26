@@ -51,6 +51,8 @@ fun install_probe name root dir =
 
 (* The children run with this environment variable unset. *)
 val unset_env_var = "HHCONFIG_UNSET_EXECUTABLE"
+(* The parent sets this one to the empty string. *)
+val empty_env_var = "HHCONFIG_EMPTY_EXECUTABLE"
 
 fun test_child root =
   let
@@ -264,6 +266,16 @@ fun test_child root =
     val _ = OS.FileSys.remove env_exec
     val _ = expect "an environment path that is no executable is final"
       (find_e "HOL4_EPROVER_EXECUTABLE" = NONE)
+    fun find_configured value env_var =
+      (aiLib.write_file config
+         (config_settings ^ "prover.e.executable =" ^ value ^ "\n");
+       find_e env_var)
+    val _ = expect "an empty executable setting counts as unset"
+      (is_some path_exec (find_configured "" empty_env_var))
+    val _ = expect "a bare executable name is looked up on PATH"
+      (is_some path_exec (find_configured " probe-exec" unset_env_var)
+       andalso find_configured " no-such-exec" unset_env_var = NONE)
+    val _ = aiLib.write_file config config_settings
     val _ = expect "PATH precedes the installations"
       (is_some path_exec (find_e unset_env_var))
     val _ = expect "state installation precedes the user's"
@@ -324,6 +336,7 @@ fun run_parent () = with_fresh_dir (fn root =>
       " HOL4_HAMMER_TIMEOUT=22" ^
       " HOL4_HAMMER_FILTER=none" ^
       " HOL4_EPROVER_EXECUTABLE=" ^ env_exec ^
+      " " ^ empty_env_var ^ "=" ^
       " HOL4_HAMMER_DIR=" ^ join root "state" ^
       " HHCONFIG_TEST_ROOT=" ^ root ^
       " HOLDIR=" ^ holdir ^

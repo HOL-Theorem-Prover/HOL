@@ -148,8 +148,10 @@ A prover is found by the first of:
      `$HOME/.hol4/hammer/provers`: the newest version directory holding
      the binary for this platform.
 
-A path set by 1 or 2 is final: if it names no executable file, the
-prover is unavailable rather than looked up further.
+An empty value of 1 or 2 counts as unset.  A value set by 1 or 2 is
+final: a name without a slash is looked up on `PATH`, and if the value
+names no executable file, the prover is unavailable rather than looked
+up further.
 
 To check E, Vampire and Zipperposition end to end (the check fails
 when any of them is absent):

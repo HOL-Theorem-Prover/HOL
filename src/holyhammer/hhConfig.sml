@@ -739,22 +739,34 @@ fun install_exec prover names root =
       (Portable.sort newer (List.filter candidate (directory_names root)))
   end
 
-(* An explicit path is final: one that names no executable file makes the
-   prover absent rather than letting PATH or an installation stand in. *)
+(* The executable the user names for prover, with where it is named: the
+   config file's prover.<prover>.executable, else env_var.  An empty
+   value counts as unset. *)
+fun explicit_exec prover env_var =
+  let
+    val key = "prover." ^ prover ^ ".executable"
+    fun named source (SOME value) =
+          if value = "" then NONE else SOME (source, value)
+      | named _ NONE = NONE
+  in
+    case named ("config " ^ key) (lookup key (config_entries ())) of
+        NONE => named env_var (OS.Process.getEnv env_var)
+      | found => found
+  end
+
+(* An explicit executable is final: one that names no executable file
+   makes the prover absent rather than letting PATH or an installation
+   stand in.  A bare name is looked up on PATH. *)
 fun find_exec prover env_var names =
   let
-    val explicit =
-      case lookup ("prover." ^ prover ^ ".executable") (config_entries ()) of
-          NONE => OS.Process.getEnv env_var
-        | configured => configured
     (* The state directory is the user's unless HOL4_HAMMER_DIR moves it. *)
     fun installed () =
       Portable.get_first (install_exec prover names)
         (Portable.mk_set
            [join (state_dir ()) "provers", join (user_dir ()) "provers"])
   in
-    case explicit of
-        SOME path => exec_file path
+    case explicit_exec prover env_var of
+        SOME (_, value) => exec_in (path_dirs ()) [value]
       | NONE =>
           (case exec_in (path_dirs ()) names of
                NONE => installed ()
