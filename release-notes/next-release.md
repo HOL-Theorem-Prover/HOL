@@ -392,6 +392,8 @@ Incompatibilities
     `premise_selection_flag := false` becomes
     `hhConfig.hh_set ("filter", "none")`.  The race-result reference
     `holyHammer.lemmas_glob` has been removed in favor of `main_hh_lemmas`.
+    `hhReconstruct.reconstruct_flag`, which turned reconstruction off,
+    has been removed: every ATP proof is replayed.
     Z3 is no longer in the default prover set: `z3` remains registered but
     has no scheduler slices, and it is found only as Z3's TPTP front end,
     `z3_tptp`.  The prover scripts in `src/holyhammer/provers` have been
