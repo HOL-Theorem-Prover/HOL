@@ -269,6 +269,7 @@ Bugs fixed
 
 -   The readers of `smlExecute` (`thm_of_sml`, `tactic_of_sml` and the others, which TacticToe and HOLyHammer use) handed the value of the compiled string back through a global reference, so that two threads reading at once could each get the other's value.
     Each thread now has its own slot (the `sml_*_glob` references are gone), and `quse_string` no longer prints the compiler's messages: a string that does not compile only makes it return `false`.
+    TacticToe's parser of tactic strings (`tttToken.pretacl_of_sml`) and its imports of HOLyHammer (`import_hh` of `tacticToe` and `tttEval`) did the same; they now use such slots too (`tttToken.sml_pretacl_glob`, `tacticToe.hh_lemmas` and `tttEval.hh_glob` are gone), and `smlExecute.read_slot` reads a value through a slot made with `smlExecute.new_slot`.
 
 -   An interrupt arriving while `with_flag`, `genwith_flag`, `finally` or `HOLFlags.with_traces` was putting things back could cut the restore short and leave the flag or trace changed.
     With `Timeout.apply`, a tactic that returned just before its deadline could leave a slow restore half done.

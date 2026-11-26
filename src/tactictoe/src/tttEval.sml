@@ -41,20 +41,11 @@ fun catch_err_ignore msg f x =
    Import holyhammer if possible
    ------------------------------------------------------------------------- *)
 
-val hh_glob = ref NONE
+val hh_slot : (string -> thmdata -> goal -> tactic) slot = new_slot ()
 val hh_timeout = ref 30
 
-fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
-
 fun import_hh () =
-  let val _ =
-     metis_avail () andalso
-     quse_string ("load \"holyHammer\"; " ^
-                  "holyHammer.set_timeout " ^ its (!hh_timeout) ^ ";" ^
-                  "tttEval.hh_glob := Option.SOME (holyHammer.main_hh);")
-  in
-    !hh_glob
-  end
+  import_hh_value hh_slot "tttEval.hh_slot" "main_hh" (!hh_timeout)
 
 (* -------------------------------------------------------------------------
    I/O
