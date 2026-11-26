@@ -5397,7 +5397,7 @@ fun test_schedule_pool () =
       in
         (result, rev (!done_))
       end
-    val _ =
+    val (serial_files, serial_used) =
       let
         val start = quiet_start ()
         val boundary = power_above start
@@ -5425,7 +5425,24 @@ fun test_schedule_pool () =
         ordered [3, 2, 0, 5] 4;
         ordered [2, 0, 5, 3] 2;
         expect "pool: no run straddles a power of ten"
-          (List.all (fn (first, used) => first + used < boundary) (!windows))
+          (List.all (fn (first, used) => first + used < boundary) (!windows));
+        (serial_files, serial_used)
+      end
+    (* The digit count of the names changes partway through an export: the
+       2-worker run draws names on both sides of a power of ten, and the
+       4-worker run, used + 2 draws later, is past it. *)
+    val _ =
+      let
+        val power = power_above (counter () + 2000)
+        val start = power - serial_used div 2
+        val (two as (_, _, first)) = export plain 2 start
+        val four = export plain 4 start
+      in
+        expect "pool: a run across a power of ten, 2 or 4 workers, gives \
+          \the serial bytes and counter"
+          (first + 1 < power andalso power <= first + serial_used andalso
+           List.all (fn (files, used, _) =>
+             files = serial_files andalso used = serial_used) [two, four])
       end
     (* Cap: workers never exceed the generated jobs; one worker is inline
        (no thread is started). *)
