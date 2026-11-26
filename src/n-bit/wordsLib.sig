@@ -13,6 +13,15 @@ sig
     val WORD_SHIFT_ss       : simpLib.ssfrag
     val WORD_ARITH_EQ_ss    : simpLib.ssfrag
     val WORD_CANCEL_ss      : simpLib.ssfrag
+    (* WORD_CANCEL_ss and WORD_CANCEL_CONV, but consulting a classifier
+       before evaluating a known-size literal coefficient: SOME {negative,
+       minimum} says whether it is negative (its msb is set) and whether
+       it is word_L; NONE evaluates.  The classifier only guides which
+       terms are cancelled; the theorems come from the cancellation laws. *)
+    val WORD_CANCEL_ss_WITH :
+       (term -> {negative : bool, minimum : bool} option) -> simpLib.ssfrag
+    val WORD_CANCEL_CONV_WITH :
+       (term -> {negative : bool, minimum : bool} option) -> conv
     val WORD_BIT_EQ_ss      : simpLib.ssfrag
     val WORD_EXTRACT_ss     : simpLib.ssfrag
     val WORD_MUL_LSL_ss     : simpLib.ssfrag

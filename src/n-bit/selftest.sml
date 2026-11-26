@@ -719,4 +719,71 @@ val _ = convtest
    computeLib.CBV_CONV wordsLib.words_compset,
    “ALL_DISTINCT [NONE : num option]”, “T”)
 
+(* WORD_CANCEL_CONV_WITH consults the caller's classifier and, given a
+   correct one, agrees with WORD_CANCEL_CONV. *)
+local
+  fun eval_classify calls tm =
+    let
+      fun holds t = can EQT_ELIM (wordsLib.WORD_EVAL_CONV t)
+      val L = wordsSyntax.mk_word_L (wordsSyntax.dim_of tm)
+    in
+      calls := !calls + 1;
+      SOME {negative = holds (wordsSyntax.mk_word_msb tm),
+            minimum = holds (mk_eq (tm, L))}
+    end
+  fun check tm =
+    let
+      val calls = ref 0
+      val conv = wordsLib.WORD_CANCEL_CONV_WITH (eval_classify calls)
+      val expected = concl (wordsLib.WORD_CANCEL_CONV tm)
+    in
+      tprint ("WORD_CANCEL_CONV_WITH: " ^ term_to_string tm);
+      require_msg
+        (check_result (fn th => aconv (concl th) expected andalso !calls > 0))
+        thm_to_string conv tm
+    end
+in
+  val _ = List.app check
+    [“3w * a + b = a + b : word8”, “a + 255w * b = a : word8”,
+     “a + b = 128w * a + b : word8”]
+end
+
+(* blastLib's parameterised entry points: with stock arguments they agree
+   with the plain versions, and the caller's wrapper is used. *)
+local
+  val stock_simp = WORD_SIMP_CONV_WITH_CANCEL wordsLib.WORD_CANCEL_ss
+  val blast_tm = “(a:word4) + b = (a ?? b) + ((a && b) << 1)”
+in
+  val _ = tprint "BBLAST_CONV_WITH_PROFILES with stock normalizer"
+  val _ = let
+    val calls = ref 0
+    fun wrap c t = (calls := !calls + 1; c t)
+    val expected = concl (BBLAST_CONV blast_tm)
+  in
+    require_msg
+      (check_result (fn th => aconv (concl th) expected andalso !calls > 0))
+      thm_to_string (BBLAST_CONV_WITH_PROFILES stock_simp wrap) blast_tm
+  end
+
+  val _ = tprint "BBLAST_CONV_WITH_STAGES decides with stock stages"
+  val _ = require_msg
+    (check_result (fn th => null (hyp th) andalso
+                            aconv (rhs (concl th)) T))
+    thm_to_string
+    (BBLAST_CONV_WITH_STAGES
+       {word_simp = stock_simp, bit_blast = Lib.mapfilter,
+        rewrite = Rewrite.ONCE_REWRITE_CONV, prover = I})
+    blast_tm
+
+  val _ = tprint "BIT_BLAST_CONV has no carry hypotheses"
+  val _ = require_msg (check_result (null o hyp)) thm_to_string
+    BIT_BLAST_CONV “(a:word4) + b = c”
+
+  val _ = tprint "BBLAST_PROVE_WITH_CONVERSION BBLAST_CONV proves"
+  val _ = require_msg
+    (check_result (aconv “?x:word4. x + 1w = 0w” o concl))
+    thm_to_string (BBLAST_PROVE_WITH_CONVERSION BBLAST_CONV)
+    “?x:word4. x + 1w = 0w”
+end
+
 val _ = OS.Process.exit OS.Process.success
