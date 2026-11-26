@@ -154,8 +154,8 @@ prover is unavailable rather than looked up further.
 To check E, Vampire and Zipperposition end to end (the check fails
 when any of them is absent):
 
-    cd src/holyhammer
-    ../../bin/Holmake smoke.exe && ./smoke.exe
+    cd src/holyhammer/tests
+    ../../../bin/Holmake smoke.exe && ./smoke.exe
 
 The evaluation harness `hhEval`, which runs HOLyHammer over whole theories
 and reports on the results, is in `evaluation/` (see its `README`); it is

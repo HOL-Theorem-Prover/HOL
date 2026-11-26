@@ -1,4 +1,4 @@
-INCLUDES = ..
+INCLUDES = .. ../tests
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all

@@ -13,10 +13,12 @@ clearly marked as such.  Preserve this across any refactor.
 
 ## Build & test
 
-From this directory (`src/holyhammer/`):
+The tests live in `tests/`, a test-only directory that the build
+sequence marks with `!`, so none of its modules is installed in sigobj.
+From `src/holyhammer/tests/`:
 
-    ../../bin/Holmake selftest.exe && ./selftest.exe  # unit + integration
-    ../../bin/Holmake smoke.exe    && ./smoke.exe      # e2e, needs provers
+    ../../../bin/Holmake selftest.exe && ./selftest.exe  # unit + integration
+    ../../../bin/Holmake smoke.exe    && ./smoke.exe      # e2e, needs provers
 
 `selftest.exe` runs every `test_*` section (each a top-level `fun`
 called at the bottom of `selftest.sml`, using `testutils` and the
@@ -29,12 +31,12 @@ slice, and unprovable goals, printing one line per check.  It fails,
 naming them, when E, Vampire or Zipperposition is absent; Z3 is only
 run, when present, by the runner check.  Under the whole-tree build the
 full selftest runs only when `HOLSELFTESTLEVEL` is set (see
-`Holmakefile`).
+`tests/Holmakefile`).
 
 Prover-parsing tests are hermetic: they replay recorded prover stdout
-from `test-data/` rather than invoking a binary.  When you change output
-parsing, add/refresh a recording there instead of depending on a live
-prover.
+from `tests/test-data/` rather than invoking a binary.  When you change
+output parsing, add/refresh a recording there instead of depending on a
+live prover.
 
 `evaluation/` holds the evaluation harness `hhEval` with its own
 `Holmakefile`, selftest and `README`; it is not in the build sequence,

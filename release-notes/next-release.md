@@ -337,7 +337,7 @@ New tools
     prover or full schedule) over a set of theories in parallel, recording
     each result in per-theory JSONL journals; `report` summarizes an
     experiment as `summary.json` and `report.md`.  `smoke.exe` in
-    `src/holyhammer` runs a fixed end-to-end smoke suite against E,
+    `src/holyhammer/tests` runs a fixed end-to-end smoke suite against E,
     Vampire and Zipperposition, all of which it requires.
 
 -   `statementDossierLib` generates Markdown and standalone HTML reports
