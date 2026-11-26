@@ -1925,7 +1925,6 @@ val nar = narrowing |> upd_substrate NativeSML
    size 5 each such goal here takes under 0.2 s; one takes 2.6 s at
    size 6. *)
 fun narrowing_ran_through size outcome =
-  outcome == NoCounterexample orelse
   outcome == Unknown ["narrowing: narrowing search exhausted",
                       "narrowing: searched up to size " ^ Int.toString size]
 
