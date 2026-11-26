@@ -502,6 +502,15 @@ val _ = check "A variable catch-all under a constructor prints as written"
   (contains paint_md "INR Red => [Red; Red] | INR v1 => [v1] | _ => []" andalso
    not (contains paint_md "INR (Paint"))
 
+(* A pattern variable with the name of a constant would read back as
+   that constant, so the case prints as stored. *)
+val _ = temp_overload_on ("v1", ``SUC``)
+val paint_ovl_md = #1 (generate (basic ["paint_result"]))
+val _ = temp_remove_ovl_mapping "v1" {Name = "SUC", Thy = "num"}
+val _ = check "Pattern variables named like constants print as stored"
+  (not (contains paint_ovl_md "| _ =>") andalso
+   contains paint_ovl_md "INR (Paint")
+
 (* Arms that do not compile back to the stored case, here nested in
    another order than the parser nests them, print as stored. *)
 val _ = save_thm ("order_result", REFL
@@ -528,6 +537,7 @@ val _ = save_thm ("arb_result", REFL
 val arb_md = #1 (generate (basic ["arb_result"]))
 val _ = check "Cases left with one arm or none print and read back"
   (contains arb_md "case y of SOME n => n" andalso
+   contains arb_md "case x of NONE => ARB | SOME n => ARB" andalso
    not (contains arb_md "of |"))
 
 (* With an overloaded name left in the patterns, which the merged arms

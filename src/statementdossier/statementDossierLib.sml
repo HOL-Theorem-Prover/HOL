@@ -141,9 +141,10 @@ fun theorem_terms th = hyp th @ [concl th]
    TypeBase.strip_case gives them).  Raises HOL_ERR unless the arms,
    compiled as the parser compiles a case, give back t up to the names
    of bound variables, or if the printed arms might not read back as
-   these: when _ is overloaded, or when a right-hand side has a free
-   variable named like one the parser makes of a printed _ (_0, _1,
-   ...), which the _ would capture.  What it splits on is printed with
+   these: when _ is overloaded, when a pattern variable has the name of
+   a constant, or when a right-hand side has a free variable named like
+   one the parser makes of a printed _ (_0, _1, ...), which the _ would
+   capture.  What it splits on is printed with
    its type when a constant in the patterns has an overloaded name,
    which arms that are no longer printed may have been all that
    resolved. *)
@@ -214,10 +215,15 @@ fun wildcard_case t =
     else
       case List.find gives shorter of
         SOME rows =>
-          SOME (split_on,
-                List.exists (List.exists ambiguous o find_terms is_const o #1)
-                            rows,
-                rows)
+          if List.exists (fn (p, _) =>
+                List.exists (Overload.is_overloaded oinfo o #1 o dest_var)
+                            (free_vars p)) rows
+          then refuse "a pattern variable has the name of a constant"
+          else
+            SOME (split_on,
+                  List.exists
+                    (List.exists ambiguous o find_terms is_const o #1) rows,
+                  rows)
       | NONE => refuse "the arms give another term"
   end
 
@@ -1630,8 +1636,9 @@ fun render ({about = extra_about, omit_types, reader_view,
       else (0, 0)
     val () =
       if merged_cases + failed_cases = 0 then ()
-      else print ("statementDossierLib: case expressions printed with \
-                  \fewer arms: " ^ Int.toString merged_cases ^
+      else print ("statementDossierLib: case expressions in the statements \
+                  \and definitions printed with fewer arms: " ^
+                  Int.toString merged_cases ^
                   "; printed in full as the merged arms failed the check: " ^
                   Int.toString failed_cases ^ "\n")
     val bucket_maps = map (fn (n, th) => (n, buckets cfg entries th)) theorems
@@ -2170,12 +2177,13 @@ fun render ({about = extra_about, omit_types, reader_view,
                   \alone is not an independent proof audit."]] @
       (if merged_cases = 0 then [] else
          [Para [Text ("In " ^ Int.toString merged_cases ^ " case \
-                      \expressions, the arms that pattern completion made \
-                      \of a catch-all are printed as that one arm, arms \
-                      \that share a right-hand side using none of their \
-                      \pattern variables as one final catch-all, and \
-                      \pattern variables an arm does not use as `_`; each \
-                      \was checked to read back as the stored term.")]]) @
+                      \expressions of the statements and definitions, the \
+                      \arms that pattern completion made of a catch-all \
+                      \are printed as that one arm, arms that share a \
+                      \right-hand side using none of their pattern \
+                      \variables as one final catch-all, and pattern \
+                      \variables an arm does not use as `_`; each was \
+                      \checked to read back as the stored term.")]]) @
       (if reader_view then
          [Para [Text ("Contents: " ^
            Int.toString (length theorems + length supporting) ^
