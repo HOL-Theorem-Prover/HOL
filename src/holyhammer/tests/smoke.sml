@@ -100,7 +100,7 @@ fun reconstruction_error axioms goal =
     (ignore (hhReconstruct.hh_reconstruct_with
        {minimize = true, preplay_timeout = #preplay_timeout options,
         minimize_timeout = #minimize_timeout options,
-        minimize_deadline = NONE} axioms goal);
+        minimize_deadline = NONE} axioms goal (Context.snapshot ()));
      NONE)
     handle Interrupt => raise Interrupt
          | error => SOME (General.exnMessage error)
@@ -129,7 +129,8 @@ fun run_alone prover goal premises =
 fun run_schedule options max_proofs goal premises =
   hhSchedule.run
     {options = options, max_proofs = max_proofs, goal = goal,
-     rankings = [("none", premises)], progress = NONE}
+     context = Context.snapshot (), rankings = [("none", premises)],
+     progress = NONE}
 
 (* The schedule of the schedule goal: three slices on three cores. *)
 fun schedule_options () =

@@ -3171,7 +3171,7 @@ fun reconstruct_timed minimize timeout deadline lemmas goal =
       SOME (hhReconstruct.hh_reconstruct_with
         {minimize = minimize, preplay_timeout = timeout,
          minimize_timeout = timeout, minimize_deadline = deadline}
-        lemmas goal)
+        lemmas goal (Context.snapshot ()))
       handle Interrupt => raise Interrupt | Feedback.HOL_ERR _ => NONE
   in
     (result, Time.toReal (Time.- (Time.now (), started)))
@@ -3317,6 +3317,20 @@ fun test_hhReconstruct () =
    wall-clock backstop of 20 times it; one that computes is stopped at
    the limit; and another thread computing beside a call does not count
    against it. *)
+(* A flag that only the contexts the tests below set it in have on: a
+   tactic reading it tells which context it was run in. *)
+val {flag = replay_mark, ...} = HOLFlags.create_btrace
+  ({group = "hhselftest", name = "replay_mark"}, false)
+
+fun marked_context () =
+  HOLFlags.set_bflagC (replay_mark, true) (Context.snapshot ())
+
+(* Proves its goal only in a marked context. *)
+val proves_if_marked : Abbrev.tactic = fn g => fn ctxt =>
+  if HOLFlags.get_bflagC ctxt replay_mark then
+    Tactic.ACCEPT_TAC boolTheory.TRUTH g ctxt
+  else Tactical.NO_TAC g ctxt
+
 fun test_replay_timeout () =
   let
     val wait = Time.fromReal 0.6
@@ -3346,8 +3360,16 @@ fun test_replay_timeout () =
     val slow_truth : Abbrev.tactic = fn g =>
       (OS.Process.sleep wait; Tactic.ACCEPT_TAC boolTheory.TRUTH g)
   in
+    expect "a replay runs in the context it is given, not the ambient one"
+      (case hhReconstruct.timeout_tactic 5.0 proves_if_marked
+              ([], boolSyntax.T) (marked_context ()) of
+           SOME ([], _) =>
+             not (isSome (hhReconstruct.timeout_tactic 5.0 proves_if_marked
+                            ([], boolSyntax.T) (Context.snapshot ())))
+         | _ => false);
     expect "a replay that waits past its limit still proves the goal"
-      (case hhReconstruct.timeout_tactic 0.2 slow_truth ([], boolSyntax.T) of
+      (case hhReconstruct.timeout_tactic 0.2 slow_truth ([], boolSyntax.T)
+              (Context.snapshot ()) of
            SOME ([], used) => used < 0.2
          | _ => false);
     expect "thread_timeout lets a call that waits run past its limit"
@@ -3510,7 +3532,7 @@ fun run_schedule_with max_proofs goal options =
     val events = ref ([] : string list)
     val result = hhSchedule.run
       {options = options, max_proofs = max_proofs, goal = goal,
-       rankings = [("none", [])],
+       context = Context.snapshot (), rankings = [("none", [])],
        progress = SOME (fn event =>
          events := observe_schedule_event event :: !events)}
   in
@@ -4067,7 +4089,8 @@ fun test_schedule_filter_rankings parser = with_fresh_dir (fn root =>
     fun run_with rankings = with_fixtures [(Z3, config)] (fn () =>
       hhSchedule.run_in root
         {options = options, max_proofs = 1, goal = ([], boolSyntax.T),
-         rankings = rankings, progress = NONE})
+         context = Context.snapshot (), rankings = rankings,
+         progress = NONE})
     val missing =
       ((ignore (run_with [("knn", ["boolTheory.TRUTH"])]); false)
        handle Fail message =>
@@ -4464,7 +4487,7 @@ fun test_schedule_deadline_recon sleeper_parser =
         loop ()
         handle Interrupt => (note ("cut|" ^ key lemmas); raise Interrupt)
       end
-    fun test_reconstruct behave _ lemmas _ =
+    fun test_reconstruct behave _ lemmas _ _ =
       let
         val _ = note ("start|" ^ key lemmas)
         val _ = case behave lemmas of
@@ -4494,8 +4517,8 @@ fun test_schedule_deadline_recon sleeper_parser =
               Slices count, Cores count, Timeout 1, DropOne drop_one]
          end,
        max_proofs = max_proofs,
-       goal = ([], boolSyntax.T), rankings = [("none", [])],
-       progress = SOME progress}
+       goal = ([], boolSyntax.T), context = Context.snapshot (),
+       rankings = [("none", [])], progress = SOME progress}
     fun with_setup slices behave f =
       with_ref (hhSchedule_Test.reconstruct, test_reconstruct behave)
         (fn () => with_fixtures
@@ -5905,6 +5928,7 @@ fun test_schedule_run_in parser =
                          with_provers legacies monos (fn () =>
                            hhSchedule.run_in root
                              {options = opts, max_proofs = 1, goal = goal,
+                              context = Context.snapshot (),
                               rankings = ranks, progress = SOME progress})))),
                      NONE)
                     handle exn => (NONE, SOME exn)
@@ -6075,6 +6099,32 @@ fun test_main_hh_lemmas_hook parser =
     ()
   end
 
+(* hh replays the provers' lists in the context of the proof it is
+   called from. *)
+fun test_hh_replay_context parser =
+  let
+    val name = "hh-replay-context"
+    val slices = [fixture_slice Z3 ["0", "schedule-truth.out"] 1]
+    val settings =
+      [("provers", hhConfig.prover_name Z3), ("slices", "1"),
+       ("cores", "1"), ("timeout", "5"), ("filter", "none"),
+       ("debug_dir", "")]
+    val seen = ref ([] : bool list)
+    val reconstruct = !hhSchedule_Test.reconstruct
+    fun noting settings lemmas goal ctxt =
+      (seen := HOLFlags.get_bflagC ctxt replay_mark :: !seen;
+       reconstruct settings lemmas goal ctxt)
+    val (goals, _) =
+      with_ref (hhSchedule_Test.reconstruct, noting) (fn () =>
+        with_fixtures [(Z3, printer_config name slices (fn _ => ()) parser)]
+          (fn () => with_hh_options settings (fn () =>
+             holyHammer.hh ([], boolSyntax.T) (marked_context ()))))
+  in
+    expect "hh reconstructs in the context of its proof"
+      (null goals andalso not (null (!seen)) andalso
+       List.all (fn marked => marked) (!seen))
+  end
+
 fun test_holyHammer_unverified_failure parser = with_fresh_dir (fn debug =>
   let
     val name = "hh-main-unverified"
@@ -6109,6 +6159,7 @@ fun test_holyHammer_unverified_failure parser = with_fresh_dir (fn debug =>
   end)
 
 val _ = test_main_hh_lemmas_hook (#parse_output (prover Eprover))
+val _ = test_hh_replay_context (#parse_output (prover Eprover))
 val _ = test_holyHammer_unverified_failure (#parse_output (prover Eprover))
 
 fun test_hhStature_pure () =

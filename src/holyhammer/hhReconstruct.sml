@@ -28,14 +28,14 @@ val reconstruction_timeout = ref hhConfig.default_preplay_timeout
 val TC_OFF = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
 (* the trace setting, the timeout and the handler all have to span the
    context application, which is when the tactic does its work.  The
-   limit is on the CPU time of the thread running the tactic, not on wall
-   time: the provers keep running while a proof is replayed, and under a
-   wall-clock limit a replay on a loaded machine gets a small share of a
-   CPU, so that whether a list replays depends on the load.  The result
-   is the goals left and the CPU seconds the tactic used. *)
-fun timeout_tactic t tac g =
+   tactic runs in ctxt, the context of the proof HolyHammer was called
+   from.  The limit is on the CPU time of the thread running the tactic,
+   not on wall time: the provers keep running while a proof is replayed,
+   and under a wall-clock limit a replay on a loaded machine gets a small
+   share of a CPU, so that whether a list replays depends on the load.
+   The result is the goals left and the CPU seconds the tactic used. *)
+fun timeout_tactic t tac g ctxt =
   let
-    val ctxt = Context.snapshot()
     val ((goals, _), time) = thread_timeout t (TC_OFF (Lib.C tac ctxt)) g
   in
     SOME (goals, time)
@@ -48,16 +48,16 @@ type settings =
 
 type reconstruction = {stac : string, tac : tactic, t_replay : real}
 
-(* Compiles stac and runs it on g with the limit t.  Returns the tactic
-   and the replay time, both in CPU seconds of the replay's thread, when
-   it proves g.  The tactic, which is also the one hh replays, sets the
-   Metis trace to 0 in the context it runs in, so that it prints nothing,
-   whatever the trace of the session. *)
-fun replay t stac g =
+(* Compiles stac and runs it on g in ctxt with the limit t.  Returns the
+   tactic and the replay time, both in CPU seconds of the replay's
+   thread, when it proves g.  The tactic, which is also the one hh
+   replays, sets the Metis trace to 0 in the context it runs in, so that
+   it prints nothing, whatever the trace of the session. *)
+fun replay t stac g ctxt =
   let
     val tac = Tactical.trace_tac ("metis.trace", 0) (tactic_of_sml 1.0 stac)
   in
-    case timeout_tactic t tac g of
+    case timeout_tactic t tac g ctxt of
         SOME ([], time) => SOME (tac, time)
       | _ => NONE
   end
@@ -138,9 +138,10 @@ fun drop_one_minimize try minimize_timeout deadline lemmas best =
     loop [] lemmas best (snd best)
   end
 
-fun minimize_lemmas minimize_timeout deadline g lemmas best =
+fun minimize_lemmas minimize_timeout deadline g ctxt lemmas best =
   drop_one_minimize
-    (fn limit => fn candidate => replay limit (mk_metis_call candidate) g)
+    (fn limit => fn candidate =>
+       replay limit (mk_metis_call candidate) g ctxt)
     minimize_timeout deadline lemmas best
 
 (* A permutative equation, such as commutativity, has sides that are
@@ -168,8 +169,8 @@ fun is_permutative_lemma lemma =
    if that fails, the list without its permutative equations.  Each try
    costs at most preplay_timeout, so a list that cannot be replayed still
    fails quickly. *)
-fun preplay preplay_timeout lemmas g =
-  case replay preplay_timeout (mk_metis_call lemmas) g of
+fun preplay preplay_timeout lemmas g ctxt =
+  case replay preplay_timeout (mk_metis_call lemmas) g ctxt of
       SOME found => SOME (lemmas, found)
     | NONE =>
         let
@@ -179,25 +180,25 @@ fun preplay preplay_timeout lemmas g =
           if null permutative then NONE
           else
             Option.map (fn found => (others, found))
-              (replay preplay_timeout (mk_metis_call others) g)
+              (replay preplay_timeout (mk_metis_call others) g ctxt)
         end
 
 fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
-                          minimize_deadline} : settings) lemmas g =
+                          minimize_deadline} : settings) lemmas g ctxt =
   let
     fun result stac (tac, time) : reconstruction =
       {stac = stac, tac = tac, t_replay = time}
   in
     (* Replay before minimising: a list Metis cannot replay fails at once
        instead of being minimised attempt by attempt. *)
-    case preplay preplay_timeout lemmas g of
+    case preplay preplay_timeout lemmas g ctxt of
         NONE => raise ERR "hh_reconstruct" "reconstruction failed"
       | SOME (replayed, full) =>
           if not minimize then result (mk_metis_call replayed) full
           else
             let
               val (kept, best) = minimize_lemmas minimize_timeout
-                minimize_deadline g replayed full
+                minimize_deadline g ctxt replayed full
               val raw = mk_metis_call kept
               val pretty =
                 psMinimize.unsafe_prettify_stac
@@ -205,7 +206,7 @@ fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
             in
               (* The short names are resolved in the current namespace,
                  so the printed form is verified on its own. *)
-              case replay preplay_timeout pretty g of
+              case replay preplay_timeout pretty g ctxt of
                   SOME found => result pretty found
                 | NONE => result raw best
             end
@@ -217,7 +218,7 @@ fun hh_reconstruct lemmas g =
       hh_reconstruct_with
         {minimize = true, preplay_timeout = !reconstruction_timeout,
          minimize_timeout = !minimization_timeout,
-         minimize_deadline = NONE} lemmas g
+         minimize_deadline = NONE} lemmas g (Context.snapshot ())
   in
     (stac, tac)
   end

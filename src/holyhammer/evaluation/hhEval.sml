@@ -1713,7 +1713,8 @@ fun reconstruct condition result goal =
           ((let
               val ({stac, ...}, elapsed) =
                 add_time (hhReconstruct.hh_reconstruct_with
-                  (reconstruction_settings ()) axioms) goal
+                  (reconstruction_settings ()) axioms goal)
+                  (Context.snapshot ())
             in
               (SOME true, SOME "metis", SOME elapsed, SOME stac)
             end)
@@ -1773,7 +1774,8 @@ fun schedule_cell_entry expdir thy (name, thm, tags) facts condition
       | progress _ = ()
     val result = hhSchedule.run
       {options = options, max_proofs = #max_proofs parameters, goal = goal,
-       rankings = rankings, progress = SOME progress}
+       context = Context.snapshot (), rankings = rankings,
+       progress = SOME progress}
     val slices = map (fn (slice, status, elapsed, cached) =>
       {slice = slice, szs = status, time = elapsed,
        cached = cached} : journal_slice) (#slices_run result)

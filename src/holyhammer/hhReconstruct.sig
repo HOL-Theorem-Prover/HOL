@@ -11,14 +11,16 @@ sig
   val minimization_timeout : real ref
   val reconstruction_timeout : real ref
 
-  (* Reconstruction.  The full lemma list is replayed first, within
-     preplay_timeout.  Minimisation then drops lemmas while Metis still
-     replays the rest; each attempt gets at most minimize_timeout, and at
-     most twice the time of the fastest verified replay so far plus
-     0.2 s (initially the verified replay the minimisation starts from:
-     the full list, or the list without its permutative equations), and
-     no attempt starts after minimize_deadline.  stac is the verified
-     tactic and t_replay the CPU time its replay took. *)
+  (* Reconstruction of a goal in a context, the one of the proof
+     HolyHammer was called from, which every replay runs in.  The full
+     lemma list is replayed first, within preplay_timeout.  Minimisation
+     then drops lemmas while Metis still replays the rest; each attempt
+     gets at most minimize_timeout, and at most twice the time of the
+     fastest verified replay so far plus 0.2 s (initially the verified
+     replay the minimisation starts from: the full list, or the list
+     without its permutative equations), and no attempt starts after
+     minimize_deadline.  stac is the verified tactic and t_replay the CPU
+     time its replay took. *)
   type settings =
     {minimize : bool, preplay_timeout : real, minimize_timeout : real,
      minimize_deadline : Time.time option}
@@ -31,14 +33,16 @@ sig
   val drop_one_minimize :
     (real -> string list -> ('a * real) option) -> real -> Time.time option ->
     string list -> 'a * real -> string list * ('a * real)
-  (* timeout_tactic t tac g: the goals tac leaves on g and the CPU
-     seconds it used, NONE when it fails or uses more than t CPU
-     seconds; the limit every replay runs under, for tests. *)
-  val timeout_tactic : real -> tactic -> goal -> (goal list * real) option
+  (* timeout_tactic t tac g ctxt: the goals tac leaves on g, run in
+     ctxt, and the CPU seconds it used, NONE when it fails or uses more
+     than t CPU seconds; the limit every replay runs under, for tests. *)
+  val timeout_tactic :
+    real -> tactic -> goal -> Context.t -> (goal list * real) option
   type reconstruction = {stac : string, tac : tactic, t_replay : real}
   val hh_reconstruct_with :
-    settings -> string list -> goal -> reconstruction
-  (* Minimizes, with the timeouts in the references above. *)
+    settings -> string list -> goal -> Context.t -> reconstruction
+  (* Minimizes, with the timeouts in the references above, in the
+     ambient context. *)
   val hh_reconstruct : string list -> goal -> (string * tactic)
 
 end

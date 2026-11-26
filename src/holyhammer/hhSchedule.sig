@@ -123,7 +123,9 @@ sig
      (prepare on the calling thread, the tails on the pool workers), then
      prunes the cache, probes the provers and runs the schedule.  A failure
      or an interrupt before the launch (the export, the prune or the
-     probes) propagates with no event and no ScheduleDone.
+     probes) propagates with no event and no ScheduleDone.  The lists the
+     provers find are replayed on goal in context, the context of the
+     proof the run is for.
 
      The clock.  The timeout bounds the proof search and starts at the
      launch of the provers, after the export.  At the soft deadline no
@@ -158,6 +160,7 @@ sig
      run without a reason of its own (see the clock). *)
   val run_in : string ->
     {options : hhConfig.hh_options, max_proofs : int, goal : goal,
+     context : Context.t,
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> result
   (* The temporary problems of a non-debug run are private to the
@@ -165,11 +168,13 @@ sig
      path refers to a retained directory only in debug mode. *)
   val run_under : string ->
     {options : hhConfig.hh_options, max_proofs : int, goal : goal,
+     context : Context.t,
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> string * result
   (* run uses the default parent and discards the problem directory path. *)
   val run :
     {options : hhConfig.hh_options, max_proofs : int, goal : goal,
+     context : Context.t,
      rankings : (string * string list) list,
      progress : (event -> unit) option} -> result
 end

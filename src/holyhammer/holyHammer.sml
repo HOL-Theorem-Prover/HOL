@@ -104,12 +104,12 @@ fun failed caller root options found =
       raise ERR caller message
     end
 
-fun run_schedule caller parent options rankings goal =
+fun run_schedule caller parent options rankings goal ctxt =
   let
     val found = ref ([] : unverified list)
     val (root, result) = hhSchedule.run_under parent
-      {options = options, max_proofs = 1, goal = goal, rankings = rankings,
-       progress = SOME (progress options found)}
+      {options = options, max_proofs = 1, goal = goal, context = ctxt,
+       rankings = rankings, progress = SOME (progress options found)}
   in
     case #suggestions result of
         suggestion :: _ => suggestion
@@ -133,47 +133,53 @@ fun hh_pb directory provers premises goal =
     val options = options_for "hh_pb" provers
     val schedule = hhSlice.mk_schedule options
     val suggestion = run_schedule "hh_pb" directory options
-      (explicit_rankings schedule premises) goal
+      (explicit_rankings schedule premises) goal (Context.snapshot ())
   in
     announce "Replace `hh_pb` with:" suggestion;
     #tac suggestion
   end
 
-fun main_hh_result caller directory thmdata goal =
+fun main_hh_result caller directory thmdata goal ctxt =
   let
     val options = options_for caller (#provers (hhConfig.snapshot ()))
     val schedule = hhSlice.mk_schedule options
     val rankings =
       hhLearn.rank_filters thmdata goal (hhSlice.filter_maxima schedule)
   in
-    run_schedule caller directory options rankings goal
+    run_schedule caller directory options rankings goal ctxt
   end
 
 fun main_hh directory thmdata goal =
-  #tac (main_hh_result "main_hh" directory thmdata goal)
+  #tac (main_hh_result "main_hh" directory thmdata goal
+          (Context.snapshot ()))
 
 fun main_hh_lemmas directory thmdata goal =
-  SOME (#lemmas (main_hh_result "main_hh_lemmas" directory thmdata goal))
+  SOME (#lemmas (main_hh_result "main_hh_lemmas" directory thmdata goal
+                   (Context.snapshot ())))
   handle HOL_ERR _ => NONE
 
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
-fun hh_suggestion goal =
+(* The lists the provers find are replayed in ctxt, the context of the
+   proof hh is called from. *)
+fun hh_suggestion goal ctxt =
   if not (has_boolty_goal goal) then
     raise ERR "hh_goal" "a term is not of type bool"
   else
     let val thmdata = quiet_create_thmdata () in
-      main_hh_result "main_hh" (workdir ()) thmdata goal
+      main_hh_result "main_hh" (workdir ()) thmdata goal ctxt
     end
 
-fun hh_goal goal = #tac (hh_suggestion goal)
-
-fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
+(* The context is the caller's, taken before the fork. *)
+fun hh_fork goal =
+  let val ctxt = Context.snapshot () in
+    Thread.fork (fn () => ignore (hh_suggestion goal ctxt), attrib)
+  end
 
 fun hh goal ctxt =
   let
-    val suggestion = hh_suggestion goal
+    val suggestion = hh_suggestion goal ctxt
     val result = #tac suggestion goal ctxt
   in
     announce "Replace `hh` with:" suggestion;
@@ -182,8 +188,9 @@ fun hh goal ctxt =
 
 fun holyhammer tm =
   let
-    val suggestion = hh_suggestion ([], tm)
-    val thm = TAC_PROOF (([], tm), #tac suggestion)
+    val ctxt = Context.snapshot ()
+    val suggestion = hh_suggestion ([], tm) ctxt
+    val thm = TAC_PROOF_in ctxt (([], tm), #tac suggestion)
   in
     announce "Prove the statement in a script with:" suggestion;
     thm

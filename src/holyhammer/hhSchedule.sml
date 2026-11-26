@@ -592,7 +592,7 @@ fun warn what error =
     "\n")
 
 fun run_with_root share_digests root
-    {options, max_proofs, goal, rankings, progress} =
+    {options, max_proofs, goal, context, rankings, progress} =
   let
     val started = Time.now ()
     val schedule = hhSlice.mk_schedule options
@@ -961,8 +961,8 @@ fun run_with_root share_digests root
                      preplay_timeout = #preplay_timeout options,
                      minimize_timeout = #minimize_timeout options,
                      minimize_deadline = SOME deadline}
-                    lemmas)
-                  goal
+                    lemmas goal)
+                  context
               val suggestion : suggestion =
                 {stac = stac, tac = tac, lemmas = lemmas,
                  prover = #prover slice, slice = slice,
