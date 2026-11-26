@@ -561,6 +561,19 @@ val _ = blast_true
 val _ = blast_true
    ``!a:word128. a << 8 >>> 8 = a && 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFw``
 
+(* the same literals in a second call: literal bits remembered by one
+   call must not be reused by the next *)
+val lit_extract_tm =
+   ``((15 >< 8)
+        (((1w : word1) @@ (((v2w [F] : word1) @@ (((212w : word9) @@
+          (((31w : word5) @@ (((5w : word4) @@ (((0w : word1) @@
+          (((1w : word1) @@ (((31w : word5) @@ (n2w dst : word5))
+          : word10)) : word11)) : word12)) : word16)) : 21 word))
+          : word30)) : 31 word)) : word32) : word8) =
+     v2w [F; T; F; T; F; T; T; T]``
+val _ = blast_true lit_extract_tm
+val _ = blast_true lit_extract_tm
+
 val _ = print "\nsimplifier tests\n\n"
 
 val _ = srw_true
