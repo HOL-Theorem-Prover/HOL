@@ -1918,14 +1918,19 @@ val _ = section "narrowing backend"
 val nar = narrowing |> upd_substrate NativeSML
 
 (* A true goal's narrowing search must run through its size: a search the
-   deadline ended would leave the goal unrefuted having covered nothing
-   in particular.  At size 5 each such goal here takes under 0.2 s; one
-   takes 2.6 s at size 6. *)
+   deadline ended, or one that gave up on part of the space, would leave
+   the goal unrefuted having covered nothing in particular.  A give-up only
+   adds its reason and the search goes on, so the size marker alone shows
+   neither; the reasons must be exactly the exhaustion and the size.  At
+   size 5 each such goal here takes under 0.2 s; one takes 2.6 s at
+   size 6. *)
+fun narrowing_ran_through size outcome =
+  outcome == NoCounterexample orelse
+  outcome == Unknown ["narrowing: narrowing search exhausted",
+                      "narrowing: searched up to size " ^ Int.toString size]
+
 fun narrowed_through cfg goal =
-  refute_noting (cfg |> upd_size 5) goal (fn outcome =>
-    outcome == NoCounterexample orelse
-    unknown_with "searched up to size 5" outcome andalso
-    not (unknown_with "timed out" outcome))
+  refute_noting (cfg |> upd_size 5) goal (narrowing_ran_through 5)
 
 fun has_hole tm = String.isSubstring "_" (Parse.term_to_string tm)
 
@@ -2616,7 +2621,7 @@ fun fset_not_refuted goal =
       end)
       fset_substrates andalso
     refute_noting (cfg |> only [Narrowing] |> upd_substrate NativeSML) goal
-      searched
+      (narrowing_ran_through 2)
   end
 
 fun fset_evaluates tm =
