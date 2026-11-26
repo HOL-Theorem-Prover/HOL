@@ -22,18 +22,22 @@ Outside the reader view, supporting theorems whose statements print
 longer than 40 lines are folded. Markdown output ends with a single newline.
 
 Pattern completion stores a `case` with a wildcard arm as one arm per
-constructor. By default, the arms of a `case` expression that share a
-right-hand side mentioning none of their pattern variables print as one
-final `_` arm, so long as the printed arms compile, as the parser
-compiles a `case`, back to the stored term up to bound variable names,
-and that right-hand side has no free variable the parser would take the
-`_` to bind (`_0`, `_1`, ...), and `_` is not overloaded; otherwise the
-expression prints in full. When a constant left in the patterns has an
-overloaded name, which the dropped arms may have been all that resolved,
-the case gives the type of what it splits on, as in `case (v :value)
-of`. About says how many expressions were merged, and the run prints how
-many were merged and how many failed that check. Set the flag
-`statementdossier.case_wildcards` to false to print every arm.
+constructor. By default, a `case` expression prints with the arms
+`patternMatchesLib.case2pmatch true` gives it, which fold such arms back
+into one catch-all and nest a `case` on a pattern variable into its
+patterns. Arms left that share a right-hand side mentioning none of
+their pattern variables print as one final catch-all, and a pattern
+variable that an arm does not use prints as `_`. This holds so long as
+the printed arms compile, as the parser compiles a `case`, back to the
+stored term up to bound variable names, no right-hand side has a free
+variable the parser would take a `_` to bind (`_0`, `_1`, ...), and `_`
+is not overloaded; otherwise the expression prints in full. When a
+constant left in the patterns has an overloaded name, which the dropped
+arms may have been all that resolved, the case gives the type of what it
+splits on, as in `case (v :value) of`. About says how many expressions
+were merged, and the run prints how many were merged and how many failed
+that check. Set the flag `statementdossier.case_wildcards` to false to
+print every arm.
 
 ## Example
 

@@ -488,13 +488,36 @@ val _ = Define `pick (m:num) n x =
 val _ = save_thm ("pick_result", REFL ``pick m n x``)
 val pick_md = #1 (generate (basic ["pick_result"]))
 val _ = check "Repeated case arms print as one wildcard arm"
-  (contains pick_md "| _ => 2" andalso contains pick_md "SOME (INR k') => k'")
+  (contains pick_md "| _ => 2" andalso not (contains pick_md "(_, _)") andalso
+   contains pick_md "SOME (INR k') => k'")
+
+(* A catch-all that binds a variable under a constructor, which pattern
+   completion expanded into one arm per constructor, prints as written. *)
+val _ = Datatype `colour = Red | Green | Paint num`
+val _ = Define `paint (x:num + colour) =
+  case x of INL k => [] | INR Red => [Red; Red] | INR c => [c]`
+val _ = save_thm ("paint_result", REFL ``paint x``)
+val paint_md = #1 (generate (basic ["paint_result"]))
+val _ = check "A variable catch-all under a constructor prints as written"
+  (contains paint_md "INR Red => [Red; Red] | INR v1 => [v1] | _ => []" andalso
+   not (contains paint_md "INR (Paint"))
+
+(* Arms that do not compile back to the stored case, here nested in
+   another order than the parser nests them, print as stored. *)
+val _ = save_thm ("order_result", REFL
+  ``case (m:num, n:num) of
+      (a, b) => case b of
+                  0 => (case a of 0 => 1 | SUC _ => 2)
+                | SUC _ => 2``)
+val order_md = #1 (generate (basic ["order_result"]))
+val _ = check "Arms that give another term print as stored"
+  (not (contains order_md "_ =>") andalso contains order_md "(SUC")
 val pick_off_md =
   #1 (HOLFlags.with_bflags [(case_wildcards, false)] generate
                            (basic ["pick_result"]))
 val _ = check "With case_wildcards off, every arm prints"
   (not (contains pick_off_md "_ =>") andalso
-   not (contains pick_off_md "one final"))
+   not (contains pick_off_md "one catch-all arm"))
 
 (* With an overloaded name left in the patterns, which the merged arms
    may have been all that resolved, the case gives the type of what it

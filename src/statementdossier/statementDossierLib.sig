@@ -67,9 +67,10 @@ type presentation = {about : string, omit_types : name list,
                      theory_sources : (string * string) list}
 val run_with_presentation : presentation -> config -> unit
 
-(* Flag statementdossier.case_wildcards, on by default: print the arms of
-   a case expression that share a right-hand side as one final `_` arm,
-   where that reads back as the stored term. *)
+(* Flag statementdossier.case_wildcards, on by default: print a case
+   expression with the catch-all arms that pattern completion expanded
+   folded back, and unused pattern variables as `_`, where that reads
+   back as the stored term. *)
 val case_wildcards : HOLFlags.bflag
 
 end

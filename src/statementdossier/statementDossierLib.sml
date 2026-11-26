@@ -32,8 +32,8 @@ type presentation = {about : string, omit_types : name list,
 (* Supporting statements printed longer than this many lines are folded *)
 val supporting_fold_lines = 40
 
-(* Print a case expression's arms that share a right-hand side as one
-   final wildcard arm (wildcard_case) *)
+(* Print a case expression with the catch-all arms that pattern
+   completion expanded folded back (wildcard_case) *)
 val {get = wildcard_arms, flag = case_wildcards, ...} =
     HOLFlags.create_btrace(
       {group = "statementdossier", name = "case_wildcards"},
@@ -129,19 +129,23 @@ fun script_theories dirs =
    atoms, so their encoding (NUMERAL, BIT1, ...) is left out. *)
 fun theorem_terms th = hyp th @ [concl th]
 
-(* Case expression t as printed with a wildcard arm: what it splits on,
-   whether to print that with its type, and its arms: the
-   largest group (of two or more, leaving another arm) of the arms of
-   TypeBase.strip_case t that have the same right-hand side, which
-   mentions none of its arm's pattern variables, merged into one final
-   arm with pattern _.  NONE if no arms merge.  Raises HOL_ERR unless the
-   merged arms, compiled as the parser compiles a case, give back t up to
-   the names of bound variables, or if the printed arms might not read
-   back as these: when _ is overloaded, or when the merged right-hand
-   side has a free variable named like the one the parser makes of a
-   printed _ (_0, _1, ...), which the _ would capture.  What it splits
-   on is printed with its type when a constant left in the patterns has
-   an overloaded name, which the dropped arms may have been all that
+(* Case expression t as printed with fewer arms: what it splits on,
+   whether to print that with its type, and the arms.  The arms are the
+   rows of patternMatchesLib.case2pmatch true t, which nests a case that
+   splits on a pattern variable into its patterns and folds the arms
+   that pattern completion made of one catch-all back into it, with
+   generated variables renamed.  Rows left with the same right-hand
+   side, using none of their pattern variables, become one final
+   catch-all variable, as does a lone catch-all that is not a variable.
+   NONE unless that gives fewer arms than t's own rows (as
+   TypeBase.strip_case gives them).  Raises HOL_ERR unless the arms,
+   compiled as the parser compiles a case, give back t up to the names
+   of bound variables, or if the printed arms might not read back as
+   these: when _ is overloaded, or when a right-hand side has a free
+   variable named like one the parser makes of a printed _ (_0, _1,
+   ...), which the _ would capture.  What it splits on is printed with
+   its type when a constant in the patterns has an overloaded name,
+   which arms that are no longer printed may have been all that
    resolved. *)
 fun wildcard_case t =
   let
@@ -155,35 +159,63 @@ fun wildcard_case t =
         SOME {actual_ops, ...} => length actual_ops > 1
       | NONE => false
     fun refuse why = raise mk_HOL_ERR "statementDossierLib" "wildcard_case" why
-    val (split_on, rows) = TypeBase.strip_case t
+    val (split_on, rows0) = TypeBase.strip_case t
+    val rows =
+        map ((fn (_, p, _, r) => (p, r)) o
+             patternMatchesSyntax.dest_PMATCH_ROW_ABS)
+            (#2 (patternMatchesSyntax.dest_PMATCH
+                   (patternMatchesLib.case2pmatch true t)))
+    fun rename (p, r) =
+      let
+        val gs = List.filter is_genvar (free_vars p)
+        val (s, _) =
+            List.foldl (fn (g, (s, avoid)) =>
+                           let val v = variant avoid (mk_var ("x", type_of g))
+                           in ((g |-> v) :: s, v :: avoid) end)
+                       ([], free_vars t @ free_vars p @ free_vars r) gs
+      in (subst s p, subst s r) end
+    val rows = map rename rows
+    (* Rows left with the same right-hand side, using none of their
+       pattern variables, as one final catch-all *)
     fun merges body (p, r) =
       aconv r body andalso not (List.exists (C free_in r) (free_vars p))
-    fun group (_, r) = List.filter (merges r) rows
     val merged =
-      List.foldl (fn (row, best) =>
-                     let val g = group row
-                     in if length g >= length best then g else best end)
+      List.foldl (fn ((_, r), best) =>
+                     let val g = List.filter (merges r) rows
+                     in if length g > length best then g else best end)
                  [] rows
-    val body = case merged of (_, r) :: _ => r | [] => t
-    val kept = List.filter (not o merges body) rows
-  in
-    if length merged < 2 orelse null kept then NONE
-    else if List.exists (uscore_name o #1 o dest_var) (free_vars body) then
-      refuse "the _ arm would capture a free variable"
-    else if Overload.is_overloaded oinfo "_" then refuse "_ is overloaded"
-    else
+    val rows' =
+      case merged of
+        [(p, body)] =>
+          if is_var p then rows
+          else List.filter (not o merges body) rows @
+               [(variant (free_vars t) (mk_var ("x", type_of split_on)), body)]
+      | (_, body) :: _ :: _ =>
+          List.filter (not o merges body) rows @
+          [(variant (free_vars t) (mk_var ("x", type_of split_on)), body)]
+      | _ => rows
+    fun gives rows =
       let
-        val annotate =
-          List.exists (List.exists ambiguous o find_terms is_const o #1) kept
-        val rows' = kept @ [(mk_var ("_", type_of split_on), body)]
         val (v, f) =
           dest_abs (Lib.with_flag (Feedback.emit_MESG, false)
-                                  TypeBase.mk_pattern_fn rows')
-      in
-        if aconv (subst [v |-> split_on] f) t then
-          SOME (split_on, annotate, rows')
-        else refuse "merged arms give another term"
-      end
+                                  TypeBase.mk_pattern_fn rows)
+      in aconv (subst [v |-> split_on] f) t end
+      handle HOL_ERR _ => false
+    val shorter = List.filter (fn rs => length rs < length rows0) [rows', rows]
+  in
+    if null rows0 orelse null shorter then NONE
+    else if List.exists (fn (_, r) =>
+                List.exists (uscore_name o #1 o dest_var) (free_vars r)) rows
+    then refuse "a _ would capture a free variable"
+    else if Overload.is_overloaded oinfo "_" then refuse "_ is overloaded"
+    else
+      case List.find gives shorter of
+        SOME rows =>
+          SOME (split_on,
+                List.exists (List.exists ambiguous o find_terms is_const o #1)
+                            rows,
+                rows)
+      | NONE => refuse "the arms give another term"
   end
 
 (* A user printer for case expressions with a wildcard arm, laid out as
@@ -209,11 +241,18 @@ fun wildcard_case_pp (tyg, _) backend sys
          Prec (_, s) => s = GrammarSpecials.fnapp_special
        | _ => false)
     val casebar = add_break (1, 0) >> add_string "|" >> add_string " "
+    val uscore =
+      GrammarSpecials.mk_fakeconst_name {fake = "_", original = NONE}
     fun arm rgrav (l, r) =
-      record_bvars (free_vars l)
+      let
+        val (used, unused) = List.partition (C free_in r) (free_vars l)
+        val l = subst (map (fn v => v |-> mk_var (uscore, type_of v)) unused) l
+      in
+      record_bvars used
         (ublock PP.CONSISTENT 0
            (pr Top l >> add_string " " >> add_string "=>" >>
             add_break (1, 2) >> ublock PP.CONSISTENT 0 (pr rgrav r)))
+      end
     (* As term_pp does after printing a type, so that the closing
        parenthesis is not spaced off as if it could merge with the : *)
     val after_type =
@@ -271,11 +310,12 @@ fun wildcard_counts tms =
            | _ => acc)
       | (x, rows) =>
           let
-            val acc =
+            val (acc, rows) =
                 (case wildcard_case t of
-                   SOME _ => (HOLset.add (merged, t), failed)
-                 | NONE => acc)
-                handle HOL_ERR _ => (merged, HOLset.add (failed, t))
+                   SOME (_, _, rows') =>
+                     ((HOLset.add (merged, t), failed), rows')
+                 | NONE => (acc, rows))
+                handle HOL_ERR _ => ((merged, HOLset.add (failed, t)), rows)
           in
             List.foldl (fn ((_, r), acc) => walk (r, acc)) (walk (x, acc))
                        rows
@@ -2124,10 +2164,12 @@ fun render ({about = extra_about, omit_types, reader_view,
                   \alone is not an independent proof audit."]] @
       (if merged_cases = 0 then [] else
          [Para [Text ("In " ^ Int.toString merged_cases ^ " case \
-                      \expressions, the arms that share a right-hand side \
-                      \using none of their pattern variables are printed as \
-                      \one final `_` arm; each was checked to read back as \
-                      \the stored term.")]]) @
+                      \expressions, arms that share a right-hand side \
+                      \using none of their pattern variables, as pattern \
+                      \completion of a wildcard makes them, are printed \
+                      \as one catch-all arm, and pattern variables an arm \
+                      \does not use as `_`; each was checked to read back \
+                      \as the stored term.")]]) @
       (if reader_view then
          [Para [Text ("Contents: " ^
            Int.toString (length theorems + length supporting) ^

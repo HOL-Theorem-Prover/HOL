@@ -295,9 +295,10 @@ New tools
     printer annotations for highlighting, types and links. Optional prose
     sections are checked against the theorem's hypotheses and database.
     The Poly/ML `statement-dossier` command reads a TOML configuration
-    and loads the selected theories. The arms of a `case` that share a
-    right-hand side print as one wildcard arm where that reads back as
-    the stored term. See `src/statementdossier/README.md` for examples.
+    and loads the selected theories. A `case` whose arms pattern completion
+    made of a wildcard prints with the wildcard arm, from
+    `patternMatchesLib.case2pmatch`, where that reads back as the stored
+    term. See `src/statementdossier/README.md` for examples.
 
 New examples
 ------------
