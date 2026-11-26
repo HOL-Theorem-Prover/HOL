@@ -702,7 +702,7 @@ local
      in
        if Lib.all (C mem fntyV) rtyV then (fnty,rty) else raise ERR "" ""
      end
-     handle _ => raise ERR "list_mk_binder"
+     handle HOL_ERR _ => raise ERR "list_mk_binder"
        "expected binder to have type ((ty1 -> ty2) -> ty3) where\
        \ tyvars of ty3 are all in (ty1->ty2)"
   fun binderFn NONE = (fn v => fn (M,_) => (Abs(v,M),Type.ind))
