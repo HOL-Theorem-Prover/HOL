@@ -266,6 +266,23 @@ fun test_child root =
     val _ = OS.FileSys.remove env_exec
     val _ = expect "an environment path that is no executable is final"
       (find_e "HOL4_EPROVER_EXECUTABLE" = NONE)
+    val (pb_error, pb_printed) = capture_stdout (fn () =>
+      hh_error (fn () =>
+        ignore (holyHammer.hh_pb "" [Eprover] [] ([], boolSyntax.T))))
+    val run_failure =
+      #szs (hhProver.run (hhProver.config_of Eprover)
+        {timeout = 1, problem = "unused", extra = [], debug_dir = NONE})
+    fun names_setting text =
+      contains ("HOL4_EPROVER_EXECUTABLE = " ^ env_exec ^
+                " names no executable file; fix or unset it") text andalso
+      not (contains "download-provers" text)
+    val _ = expect "a missing explicit executable is reported as such"
+      (names_setting pb_printed andalso
+       (case pb_error of SOME text => names_setting text | NONE => false)
+       andalso
+       (case run_failure of
+            hhProver.RunFailure text => names_setting text
+          | _ => false))
     fun find_configured value env_var =
       (aiLib.write_file config
          (config_settings ^ "prover.e.executable =" ^ value ^ "\n");

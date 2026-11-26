@@ -110,10 +110,12 @@ Then, in an interactive session:
     load "holyHammer"; open holyHammer;
     holyhammer ``LENGTH (REVERSE l ++ l) = 2 * LENGTH l``;
 
-If no prover is found, you get
+If no prover is found, a line for each prover such as
 
-    HolyHammer: no prover binary found; run tools/download-provers or
-    put a supported prover binary on PATH
+    HolyHammer prover 'e': not found; install it with tools/download-provers or put it on PATH
+
+is printed, and the call fails with `no prover binary found` and the
+same lines.
 
 `interactive.sml` shows how to list the provers HolyHammer can see and
 which versions they are.

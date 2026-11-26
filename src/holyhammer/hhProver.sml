@@ -918,9 +918,8 @@ fun save_output directory name contents =
     save ()
   end
 
-fun missing_prover name =
-  "HolyHammer prover '" ^ name ^
-  "' was not found; install it with tools/download-provers"
+fun missing_prover ({name, env_var, ...} : prover_config) =
+  "HolyHammer prover '" ^ name ^ "': " ^ hhConfig.missing_exec name env_var
 
 fun completed result : running =
   {kill = fn () => (), wait = fn () => result}
@@ -934,7 +933,7 @@ fun run_async (config : prover_config) request =
     fun could_not_execute version = failure version "could not execute prover"
   in
     case probe config of
-        NONE => completed (failure NONE (missing_prover (#name config)))
+        NONE => completed (failure NONE (missing_prover config))
       | SOME {path = executable, version, ...} =>
           ((let
               val (path, args) =

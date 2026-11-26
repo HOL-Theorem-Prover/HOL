@@ -97,4 +97,7 @@ sig
      else the newest <prover>-<version>/<platform>/ holding one of names
      in the state directory's provers, then in ~/.hol4/hammer/provers. *)
   val find_exec : string -> string -> string list -> string option
+  (* missing_exec prover env_var: why find_exec prover env_var finds no
+     executable, as advice to the user. *)
+  val missing_exec : string -> string -> string
 end

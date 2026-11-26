@@ -79,6 +79,8 @@ sig
 
   (* Executable discovery, version probing and a timed run of one problem. *)
   val find_exec : prover_config -> string option
+  (* Why find_exec finds no executable, as advice to the user. *)
+  val missing_prover : prover_config -> string
   val probe : prover_config ->
     {path : string, version : string option, tested : bool} option
   (* Shared with the scheduler: lock discipline must have one definition. *)

@@ -773,4 +773,11 @@ fun find_exec prover env_var names =
              | found => found)
   end
 
+fun missing_exec prover env_var =
+  case explicit_exec prover env_var of
+      SOME (source, value) =>
+        source ^ " = " ^ value ^ " names no executable file; fix or unset it"
+    | NONE =>
+        "not found; install it with tools/download-provers or put it on PATH"
+
 end

@@ -18,28 +18,19 @@ datatype prover = datatype hhConfig.prover
 
 fun set_timeout n = hhConfig.hh_set ("timeout", Int.toString n)
 
-fun no_prover caller =
-  let
-    val message =
-      "no prover binary found; run tools/download-provers or put a " ^
-      "supported prover binary on PATH"
-    val _ = print_endline ("HolyHammer: " ^ message)
-  in
-    raise ERR caller message
-  end
-
+(* The provers that have an executable; each other one is reported. *)
 fun available_provers caller provers =
   let
-    fun available prover =
-      let val config = hhProver.config_of prover in
-        case hhProver.find_exec config of
-            SOME _ => true
-          | NONE =>
-              (print_endline ("no binary for " ^ #name config); false)
-      end
-    val available = filter available provers
+    val (available, missing) =
+      List.partition (isSome o hhProver.find_exec o hhProver.config_of)
+        provers
+    val reasons = map (hhProver.missing_prover o hhProver.config_of) missing
+    val _ = List.app print_endline reasons
   in
-    if null available then no_prover caller else available
+    if null available then
+      raise ERR caller
+        (String.concatWith "\n" ("no prover binary found" :: reasons))
+    else available
   end
 
 (* Deliberately a function: state_dir needs HOME and creates directories,
