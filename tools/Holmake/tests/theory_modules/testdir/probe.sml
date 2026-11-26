@@ -142,9 +142,13 @@ val _ = if enabled then
   CompilerSpecific.quietbind
     "val _ = let val out = TextIO.openOut \"module-stats\"; \
     \val {hits,misses,writes} = TheoryModules.statistics() \
+    \val loaded = TextIO.openOut \"loaded-modules\" \
     \in TextIO.output(out, Int.toString hits ^ \" \" ^ \
     \Int.toString misses ^ \" \" ^ Int.toString writes); \
-    \TextIO.closeOut out end"
+    \TextIO.closeOut out; \
+    \TextIO.output(loaded, Int.toString (length \
+    \(PolyML.SaveState.showLoadedModules ()))); \
+    \TextIO.closeOut loaded end"
   else ();
 
 val _ = if flag "loadprobe" then OS.Process.exit OS.Process.success

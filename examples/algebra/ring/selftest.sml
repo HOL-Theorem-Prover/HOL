@@ -5,7 +5,7 @@
 (*            (c) Copyright, University of Cambridge 1998                    *)
 (* ========================================================================= *)
 
-open HolKernel Portable Parse boolLib;
+open HolKernel Portable Parse boolLib bossLib;
 
 open ringLib testutils;
 
@@ -79,3 +79,14 @@ val _ = List.app (rule_test RING_RULE) [
        “x IN ring_carrier r /\ y IN ring_carrier r
     ==> x = ring_add r y (ring_sub r x y)”)
       ];
+
+val _ = new_theory "scratch";
+
+val _ =
+  rule_test
+    (fn tm => prove (tm,
+      rpt strip_tac >> RING_USING_TAC [``x:'a = y``]))
+    ("RING_USING_TAC retains carrier facts and ignores other equalities",
+     ``x IN ring_carrier r /\ y IN ring_carrier r /\
+       x = y /\ (p:bool) = q ==>
+       ring_add r x (ring_0 r) = y``);

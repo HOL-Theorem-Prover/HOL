@@ -561,6 +561,19 @@ val _ = blast_true
 val _ = blast_true
    ``!a:word128. a << 8 >>> 8 = a && 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFw``
 
+(* the same literals in a second call: literal bits remembered by one
+   call must not be reused by the next *)
+val lit_extract_tm =
+   ``((15 >< 8)
+        (((1w : word1) @@ (((v2w [F] : word1) @@ (((212w : word9) @@
+          (((31w : word5) @@ (((5w : word4) @@ (((0w : word1) @@
+          (((1w : word1) @@ (((31w : word5) @@ (n2w dst : word5))
+          : word10)) : word11)) : word12)) : word16)) : 21 word))
+          : word30)) : 31 word)) : word32) : word8) =
+     v2w [F; T; F; T; F; T; T; T]``
+val _ = blast_true lit_extract_tm
+val _ = blast_true lit_extract_tm
+
 val _ = print "\nsimplifier tests\n\n"
 
 val _ = srw_true
@@ -671,6 +684,10 @@ val () = qtest_conv "WORD_GROUND_CONV" wordsLib.WORD_GROUND_CONV
   word_xor 3w 5w : word8 = 6w
   `
 
+val _ = List.app (test_fail "WORD_GROUND_CONV" wordsLib.WORD_GROUND_CONV)
+  [“w2w (1w:'a word) : 'b word”, “(f:'a -> 'b) x”, “f (1w:word8) : word8”,
+   “word_from_hex_list [18446744073709551616] : 'a word”,
+   “word_from_hex_list [18446744073709551616] : word8”]
 
 
 val elapsed = Timer.checkRealTimer tt
