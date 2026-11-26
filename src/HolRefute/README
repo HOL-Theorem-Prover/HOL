@@ -122,6 +122,13 @@ constructors, variables and self-calls rather than approximate.
 `upd_depth` is the per-`Enum` fuel; fuel-bounded exhaustion is always
 incomplete.
 
+`upd_max_steps n` (at least 1, default 1000000) bounds the rewrite steps
+of each evaluation on Compute (a test, a guard, an enumerator's input).
+An evaluation still unfinished after them is stuck, like any undecided
+one: the search ends incomplete instead of evaluating until the
+deadline, and a candidate whose test is stuck is at most a Potential
+counterexample.
+
 `upd_instantiate` pins type variables of QC and narrowing; word-width
 variables take fcp numerals from `upd_widths`.  `upd_use_subtype true`
 transports a typedef-typed variable to its guarded representation (never

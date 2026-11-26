@@ -27,6 +27,11 @@ signature Refute_Config = sig
       size_mode : bound_mode,
       iterations : int,
       depth : int,
+      (* Rewrite steps one candidate's evaluation may take on the Compute
+         substrate before it stops and the candidate counts as stuck
+         (never as a counterexample or as exhausted).  At least 1;
+         default 1000000. *)
+      max_steps : int,
       finite_types : bool,
       finite_type_size : int,
       default_type : Type.hol_type list,
@@ -146,6 +151,7 @@ signature Refute_Config = sig
   val upd_iterative_size : int -> config -> config
   val upd_iterations : int -> config -> config
   val upd_depth : int -> config -> config
+  val upd_max_steps : int -> config -> config
   val upd_finite_types : bool -> config -> config
   val upd_finite_type_size : int -> config -> config
   (* Word widths tried for a type variable in a word's index position;

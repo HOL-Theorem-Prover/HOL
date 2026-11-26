@@ -76,6 +76,11 @@ structure Refute_Core :> Refute_Core = struct
       size_mode : bound_mode,
       iterations : int,
       depth : int,
+      (* Rewrite steps one candidate's evaluation may take on the Compute
+         substrate before it stops and the candidate counts as stuck
+         (never as a counterexample or as exhausted).  At least 1;
+         default 1000000. *)
+      max_steps : int,
       finite_types : bool,
       finite_type_size : int,
       default_type : hol_type list,
@@ -223,6 +228,7 @@ structure Refute_Core :> Refute_Core = struct
       size_mode = IterativeDeepening,
       iterations = 100,
       depth = 10,
+      max_steps = 1000000,
       finite_types = true,
       finite_type_size = 3,
       default_type = [``:num``],
@@ -381,6 +387,7 @@ structure Refute_Core :> Refute_Core = struct
       QcSize of int * bound_mode
     | QcIterations of int
     | QcDepth of int
+    | QcMaxSteps of int
     | QcFiniteTypes of bool
     | QcFiniteTypeSize of int
     | QcDefaultType of hol_type list
@@ -404,6 +411,8 @@ structure Refute_Core :> Refute_Core = struct
       iterations = (case update of QcIterations value => value
                     | _ => #iterations qc),
       depth = (case update of QcDepth value => value | _ => #depth qc),
+      max_steps = (case update of QcMaxSteps value => value
+                   | _ => #max_steps qc),
       finite_types = (case update of QcFiniteTypes value => value
                       | _ => #finite_types qc),
       finite_type_size = (case update of QcFiniteTypeSize value => value
@@ -459,6 +468,11 @@ structure Refute_Core :> Refute_Core = struct
       val _ = if #iterations qc < 0 then invalid "iterations" else ()
       val _ = bounded "depth" (#depth qc)
       val _ =
+        if #max_steps qc >= 1 then ()
+        else raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
+          ("max_steps: must be at least 1; got " ^
+           Int.toString (#max_steps qc))
+      val _ =
         if #finite_type_size qc < 1 orelse #finite_type_size qc > 6 then
           raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
             "finite_type_size: must lie between 1 and 6"
@@ -506,6 +520,7 @@ structure Refute_Core :> Refute_Core = struct
     update_qc (QcSize (value, IterativeDeepening))
   fun upd_iterations value = update_qc (QcIterations value)
   fun upd_depth value = update_qc (QcDepth value)
+  fun upd_max_steps value = update_qc (QcMaxSteps value)
   fun upd_finite_types value = update_qc (QcFiniteTypes value)
   fun upd_finite_type_size value = update_qc (QcFiniteTypeSize value)
   fun upd_default_type value = update_qc (QcDefaultType value)
@@ -2089,6 +2104,7 @@ structure Refute_Core :> Refute_Core = struct
             "\n",
           "iterations = " ^ Int.toString (#iterations q) ^ "\n",
           "depth = " ^ Int.toString (#depth q) ^ "\n",
+          "max_steps = " ^ Int.toString (#max_steps q) ^ "\n",
           "finite_types = " ^ Bool.toString (#finite_types q) ^
             "\n",
           "finite_type_size = " ^ Int.toString (#finite_type_size q) ^

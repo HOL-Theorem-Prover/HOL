@@ -60,6 +60,82 @@ val selftest_level =
 (* Harness                                                             *)
 (* ------------------------------------------------------------------- *)
 
+(* Keep call details until the test is checked; formatting them only on
+   failure keeps quiet/captured output unchanged. *)
+val refute_calls = Synchronized.var "selftest refute calls"
+  ([] : (unit -> string) list)
+
+fun certainty_text Genuine = "Genuine"
+  | certainty_text (QuasiGenuine reasons) =
+      "QuasiGenuine: " ^ String.concatWith "; " reasons
+  | certainty_text (Potential reasons) =
+      "Potential: " ^ String.concatWith "; " reasons
+
+fun witnesses_text kind witnesses =
+  kind ^ " " ^ Int.toString (length witnesses) ^ " [" ^
+  String.concatWith "; " (map (fn (c : counterexample) =>
+    #backend c ^ "/" ^ #substrate c ^ " " ^ certainty_text (#certainty c))
+    witnesses) ^ "]"
+
+fun outcome_text (Counterexample cs) = witnesses_text "Counterexample" cs
+  | outcome_text NoCounterexample = "NoCounterexample"
+  | outcome_text (Model cs) = witnesses_text "Model" cs
+  | outcome_text NoModel = "NoModel"
+  | outcome_text (Unknown reasons) =
+      "Unknown: " ^ String.concatWith "; " reasons
+
+fun record_refute_call api (assumptions, goal) describe action =
+  let
+    val started = Time.now ()
+    val finished = ref NONE
+    fun details () =
+      " " ^ api ^ ": " ^
+      String.concatWith ", " (map Parse.term_to_string assumptions) ^
+      " |- " ^ Parse.term_to_string goal ^ "\n    " ^
+      (case !finished of
+           NONE => "did not return"
+         | SOME (elapsed, result) =>
+             (case result of
+                  Exn.Res value => describe value
+                | Exn.Exn e => "raised: " ^ General.exnMessage e) ^
+             " (" ^ Time.toString elapsed ^ " s)")
+    (* Reserve the row before calling: a backend can call back into Refute. *)
+    val _ = Synchronized.change refute_calls (fn calls => details :: calls)
+    val result = Exn.capture action ()
+    val _ = finished := SOME (Time.- (Time.now (), started), result)
+  in
+    Exn.release result
+  end
+
+(* A call's details name the back ends, substrate and deadline it ran
+   with: an Unknown carries none of them. *)
+fun config_text (cfg : config) =
+  (case #backends cfg of
+       SOME backends => String.concatWith ", " backends
+     | NONE => "all back ends") ^ " on " ^
+  (case #substrate (#qc cfg) of
+       Auto => "Auto"
+     | Compute => "Compute"
+     | NativeSML => "NativeSML") ^ ", " ^
+  Real.fmt (StringCvt.FIX (SOME 1)) (#timeout cfg) ^ " s deadline"
+
+fun refute cfg goal =
+  record_refute_call ("refute (" ^ config_text cfg ^ ")") ([], goal)
+    outcome_text (fn () => Refute.refute cfg goal)
+fun refute_goal cfg goal =
+  record_refute_call ("refute_goal (" ^ config_text cfg ^ ")") goal
+    outcome_text (fn () => Refute.refute_goal cfg goal)
+fun refute_with updates goal =
+  record_refute_call "refute_with" ([], goal) outcome_text
+    (fn () => Refute.refute_with updates goal)
+fun quickcheck goal = record_refute_call "quickcheck" ([], goal) outcome_text
+  (fn () => Refute.quickcheck goal)
+fun try_refute cfg goal =
+  record_refute_call ("try_refute (" ^ config_text cfg ^ ")") goal
+  (fn NONE => "NONE (no counterexample returned)"
+    | SOME (backend, result) => "SOME " ^ backend ^ ": " ^ outcome_text result)
+  (fn () => Refute.try_refute cfg goal)
+
 fun check_result P =
   testutils.check_result (fn r =>
     P r handle Interrupt => raise Interrupt
@@ -67,25 +143,30 @@ fun check_result P =
                      false))
 
 (* CI shows only the end of the log, so the names of failed tests are
-   printed again there, each with its message *)
+   printed again there, each with the last call it made: the one whose
+   outcome failed the check, for a test that stops at its first failure *)
 val failed_tests = ref ([] : (string * string) list)
-
-(* What the running test's last failed call returned, set by
-   [refute_noting] *)
-val failure_note = ref ""
 
 fun test_msg name pred msg =
   let val failures = !erc in
-    failure_note := "";
+    Synchronized.change refute_calls (K []);
     tprint name;
     require_msg (check_result pred) msg (fn () => ()) ();
-    if !erc > failures then failed_tests := (name, msg ()) :: !failed_tests
-    else ()
+    if !erc > failures then
+      failed_tests :=
+        (name, case Synchronized.value refute_calls of
+                   details :: _ => "last call" ^ details ()
+                 | [] => "no refute call") :: !failed_tests
+    else ();
+    Synchronized.change refute_calls (K [])
   end
 
 fun test name pred =
   test_msg name pred (fn () =>
-    if !failure_note = "" then name ^ " failed" else !failure_note)
+    name ^ " failed" ^ String.concat
+      (Portable.mapi (fn i => fn details =>
+         "\n  call " ^ Int.toString (i + 1) ^ details ())
+        (rev (Synchronized.value refute_calls))))
 
 fun section name = print ("\n== " ^ name ^ "\n")
 fun skip name why = (tprint name; print ("skipped: " ^ why ^ "\n"))
@@ -169,43 +250,6 @@ val genuine_uncertified = cex_where (fn c => is_genuine c andalso
 val potential = cex_where is_potential
 
 fun reasons_of (Unknown rs) = rs | reasons_of _ = []
-
-fun outcome_text outcome =
-  case outcome of
-      Counterexample (c :: _) =>
-        "a counterexample from " ^ #backend c ^ " on " ^ #substrate c ^
-        (if is_genuine c then ", Genuine" else ", not Genuine") ^
-        (if Option.isSome (#cert c) then ", certified" else ", no cert")
-    | Counterexample [] => "an empty counterexample list"
-    | NoCounterexample => "NoCounterexample"
-    | Model _ => "a model"
-    | NoModel => "NoModel"
-    | Unknown rs => "Unknown: " ^ String.concatWith "; " rs
-
-fun substrate_text Auto = "Auto"
-  | substrate_text Compute = "Compute"
-  | substrate_text NativeSML = "NativeSML"
-
-(* [refute cfg goal] checked by [P]; a failure leaves the goal, back ends,
-   substrate and outcome in [failure_note] for the test's message *)
-fun refute_noting (cfg : config) goal P =
-  let
-    val started = Time.now ()
-    val outcome = refute cfg goal
-    val elapsed = Time.toReal (Time.- (Time.now (), started))
-  in
-    P outcome orelse
-    (failure_note :=
-       Parse.term_to_string goal ^ " with " ^
-       (case #backends cfg of
-            SOME bs => String.concatWith ", " bs
-          | NONE => "all back ends") ^
-       " on " ^ substrate_text (#substrate (#qc cfg)) ^ " returned " ^
-       outcome_text outcome ^ " after " ^
-       Real.fmt (StringCvt.FIX (SOME 2)) elapsed ^ " s of its " ^
-       Real.fmt (StringCvt.FIX (SOME 1)) (#timeout cfg) ^ " s deadline";
-     false)
-  end
 
 fun unknown_with needle outcome =
   is_unknown outcome andalso
@@ -879,7 +923,8 @@ val _ = test "show_config prints every field" (fn () =>
       "no_assms = false", "evals = 0 terms", "expect = NoExpectation",
       "max_counterexamples = 1", "tag = ", "widths = [1, 2, 3, 4]",
       "size = 10", "size_mode = IterativeDeepening", "iterations = 100",
-      "depth = 10", "finite_types = true", "finite_type_size = 3",
+      "depth = 10", "max_steps = 1000000", "finite_types = true",
+      "finite_type_size = 3",
       "default_type = :num", "instantiate = []", "substrate = Auto",
       "seed = NONE", "allow_existentials = true", "finite_functions = true",
       "certify = false", "smart_quantifier = true",
@@ -1929,7 +1974,7 @@ fun narrowing_ran_through size outcome =
                       "narrowing: searched up to size " ^ Int.toString size]
 
 fun narrowed_through cfg goal =
-  refute_noting (cfg |> upd_size 5) goal (narrowing_ran_through 5)
+  narrowing_ran_through 5 (refute (cfg |> upd_size 5) goal)
 
 fun has_hole tm = String.isSubstring "_" (Parse.term_to_string tm)
 
@@ -2544,9 +2589,8 @@ val _ = test "function inversion refutes and stays sound" (fn () =>
 val _ = section "native substrate"
 
 fun both_strategies cfg goal P =
-  refute_noting (cfg |> only [Exhaustive]) goal (cex_where P) andalso
-  refute_noting (cfg |> only [Random] |> upd_seed (SOME 1)) goal
-    (cex_where P)
+  refute (cfg |> only [Exhaustive]) goal |> cex_where P andalso
+  refute (cfg |> only [Random] |> upd_seed (SOME 1)) goal |> cex_where P
 
 fun native_genuine (c : counterexample) =
   #substrate c = "native" andalso is_genuine c
@@ -2572,14 +2616,13 @@ fun native_refuted goal =
     fun certified c = native_genuine c andalso Option.isSome (#cert c)
   in
     both_strategies native_small goal certified andalso
-    refute_noting nar goal (cex_where certified)
+    cex_where certified (refute nar goal)
   end
 
 fun native_not_refuted goal =
-  refute_noting (native_small |> only [Exhaustive]) goal not_refuted
-  andalso
-  refute_noting (native_small |> only [Random] |> upd_seed (SOME 1)) goal
-    not_refuted andalso
+  not_refuted (refute (native_small |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (native_small |> only [Random] |> upd_seed (SOME 1))
+                      goal) andalso
   narrowed_through nar goal
 
 (* Finite sets are fEMPTY/fINSERT chains: native code reads a set through
@@ -2595,8 +2638,8 @@ fun fset_refuted goal =
       #substrate c = name andalso is_genuine c andalso
       Option.isSome (#cert c)))
     fset_substrates andalso
-  refute_noting nar goal (cex_where (fn c =>
-    native_genuine c andalso Option.isSome (#cert c)))
+  refute nar goal |> cex_where (fn c =>
+    native_genuine c andalso Option.isSome (#cert c))
 
 (* A refusal or a timeout would leave a goal unrefuted too, so every back
    end must report the search run through its sizes.  The true goals run
@@ -2614,22 +2657,16 @@ fun fset_not_refuted goal =
     List.all (fn (substrate, _) =>
       let val cfg = cfg |> upd_substrate substrate
       in
-        refute_noting (cfg |> only [Exhaustive]) goal searched andalso
-        refute_noting (cfg |> only [Random] |> upd_seed (SOME 1)
-                         |> upd_iterations 200) goal searched
+        searched (refute (cfg |> only [Exhaustive]) goal) andalso
+        searched (refute (cfg |> only [Random] |> upd_seed (SOME 1)
+                            |> upd_iterations 200) goal)
       end)
       fset_substrates andalso
-    refute_noting (cfg |> only [Narrowing] |> upd_substrate NativeSML) goal
-      (narrowing_ran_through 2)
+    narrowing_ran_through 2
+      (refute (cfg |> only [Narrowing] |> upd_substrate NativeSML) goal)
   end
 
-fun fset_evaluates tm =
-  let val value = rhs (concl (bossLib.EVAL tm)) in
-    aconv value T orelse
-    (failure_note := Parse.term_to_string tm ^ " evaluates to " ^
-                     Parse.term_to_string value;
-     false)
-  end
+fun fset_evaluates tm = aconv (rhs (concl (bossLib.EVAL tm))) T
 
 val _ = Datatype.Datatype `fs_box = FsNone | FsSome (num fset)`
 val _ = Datatype.Datatype `fs_rec = <| fs_tags : num fset; fs_count : num |>`
@@ -2866,9 +2903,9 @@ fun fmap_searched goal =
       not (unknown_with "HOL_ERR" outcome)
     val uncertified = native_small |> upd_certify false
   in
-    refute_noting (uncertified |> only [Exhaustive]) goal searched andalso
-    refute_noting (uncertified |> only [Random] |> upd_seed (SOME 1)) goal
-      searched andalso
+    searched (refute (uncertified |> only [Exhaustive]) goal) andalso
+    searched (refute (uncertified |> only [Random] |> upd_seed (SOME 1))
+                     goal) andalso
     narrowed_through (nar |> upd_certify false) goal
   end
 
@@ -2892,13 +2929,13 @@ fun set_refuted goal =
     fun certified c = native_genuine c andalso Option.isSome (#cert c)
   in
     both_strategies set_native goal certified andalso
-    refute_noting nar goal (cex_where certified)
+    cex_where certified (refute nar goal)
   end
 
 fun set_not_refuted goal =
-  refute_noting (set_native |> only [Exhaustive]) goal not_refuted andalso
-  refute_noting (set_native |> only [Random] |> upd_seed (SOME 1)) goal
-    not_refuted andalso
+  not_refuted (refute (set_native |> only [Exhaustive]) goal) andalso
+  not_refuted (refute (set_native |> only [Random] |> upd_seed (SOME 1))
+                      goal) andalso
   narrowed_through nar goal
 
 val _ = test "sets and DRESTRICT are extracted" (fn () =>
@@ -6237,16 +6274,16 @@ val _ = test "a looping srw_ss conversion stops at the step limit" (fn () =>
       | NONE => false
   end)
 
-(* A candidate whose evaluation takes 10^8 rewrite steps.  Its evaluation
-   is cut at the step budget and the candidate counts as stuck, so the
-   search ends without a verdict instead of evaluating until the
-   deadline. *)
+(* Every candidate here is a counterexample once its 10^5 iterations are
+   evaluated.  With a budget of 1000 steps each evaluation is cut short
+   and the candidate counts as stuck, so the search ends incomplete
+   instead of finding one or evaluating until the deadline. *)
 val _ = test "a candidate's evaluation stops at its step budget" (fn () =>
   let
     val outcome =
       refute (exhaustive |> upd_substrate Compute |> upd_size 1
-                         |> upd_timeout 60.0)
-             ``n < 2 ==> FUNPOW SUC 100000000 n = 0``
+                         |> upd_max_steps 1000 |> upd_timeout 60.0)
+             ``n < 2 ==> FUNPOW SUC 100000 n = 0``
   in
     unknown_with "search space not exhausted" outcome andalso
     not (unknown_with "timed out" outcome)
@@ -6279,7 +6316,7 @@ val _ = test "a certifiable hit is upgraded to Genuine" (fn () =>
 val _ =
   if null (!failed_tests) then ()
   else print ("\nFailed tests:\n" ^
-              String.concat (map (fn (name, msg) =>
-                                    "  " ^ name ^ "\n    " ^ msg ^ "\n")
+              String.concat (map (fn (name, call) =>
+                                    "  " ^ name ^ "\n    " ^ call ^ "\n")
                                  (rev (!failed_tests))))
 val _ = exit_count0 erc
