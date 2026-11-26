@@ -20,14 +20,16 @@ val ERR = mk_HOL_ERR "smlExec"
 
 type 'a slot = 'a Thread_Data.var
 
+fun new_slot () : 'a slot = Thread_Data.var ()
+
 fun put slot x = Thread_Data.put slot (SOME x)
 
-val sml_bool_slot : bool slot = Thread_Data.var ()
-val sml_tactic_slot : tactic slot = Thread_Data.var ()
-val sml_string_slot : string slot = Thread_Data.var ()
-val sml_goal_slot : goal slot = Thread_Data.var ()
-val sml_thm_slot : thm slot = Thread_Data.var ()
-val sml_thml_slot : thm list slot = Thread_Data.var ()
+val sml_bool_slot : bool slot = new_slot ()
+val sml_tactic_slot : tactic slot = new_slot ()
+val sml_string_slot : string slot = new_slot ()
+val sml_goal_slot : goal slot = new_slot ()
+val sml_thm_slot : thm slot = new_slot ()
+val sml_thml_slot : thm list slot = new_slot ()
 
 (* -------------------------------------------------------------------------
    Execute strings as sml code.  The compiler prints nothing: a string
@@ -54,20 +56,20 @@ fun quse_string s =
         | _ => (TextIO.closeIn stream; false)
   end
 
-(* The value program, a declaration that puts it in slot, puts there.
-   The slot is left empty. *)
-fun take slot program =
+(* The value of the expression e, put in slot (whose long name is name)
+   by a declaration compiled on this thread.  The slot is left empty. *)
+fun read_slot slot name e =
   let
     val _ = Thread_Data.put slot NONE
-    val compiled = quse_string program
+    val compiled =
+      quse_string ("val _ = smlExecute.put " ^ name ^ " ( " ^ e ^ " )")
     val value = Thread_Data.get slot
   in
     Thread_Data.put slot NONE;
     if compiled then value else NONE
   end
 
-fun put_program slot e =
-  "val _ = smlExecute.put smlExecute." ^ slot ^ " ( " ^ e ^ " )"
+fun read slot name = read_slot slot ("smlExecute." ^ name)
 
 (* -------------------------------------------------------------------------
    Tests
@@ -119,8 +121,8 @@ fun is_stype s =
   end
 
 fun is_pointer_eq s1 s2 =
-  take sml_bool_slot
-    (put_program "sml_bool_slot" ("PolyML.pointerEq (" ^ s1 ^ "," ^ s2 ^ ")"))
+  read sml_bool_slot "sml_bool_slot"
+    ("PolyML.pointerEq (" ^ s1 ^ "," ^ s2 ^ ")")
   = SOME true
 
 (* -------------------------------------------------------------------------
@@ -130,21 +132,20 @@ fun is_pointer_eq s1 s2 =
 fun thm_of_sml s =
   if is_thm s then
     Option.map (fn th => (s, th))
-      (take sml_thm_slot (put_program "sml_thm_slot" s))
+      (read sml_thm_slot "sml_thm_slot" s)
   else NONE
 
 fun thml_of_sml sl =
-  take sml_thml_slot
-    (put_program "sml_thml_slot" ("[" ^ String.concatWith " , " sl ^ "]"))
+  read sml_thml_slot "sml_thml_slot" ("[" ^ String.concatWith " , " sl ^ "]")
 
 fun mk_valid s = "Tactical.VALID (" ^ s ^ ")"
 
 fun tactic_of_sml tim s =
   let
-    val program = put_program "sml_tactic_slot"
-      ("smlTimeout.timeout " ^ rts tim ^ " (fn () => " ^ mk_valid s ^ ") ()")
+    val e =
+      "smlTimeout.timeout " ^ rts tim ^ " (fn () => " ^ mk_valid s ^ ") ()"
   in
-    case take sml_tactic_slot program of
+    case read sml_tactic_slot "sml_tactic_slot" e of
         SOME tac => tac
       | NONE => raise ERR "tactic_of_sml" s
   end
@@ -154,17 +155,17 @@ fun tactic_of_sml tim s =
    its instrumented tactic: a worker that fails to stop can outlive the
    timeout and wedge the otherwise valid theory recording. *)
 fun tactic_of_sml_no_timeout s =
-  case take sml_tactic_slot (put_program "sml_tactic_slot" (mk_valid s)) of
+  case read sml_tactic_slot "sml_tactic_slot" (mk_valid s) of
       SOME tac => tac
     | NONE => raise ERR "tactic_of_sml_no_timeout" s
 
 fun string_of_sml s =
-  case take sml_string_slot (put_program "sml_string_slot" s) of
+  case read sml_string_slot "sml_string_slot" s of
       SOME x => x
     | NONE => raise ERR "string_of_sml" s
 
 fun goal_of_sml s =
-  case take sml_goal_slot (put_program "sml_goal_slot" s) of
+  case read sml_goal_slot "sml_goal_slot" s of
       SOME x => x
     | NONE => raise ERR "goal_of_sml" s
 

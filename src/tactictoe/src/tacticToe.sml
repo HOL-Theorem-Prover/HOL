@@ -83,22 +83,23 @@ fun select_tacfea tacdata gfea =
 
 val hh_use = ref false
 val hh_time = ref 30
-val hh_lemmas = ref NONE
+val hh_lemmas_slot
+  : (string -> thmdata -> goal -> string list option) slot = new_slot ()
 val atp_dir = ref ""
 fun atp_dir_of () =
   if !atp_dir = "" then tactictoe_dir_of () ^ "/provers" else !atp_dir
 
 fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
 
+fun import_hh_value slot name f time =
+  if metis_avail () andalso quse_string "load \"holyHammer\"" then
+    read_slot slot name
+      ("(holyHammer.set_timeout " ^ its time ^ "; holyHammer." ^ f ^ ")")
+  else NONE
+
 fun import_hh () =
-  let val _ =
-     metis_avail () andalso
-     quse_string ("load \"holyHammer\"; " ^
-       "holyHammer.set_timeout " ^ its (!hh_time) ^ ";" ^
-       "tacticToe.hh_lemmas := Option.SOME (holyHammer.main_hh_lemmas);")
-  in
-    !hh_lemmas
-  end
+  import_hh_value hh_lemmas_slot "tacticToe.hh_lemmas_slot" "main_hh_lemmas"
+    (!hh_time)
 
 (* -------------------------------------------------------------------------
    Main function

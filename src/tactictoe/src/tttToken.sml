@@ -236,7 +236,7 @@ fun build_stac tokenl = case tokenl of
    Parsing a list of tactics (of different types)
    ------------------------------------------------------------------------- *)
 
-val sml_pretacl_glob = ref []
+val sml_pretacl_slot : pretac list slot = new_slot ()
 
 fun mk_valid s = "Tactical.VALID ( " ^ s ^ " )"
 
@@ -251,12 +251,9 @@ fun mk_pretac stac = case extract_atyl stac of
 fun pretacl_of_sml tim stacl =
   let
     val ttacl = "[ " ^ String.concatWith " , " (map mk_pretac stacl) ^ " ]"
-    val program =
-      "let fun f () = tttToken.sml_pretacl_glob := " ^ ttacl ^ " in " ^
-      "smlTimeout.timeout " ^ rts tim ^ " f () end"
-    val b = quse_string program
   in
-    if b then SOME (!sml_pretacl_glob) else NONE
+    read_slot sml_pretacl_slot "tttToken.sml_pretacl_slot"
+      ("smlTimeout.timeout " ^ rts tim ^ " (fn () => " ^ ttacl ^ ") ()")
   end
 
 end (* struct *)

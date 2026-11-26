@@ -9,7 +9,11 @@ sig
   (* result slots of the thread running a compiled string, set by the
      strings the readers compile *)
   type 'a slot
+  val new_slot          : unit -> 'a slot
   val put               : 'a slot -> 'a -> unit
+  (* read_slot slot name e: the value of the expression e compiled on this
+     thread, through slot, whose long name is name *)
+  val read_slot         : 'a slot -> string -> string -> 'a option
   val sml_bool_slot     : bool slot
   val sml_tactic_slot   : tactic slot
   val sml_string_slot   : string slot

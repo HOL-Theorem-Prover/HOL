@@ -7,13 +7,19 @@ sig
 
   (* allows tactictoe to call holyhammer: disabled by default *)
   val hh_use : bool ref
-  val hh_lemmas :
-    (string -> mlThmData.thmdata -> goal -> string list option) option ref
+  val hh_lemmas_slot :
+    (string -> mlThmData.thmdata -> goal -> string list option)
+    smlExecute.slot
   val hh_time : int ref
   val atp_dir : string ref
   val atp_dir_of : unit -> string
   val import_hh : unit ->
     (string -> mlThmData.thmdata -> goal -> string list option) option
+  (* import_hh_value slot name f time: holyHammer.f, read through slot
+     (whose long name is name) after loading HolyHammer with its timeout
+     set to time seconds; NONE if Metis or HolyHammer is unavailable *)
+  val import_hh_value :
+    'a smlExecute.slot -> string -> string -> int -> 'a option
 
   (* parametrizable functions *)
   val build_searchobj :

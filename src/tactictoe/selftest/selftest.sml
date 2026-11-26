@@ -314,6 +314,21 @@ val _ = check "TacticToe recording API type-checks"
      val _ : unit -> tttManifest.manifest option = tttManifest.read_manifest
    in true end)
 
+(* pretacl_of_sml hands each thread the tactics it parsed, even when
+   another thread parses at the same time. *)
+val _ = check "concurrent tactic parsing keeps each thread's tactics"
+  (let
+     fun subgoals stac = case tttToken.pretacl_of_sml 1.0 [stac] of
+         SOME [tttToken.NoargTac tac] =>
+         SOME (length (fst (tac ([], T) (Context.snapshot ()))))
+       | _ => NONE
+     fun parses (stac, n) k =
+       k = 0 orelse (subgoals stac = SOME n andalso parses (stac, n) (k - 1))
+   in
+     smlParallel.parmap_exact 2 (fn x => parses x 200)
+       [("ALL_TAC", 1), ("ACCEPT_TAC TRUTH", 0)] = [true, true]
+   end)
+
 exception RecorderTacticFailure
 val _ = check "recording preserves source tactic exceptions"
   (((record_tactic

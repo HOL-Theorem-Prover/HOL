@@ -41,7 +41,8 @@ sig
   val tactictoe_thmlarg : thm list
   val tactictoe_termarg : term quotation
 
-  val sml_pretacl_glob : pretac list ref
+  (* the result slot of the strings pretacl_of_sml compiles *)
+  val sml_pretacl_slot : pretac list smlExecute.slot
   val pretacl_of_sml : real -> string list -> pretac list option
 
   val build_tac : parsetoken -> token list -> tactic
