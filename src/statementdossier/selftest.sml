@@ -517,7 +517,18 @@ val pick_off_md =
                            (basic ["pick_result"]))
 val _ = check "With case_wildcards off, every arm prints"
   (not (contains pick_off_md "_ =>") andalso
-   not (contains pick_off_md "one catch-all arm"))
+   not (contains pick_off_md "read back as the stored term"))
+
+(* case2pmatch drops ARB arms, which the parser puts back: a case left
+   with one arm prints it alone, and one left with none prints as
+   stored. *)
+val _ = save_thm ("arb_result", REFL
+  ``(option_CASE (x:num option) (ARB:num) (\n. ARB),
+     case (y:num option) of NONE => (ARB:num) | SOME n => n)``)
+val arb_md = #1 (generate (basic ["arb_result"]))
+val _ = check "Cases left with one arm or none print and read back"
+  (contains arb_md "case y of SOME n => n" andalso
+   not (contains arb_md "of |"))
 
 (* With an overloaded name left in the patterns, which the merged arms
    may have been all that resolved, the case gives the type of what it

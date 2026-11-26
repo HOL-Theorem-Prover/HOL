@@ -165,6 +165,9 @@ fun wildcard_case t =
              patternMatchesSyntax.dest_PMATCH_ROW_ABS)
             (#2 (patternMatchesSyntax.dest_PMATCH
                    (patternMatchesLib.case2pmatch true t)))
+        (* case2pmatch can fail with Empty, when it drops every row *)
+        handle Interrupt => raise Interrupt
+             | e => refuse ("case2pmatch: " ^ General.exnMessage e)
     fun rename (p, r) =
       let
         val gs = List.filter is_genvar (free_vars p)
@@ -272,8 +275,11 @@ fun wildcard_case_pp (tyg, _) backend sys
          add_break (1, 0) >> add_string "of") >>
       (if HOLFlags.get_bflag term_pp.print_firstcasebar then casebar
        else add_break (1, 2)) >>
-      pr_list (arm (Prec (0, "casebar"))) casebar (Lib.butlast rows) >>
-      casebar >> arm (if parens then Top else rgrav) (List.last rows)
+      (if length rows > 1 then
+         pr_list (arm (Prec (0, "casebar"))) casebar (Lib.butlast rows) >>
+         casebar
+       else nothing) >>
+      arm (if parens then Top else rgrav) (List.last rows)
   in
     get_gspec >-
     (fn gspec =>
@@ -1624,8 +1630,8 @@ fun render ({about = extra_about, omit_types, reader_view,
       else (0, 0)
     val () =
       if merged_cases + failed_cases = 0 then ()
-      else print ("statementDossierLib: case expressions printed with a \
-                  \wildcard arm: " ^ Int.toString merged_cases ^
+      else print ("statementDossierLib: case expressions printed with \
+                  \fewer arms: " ^ Int.toString merged_cases ^
                   "; printed in full as the merged arms failed the check: " ^
                   Int.toString failed_cases ^ "\n")
     val bucket_maps = map (fn (n, th) => (n, buckets cfg entries th)) theorems
@@ -2164,12 +2170,12 @@ fun render ({about = extra_about, omit_types, reader_view,
                   \alone is not an independent proof audit."]] @
       (if merged_cases = 0 then [] else
          [Para [Text ("In " ^ Int.toString merged_cases ^ " case \
-                      \expressions, arms that share a right-hand side \
-                      \using none of their pattern variables, as pattern \
-                      \completion of a wildcard makes them, are printed \
-                      \as one catch-all arm, and pattern variables an arm \
-                      \does not use as `_`; each was checked to read back \
-                      \as the stored term.")]]) @
+                      \expressions, the arms that pattern completion made \
+                      \of a catch-all are printed as that one arm, arms \
+                      \that share a right-hand side using none of their \
+                      \pattern variables as one final catch-all, and \
+                      \pattern variables an arm does not use as `_`; each \
+                      \was checked to read back as the stored term.")]]) @
       (if reader_view then
          [Para [Text ("Contents: " ^
            Int.toString (length theorems + length supporting) ^
