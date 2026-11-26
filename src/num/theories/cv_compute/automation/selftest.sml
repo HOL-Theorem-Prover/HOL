@@ -173,6 +173,38 @@ val rec_test3_def = Define `
 
 val _ = cv_auto_trans rec_test3_def;
 
+val _ = Datatype ‘
+  unit_record = <| ur_unit : unit; ur_num : num |>
+’
+
+val unit_record_select_def = Define ‘
+  unit_record_select (r : unit_record) = r.ur_num
+’
+
+val _ = cv_auto_trans unit_record_select_def;
+
+val _ = testutils.convtest
+  ("cv_eval record with unit field", cv_eval,
+   “unit_record_select <| ur_unit := (); ur_num := 17 |>”, “17:num”);
+
+val _ = Datatype ‘
+  mixed_unit_record = <| mur_int : int; mur_list : num list;
+                         mur_unit : unit; mur_num : num |>
+’
+
+val mixed_unit_record_select_def = Define ‘
+  mixed_unit_record_select (r : mixed_unit_record) =
+    (r.mur_int, r.mur_list, r.mur_num)
+’
+
+val _ = cv_auto_trans mixed_unit_record_select_def;
+
+val _ = testutils.convtest
+  ("cv_eval mixed record with unit field", cv_eval,
+   “mixed_unit_record_select
+      <| mur_int := -3; mur_list := [2; 5]; mur_unit := (); mur_num := 19 |>”,
+   “(-3:int, [2; 5]:num list, 19:num)”);
+
 val fac_def = Define `
   fac (n:num) = if n = 0:num then 1 else n * fac (n-1)
 `

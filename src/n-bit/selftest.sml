@@ -671,6 +671,10 @@ val () = qtest_conv "WORD_GROUND_CONV" wordsLib.WORD_GROUND_CONV
   word_xor 3w 5w : word8 = 6w
   `
 
+val _ = List.app (test_fail "WORD_GROUND_CONV" wordsLib.WORD_GROUND_CONV)
+  [“w2w (1w:'a word) : 'b word”, “(f:'a -> 'b) x”, “f (1w:word8) : word8”,
+   “word_from_hex_list [18446744073709551616] : 'a word”,
+   “word_from_hex_list [18446744073709551616] : word8”]
 
 
 val elapsed = Timer.checkRealTimer tt

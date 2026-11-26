@@ -225,11 +225,40 @@ fun insert_cv_inline th = (
 val (cv_inline_thms, cv_inline_add) =
     register_ThmSetData_list "cv_inline" insert_cv_inline;
 
-fun insert_cv_from_to th = (
+(* A cv_from_to entry is paired with the name of the theorem it came from,
+   or "" if cv_from_to_add added it; cv_typeLib uses the name to tell
+   which theory added it. *)
+fun cv_from_to_add_entry name th es = (
   cv_print Verbose "\ncv_from_to:\n\n";
   cv_print_thm Verbose th;
-  cv_print Verbose "\n\n"; [th])
-val (cv_from_to_thms, cv_from_to_add) =
-    register_ThmSetData_list "cv_from_to" insert_cv_from_to;
+  cv_print Verbose "\n\n";
+  (name, th) :: es)
+
+fun cv_from_to_remove s es = filter (fn (n, _) => n <> s) es
+
+fun apply_cv_from_to_delta (ThmSetData.ADD(knm, th)) es = let
+      val name = kname_string knm
+      in cv_from_to_add_entry name th (cv_from_to_remove name es) end
+  | apply_cv_from_to_delta (ThmSetData.REMOVE s) es = cv_from_to_remove s es
+
+val { get_global_value = cv_from_to_entries,
+      update_global_value = cv_from_to_update,
+      record_delta = cv_from_to_record, ... } =
+    register_ThmSetData "cv_from_to" apply_cv_from_to_delta;
+
+fun cv_from_to_thms () = map #2 (cv_from_to_entries ())
+
+fun cv_from_to_add th = cv_from_to_update (cv_from_to_add_entry "" th)
+
+fun cv_from_to_delete s = let
+  val name = kname_string (ThmSetData.toKName s)
+  val d = ThmSetData.REMOVE name
+  in
+    if exists (fn (n, _) => n = name) (cv_from_to_entries ()) then
+      (cv_from_to_update (apply_cv_from_to_delta d); cv_from_to_record d)
+    else
+      raise mk_HOL_ERR "cv_memLib" "cv_from_to_delete"
+        ("no cv_from_to theorem is stored under the name " ^ Lib.quote name)
+  end
 
 end

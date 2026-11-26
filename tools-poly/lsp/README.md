@@ -1553,6 +1553,16 @@ recorded only if it has source text of its own (`start < stop`); the
 resume snapshot is still taken for the synthetic one, which is what
 keeps an append off the from-boot path.
 
+The request side applies the same rule to the spans it parses out of
+the buffer, and has to: the collision is still there once the
+synthetic declaration is no longer *recorded*, because both spans end
+at the same stop and so both find the one surviving set of values.  A
+selection reaching the end of such a file then answered twice about
+its last declaration, and a cursor there answered about it under the
+synthetic declaration's zero-width range instead of its own.  A span
+with no text in it is nothing a range can contain or a cursor can sit
+at the end of, so `declResultsAt` drops it.
+
 ### Client cookbook
 
 The pane that shows a goal state is the pane that shows this — it is
