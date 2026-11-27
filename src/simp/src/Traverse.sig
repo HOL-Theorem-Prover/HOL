@@ -195,11 +195,9 @@ sig
      CHILD_FIRST_WITH_ABORT also calls the check before each step and
      solver call.  ROOT_REWRITE applies the reducers at the root of the
      term only; side conditions are still simplified by the full
-     traversal, which for ROOT_REWRITE_WITH_CONTEXT follows the given
-     policy, charging it for the root attempt too.  Exceptions raised
-     by a policy, an observer or a check propagate out of the traversal
-     unchanged, even where a conversion combinator would have read them
-     as a failure.
+     parent-first traversal.  Exceptions raised by a policy, an observer
+     or a check propagate out of the traversal unchanged, even where a
+     conversion combinator would have read them as a failure.
 
      eta_argument policy contracts the rightmost abstraction argument
      that the ChildFirst policy would contract, failing if there is none.
@@ -238,7 +236,7 @@ sig
        child_first_policy -> xtraverse_data ->
        {reducer_context : thm list, solver_context : thm list} -> conv
    val ROOT_REWRITE : xtraverse_data -> thm list -> conv
-   val ROOT_REWRITE_WITH_CONTEXT : traversal_policy -> xtraverse_data ->
+   val ROOT_REWRITE_WITH_CONTEXT : xtraverse_data ->
        {reducer_context : thm list, solver_context : thm list} -> conv
    val eta_argument : child_first_policy -> conv
    val NORMALIZE_ARGUMENTS : child_first_policy -> conv -> conv

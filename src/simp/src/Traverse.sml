@@ -556,10 +556,7 @@ fun TRAVERSE_IN_CONTEXT eager (config : run_config) limit rewriters
          trace(4,REDUCE ("Reducing",tm)); conv tm)
       end;
     in
-      if select_root then
-        fn tm => ((if plain then () else charge tm);
-                  (high_priority ORELSEC low_priority) tm)
-      else loop
+      if select_root then high_priority ORELSEC low_priority else loop
     end
   in
     trav_entry select_root stack context
@@ -652,8 +649,8 @@ fun CHILD_FIRST_WITH_ABORT check_abort observer policy =
     false
 fun CHILD_FIRST_WITH_OBSERVER observe policy =
   GEN_TRAVERSE_WITH_CONTEXT NONE (SOME observe) (ChildFirst policy) false
-fun ROOT_REWRITE_WITH_CONTEXT policy =
-  GEN_TRAVERSE_WITH_CONTEXT NONE NONE policy true
+val ROOT_REWRITE_WITH_CONTEXT =
+  GEN_TRAVERSE_WITH_CONTEXT NONE NONE ParentFirst true
 
 fun NORMALIZE_ARGUMENTS (policy : child_first_policy) child tm =
   let

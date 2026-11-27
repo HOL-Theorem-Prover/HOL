@@ -27,10 +27,11 @@ without reprocessing it:
   only as context theorems: directives such as `ExclX`, `SF` or `Cong`
   among them have no effect.
 - `arguments ths` simplifies only the arguments of a term (or the body,
-  if it is an abstraction), leaving the term's head as it is. It is
-  `Traverse.NORMALIZE_ARGUMENTS policy (normalize ths)`, which
+  if it is an abstraction), leaving the term's head as it is. It works
+  as `Traverse.NORMALIZE_ARGUMENTS policy (normalize ths)`, which
   eta-contracts abstraction arguments as the policy allows and repeats
-  until nothing changes.
+  until nothing changes, except that one bounded-rewrite allowance is
+  shared by all the arguments.
 - `may_reduce_arguments t` is false only if no argument of `t` can be
   simplified by `ss` alone, ignoring the theorems later given to
   `arguments`. It is true whenever a rewrite of `ss` matches an
@@ -50,8 +51,8 @@ fail.
 
 ### Failure
 
-Never fails. The conversions fail only if the policy raises an exception,
-and return a reflexive theorem if nothing changes.
+Never fails. The conversions fail only if the policy or the observer
+raises an exception, and return a reflexive theorem if nothing changes.
 
 ### Example
 

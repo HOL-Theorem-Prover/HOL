@@ -48,10 +48,12 @@ The looper limit and bounded rewrites in `ths` apply across the whole
 call.
 
 `GEN_GLOBAL_SIMP_TAC_CHILD_FIRST policy` simplifies subterms before the
-terms containing them. The `BOUND` variant also takes a rewrite bundle
-that has already been installed in `ss` with
-`simpLib.install_rewrite_bundle`; it uses the bundle's rewrites without
-compiling them again, so `ths` should not repeat them.
+terms containing them. The whole-implication rewrites of `imp_premises`
+and `imp_rebuild` are tried at the root only, and their side conditions
+are simplified parent-first, without charging the policy. The `BOUND`
+variant also takes a rewrite bundle that has already been installed in
+`ss` with `simpLib.install_rewrite_bundle`; it uses the bundle's
+rewrites without compiling them again, so `ths` should not repeat them.
 
 ### Failure
 

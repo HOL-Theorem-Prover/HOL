@@ -3747,7 +3747,7 @@ fun gen_global_simp_tac_with_bound traversal bound mode
                    val (invocation_ss,reducer_context) =
                      process_asm_tags ss context
                    val root_rewrite =
-                     Traverse.ROOT_REWRITE_WITH_CONTEXT traversal
+                     Traverse.ROOT_REWRITE_WITH_CONTEXT
                        (traversal_state invocation_ss)
                  in
                    SOME (root_rewrite
