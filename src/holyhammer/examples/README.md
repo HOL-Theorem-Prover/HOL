@@ -9,7 +9,7 @@ yourself.
 
 HolyHammer ("hammer" for short) takes a HOL4 goal and:
 
-  1. *selects premises*: picks a few dozen to a few hundred possibly
+  1. *selects premises*: picks a few dozen to about a thousand possibly
      relevant theorems from everything loaded (ancestor theories, the
      current theory, and theorems bound at the top level);
   2. *translates* the goal and the premises into first-order or
@@ -136,12 +136,12 @@ in an interactive session; each `hh` runs the hammer.
 The two entry points
 --------------------
 
-`holyhammer : term -> thm` proves a closed statement:
+`holyhammer : term -> thm` proves a statement:
 
     > val th = holyhammer ``MEM x l /\ EVERY P l ==> P x``;
 
     Prove the statement in a script with:
-      metis_tac [EVERY_MEM]
+      metis_tac [listTheory.EVERY_MEM]
     val th = ⊢ MEM x l ∧ EVERY P l ⇒ P x: thm
 
 `hh : tactic` is the same thing as a tactic.  It attacks the current
@@ -154,7 +154,7 @@ goal *including its assumptions*:
 When it succeeds, `hh` ends with the tactic to put in your script:
 
     Replace `hh` with:
-      metis_tac [ALL_DISTINCT_APPEND']
+      metis_tac [listTheory.ALL_DISTINCT_APPEND']
 
 The tactic is verified: Metis has replayed it through the HOL4 kernel.
 It names a fact by its plain name where that name, in the current
@@ -176,9 +176,10 @@ How to read the verbose output:
     use different premise selectors, numbers of facts, TPTP dialects and
     prover options.  They run in parallel, one per core.
   * `<prover> slice: Theorem (t s)`: that prover claims a proof.  Other
-    statuses are `Timeout`, `GaveUp`, `ResourceOut`, `CounterSatisfiable`
-    (the selected premises do not imply the goal, which does not mean the
-    goal is false), and `ContradictoryAxioms` (see the FAQ).
+    statuses include `Timeout`, `GaveUp`, `ResourceOut`,
+    `CounterSatisfiable` (the selected premises do not imply the goal,
+    which does not mean the goal is false), and `ContradictoryAxioms` (see
+    the FAQ).
   * `proof found by <prover>:` lists *all* the facts the prover used.
   * `proof by <prover> not replayed`: Metis could not re-prove the goal
     from those facts within `preplay_timeout`.  The hammer goes on with
@@ -208,12 +209,11 @@ messages:
 What the hammer is good at
 --------------------------
 
-Across the examples in this directory, run on a 16-core machine with the
-default 30 s budget:
+Across the examples in this directory, with the default settings:
 
   * Almost every "there must be a library lemma for this" goal is
-    solved in 2-10 seconds.  This includes lemmas with hard-to-guess
-    names (`EXTEND_RTC_TC_RIGHT1`, `rpreserves_symmetric_RTC`,
+    solved.  This includes lemmas with hard-to-guess names
+    (`EXTEND_RTC_TC_RIGHT1`, `rpreserves_symmetric_RTC`,
     `HD_APPEND_NOT_NIL`, `DIVIDES_LEQ_OR_ZERO`) and variants of library
     lemmas with arguments swapped, an implication in place of an
     equivalence, or an extra assumption.
@@ -224,13 +224,6 @@ default 30 s budget:
   * Induction and case-analysis *steps* in your own developments, once
     you have done the induction yourself.  The hammer finds and combines
     the definitions, the induction hypothesis and the library lemmas.
-
-For comparison, twelve of the multi-lemma goals in these files were also
-given to the standard tactics without any lemmas: `simp []`,
-`metis_tac []`, `DECIDE_TAC` and `rw [] >> metis_tac []`, each with a
-10-second limit.  Only three (`length_rev_append_self`,
-`reverse_middle` and `card_insert_new`) were proved, all by `simp`.
-The hammer proved all twelve.
 
 What it is not good at:
 
@@ -321,7 +314,7 @@ want:
 
 | Option            | Default                     | Meaning                   |
 |-------------------|-----------------------------|---------------------------|
-| `timeout`         | `30`                        | overall budget, seconds   |
+| `timeout`         | `30`                        | proof search, seconds     |
 | `provers`         | `e vampire zipperposition`  | which provers to schedule |
 | `filter`          | (per slice)                 | `knn`, `mepo`, `mash`,    |
 |                   |                             | `mesh` or `none`          |
@@ -332,7 +325,8 @@ want:
 | `preplay_timeout` | `2.5`                       | seconds Metis gets to     |
 |                   |                             | replay a proof            |
 | `cache`           | `false`                     | reuse earlier prover runs |
-| `debug_dir`       | (empty)                     | keep prover output here   |
+| `debug_dir`       | (empty)                     | keep problems and prover  |
+|                   |                             | output here               |
 
 Values are checked immediately:
 
@@ -406,7 +400,7 @@ If you know a hammer from another proof assistant:
 
   * **Hammer the current goal.** HOL4 `e hh` (or `hh` anywhere a tactic is
     expected); Isabelle `sledgehammer`; Rocq `hammer`.
-  * **Prove a closed statement.** HOL4 ``holyhammer ``t`` ``; Isabelle
+  * **Prove a statement.** HOL4 ``holyhammer ``t`` ``; Isabelle
     `lemma "t" sledgehammer`; Rocq `Lemma l : t. hammer.`
   * **What you paste into the script.** HOL4 `metis_tac [...]`;
     Isabelle `by (metis ...)`, `by simp`, etc.; Rocq `sauto use: ...`,

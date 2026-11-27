@@ -307,12 +307,8 @@ val valid_provers = Option.isSome o parse_provers
 
 val default_export_workers = 2
 
-(* The default of the preplay_timeout option, in CPU seconds of the
-   replay's thread. *)
 val default_preplay_timeout = 2.5
 
-(* The default of the minimize_timeout option, in CPU seconds of the
-   attempt's thread. *)
 val default_minimize_timeout = 1.0
 
 val option_specs : option_spec list =
@@ -387,8 +383,8 @@ val option_specs : option_spec list =
     valid = positive_real},
    {name = "preplay_drop_one", default = fn () => "true",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",
-    doc = "while no new lemma list waits, retry each list Metis could " ^
-          "not replay without one of its lemmas",
+    doc = "retry a list Metis could not replay without each of its " ^
+          "lemmas in turn, while no new list waits, until the timeout",
     valid = Option.isSome o bool_value},
    {name = "cache", default = fn () => "false",
     expected = "a Boolean (true/false, yes/no, on/off, or 1/0)",
@@ -573,8 +569,6 @@ fun detected_cores () =
          SOME number => number
        | NONE => Thread.numProcessors (), 1)
 
-(* [overrides] take precedence over every other source, without touching
-   the runtime settings that hh_set changes. *)
 fun snapshot_with overrides =
   let
     val entries = read_config_once ()

@@ -1,7 +1,7 @@
 signature hhPool =
 sig
   (* A bounded pool of one-shot worker threads.  Every job runs on its own
-     thread, started when one of the workers slots is free; at most
+     thread, started when one of the `workers` slots is free; at most
      `workers` jobs run at once and the others wait in submission order.
      All bookkeeping is protected by one mutex that is never held while a
      job runs or while a thread is waited for (ConditionVar.wait releases
@@ -20,12 +20,12 @@ sig
   type fork = (unit -> unit) -> Thread.thread
   val default_fork : fork
 
-  (* with_pool {workers, fork} f applies f to a fresh pool of workers >= 1
-     slots and, however f exits (an interrupt included), cancels every job
-     that is still waiting or running, discards what the unconsumed jobs
-     left and waits until every worker thread has actually exited (is no
-     longer active), before returning or raising.  An interrupt that
-     arrives while this cleanup runs is raised after it. *)
+  (* with_pool {workers, fork} f applies f to a fresh pool of
+     max (1, workers) slots and, however f exits (an interrupt included),
+     cancels every job that is still waiting or running, discards what the
+     unconsumed jobs left and waits until every worker thread has exited,
+     before returning or raising.  An interrupt that arrives while this
+     cleanup runs is raised after it. *)
   val with_pool : {workers : int, fork : fork} -> (pool -> 'a) -> 'a
 
   (* submit pool {run, discard} admits a job and starts it as soon as a slot

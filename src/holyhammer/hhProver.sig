@@ -81,9 +81,12 @@ sig
   val find_exec : prover_config -> string option
   (* Why find_exec finds no executable, as advice to the user. *)
   val missing_prover : prover_config -> string
+  (* The executable and its version, probed once per prover name; an
+     untested or unknown version is reported on stderr. *)
   val probe : prover_config ->
     {path : string, version : string option, tested : bool} option
-  (* Shared with the scheduler: lock discipline must have one definition. *)
+  (* with_mutex mutex f runs f holding mutex; the scheduler's locks use it
+     too. *)
   val with_mutex : Mutex.mutex -> (unit -> 'a) -> 'a
   (* Runs a program to its end, killing it after the limit in seconds,
      through the spawn the provers use, and returns what it wrote to stdout;
@@ -94,9 +97,12 @@ sig
      status : Posix.Process.exit_status, time : real}
   val elapsed : Time.time -> real
 
-  (* Test hook: counts every successful fork, including version probes. *)
+  (* Test hook: counts every successful spawn, version probes included. *)
   val spawn_count : unit -> int
   val reset_spawn_count : unit -> unit
+  (* run_async config request starts the prover on the request, killing
+     it grace_seconds past its timeout; wait gives the result, saving the
+     output in debug_dir if set. *)
   val run_async : prover_config -> run_request -> running
   val run : prover_config -> run_request -> run_result
 end

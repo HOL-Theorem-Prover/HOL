@@ -42,8 +42,7 @@ type constants =
    max_suggestions_factor : int,
    max_suggestions_extra : int}
 
-(* Isabelle's learner and mesh constants are kept in one value.  Later tuning
-   must replace this record as a whole rather than mixing parameter sets. *)
+(* Isabelle's defaults, in one record so that tuning replaces them whole. *)
 val default_constants : constants =
   {init_val = 30.0,
    pos_weight = 5.0,
@@ -153,10 +152,9 @@ fun create_thmdata_for target =
       (theory ^ "Theory." ^ name, theorem)
     val database_entries = List.concat (map (fn theory =>
       map (qualify theory) (DB.thms theory)) theories)
-    (* Namespace values belong to the interactive ambient context and have
-       no theory ownership metadata.  Preserve legacy behavior only when
-       that ambient theory is the requested target; an explicit historical
-       or evaluation target must be independent of unrelated session state. *)
+    (* Namespace values belong to the session and have no owning theory,
+       so they join the corpus only when the target is the current theory;
+       another target must not depend on session state. *)
     val namespace_entries =
       if Theory.current_theory () = target then
         map (qualify mlThmData.namespace_tag)
@@ -572,8 +570,8 @@ fun nb_score_parts model goal_features thmid =
 
 fun nb_scores model {pool, goal_features} =
   let
-    (* Normalization is query-wide.  Keeping it outside the candidate loop is
-       load-bearing for the large pools used by the live hammer. *)
+    (* Prepare the goal's features once per query, not per candidate: the
+       live hammer scores large pools. *)
     val prepared_goal_features = known_goal_features model goal_features
   in
     List.mapPartial

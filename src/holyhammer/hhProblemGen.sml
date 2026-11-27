@@ -48,10 +48,6 @@ struct
 
   fun fail message = raise Fail ("hhProblemGen: " ^ message)
 
-  (* An abstraction that survives first-order lambda handling.  The text
-     needs the grammar (Parse.term_to_string), so it is produced only by
-     describe_failure, on the calling thread; the labels are the context
-     prefixes ("fact NAME", "conjecture"), innermost first. *)
   exception Lambda_survived of string list * term
 
   fun describe_failure (Lambda_survived (labels, tm)) =
@@ -179,7 +175,6 @@ struct
        facts = hhMonomorph.monomorph caps conjecture facts}
     else {conjecture = conjecture, facts = facts}
 
-  (* Monomorphization against a reusable ground pool (the goal's). *)
   fun pass_monomorph_pool encoding caps pool facts =
     if is_monomorphic encoding then
       hhMonomorph.monomorph_pool caps pool facts
@@ -444,11 +439,11 @@ struct
         Redblackmap.find (by_name, raw_symbol head)) arities
     end
 
-  (* Pass 6.  Sufficient_App_Op retains direct applications unless a
-     function-typed variable can consume a partial result.  Isabelle's
-     45-fact poly-native cut-over uses Min_App_Op: direct symbols then keep
-     the smallest spine they occur with, trading a few more app
-     applications for a smaller application vocabulary. *)
+  (* Pass 6.  Sufficient_App_Op (min_arity) lowers a symbol's direct arity
+     to that of its longest partial application whose type is a quantified
+     variable's, so that the variable can stand for it.  As in
+     Sledgehammer, poly_native problems of 45 facts or more use Min_App_Op
+     instead: a symbol keeps the fewest arguments it occurs with. *)
   fun uses_variable_types (hhTypeEnc.Native {poly = true, ...}) nfacts =
         nfacts < 45
     | uses_variable_types _ _ = true
@@ -1562,11 +1557,9 @@ struct
           map #2 (#facts main_terms @ helpers)
       | _ => []
 
-  (* Everything up to the TPTP AST that resolves terms or draws fresh
-     names runs here, on the caller, and what is left (the tail) neither
-     draws nor consults the memo, theorem data or the translation cache.
-     The tail reads the live signature and type database and builds the
-     AST; its failures are raw (see describe_failure). *)
+  (* The problem after the lambda pass: the caller-side work runs at once
+     and the function returned is the tail (see prepare_pb in the
+     signature). *)
   fun make_problem main_is_mono options lambda_terms =
     let
       val {format, type_enc, lam_trans, mono_iters, mono_instances} = options
@@ -1666,12 +1659,11 @@ struct
       val with_proxies = initial @ proxy_source
       (* EQ_EXT's only constant is equality, and app is introduced only
          after monomorphization, so the ground pool seldom grounds it at a
-         function type that app is used at.  A mono problem then got
-         EQ_EXT only at opaque sorts, where it is useless: two lifted
-         lambdas, say, could never be proved equal.  Show the
-         monomorphizer an equation at each app function type.  EQ_EXT has
-         no lambda in term position, so the lambda pass would not change
-         it. *)
+         function type that app is used at, and at opaque sorts alone it
+         is useless (two lifted lambdas, say, could never be proved
+         equal).  So the monomorphizer is shown an equation at each app
+         function type.  EQ_EXT has no lambda in term position, so the
+         lambda pass would not change it. *)
       val extensionality =
         if not (#used_app main_fo) then []
         else
@@ -1819,9 +1811,6 @@ struct
       handle error => (TextIO.closeOut output handle _ => (); raise error)
     end
 
-  (* The caller-side stage: everything that draws fresh names or reads the
-     memo, theorem data or the translation cache.  The tail it returns
-     builds the TPTP AST and may run on another thread. *)
   fun prepare_pb memo options input =
     let
       val simplified = memoized_presimp memo (#format options) input
@@ -1840,7 +1829,6 @@ struct
       make_problem pre_mono options lambda_terms
     end
 
-  (* The AST-only stage: no HOL terms, no fresh names. *)
   fun format_pb options problem =
     hhTptpProblem.string_of_problem (#format options) (header options)
       problem

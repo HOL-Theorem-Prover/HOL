@@ -34,11 +34,15 @@ sig
 
   val syntax_of : format -> syntax
   val format_name : format -> string
+  (* [string_of_problem format header sections] prints [header] as a
+     comment line, then each section after a comment naming it and its
+     line count.  It fails on a construct that [format] lacks. *)
   val string_of_problem : format -> string -> problem -> string
 
-  (* Unescaped TPTP names of premise copies: copy 1 of a fact is
-     thm.<fact>, copy n > 1 (a monomorphic instance) is thm<n>.<fact>.
-     fact_of_name inverts fact_name and is NONE for other names. *)
+  (* Unescaped TPTP names of premise copies (the monomorphic instances of
+     a fact share its name): copy 1 is thm.<fact>, copy n > 1 is
+     thm<n>.<fact>.  fact_of_name inverts fact_name and is NONE for other
+     names. *)
   val fact_name : int -> string -> string
   val fact_of_name : string -> string option
 

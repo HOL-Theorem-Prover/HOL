@@ -133,7 +133,7 @@ Proof
 QED
 
 (* rich_listTheory exports this fact twice: as EXISTS_REVERSE and under
-   its pre-2000 name SOME_EL_REVERSE.  The hammer happened to pick the
+   its legacy name SOME_EL_REVERSE.  The hammer happened to pick the
    legacy alias; either works. *)
 Theorem exists_reverse:
   EXISTS P (REVERSE l) <=> EXISTS P l

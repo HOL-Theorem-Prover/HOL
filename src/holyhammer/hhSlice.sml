@@ -152,7 +152,6 @@ fun mk_schedule (options : hhConfig.hh_options) =
     walk tables [] order []
   end
 
-(* Each distinct filter in first-use order, with its largest fact count. *)
 fun filter_maxima schedule =
   let
     fun add slice [] = [(#filter slice, #nfacts slice)]

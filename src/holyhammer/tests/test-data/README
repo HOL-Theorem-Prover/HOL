@@ -10,7 +10,7 @@ comment chatter.  The recordings with a version and a format in their name
 come from the end-to-end export, proof, parse-back, and reconstruction of
 `arithmeticTheory.ADD1`, one for each of slices 9 to 16 of
 `hhProver.portfolio`, including the Vampire TH0, E TX0-minus, and
-Zipperposition FOF substitutes for the formats those binaries reject.
+Zipperposition FOF substitutes (see the comments there).
 Pigeonhole instances gave E's `GaveUp`, Vampire's `Timeout`, and
 Zipperposition's `ResourceOut` (its spelling of a timeout); the
 Zipperposition `GaveUp` comes from a small higher-order counterexample.

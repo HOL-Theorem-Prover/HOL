@@ -4,16 +4,11 @@
 (* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 
-(* Kept outside the public [hhSchedule] signature so [selftest.sml] can start
-   the workers of the export pool its own way ([fork]), act on a worker
-   before it finishes an item ([before_finish], applied to the item's
-   index), act where an item is handed to the pool ([after_submit]), act
-   at the launch points of run_in ([launch_point]) and before a slice
-   worker claims work ([before_claim]), and replace the reconstruction of
-   a proof ([reconstruct]).  Production leaves the hooks at their
-   defaults. *)
+(* Test hooks of tests/selftest.sml, outside the public hhSchedule
+   signature.  Production leaves them at their defaults. *)
 structure hhSchedule_Test =
 struct
+  (* Starts the workers of the export pool. *)
   val fork = ref hhPool.default_fork
   (* Called on the worker with the item's index, after the temporary is
      opened and just before the tail runs, so that an exception raised
@@ -144,8 +139,7 @@ fun new_problem_dir parent =
   end
 
 (* Each call removes only the root it reserved, never parent, so parallel
-   calls in this or other processes do not interfere.  With debug_dir set,
-   the problems are kept there instead, next to the prover output. *)
+   calls in this or other processes do not interfere. *)
 fun with_problem_dir parent (options : hhConfig.hh_options) f =
   case #debug_dir options of
       SOME directory => f (new_problem_dir (join directory "problems"))
@@ -186,11 +180,8 @@ fun mono_instances options config (slice : hhProver.slice) =
       SOME cap => cap
     | NONE => Int.max (#mono_instances config, #nfacts slice)
 
-(* Copy source to destination through a fresh sibling temporary renamed
-   on success, so that an existing destination is replaced whole and no
-   temporary survives an error or an interrupt.  Returns the byte count.
-   Hard links are not an option: opening an old path for writing would
-   truncate every other path linked to it. *)
+(* Not a hard link: opening an old path for writing would truncate every
+   other path linked to it. *)
 fun copy_file source destination =
   hhConfig.write_atomically
     {open_out = BinIO.openOut, close_out = BinIO.closeOut} destination
@@ -254,10 +245,8 @@ type work =
   {index : int, config : hhProver.prover_config, slice : hhProver.slice,
    path : string, key : string * int, kind : kind}
 
-(* The ordered work of one export: one item per distinct problem, in
-   distinct_problems order.  The first legacy item of a selection is
-   exported, the later ones copy its published file.  Every ranking is
-   checked before the caller creates a directory or problem file. *)
+(* Every ranking is checked before the caller creates a directory or
+   problem file. *)
 fun ordered_work_for options rankings scheduled_paths =
   let
     val problems = distinct_problems scheduled_paths
@@ -299,37 +288,6 @@ fun ordered_work_for options rankings scheduled_paths =
 fun ordered_work root options rankings schedule =
   ordered_work_for options rankings (schedule_paths root schedule)
 
-(* The staged pipeline over ordered work.  Per item:
-     prepare w         on the caller, in order; may touch HOL state and draw
-                       fresh names;
-     submit (w, p)     at admission: start the item's finishing work and
-                       return it as a pending item;
-     await q           at resolution, in order: wait for the pending item
-                       and return what it staged;
-     publish (w, f)    in order, on the caller.
-   Finishing work draws no fresh names and uses neither the memo nor
-   the caches; it may read the live signature (see hhSchedule.sig).
-   submit and await must be interchangeable in timing: an implementation
-   may run the finishing work inside await (deferred, window 0) or on a
-   worker started by submit.
-   submit cleans up what it was given when it fails, await what it staged
-   when it fails and publish what it was given when it fails.  abandon q
-   cancels a pending item (waiting for its work to stop) and removes
-   whatever it staged, release f removes whatever a finished item staged;
-   both are idempotent and are applied to every item that is dropped.
-
-   A failed stage stops admission, the work admitted before the failing
-   index is resolved, the successful prefix is published and the exception
-   of the earliest failing index is raised.  An interrupt drops all waiting
-   work and propagates.
-
-   Up to window admitted items wait while later ones are prepared.  With
-   window 0 each item is prepared, awaited and published before the next is
-   prepared; with window > 0 the finishing work of up to window items (on
-   the workers of a pool) overlaps later prepares.  An
-   observer sees the effects in stage order: a generated event fires in
-   prepare and a copied event in publish, so with a window the copies are
-   reported after later generated events. *)
 fun run_staged {window}
     {prepare, submit, await, publish, abandon, release} works =
   let
@@ -415,15 +373,10 @@ fun prepare_work (observer : export_observer) conjecture memo named_for
                (conjecture, named_for key)))
   end
 
-(* The finishing work of a generated problem runs the tail of its
-   preparation (the final first-orderization and the build of the AST),
-   formats the AST and writes it to a temporary whose name was chosen
-   beforehand, so that whoever drops the item can remove it whatever the
-   writer did.  It draws no fresh names and uses no memo or cache, but the
-   tail reads the live signature and type database, so it runs on a worker
-   only when no context is pinned (see pool_size).  A failure of the tail
-   is raw (hhProblemGen.Lambda_survived) and becomes its text where the
-   caller awaits the item. *)
+(* The finishing work of a generated problem.  The temporary's name is
+   chosen beforehand, so that whoever drops the item can remove it
+   whatever the writer did.  A failure of the tail is raw
+   (hhProblemGen.Lambda_survived); await_pending turns it into its text. *)
 fun finish_problem started options tail temporary =
   (hhConfig.stage_to
      {open_out = TextIO.openOut, close_out = TextIO.closeOut} temporary
@@ -486,15 +439,10 @@ fun publish_work (observer : export_observer)
          handle exn => (hhConfig.remove_quietly temporary; raise exn))
     | Copying first => #copied observer (slice, copy_file first path)
 
-(* The number of threads that finish generated problems: the configured
-   export_workers, at most the cores and the number of generated problems;
-   one means inline.  A caller with a pinned context (Context.is_pinned,
-   in practice only the proof replay of the language server) gets one:
-   the tail reads the ambient signature, which a fresh thread would see
-   unpinned.  The items admitted and waiting for resolution are bounded by
-   the workers (the queue briefly holds one more at admission), so the
-   prepared tails (retained HOL terms) and the finished files held at any
-   time are bounded as well. *)
+(* The number of threads that finish generated problems.  A caller with
+   a pinned context (in practice only the proof replay of the language
+   server) gets one: the tail reads the ambient signature, which a fresh
+   thread would see unpinned. *)
 fun pool_size (options : hhConfig.hh_options) works =
   let
     val generated = length (List.filter
@@ -529,13 +477,9 @@ fun lazy_named rankings =
     named_for
   end
 
-(* prepare (and everything that draws fresh names or touches HOL state
-   other than reading the signature) runs on the thread that calls this
-   function, before any pool worker exists.  Both thml_of_namel and the
-   exporters touch HOL process-global state.  Only the finishing work of
-   generated problems (the tail of the preparation, then format and write)
-   moves to the workers of a pool, which is closed (its workers stopped and
-   their files removed) before this returns or raises. *)
+(* prepare stays on the calling thread: thml_of_namel and the exporters
+   touch HOL process-global state.  The pool is closed (its workers
+   stopped and their files removed) before this returns or raises. *)
 fun export_works (observer : export_observer) options goal rankings works =
   let
     val fork = !hhSchedule_Test.fork
@@ -947,13 +891,9 @@ fun run_with_root share_digests root
         if skip then ()
         else
           ((let
-              (* Nothing interrupts this reconstruction but the caller's
-                 interrupt: a proof a prover found is
-                 reconstructed until it verifies or fails, in about two
-                 preplay timeouts (the list, then without its permutative
-                 equations), the minimisation, which stops at the soft
-                 deadline and keeps the shortest verified list, and the
-                 final replay. *)
+              (* Only the caller's interrupt cuts this reconstruction
+                 short: a list a prover found is reconstructed until it
+                 verifies or fails (see run_in). *)
               val ({stac, tac, t_replay}, t_recon) =
                 add_time
                   (reconstruct_with

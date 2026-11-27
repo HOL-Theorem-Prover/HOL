@@ -12,21 +12,21 @@ Proves a goal with external automated provers, checked by Metis.
 `hh` selects premises for the goal, its assumptions included, from the
 theorems loaded in the session, and sends the goal and the premises to
 the installed provers (E, Vampire, Zipperposition) in parallel time
-slices. It replays the first proof they find with `metis_tac`, which
-solves the goal, and prints that `metis_tac` call. The provers are not
-trusted, and no oracle tag is added.
+slices. It replays the proofs they find with `metis_tac` until one
+succeeds, which solves the goal, and prints that `metis_tac` call. The
+provers are not trusted, and no oracle tag is added.
 
-The proof search lasts 30 seconds by default; `hhConfig.hh_set
+The proof search is limited to 30 seconds by default; `hhConfig.hh_set
 ("timeout", "60")` changes it. Replaying the proofs found can take
 longer.
 
 ### Failure
 
-Fails if no prover is installed, if a term of the goal is not of type
-`bool`, if the provers find no proof (`ATPs could not find a proof`), or
-if Metis replays none of the proofs they found (`ATPs found proofs, but
-reconstruction failed for: ...`, followed by the facts each prover
-used).
+Fails if none of the provers of the `provers` option is installed, if a
+term of the goal is not of type `bool`, if the provers find no proof
+(`ATPs could not find a proof`), or if Metis replays none of the proofs
+they found (`ATPs found proofs, but reconstruction failed for: ...`,
+followed by the facts each prover used).
 
 ### Example
 

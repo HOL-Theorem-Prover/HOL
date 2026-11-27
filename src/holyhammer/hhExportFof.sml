@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhExportFof.sml                                           *)
-(* DESCRIPTION   :                                                           *)
+(* DESCRIPTION   : Export of hammer problems and theories to TPTP FOF        *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
@@ -349,7 +349,7 @@ fun fof_export_pb dir (cj,namethml) =
 
 
 (*
-load "holyHammer"; open holyhammer;
+load "holyHammer"; open holyHammer;
 load "hhExportFof"; open hhExportFof;
 load "mlThmData"; open mlThmData;
 load "mlFeature"; open mlFeature;
@@ -358,7 +358,7 @@ val goal : goal = ([],cj);
 val n = 32;
 load "mlNearestNeighbor"; open mlNearestNeighbor;
 val thmdata = create_thmdata ();
-val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
+val premises = thmknn_wdep thmdata n (fea_of_goal true goal);
 val namethml = thml_of_namel premises;
 val hh_dir = HOLDIR ^ "/src/holyhammer";
 fof_export_pb hh_dir (cj,namethml);

@@ -4,7 +4,10 @@
 (* AUTHORS       : Jia Meng and Jasmin Blanchette (Isabelle/HOL)             *)
 (* PORTED FROM   : Isabelle's sledgehammer_mepo.ML, faithfully.  The caches  *)
 (*                 of facts and weights and the restriction of a context are *)
-(*                 new.                                                      *)
+(*                 new.  Only the simp and local stature bonuses apply, the  *)
+(*                 goal's assumptions stand for the chained facts, and a     *)
+(*                 goal without ordinary constants falls back to those of    *)
+(*                 the current theory's facts.                               *)
 (* ========================================================================= *)
 
 structure hhMePo :> hhMePo =
@@ -44,8 +47,7 @@ type fudge =
    special_fact_index : int,
    hopeless_iter : int}
 
-(* Isabelle's MePo defaults are kept together so that later tuning cannot
-   accidentally produce a mixture of parameter sets. *)
+(* Isabelle's defaults, in one record so that tuning replaces them whole. *)
 val default_fudge : fudge =
   {local_const_multiplier = 1.5,
    worse_irrel_freq = 100.0,
@@ -438,8 +440,7 @@ fun irrel_pconst_weight
     (irrel_weight_for fudge) swapped_match frequency_table chained_table
     pconst
 
-(* HOL4 exposes simp and locality statures.  The archived Intro, Elim, Assum,
-   and Chained bonus cases have no corresponding fact source here. *)
+(* Isabelle's Intro, Elim, Assum and Chained bonuses have no HOL4 stature. *)
 fun stature_bonus ({simp_bonus, local_bonus, ...} : fudge)
       ({simp, local_, ...} : hhStature.stature) =
   if simp then simp_bonus else if local_ then local_bonus else 0.0
@@ -584,9 +585,9 @@ val ext_thmid = "boolTheory.EQ_EXT"
 fun is_special_set_thmid thmid =
   List.exists (fn name => name = thmid) special_set_thmids
 
-(* Count occurrences only up to the cutoff. This bounds the number of keys
-   the restricted pool can need and keeps its original indices. Use the
-   map only when the array would be much larger than that upper bound. *)
+(* A restricted pool keeps the original pconst indices but uses at most as
+   many as its facts hold.  Use a map when that bound, counted only up to
+   the cutoff, is under 1/128 of the array. *)
 fun restricted_weight_cache Sparse _ = Sparse
   | restricted_weight_cache (dense as Dense count) facts =
       let

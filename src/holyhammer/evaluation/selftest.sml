@@ -820,8 +820,9 @@ fun test_hhEval_integration () =
                #filter slice = "mepo" andalso #format slice = "tf0" andalso
                #type_enc slice = "mono_native" andalso
                #lam_trans slice = "lifting") worker_slices)
-          (* pair and option are built before bossLib: their workers run
-             on the hol.state0 heap. *)
+          (* pair and option are built before bossLib, so their workers
+             run on the hol.state0 heap and replay only with what the
+             worker script loads. *)
           val _ = expect "hhEval workers reconstruct proofs"
             (List.exists (fn entry : hhEval.journal_entry =>
                  #recon_ok entry = SOME true)

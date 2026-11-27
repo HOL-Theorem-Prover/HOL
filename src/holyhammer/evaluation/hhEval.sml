@@ -1,12 +1,7 @@
 (* ========================================================================= *)
 (* FILE          : hhEval.sml                                                *)
-(* DESCRIPTION   : HolyHammer evaluation corpus and durable journal          *)
+(* DESCRIPTION   : HolyHammer evaluation harness over whole theories         *)
 (* AUTHOR        : Lukasz Czajka                                             *)
-(*
-   Schedule cells own [cores] prover processes apiece.  Callers of run_eval
-   therefore size ncore to machine_cores div cores_per_cell; the predictable
-   peak load is ncore * cores_per_cell.
-*)
 (* ========================================================================= *)
 
 structure hhEval :> hhEval =
@@ -33,8 +28,6 @@ type condition =
   {cond_id : string, regime : regime, selector : selector,
    engine : engine, timeout : int, reconstruct : bool}
 
-(* What a journal cell recorded: the prover's SZS verdict, or why no
-   prover verdict exists. *)
 datatype cell_status =
     Szs of hhProver.szs
   | EvalError
@@ -220,13 +213,11 @@ fun fresh_normalized thy tm =
     if is_const subterm andalso #Thy (dest_thy_const subterm) = thy
     then SOME () else NONE) tm)
 
-(* [thy] is explicit so this classifier is pure and usable on a recorded
-   theorem independently of Theory.current_theory().  Contracting first
-   matches the normalized statement inspected by the other goal classifier. *)
+(* thy is explicit, so that a recorded theorem is classified independently
+   of Theory.current_theory (). *)
 fun is_fresh_goal thy tm = fresh_normalized thy (normalize_goal tm)
 
-(* Keep classification at journal entry construction, and share the result
-   across every condition evaluated for this theorem. *)
+(* Computed at most once per theorem, and shared by all its conditions. *)
 fun goal_tags thy thm =
   Susp.delay (fn () =>
     let val tm = normalize_goal (list_mk_imp (dest_thm thm)) in
@@ -789,9 +780,8 @@ fun json_corpus_entry {thy, theorem_count, dep_stamp} =
      ("theorem_count", json_int theorem_count),
      ("dep_stamp", JSON.STRING dep_stamp)]
 
-(* Preserve effective values across fresh worker processes.  The default
-   mono_instances value is special: setting it would impose an explicit cap
-   instead of allowing the default per-slice cap. *)
+(* The effective options, passed on to the worker processes, except a
+   default mono_instances. *)
 fun eval_hammer_options () =
   List.mapPartial (fn (key, value, source) =>
     if key = "mono_instances" andalso source = "default" then NONE
@@ -1444,8 +1434,6 @@ fun failed message : outcome =
   {recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
    error = SOME message}
 
-(* engine is NONE only for the entry of a theory that failed to load,
-   which belongs to no condition. *)
 fun base_entry_for expdir thy name {cond_id, regime, selector, timeout}
     engine ho fresh nfacts szs t_prover axioms version (outcome : outcome) =
   {run = run_name expdir, thy = thy, thm = name, goal_id = goal_id thy name,
@@ -1761,8 +1749,9 @@ fun schedule_cell_entry expdir thy (name, thm, tags) facts condition
           PerSlice => #rank_many facts (hhSlice.filter_maxima schedule)
         | _ =>
             let
-              (* Legacy schedule selectors share one longest-first ranking.
-                 In particular, chainy kNN uses the schedule maximum. *)
+              (* Every filter of the schedule gets the selector's single
+                 ranking; Knn ranks as many facts as the largest slice
+                 takes. *)
               val premises = selected_premises_at condition facts
                 (SOME maximum)
             in
@@ -2060,8 +2049,8 @@ fun write_evalscript expdir thy conditions sample =
     val action = "val _ = hhEval.eval_thy " ^ Portable.mlquote expdir ^
       " " ^ Portable.mlquote thy ^ ";"
     val worker_theory = "hheval_worker_" ^ safe_component thy
-    (* hhEval is not in sigobj: it is built in this directory only, of
-       the tree whose bin/hol runs the worker. *)
+    (* hhEval is not in sigobj: the worker loads it from the evaluation
+       directory of the tree whose bin/hol runs it. *)
     val evaluation_dir =
       join (join (join Globals.HOLDIR "src") "holyhammer") "evaluation"
     (* Reconstruction replays a Metis tactic, whose structure the heap of

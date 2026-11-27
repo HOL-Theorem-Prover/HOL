@@ -19,7 +19,7 @@ At least one external prover must be installed (see "Installing provers").
     holyhammer ``1 + 1 = 2``;
     g `1 + 1 = 2`; e hh;
 
-`holyhammer : term -> thm` proves a closed statement and `hh` is the same
+`holyhammer : term -> thm` proves a statement and `hh` is the same
 search as a tactic, assumptions included.  `hh_pb dir provers premises` runs
 the given provers on exactly the given premises (fully qualified names, such
 as `"listTheory.EVERY_MEM"`), writing its problems below `dir`.  Each returns
@@ -71,9 +71,10 @@ Each proof is replayed by Metis within `preplay_timeout` (2.5 s), and with
 `minimize` set (the default) shortened by attempts of at most
 `minimize_timeout` (1.0 s) each.  With `preplay_drop_one` (the default) a
 proof that fails to replay is retried once without each of its lemmas in
-turn.  These limits are CPU seconds of the replaying thread, so a replay
-beside busy provers is not cut short; outside Linux they are the lesser of
-wall time and the process's CPU time.
+turn.  Minimisation and these retries stop at the timeout.  The limits are
+CPU seconds of the replaying thread, so a replay beside busy provers is not
+cut short; outside Linux they are the lesser of wall time and the
+process's CPU time.
 
 `cores` (0, the default, means all processors) is the number of provers
 run at once, and `export_workers` (default 2) the number of threads that
@@ -99,7 +100,7 @@ slice; empty, the default, keeps each slice's own.
   * Formats: `fof`, `tf0`, `tf1`, `tx0`, `tx0-`, `th0`, and `th1`.
   * Type encodings: `mono_native`, `mono_native_fool`, `mono_native_higher`,
     `mono_native_higher_fool`, `poly_native`, `mono_guards`, and
-    `mono_guards??`; empty selects the untyped FOF translation.
+    `mono_guards??`; a FOF slice without one uses the untyped translation.
   * Lambda translations: `lifting`, `combs`, `combs_and_lifting`, and
     `keep_lams`.
 
@@ -132,8 +133,7 @@ directories listed below is not searched: name the binary with
 `prover.<name>.executable`.  Alternatively, put a supported binary on
 `PATH`: `eprover-ho` or `eprover`, `vampire`, `zipperposition`, or
 `z3_tptp`, Z3's TPTP front end built from `examples/tptp` in the Z3 sources
-(tested with 4.11.2).  The plain `z3` binary does not read TPTP and is never
-used.
+(tested with 4.11.2; the `z3` binary itself reads no TPTP).
 
 A prover is found by the first of:
 
@@ -141,8 +141,7 @@ A prover is found by the first of:
      `prover.e.executable = /opt/e/bin/eprover`;
   2. its environment variable: `HOL4_EPROVER_EXECUTABLE`,
      `HOL4_VAMPIRE_EXECUTABLE`, `HOL4_ZIPPERPOSITION_EXECUTABLE`, or
-     `HOL4_Z3_TPTP_EXECUTABLE` (HolSmt's `HOL4_Z3_EXECUTABLE` names an
-     SMT-LIB solver and is not consulted);
+     `HOL4_Z3_TPTP_EXECUTABLE`;
   3. `PATH`;
   4. an installation in the state directory's `provers`, then in
      `$HOME/.hol4/hammer/provers`: the newest version directory holding

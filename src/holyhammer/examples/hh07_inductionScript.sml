@@ -132,9 +132,8 @@ End
    given 2 * sum_to n = n * (n + 1).  It is non-linear, so DECIDE_TAC
    cannot do it, and the usual manual proof is a careful simp with
    distributivity lemmas.  The hammer found a 12-lemma equational proof
-   in about 16 seconds (in an earlier run it needed 25 seconds and
-   found a slightly different list).  Such a long list is a sign that
-   the goal is near the limit of what the hammer can do.
+   in about 16 seconds.  Such a long list is a sign that the goal is
+   near the limit of what the hammer can do.
 
    The base case used sum_to_compute, a numeral-friendly version of the
    definition that Definition stores automatically.  It is stored in the

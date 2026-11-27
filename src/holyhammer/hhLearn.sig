@@ -122,8 +122,8 @@ sig
   val clean_context_cache : unit -> unit
   val target_thmdata_cache_size : unit -> int
   val target_thmdata_cache_builds : unit -> int
-  (* The explicit constructor supports a lagging persistent model and is also
-     useful for checking partial-model behavior hermetically. *)
+  (* model_thmdata is the training corpus, which may lag thmdata; facts
+     missing from it are unknown to the naive Bayes model. *)
   val make_context :
     {thmdata : mlThmData.thmdata,
      model_thmdata : mlThmData.thmdata,

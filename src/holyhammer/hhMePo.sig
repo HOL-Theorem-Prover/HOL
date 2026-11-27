@@ -42,10 +42,10 @@ sig
   val match_patternT : Type.hol_type * Type.hol_type -> bool
   val match_ptype : ptype * ptype -> bool
 
-  (* The string argument is the owning theory.  Each call also inserts its
-     [%thy%...] pseudo-constant. *)
   val empty_pconst_table : unit -> pconst_table
   val add_pconst_to_table : pconst -> pconst_table -> pconst_table
+  (* The string argument of add_pconsts_in_term and pconsts_in_term is the
+     owning theory; each call also adds its pseudo_theory_name constant. *)
   val add_pconsts_in_term :
     string -> Term.term -> pconst_table -> pconst_table
   val pconsts_of_table : pconst_table -> pconst list

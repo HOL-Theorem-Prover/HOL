@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhExportTh0.sml                                           *)
-(* DESCRIPTION   :                                                           *)
+(* DESCRIPTION   : Export of HOL4 theories to TPTP TH0                       *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
@@ -27,7 +27,7 @@ fun name_obj_mono cv =
   handle HOL_ERR _ => raise ERR "name_obj_mono" (term_to_string cv)
 
 (* -------------------------------------------------------------------------
-   TF0 types
+   TH0 types
    ------------------------------------------------------------------------- *)
 
 fun name_tyu_mono_and_o ty =
@@ -69,7 +69,7 @@ fun th0_ty_poly oc ty =
     end
 
 (* -------------------------------------------------------------------------
-   TF0 quantifier
+   TH0 quantifier
    ------------------------------------------------------------------------- *)
 
 fun th0_forall_tyvarl_tm oc tm =
@@ -113,7 +113,7 @@ fun th0_quant_vl oc s vl =
   (os oc s; os oc "["; oiter oc ", " th0_quantv vl; os oc "]: ")
 
 (* -------------------------------------------------------------------------
-   TF0 term
+   TH0 term
    ------------------------------------------------------------------------- *)
 
 fun iname oc ty = os oc ("i_" ^ name_tyu_mono ty)
@@ -181,7 +181,7 @@ th0_term_poly TextIO.stdOut tm;
 *)
 
 (* -------------------------------------------------------------------------
-   TF0 formula
+   TH0 formula
    ------------------------------------------------------------------------- *)
 
 fun th0_pred oc tm =
@@ -296,7 +296,7 @@ fun th0def_ji_axiom oc ty =
    ji_axiom oc ty; osn oc ").")
 
 (* -------------------------------------------------------------------------
-   TF0 definitions
+   TH0 definitions
    ------------------------------------------------------------------------- *)
 
 (* Types *)

@@ -60,7 +60,7 @@ struct
     else term tm
 
   (* Do not open the combin theory: doing so changes the session grammar.
-     Constants are looked up only when combs is selected.  HOL4 calls the B
+     Constants are looked up only by the combinator modes.  HOL4 calls the B
      combinator "o"; it has B's defining equation o f g x = f (g x). *)
   fun combin name =
     gen_tyvarify (prim_mk_const {Thy = "combin", Name = name})

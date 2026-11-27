@@ -211,7 +211,7 @@ fun fold_file_names add line initial =
 fun axiom_name line =
   let
     val (_, opened) = Substring.position "(" (Substring.full line)
-    (* The original header parser ignores opening parentheses in fields. *)
+    (* Opening parentheses in the name and role fields are dropped. *)
     fun without_open field =
       let val text = Substring.string field in
         if String.isSubstring "(" text then
@@ -364,13 +364,12 @@ val portfolio =
    mk_slice Zipperposition ("th1", "mono_native_higher_fool", "keep_lams")
      "knn" 128,
    mk_slice Eprover ("th0", "mono_native_higher", "keep_lams") "knn" 512,
-   (* Substitution: chosen when the generated TF1 (it bound formula type
-      variables with !>) was rejected by Vampire 5.0.1.  TH0 is its next
-      tested table candidate; this is a parser-equivalence correction, not
-      a tuning change.  The pinned
-      build runs its generic FOF schedule on THF and superposes into
-      lambda bodies with loose bound variables, refuting consistent
-      axioms, so its TH0 problems are lambda-lifted. *)
+   (* Substitution for TF1, which Vampire 5.0.1 rejected when the
+      generated TF1 bound formula type variables with !>: TH0 is the next
+      tested table candidate, a parser-equivalence correction, not a
+      tuning change.  The pinned build runs its generic FOF schedule on
+      THF and superposes into lambda bodies with loose bound variables,
+      refuting consistent axioms, so its TH0 problems are lambda-lifted. *)
    mk_slice Vampire ("th0", "mono_native_higher", "lifting") "knn" 512,
    (* Substitution: E 3.2.5-ho was recorded rejecting the TF0
       combs_and_lifting problems generated at the time; it reads and
@@ -382,9 +381,9 @@ val portfolio =
    (* Substitution for FOF/mono_guards??: Zipperposition 2.1 rejected
       those problems with a unification error, as their guard axioms
       applied symbols to all their HOL arguments, more than the rest of
-      the problem did.  Guard axioms now use the problem's arities and
-      Zipperposition accepts the problems, but the slice stays legacy
-      FOF/32 until the portfolio is re-evaluated. *)
+      the problem did.  Guard axioms use the problem's arities, which
+      Zipperposition accepts, but the slice stays legacy FOF/32 until the
+      portfolio is re-evaluated. *)
    mk_slice Zipperposition legacy_fof "knn" 32,
 
    mk_slice Vampire legacy_fof "mesh" 96,
@@ -422,8 +421,8 @@ fun zipperposition_command executable {timeout, problem, extra, ...} =
    ["--input", "tptp", "--output", "tptp", "--timeout",
     Int.toString timeout] @ extra @ [problem])
 
-(* Only Z3's TPTP front end (examples/tptp) reads TPTP; the z3 binary
-   itself does not, so it is never a candidate. *)
+(* z3_tptp is Z3's TPTP front end (Z3's examples/tptp); the z3 binary
+   itself reads no TPTP. *)
 fun z3_command executable {timeout, problem, extra, ...} =
   (executable,
    ["-c", "-smt.pull_nested_quantifiers:true",

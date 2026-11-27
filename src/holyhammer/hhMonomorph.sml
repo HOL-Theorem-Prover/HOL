@@ -429,9 +429,9 @@ struct
     | result_of (Schematic {nickname, instances, ...}) =
         map (fn (_, _, theorem) => (nickname, theorem)) (!instances)
 
-  (* The seed of a run: the rigid type variables and the initial table,
-     which holds every schematic name (empty when it has no ground type)
-     with the ground types of the goal and of the ground premises. *)
+  (* The initial table of a run: every schematic name (empty when it has
+     no ground type) with the ground types of [table] (the goal's) and of
+     the ground premises. *)
   fun add_premise_grounds infos table =
     let
       fun add (constant as (name, _), index) =
@@ -447,12 +447,9 @@ struct
         table types
     end
 
-  (* A reusable seed: the goal, its rigid type variables and, once a run
-     needs it, the ground types of the goal by constant name, sorted.
-     Every type variable in the goal is rigid. A run projects the index
-     onto its own schematic names. Both are computed on demand and at most
-     once, so a pool that is never used (polymorphic encodings, no schematic
-     helper) costs nothing. *)
+  (* A reusable seed: the goal, its rigid type variables (all of the
+     goal's) and its ground types by constant name, sorted, each forced at
+     most once.  A run projects the index onto its own schematic names. *)
   type 'a susp = {force : unit -> 'a, forced : unit -> bool}
 
   fun susp f =

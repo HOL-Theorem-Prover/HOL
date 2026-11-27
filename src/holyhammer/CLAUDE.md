@@ -1,4 +1,5 @@
-This file provides guidance to coding agents when working with HolyHammer code in the HOL4 repository.
+This file provides guidance to coding agents when working with
+HolyHammer code in the HOL4 repository.
 
 HOLyHammer: given a HOL4 goal, select premises, translate goal+premises
 to TPTP, schedule external-prover slices, and reconstruct the resulting
@@ -21,16 +22,16 @@ From `src/holyhammer/tests/`:
     ../../../bin/Holmake smoke.exe    && ./smoke.exe      # e2e, needs provers
 
 `selftest.exe` runs every `test_*` section (each a top-level `fun`
-called at the bottom of `selftest.sml`, using `testutils` and the
+followed by its call `val _ = test_... ()`, using `testutils` and the
 helpers of `hhTestLib`, which `evaluation/selftest.sml` shares).  There
-is no per-test flag; comment out the top-level call to isolate a
-section.  The selftest launches no real prover; live proof search is
-exercised by `smoke.exe` alone, which runs each tested prover alone, the
-schedule (and its cache), the MePo/MaSh/MeSh selectors, every typed
-slice, and unprovable goals, printing one line per check.  It fails,
-naming them, when E, Vampire or Zipperposition is absent; Z3 is only
-run, when present, by the runner check.  Under the whole-tree build the
-full selftest runs only when `HOLSELFTESTLEVEL` is set (see
+is no per-test flag; comment out a section's call to isolate the
+others.  The selftest launches no real prover; live proof search is
+exercised by `smoke.exe` alone, which runs each tested prover alone,
+`hh_pb`, the schedule (and its cache), the MePo/MaSh/MeSh selectors,
+every typed slice, and unprovable goals, printing one line per check.
+It fails, naming them, when E, Vampire or Zipperposition is absent; Z3
+is only run, when present, by the runner check.  Under the whole-tree
+build the selftest runs only when `HOLSELFTESTLEVEL` is set (see
 `tests/Holmakefile`).
 
 Prover-parsing tests are hermetic: they replay recorded prover stdout
@@ -50,7 +51,9 @@ being present or committed.
   Zipperposition | Z3`) and its name codec, the option system
   (`hh_set`/`hh_get`/`snapshot` → `hh_options`), config-file + env
   discovery, executable discovery, and the state dir.  Central; nearly
-  everything depends on it, so it must not depend back on later modules.
+  everything depends on it, so it must not depend on the modules that
+  use it (it uses only `hhTypeEnc` and `hhLamTrans`, to validate option
+  values).
   Provers are identified by constructor throughout; `prover_name`
   strings appear only at text boundaries (option values, config keys,
   install dirs, journals).
@@ -62,8 +65,8 @@ being present or committed.
   (`tf0`/`tf1`/`tx0`/`tx0-`/`th0`/`th1`): type encodings, lambda
   translations, monomorphisation, and the TPTP AST/printer.
 - **`hhTranslate`, `hhExportLib`, and the `hhExport*` writers** (Fof,
-  Tf0/Tf1, Th0/Th1, Sexpr) — the legacy FOF exporter the schedule still
-  uses (`hhExportFof`), and the bushy/chainy dataset exporters
+  Tf0/Tf1, Th0/Th1, Sexpr) — the FOF exporter of the schedule's legacy
+  `fof` slices (`hhExportFof`), and the bushy/chainy dataset exporters
   (`README_EXPORT`).
 - **`hhProver`** — declarative prover table: `config_of` maps each
   `prover` constructor to its `prover_config`, which bundles executable
@@ -90,8 +93,8 @@ being present or committed.
   selection).  This is the TacticToe integration surface and must keep
   working; consume `main_hh_lemmas` for lemma lists.
 - **`evaluation/hhEval`** (outside the library) — headless, resumable
-  evaluation harness (Bushy/Chainy regimes, Deps/kNN/MePo/MaSh/MeSh
-  selectors, Prover/Sched engines) writing a JSONL journal.
+  evaluation harness (Bushy/Chainy regimes, Deps/kNN/MePo/MaSh/MeSh/
+  per-slice selectors, Prover/Sched engines) writing a JSONL journal.
 
 ## Reused infrastructure (do not rebuild here)
 

@@ -297,12 +297,10 @@ New tools
     scripts.  E, Vampire, and the newly supported Zipperposition form the
     default prover set.  Pinned provers can be installed with
     `tools/download-provers`; supported binaries on `PATH` also work.
-    Executables can be selected through
-    `prover.<name>.executable` in the hammer configuration or the
-    `HOL4_<PROVER>_EXECUTABLE` environment variables (for E,
-    `HOL4_EPROVER_EXECUTABLE`); an empty value counts as unset, a name
-    without a slash is looked up on `PATH`, and a value that names no
-    executable leaves the prover unavailable.
+    Executables can be selected through `prover.<name>.executable` in the
+    hammer configuration or the `HOL4_<PROVER>_EXECUTABLE` environment
+    variables (for E, `HOL4_EPROVER_EXECUTABLE`); `src/holyhammer/README`
+    gives the search order.
 
 -   HOLyHammer now runs its provers through a parallel slice scheduler and
     returns the first proof that Metis replays, printing the `metis_tac`
@@ -387,28 +385,16 @@ New examples
 Incompatibilities
 -----------------
 
--   The `holyHammer.prover` datatype has gained a `Zipperposition`
-    constructor, so exhaustive matches on it need a new case.  The
-    evaluation helpers `holyHammer.hh_pb_eval_thm` and `hh_pb_eval_thy`
-    have been removed in favor of `hhEval`.  The file-based
-    `hhReconstruct.get_lemmas` API and its status/output-file protocol have
-    also been removed.  The types of `hh`, `holyhammer`, `hh_fork`, `hh_pb`,
-    `main_hh`, and `main_hh_lemmas` are unchanged.
+-   The `holyHammer.prover` datatype has gained a `Zipperposition` constructor, so exhaustive matches on it need a new case.
+    The evaluation helpers `holyHammer.hh_pb_eval_thm` and `hh_pb_eval_thy` have been removed in favor of `hhEval`.
+    The file-based `hhReconstruct.get_lemmas` API and its status/output-file protocol have also been removed.
+    The types of `hh`, `holyhammer`, `hh_fork`, `hh_pb`, `main_hh`, and `main_hh_lemmas` are unchanged.
 
--   The `holyHammer.premise_selection_flag` reference has been removed.
-    Execution is controlled by the `timeout`, `provers`, and `filter`
-    options through `hhConfig.hh_set`; in particular,
-    `premise_selection_flag := false` becomes
-    `hhConfig.hh_set ("filter", "none")`.  The race-result reference
-    `holyHammer.lemmas_glob` has been removed in favor of `main_hh_lemmas`.
-    `hhReconstruct.reconstruct_flag`, which turned reconstruction off,
-    has been removed: every ATP proof is replayed.
-    Z3 is no longer in the default prover set: `z3` remains registered but
-    has no scheduler slices, and it is found only as Z3's TPTP front end,
-    `z3_tptp`.  The prover scripts in `src/holyhammer/provers` have been
-    removed, and prover binaries copied there are no longer found:
-    install them with `tools/download-provers`, put them on `PATH`, or
-    set `prover.<name>.executable`.
+-   The `holyHammer.premise_selection_flag` reference has been removed: `premise_selection_flag := false` becomes `hhConfig.hh_set ("filter", "none")`.
+    The race-result reference `holyHammer.lemmas_glob` has been removed in favor of `main_hh_lemmas`.
+    `hhReconstruct.reconstruct_flag`, which turned reconstruction off, has been removed: every ATP proof is replayed.
+    Z3 is no longer in the default prover set: `z3` remains registered but has no scheduler slices, and it is found only as Z3's TPTP front end, `z3_tptp`.
+    The prover scripts in `src/holyhammer/provers` have been removed, and prover binaries copied there are no longer found: install them with `tools/download-provers`, put them on `PATH`, or set `prover.<name>.executable`.
 
 -   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
     Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.

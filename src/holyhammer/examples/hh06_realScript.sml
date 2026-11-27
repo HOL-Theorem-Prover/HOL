@@ -21,7 +21,7 @@ Libs
    numbers, linear goals belong to REAL_ARITH_TAC; the hammer is for
    everything that needs library knowledge: inverses, absolute values,
    exp/ln, trigonometry.  Facts from theories that are loaded but not
-   opened come back fully qualified (realaxTheory.REAL_LE_SQUARE).
+   opened come back fully qualified (real_sigmaTheory.REAL_MAX_REDUCE).
    ------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------------

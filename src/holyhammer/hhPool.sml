@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhPool.sml                                                *)
-(* DESCRIPTION   : bounded pool of one-shot worker threads                   *)
+(* DESCRIPTION   : Bounded pool of one-shot worker threads                   *)
 (* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 

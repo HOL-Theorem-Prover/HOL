@@ -1,10 +1,10 @@
-(* ===================================================================== *)
-(* FILE          : holyHammer.sml                                        *)
-(* DESCRIPTION   : Premise selection and external provers                *)
-(* AUTHORS       : (c) Thibault Gauthier, University of Innsbruck        *)
-(*                 Lukasz Czajka                                         *)
-(* DATE          : 2015                                                  *)
-(* ===================================================================== *)
+(* ========================================================================= *)
+(* FILE          : holyHammer.sml                                            *)
+(* DESCRIPTION   : Premise selection and external provers                    *)
+(* AUTHORS       : (c) Thibault Gauthier, University of Innsbruck            *)
+(*                 Lukasz Czajka                                             *)
+(* DATE          : 2015                                                      *)
+(* ========================================================================= *)
 
 structure holyHammer :> holyHammer =
 struct

@@ -1,11 +1,11 @@
-(* ===================================================================== *)
-(* FILE          : hhReconstruct.sml                                     *)
-(* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP   *)
-(*                 and optionally minimize them.                         *)
-(* AUTHORS       : (c) Thibault Gauthier, University of Innsbruck        *)
-(*                 Lukasz Czajka                                         *)
-(* DATE          : 2015                                                  *)
-(* ===================================================================== *)
+(* ========================================================================= *)
+(* FILE          : hhReconstruct.sml                                         *)
+(* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP       *)
+(*                 and optionally minimize them.                             *)
+(* AUTHORS       : (c) Thibault Gauthier, University of Innsbruck            *)
+(*                 Lukasz Czajka                                             *)
+(* DATE          : 2015                                                      *)
+(* ========================================================================= *)
 
 structure hhReconstruct :> hhReconstruct =
 struct
@@ -14,26 +14,24 @@ open HolKernel Dep Tag boolLib aiLib smlExecute smlTimeout mlThmData
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Settings
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val minimization_timeout = ref hhConfig.default_minimize_timeout
 val reconstruction_timeout = ref hhConfig.default_preplay_timeout
 
-(*----------------------------------------------------------------------------
-   Minimization and pretty-printing
- -----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Replay, minimization and lemma naming
+   ------------------------------------------------------------------------- *)
 
 val TC_OFF = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
-(* the trace setting, the timeout and the handler all have to span the
+(* The trace setting, the timeout and the handler all have to span the
    context application, which is when the tactic does its work.  The
-   tactic runs in ctxt, the context of the proof HolyHammer was called
-   from.  The limit is on the CPU time of the thread running the tactic,
-   not on wall time: the provers keep running while a proof is replayed,
-   and under a wall-clock limit a replay on a loaded machine gets a small
-   share of a CPU, so that whether a list replays depends on the load.
-   The result is the goals left and the CPU seconds the tactic used. *)
+   limit is on the thread's CPU time, not on wall time: the provers keep
+   running while a proof is replayed, and under a wall-clock limit a
+   replay on a loaded machine gets a small share of a CPU, so that
+   whether a list replays depends on the load. *)
 fun timeout_tactic t tac g ctxt =
   let
     val ((goals, _), time) = thread_timeout t (TC_OFF (Lib.C tac ctxt)) g
@@ -48,11 +46,10 @@ type settings =
 
 type reconstruction = {stac : string, tac : tactic, t_replay : real}
 
-(* Compiles stac and runs it on g in ctxt with the limit t.  Returns the
-   tactic and the replay time, both in CPU seconds of the replay's
-   thread, when it proves g.  The tactic, which is also the one hh
-   replays, sets the Metis trace to 0 in the context it runs in, so that
-   it prints nothing, whatever the trace of the session. *)
+(* Compiles stac and runs it on g in ctxt within t CPU seconds; returns
+   the tactic and its replay time when it proves g.  The tactic, which hh
+   also applies, sets the Metis trace to 0 in the context it runs in, so
+   that it prints nothing whatever the trace of the session. *)
 fun replay t stac g ctxt =
   let
     val tac = Tactical.trace_tac ("metis.trace", 0) (tactic_of_sml 1.0 stac)
@@ -94,18 +91,13 @@ fun bound_name lemma =
   end
   handle Interrupt => raise Interrupt | _ => lemma
 
-(* An attempt may take at most twice the time of the fastest verified
-   replay so far in this minimisation, plus some slack; minimize_timeout
-   caps it.  A failing attempt, the common case for a needed fact,
-   otherwise runs out the whole minimize_timeout.  The fastest replay
-   starts as the verified replay the minimisation starts from (the full
-   list, or the list without its permutative equations) and improves
-   when a shorter list replays faster.  Sledgehammer's minimiser bases
-   the limit on the last successful replay, but then a marginal success
-   (an attempt that only just fits) raises the limit of every later
-   attempt, and the next ones run out a longer limit: the time of a
-   minimisation depends on whether one attempt beats its limit by a few
-   milliseconds.  With the minimum the limit never rises. *)
+(* Without this limit a failing attempt, the common case for a needed
+   fact, runs out the whole minimize_timeout.  Sledgehammer's minimiser
+   bases the limit on the last successful replay, but then a marginal
+   success (an attempt that only just fits) raises the limit of every
+   later attempt, so that the time of a minimisation depends on whether
+   one attempt beats its limit by a few milliseconds.  With the fastest
+   replay the limit never rises. *)
 val attempt_factor = 2.0
 val attempt_slack = 0.2
 
@@ -115,14 +107,8 @@ fun attempt_timeout minimize_timeout t =
 fun out_of_time NONE = false
   | out_of_time (SOME deadline) = Time.>= (Time.now (), deadline)
 
-(* Drops the lemmas one at a time, keeping a lemma when the replay
-   without it fails.  try limit candidate is the replay, within limit
-   seconds, of the candidate list, and gives its tactic and time when it
-   succeeds.  The limit of an attempt is attempt_timeout of the fastest
-   replay so far (see above), starting from the time of best, the
-   verified result the minimisation starts from.  Every intermediate
-   list is verified, so stopping at the deadline returns a verified
-   list. *)
+(* Every intermediate list is verified, so stopping at the deadline
+   returns a verified list. *)
 fun drop_one_minimize try minimize_timeout deadline lemmas best =
   let
     fun loop kept [] best _ = (kept, best)

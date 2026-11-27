@@ -31,7 +31,7 @@ sig
      debug_dir : string option,
      verbose : bool}
 
-  (* Small filesystem and string helpers, shared with hhProver and hhEval. *)
+  (* Filesystem and string helpers shared by the HolyHammer modules. *)
   val is_dir : string -> bool
   val ensure_dir : string -> unit
   val remove_tree : string -> unit
@@ -62,6 +62,7 @@ sig
   val trim_left : string -> string
   val valid_filter : string -> bool
 
+  (* HOL4_HAMMER_DIR, else ~/.hol4/hammer; created if missing. *)
   val state_dir : unit -> string
 
   (* The built-in default of the export_workers option. *)
@@ -75,20 +76,33 @@ sig
      of the attempt's thread (smlTimeout.thread_timeout's clock). *)
   val default_minimize_timeout : real
 
+  (* get key: key's value from the first source that sets it: hh_set,
+     ~/.hol4/hammer/config, $HOLDIR/etc/hammer-config, the environment
+     variable HOL4_HAMMER_<KEY> (dots as underscores), the option's
+     default.  get_path expands a leading ~.  dump gives, with its
+     source, each option, each key of the config files and each key get
+     has read. *)
   val get : string -> string option
   val get_int : string -> int option
   val get_bool : string -> bool option
   val get_path : string -> string option
   val dump : unit -> (string * string) list
 
+  (* hh_set, hh_unset and hh_get set, unset and read an option for the
+     session, raising on an unknown key or an invalid value.  hh_params
+     gives each option's (name, value, source). *)
   val hh_set : string * string -> unit
   val hh_unset : string -> unit
   val hh_get : string -> string
   val hh_params : unit -> (string * string * string) list
   val print_params : unit -> unit
+  (* snapshot (): the options in effect.  snapshot_with overrides puts
+     overrides before every other source, without changing what hh_set
+     set. *)
   val snapshot : unit -> hh_options
   val snapshot_with : (string * string) list -> hh_options
 
+  (* <arch>-<system>, the platform directory of an installed prover. *)
   val platform : unit -> string
   (* find_exec prover env_var names: the executable the config file's
      prover.<prover>.executable names, else env_var's, when either is set

@@ -1,5 +1,6 @@
-(* The unified HolyHammer problem generator.  The IR keeps the original HOL
-   terms until generate_problem first-orderizes them into
+(* The HolyHammer problem generator: a goal and its premises to a TPTP
+   problem in a slice's format, type encoding and lambda translation.  The
+   IR keeps HOL terms until first-orderization turns them into
    hhTptpProblem.tptp_term values. *)
 signature hhProblemGen =
 sig
@@ -9,7 +10,7 @@ sig
 
   (* Every intermediate fact has the caller's nickname and a HOL formula.
      Lambda definitions introduced by pass_lambda are ordinary facts named
-     lam.<n>. *)
+     lam.<n> (and lam.<n>.combs). *)
   type named_terms = {conjecture : term, facts : (string * term) list}
 
   (* This deliberately has the shape of hhTptpProblem.tptp_formula, except
@@ -24,11 +25,13 @@ sig
                    facts : (string * hol_formula) list,
                    proxies : string list}
 
-  (* Beta-eta contraction, unfolding LET when the flag is set. *)
+  (* Beta-eta contraction; with the flag set, it also unfolds each LET
+     whose unfolding copies nothing: its argument is a variable or a
+     constant, or its variable occurs at most once. *)
   val beta_eta_contract : bool -> term -> term
 
-  (* Pass 1.  Beta-eta contract every formula and unfold LET exactly when
-     the target syntax lacks $let.  COND remains for the helper/$ite pass. *)
+  (* Pass 1.  beta_eta_contract true on every formula, whatever the
+     format.  COND remains for the helper/$ite pass. *)
   val presimp : hhTptpProblem.format -> named_terms -> named_terms
 
   (* Pass 2.  Runs lambda translation jointly over the conjecture and facts;
@@ -60,41 +63,43 @@ sig
     {format : hhTptpProblem.format, type_enc : hhTypeEnc.type_enc,
      lam_trans : hhLamTrans.mode, mono_iters : int, mono_instances : int}
 
-  (* The compositional front end consumed by the remaining generator passes. *)
+  (* Passes 1--5 composed, to inspect the IR.  generate_problem runs the
+     same passes, but monomorphizes before the lambda pass under combs
+     with a monomorphic encoding. *)
   val translate_front : problem_options -> named_terms -> proxy_ir
 
-  (* Passes 6--8: first-orderize, run the ?? monotonicity oracle, and apply
-     the selected type encoding.  This is pure so pass-level selftests can
-     inspect the TPTP AST before it is written to a file. *)
+  (* The whole pipeline: passes 1--5, the helper facts, then passes 6--8
+     (first-orderize, run the ?? monotonicity oracle, apply the type
+     encoding).  It returns the TPTP AST and writes no file. *)
   val generate_problem :
     problem_options -> named_terms -> hhTptpProblem.problem
 
   (* A memo is local to one scheduler export pass.  It deliberately has no
-     process-global backing: lambda translation is goal-dependent. *)
+     process-global backing: lambda translation is goal-dependent.
+     memo_lambda_runs counts the lambda translations it has run. *)
   type export_memo
   val new_export_memo : unit -> export_memo
   val memo_lambda_runs : export_memo -> int
 
   (* An abstraction survived first-order lambda handling; the labels are
      the context prefixes ("fact NAME", "conjecture"), innermost first.
-     The tail of a prepared problem raises this instead of the Fail text,
-     which needs the term grammar and so is produced by describe_failure
-     on the calling thread: describe_failure maps it to the Fail
-     exception of the same text the caller-side first-orderization
-     raises, and every other exception to itself. *)
+     A tail (below) raises it instead of a Fail, whose text needs the term
+     grammar.  describe_failure, run on the calling thread, maps it to the
+     Fail that the caller-side first-orderization raises, and every other
+     exception to itself. *)
   exception Lambda_survived of string list * term
   val describe_failure : exn -> exn
 
   (* export_pb_in writes format_pb of force_tail of prepare_pb.  prepare_pb
-     runs on the caller: it draws the fresh names and reads the memo,
-     theorem data and caches (its own failures are final).  It returns the
-     tail of make_problem: the final first-orderization and the build of
-     the AST, which draw no names and use no shared state but read the live
-     signature and type database.  A tail may run on another thread, only
-     where no context is pinned (see hhSchedule), and fails with the raw
-     exception (Lambda_survived, not its text); force_tail runs a tail on
-     the calling thread and applies describe_failure.  format_pb touches no
-     HOL state. *)
+     runs on the caller: it draws the fresh names and reads the memo and
+     theorem data (its failures carry their text).  It returns the tail: the
+     final first-orderization and the build of the AST, which draw no
+     names and use no shared state but read the live signature and type
+     database.  A tail may run on another thread, only where no context is
+     pinned (see hhSchedule), and fails with the raw exception
+     (Lambda_survived, not its text); force_tail runs a tail on the calling
+     thread and applies describe_failure.  format_pb touches no HOL state.
+     export_pb is export_pb_in with a fresh memo. *)
   type tail = unit -> hhTptpProblem.problem
   val prepare_pb : export_memo -> problem_options
     -> term * (string * thm) list -> tail

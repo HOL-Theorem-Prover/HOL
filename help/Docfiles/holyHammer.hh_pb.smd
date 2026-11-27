@@ -14,8 +14,9 @@ without premise selection: it runs only `provers`, a list of `Eprover`,
 `Vampire`, and `Zipperposition`, on exactly `premises`, fully qualified
 theorem names such as `"listTheory.EVERY_MEM"`. It returns the tactic
 that Metis replayed, and prints it. Its problem files are written below
-the directory `dir` and deleted when it returns. The provers of the list
-that are not installed are skipped.
+the directory `dir` and deleted when it returns (unless the `debug_dir`
+option is set). The provers of the list that are not installed are
+skipped.
 
 ### Failure
 

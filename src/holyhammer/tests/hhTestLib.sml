@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhTestLib.sml                                             *)
-(* DESCRIPTION   : Helpers shared by the HolyHammer selftests                *)
+(* DESCRIPTION   : Helpers shared by the HolyHammer tests                    *)
 (* AUTHOR        : Lukasz Czajka                                             *)
 (* ========================================================================= *)
 

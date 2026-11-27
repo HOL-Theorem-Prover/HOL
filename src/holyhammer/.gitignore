@@ -3,5 +3,5 @@ export_*
 chainy_*
 bushy_*
 tptp4X
-# Binaries installed here before download-provers; no longer searched.
+# Old in-tree prover installs, which HolyHammer does not search.
 /provers/

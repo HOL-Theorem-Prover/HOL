@@ -4,7 +4,7 @@
 (*                                                                           *)
 (* This is not a theory script.  Paste the commands into an interactive      *)
 (* HOL4 session one at a time (or run "hol < interactive.sml" to see them    *)
-(* all).  The comments show abridged output from a real session on a        *)
+(* all).  The comments show abridged output from a real session on a         *)
 (* 16-core machine with E 3.2.5, Vampire 5.0.1 and Zipperposition 2.1.       *)
 (* Your timings, slice lists and even lemma choices will differ.             *)
 (* ========================================================================= *)
@@ -98,7 +98,7 @@ val th2 =
 
 (*      starting vampire slice (96 facts)
         starting vampire slice (512 facts)
-        ...                                  (only Vampire slices now)
+        ...                                  (Vampire slices only)
         vampire slice: Theorem (0.06 s)
         proof found by vampire:
           metis_tac [listTheory.REVERSE_REVERSE, listTheory.REVERSE_DEF,
@@ -124,7 +124,8 @@ hhConfig.hh_set ("filter", "magic")
    6. Premise selection: filters and the number of facts
 
    Every slice has its own premise selector and fact count.  Setting
-   "filter" or "max_facts" overrides them for all slices.
+   "filter" overrides the selector of every slice; "max_facts" caps the
+   fact count of every slice.
    ------------------------------------------------------------------------- *)
 
 hhConfig.hh_set ("filter", "mepo");
@@ -180,7 +181,7 @@ val th6 = TAC_PROOF (pb_goal,
     how to finish such a proof by hand. *)
 
 (* -------------------------------------------------------------------------
-   8. Keeping the minimisation off
+   8. Switching minimisation off
 
    With minimize = false the verified proof keeps every fact the prover
    used, in the form the prover reported it.
@@ -217,15 +218,15 @@ val th8 = holyhammer ``x < y ==> (x + y) / 2r < y``;
                      realaxTheory.REAL_LT_RADD,
                      realaxTheory.REAL_LT_TOTAL]
 
-    /tmp/hh-debug now contains one file per prover run (e-2.out,
-    vampire-7.out, ...) with the prover's own output.  The matching
+    /tmp/hh-debug now contains one file per prover run, named
+    <prover>-<pid>-<n>.out, with the prover's own output.  The matching
     problems are in directories such as
       /tmp/hh-debug/problems/<call>/
         vampire.knn.tx0.mono__native__fool.lifting.96
-    (prover, premise selector, encoding, number of facts), each with
-    the problem in atp_in.
+    (prover, premise selector, format, type encoding, lambda
+    translation, number of facts), each with the problem in atp_in.
 
-    Note the seven-lemma proof of a goal that realLib.REAL_ARITH_TAC
+    Note the four-lemma proof of a goal that realLib.REAL_ARITH_TAC
     proves at once: see tip 6 in README.md.  On another run the same
     call failed with "reconstruction failed"; linear arithmetic is not
     the hammer's job. *)

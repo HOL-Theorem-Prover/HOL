@@ -47,8 +47,8 @@ struct
   fun valid_format format =
     (ignore (format_of_string format); true) handle Fail _ => false
 
-  (* The slice vocabulary: names and encodings must stay mutually inverse,
-     so keep them in one table rather than two mirrored case analyses. *)
+  (* The slice vocabulary, in one table so that of_string and to_string
+     stay mutually inverse. *)
   val encodings =
     [("mono_native", Native {higher = false, fool = false, poly = false}),
      ("mono_native_fool", Native {higher = false, fool = true, poly = false}),

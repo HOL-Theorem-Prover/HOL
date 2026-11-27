@@ -7,7 +7,7 @@ holyHammer.holyhammer : term -> thm
 
 ------------------------------------------------------------------------
 
-Proves a closed statement with external automated provers.
+Proves a statement with external automated provers.
 
 `holyhammer tm` proves `tm` as `hh` proves the goal `([], tm)`, and
 prints the `metis_tac` call that proves `tm` in a script.

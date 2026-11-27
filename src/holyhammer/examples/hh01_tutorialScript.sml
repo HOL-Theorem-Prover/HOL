@@ -24,7 +24,7 @@ Libs
    The hammer prints the verified proof:
 
      Prove the statement in a script with:
-       metis_tac [EVERY_MEM]
+       metis_tac [listTheory.EVERY_MEM]
 
    and it returns the theorem.  The whole call takes a few seconds, even
    when a prover answers in a fraction of a second: preparing and
@@ -76,12 +76,12 @@ QED
    The last message is again a verified metis_tac call:
 
      Replace `hh` with:
-       metis_tac [ALL_DISTINCT_APPEND']
+       metis_tac [listTheory.ALL_DISTINCT_APPEND']
 
    In your own script it would replace the hh; the tactics before it
-   stay.  Here the library had a
-   variant of the right lemma, ALL_DISTINCT_APPEND', stated with
-   DISJOINT, and metis_tac uses the assumption on its own.
+   stay.  Here the library had a variant of the right lemma,
+   ALL_DISTINCT_APPEND', stated with DISJOINT, and metis_tac uses the
+   assumption on its own.
    ------------------------------------------------------------------------- *)
 
 Theorem distinct_append_disjoint:
@@ -99,7 +99,9 @@ QED
    over a list without duplicates gives a list without duplicates.  The
    library does not state this with INJ.  The hammer went through nub
    (remove duplicates): a distinct list equals its nub, and the nub of a
-   map with an injective function is distinct. *)
+   map with an injective function is distinct.
+   ------------------------------------------------------------------------- *)
+
 Theorem map_inj_distinct:
   INJ f (set l) UNIV /\ ALL_DISTINCT l ==> ALL_DISTINCT (MAP f l)
 Proof

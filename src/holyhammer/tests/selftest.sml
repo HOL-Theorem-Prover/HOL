@@ -186,7 +186,7 @@ fun test_child root =
       (Real.abs (#preplay_timeout options - 1.75) < 0.000001
        andalso
        Real.abs (#minimize_timeout options - 3.5) < 0.000001)
-    val _ = expect "hh_params reports all four provenance layers"
+    val _ = expect "hh_params reports set, config and env sources"
       (has_parameter "timeout" "23" "set" andalso
        has_parameter "cores" "3" "config" andalso
        has_parameter "filter" "none" "env" andalso
@@ -218,7 +218,7 @@ fun test_child root =
       ["format", "type_enc", "lam_trans", "mono_iters", "mono_instances",
        "verbose", "preplay_drop_one"]
     val default_options : hhConfig.hh_options = hhConfig.snapshot ()
-    val _ = expect "new option defaults preserve per-slice values"
+    val _ = expect "unset per-slice options leave the slice values"
       (#filter default_options = "none" andalso
        #format default_options = "" andalso
        #type_enc default_options = "" andalso
@@ -342,7 +342,7 @@ fun make_fixture root =
 fun run_parent () = with_fresh_dir (fn root =>
   let
     val (home, holdir, path, env_exec) = make_fixture root
-    (* the children must not see the caller's prover installations *)
+    (* The children must not see the caller's prover installations. *)
     val clean_env =
       "/usr/bin/env -u HOL4_VAMPIRE_EXECUTABLE" ^
       " -u HOL4_ZIPPERPOSITION_EXECUTABLE -u HOL4_Z3_TPTP_EXECUTABLE" ^
@@ -435,10 +435,9 @@ val _ =
        aiLib.write_file (join root child_done) "";
        OS.Process.exit OS.Process.success)
 
-(* This quotation is deliberately compiled after hhLamTrans is linked.  A
-   compile-time combin-theory dependency used to install its surface grammar
-   in HolyHammer sessions (b7fca5c48); this ordinary source fixture must
-   retain the ambient grammar. *)
+(* This quotation is compiled after hhLamTrans is linked.  A compile-time
+   combin-theory dependency would install combin's surface grammar in
+   HolyHammer sessions; the quotation must parse with the ambient one. *)
 val grammar_pollution_fixture : Term.term = ``(\x : 'a. x) y = y``
 val _ =
   (tprint "hhLamTrans does not pollute the term grammar";
@@ -1203,7 +1202,7 @@ fun test_hhTranslate_lifted_axioms () =
 
 val _ = test_hhTranslate_lifted_axioms ()
 
-(* The fresh-name counter: counter () draws one name and returns its
+(* Type.gen_tyvar's counter: counter () draws one name and returns its
    number; advance_to target draws names until the next one drawn is
    numbered target; power_above n is the least power of ten above n. *)
 fun counter () =
@@ -1955,15 +1954,14 @@ fun test_hhProblemGen () =
       end
     val _ = List.app (golden_problem_of golden_exported 100) golden_specs
     (* A bound function-valued variable and one polymorphic constant used
-       at two types, against output of the unmemoised encoder. *)
+       at two types. *)
     val symbol_goal = (``(!H : num -> num. H 0 = 0) /\
       (([] : num list) = []) /\ (([] : bool list) = [])``, [])
     val _ = List.app (golden_problem_of symbol_goal 100)
       [("hhproblemgen-tf0-symbols.p", tf0, "mono_native", "lifting"),
        ("hhproblemgen-tf1-symbols.p", tf1, "poly_native", "lifting")]
     (* Repeated ordinary names (thm, thm2, thm3), repeated helper names
-       (help.h, help.h.2) and the lam. exception (never numbered), against
-       pre-change output. *)
+       (help.h, help.h.2) and the lam. exception (never numbered). *)
     fun copy_fact name n =
       (name, Thm.mk_oracle_thm "hhProblemGen_selftest"
               ([], ``(P : num -> bool) ^(numSyntax.term_of_int n)``))
@@ -2332,9 +2330,9 @@ fun test_hhProblemGen_counter_window () =
 val _ = test_hhProblemGen_counter_window ()
 
 (* A "lambda survived" failure of the tail of a prepared problem is raised
-   raw (it may run on a worker, where the term grammar must not be read)
-   and becomes the text the caller-side first-orderization raises, written
-   out here as it was before the move. *)
+   raw (the tail may run on a worker, where the term grammar must not be
+   read); describe_failure turns it into the text the caller-side
+   first-orderization raises, spelled out here. *)
 fun test_hhProblemGen_lambda_survived_text () =
   let
     val tm = ``\x:num. x + 1``
@@ -2661,12 +2659,12 @@ fun test_hhSlice () =
     val defaults = hh_options
       [Provers default_provers, Slices (24 * 32), Cores 32, Filter ""]
     val default_schedule = hhSlice.mk_schedule defaults
-    val _ = expect_equal "golden 24-slice Phase 3 schedule"
+    val _ = expect_equal "golden 24-slice default schedule"
       expected_default (map (slice_summary o #2) default_schedule)
-    val _ = expect_equal "frozen 16-slice Phase 2 schedule prefix"
+    val _ = expect_equal "default schedule: first sixteen slices"
       phase2_golden
       (List.take (map (slice_summary o #2) default_schedule, 16))
-    val _ = expect_equal "Phase 1 eight-slice prefix is frozen verbatim"
+    val _ = expect_equal "default schedule: first eight slices"
       phase1 (List.take (map (slice_summary o #2) default_schedule, 8))
     val gate = [Provers default_provers, Slices 8, Cores 8, Filter "knn"]
     val gate30 = hh_options gate
@@ -2674,15 +2672,15 @@ fun test_hhSlice () =
     val gate30_schedule = hhSlice.mk_schedule gate30
     val gate10_schedule = hhSlice.mk_schedule gate10
     val expected_gate = List.take (phase1, 8)
-    val _ = expect_equal "gate freezes the first eight schedule slices"
+    val _ = expect_equal "eight slices are the first eight default slices"
       expected_gate (map (slice_summary o #2) gate30_schedule)
-    val _ = expect_equal "S30 and S10 use the same frozen schedule"
+    val _ = expect_equal "the timeout leaves the eight-slice schedule alone"
       (schedule_summary gate30_schedule) (schedule_summary gate10_schedule)
-    val _ = expect "eight-core gate gives every S30 slice 30 seconds"
+    val _ = expect "eight slices on eight cores get 30 seconds each"
       (List.all (fn (_, slice) =>
          real_close 30.0 (hhSlice.slice_budget 8 gate30 slice))
          gate30_schedule)
-    val _ = expect "eight-core gate gives every S10 slice 10 seconds"
+    val _ = expect "eight slices on eight cores get 10 seconds each"
       (List.all (fn (_, slice) =>
          real_close 10.0 (hhSlice.slice_budget 8 gate10 slice))
          gate10_schedule)
@@ -2699,7 +2697,7 @@ fun test_hhSlice () =
         #mk_command config "anchor-prover" baseline =
         #mk_command config "anchor-prover" scheduled
       end
-    val _ = expect "gate anchors are command-equivalent to one-shot B"
+    val _ = expect "the eight slices add no extra prover options"
       (List.all anchor_command_equal anchors)
     val small = hhSlice.mk_schedule
       (hh_options [Provers default_provers, Slices 5, Cores 2, Filter "knn"])
@@ -3104,11 +3102,11 @@ fun test_runner () = with_fresh_dir (fn root =>
       (contains "out\n" merged_text andalso
        contains "err\n" merged_text andalso
        contains ("home=" ^ home ^ "\n") merged_text)
-    (* the child must not inherit the blocked or ignored signals of the
-       calling Poly/ML thread (E's --cpu-limit relies on SIGXCPU) *)
+    (* The child must not inherit the blocked or ignored signals of the
+       calling Poly/ML thread (E's --cpu-limit relies on SIGXCPU). *)
     fun signal_survivor signal =
       let
-        (* SIGXCPU dumps core by default; leave no core file *)
+        (* SIGXCPU dumps core by default; leave no core file. *)
         val config = fake_config "runner-signal" "/bin/sh"
           ["-c", "ulimit -c 0; kill -" ^ signal ^ " $$; echo survived"]
           (#parse_output e)
@@ -3130,7 +3128,7 @@ fun test_runner () = with_fresh_dir (fn root =>
          ("/definitely/missing/holyhammer-prover", []),
        parse_output = #parse_output e,
        mono_instances = 100, slices = [], legacy = false}
-    (* the first run probes (and so spawns) the executable *)
+    (* The first run probes (and so spawns) the executable. *)
     val _ = hhProver.run exec_failure timeout_request
     val spawns_before = hhProver.spawn_count ()
     val exec_result = hhProver.run exec_failure timeout_request
@@ -3188,7 +3186,8 @@ fun test_hhReconstruct () =
     val false_lemmas =
       arith ["ADD_COMM", "ADD_ASSOC", "ADD_CLAUSES", "MULT_COMM",
              "LEFT_ADD_DISTRIB", "ADD1"]
-    (* Each of the seven attempts used to run out the full timeout. *)
+    (* Replayed before minimisation, the list fails after two tries (with
+       and without its permutative lemmas) of at most 0.5 s each. *)
     val (failed, failed_time) =
       reconstruct_timed true 0.5 NONE false_lemmas false_goal
     val _ = expect "reconstruction of an unreplayable list fails at once"
@@ -3310,13 +3309,6 @@ fun test_hhReconstruct () =
     ()
   end
 
-(* A replay is limited by the CPU time of the thread running it, not by
-   wall time: the provers keep running while a proof is replayed, so a
-   replay can get little of a CPU.  A tactic that waits without
-   computing, as one starved of CPU does, runs past its limit, up to a
-   wall-clock backstop of 20 times it; one that computes is stopped at
-   the limit; and another thread computing beside a call does not count
-   against it. *)
 (* A flag that only the contexts the tests below set it in have on: a
    tactic reading it tells which context it was run in. *)
 val {flag = replay_mark, ...} = HOLFlags.create_btrace
@@ -3331,6 +3323,13 @@ val proves_if_marked : Abbrev.tactic = fn g => fn ctxt =>
     Tactic.ACCEPT_TAC boolTheory.TRUTH g ctxt
   else Tactical.NO_TAC g ctxt
 
+(* A replay is limited by the CPU time of the thread running it, not by
+   wall time: the provers keep running while a proof is replayed, so a
+   replay can get little of a CPU.  A tactic that waits without
+   computing, as one starved of CPU does, runs past its limit, up to a
+   wall-clock backstop of 20 times it; one that computes is stopped at
+   the limit; and another thread computing beside a call does not count
+   against it. *)
 fun test_replay_timeout () =
   let
     val wait = Time.fromReal 0.6
@@ -3341,7 +3340,7 @@ fun test_replay_timeout () =
         Time.toReal usr + Time.toReal sys
       end
     (* f start, with a thread that spins from when f calls start () until
-       f returns *)
+       f returns. *)
     fun beside_spinner f =
       let
         val go = ref false
@@ -3395,8 +3394,8 @@ fun test_replay_timeout () =
            (process_seconds process < 0.3 andalso
             (print "(skipped: the call got too little CPU) "; true))
        end);
-    (* the call counts down without allocating, so neither the garbage
-       collector nor another thread changes its work *)
+    (* The call counts down without allocating, so neither the garbage
+       collector nor another thread changes its work. *)
     expect "thread_timeout reports the CPU time a call used"
       (let
          val process = Timer.startCPUTimer ()
@@ -3625,7 +3624,7 @@ fun test_schedule_max_proofs parser =
        List.exists (fn lemmas => lemmas = ["boolTheory.T_DEF"])
          lemma_sets)
     (* t_replay is the CPU time of the replay's thread, read in ticks of
-       0.01 s, and t_recon the wall time of the whole reconstruction *)
+       0.01 s, and t_recon the wall time of the whole reconstruction. *)
     val _ = expect "scheduler suggestions carry their replay time"
       (List.all (fn {t_replay, t_recon, ...} : hhSchedule.suggestion =>
           0.0 <= t_replay andalso t_replay <= t_recon + 0.01)
@@ -3741,8 +3740,6 @@ fun test_schedule_without_minimization () =
     ()
   end
 
-(* Five slices report the same list, which Metis cannot replay within
-   preplay_timeout (1 s).  Replaying it once per slice took 5 s. *)
 (* fixtureTheory.unreconstructable does not exist, so Metis cannot replay
    the list; without it the list proves ADD1. *)
 fun test_schedule_drop_one () =
@@ -3770,6 +3767,8 @@ fun test_schedule_drop_one () =
          | _ => false)
   end
 
+(* Five slices report the same list, which Metis cannot replay within
+   preplay_timeout (1 s); it is replayed once, not once per slice. *)
 fun test_schedule_failed_list_once () =
   let
     val name = "hh-schedule-failed-list-once"
@@ -3789,7 +3788,7 @@ fun test_schedule_failed_list_once () =
       run_schedule_on ([], ``!n. n + 1 = n``) options)
     val found = List.filter (String.isPrefix "found|") events
   in
-    expect "scheduler replays a lemma list that failed only once"
+    expect "scheduler replays a failing lemma list only once"
       (length found = 5 andalso null (#suggestions result) andalso
        #stopped result = hhSchedule.Exhausted andalso
        #t_total result < 3.0)
@@ -4153,8 +4152,9 @@ fun test_schedule_knn_anchor_export () = with_fresh_dir (fn root =>
   end)
 
 (* The monomorphiser makes about one instance per fact and drops a
-   polymorphic fact that gets none, so a prover's instance cap below the
-   slice's fact count used to cut the lowest-ranked facts. *)
+   polymorphic fact that gets none, so a prover's instance cap (2 here) is
+   only a floor: below the slice's fact count it would cut the
+   lowest-ranked facts. *)
 fun test_schedule_mono_cap_export () = with_fresh_dir (fn root =>
   let
     val {name, exec_names, env_var, version_args, parse_version,
@@ -5481,8 +5481,7 @@ fun test_schedule_pool () =
       (inline_forks = 0 andalso !forks = length jobs)
     (* Failures and interrupts. *)
     (* A tail failure, as the first-order lambda handling raises it, and
-       the text it had before the move (written out, not computed by
-       describe_failure). *)
+       its text, written out rather than computed by describe_failure. *)
     val survivor : Term.term = ``\x:num. x + 1``
     fun survivor_text label =
       "hhProblemGen: " ^ label ^ ": hhProblemGen: lambda survived \
@@ -7070,7 +7069,7 @@ fun test_hhLearn_dispatch_cache_and_knn_anchor () =
        restricted_knn = expected_restricted_knn);
     expect "hhLearn none dispatch preserves the full thmdata order"
       (none = [primary, secondary]);
-    expect "hhLearn dispatches all three new filters on a live fixture"
+    expect "hhLearn dispatches mepo, mash and mesh on a live fixture"
       (mepo = [primary] andalso mash = [primary] andalso
        mesh = [primary] andalso from_fixture (mepo @ mash @ mesh));
     expect "hhLearn context cache uses the strong target fact inventory"

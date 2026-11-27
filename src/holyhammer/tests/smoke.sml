@@ -80,9 +80,10 @@ fun hh_pb_smoke () =
         | _ => (false, "no tactic printed last")
     end))
 
-(* The checks below run the tested provers on their default slice tables,
-   each search for at most timeout seconds, on the premises given (filter
-   none), without the cache and without fact or monomorphisation caps. *)
+(* The checks below run the tested provers on their own slices, each
+   search for at most timeout seconds, on the premises given (filter
+   none), without the cache unless a check enables it, and with each
+   slice's own format, encodings, and fact and monomorphisation caps. *)
 val timeout = 30
 val tested_provers =
   [hhConfig.Eprover, hhConfig.Vampire, hhConfig.Zipperposition]
@@ -288,10 +289,11 @@ fun pigeonhole count =
 fun matrix_slice prover format type_enc lam_trans nfacts =
   hhProver.mk_slice prover (format, type_enc, lam_trans) "none" nfacts
 
-(* The complete typed-slice encoding matrix.  The final three rows are the
-   table triples that the portfolio's substitutions replaced (see
-   hhProver.portfolio): a substitution removes a slice from the schedule,
-   but must not remove its encoding from the soundness checks. *)
+(* The typed encodings that the soundness checks query one by one.  The
+   final three rows are the table triples that the portfolio's
+   substitutions replaced (see hhProver.portfolio): a substitution removes
+   a slice from the schedule, but must not remove its encoding from the
+   soundness checks. *)
 val matrix =
   let open hhConfig in
     [matrix_slice Vampire "tx0" "mono_native_fool" "lifting" 96,
@@ -342,10 +344,9 @@ fun main () =
          OS.Process.failure)
     | [] =>
       let
-        (* The standalone executable has no script-owned theory by
-           default.  Reconstruction evaluates a tactic and therefore needs
-           initialized kernel theory state, just as an interactive HOL
-           session has. *)
+        (* Reconstruction evaluates a tactic, which needs a current
+           theory; the standalone executable has none until it makes
+           one. *)
         val _ =
           (ignore (Theory.current_theory ()); ())
           handle Feedback.HOL_ERR _ =>
