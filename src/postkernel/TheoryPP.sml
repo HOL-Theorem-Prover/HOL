@@ -660,10 +660,10 @@ fun pp_struct hash (info_record : struct_info_record) = let
               block INCONSISTENT 0 (
                 add_string "TheoryReader.load_thydata {" >> add_break (1,2) >>
                 block CONSISTENT 0 (
-                  block INCONSISTENT 2 (
-                    add_string "thyname =" >> add_break(1,2) >>
-                    add_string (mlquote name ^ ",")
-                  ) >> add_break (1,0) >>
+                  (* one line, however long the name: TheoryModules
+                     reads the header as text *)
+                  add_string ("thyname = " ^ mlquote name ^ ",") >>
+                  add_break (1,0) >>
                   block INCONSISTENT 2 (
                     add_string "hash =" >> add_break(1,2) >>
                     add_string (mlquote hash ^ ",")

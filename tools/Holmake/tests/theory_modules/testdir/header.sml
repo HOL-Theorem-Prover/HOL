@@ -1,10 +1,10 @@
-(* Reads theory headers the printer breaks (a 59-character theory name),
-   headers after more than 4 KiB of opens, and a header with no hash,
-   then writes modules from .dat files for a list starting with a theory
-   whose header can't be read and one whose .dat is missing.  Records in
-   module-stats the headers it read and how many modules the writer
-   wrote. *)
-val long = "moduleLongNameThatMakesTheGeneratedTheoryHeaderBreakItsLine";
+(* Reads the header of a theory with a 59-character name, which the
+   printer keeps on one line, a header after more than 4 KiB of opens,
+   and a header with no hash, then writes modules from .dat files for a
+   list starting with a theory whose header can't be read and one whose
+   .dat is missing.  Records in module-stats the headers it read and how
+   many modules the writer wrote. *)
+val long = "moduleLongNameThatTheGeneratedTheoryHeaderMustKeepOnOneLine";
 val _ = Meta.configureTheoryModuleCache
           {directory = "modules",
            base_state = OS.Path.concat (Systeml.HOLDIR, "bin/hol.state")};
@@ -15,8 +15,8 @@ fun write file text =
   let val output = HOLFileSys.openOut file
   in HOLFileSys.output (output, text); HOLFileSys.closeOut output end;
 val long_sml = read (long ^ "Theory.sml");
-val _ = String.isSubstring "thyname =\n" long_sml orelse
-        raise Fail "the long theory name's header line isn't broken";
+val _ = String.isSubstring ("thyname = \"" ^ long ^ "\",") long_sml orelse
+        raise Fail "the long theory name's header line is broken";
 (* The header's hash is the SHA-1 of the theory's .dat file. *)
 val dat_sha1 = TheoryModules.file_digest (long ^ "Theory.dat");
 fun show NONE = "none"

@@ -244,8 +244,7 @@ fun unchanged_bindings () = same_bindings compiled_bindings
    loader identifies the theory by the same literals.  The file is read
    as text, never compiled, up to the line naming the .dat's path, the
    header's last field: the opens before it can take any number of
-   lines, and the printer may break a line after "thyname =" or
-   "hash =". *)
+   lines. *)
 fun sml_header file =
   let
     val input = HOLFileSys.openIn file
@@ -262,21 +261,14 @@ fun sml_header file =
     fun literal key =
       let
         val (_, rest) = Substring.position key (Substring.full text)
-        val rest = Substring.dropl Char.isSpace
-                     (Substring.triml (String.size key) rest)
+        val rest = Substring.triml (String.size key) rest
+        val (value, close) = Substring.splitl (fn c => c <> #"\"") rest
       in
-        case Substring.getc rest of
-            SOME (#"\"", rest) =>
-            let
-              val (value, close) = Substring.splitl (fn c => c <> #"\"") rest
-            in
-              if Substring.isEmpty close then NONE
-              else SOME (Substring.string value)
-            end
-          | _ => NONE
+        if Substring.isEmpty close then NONE
+        else SOME (Substring.string value)
       end
   in
-    case (literal "thyname =", literal "hash =") of
+    case (literal "thyname = \"", literal "hash = \"") of
         (SOME thy, SOME hash) => SOME (thy, hash)
       | _ => NONE
   end
