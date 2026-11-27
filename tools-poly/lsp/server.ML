@@ -5784,13 +5784,26 @@ fun start {diag, dbg, warnings} = let
        not from the last compile: a declaration the user has typed
        since is still a declaration, and saying nothing about the one
        above it because of that would make the pane blink out on a
-       keystroke. *)
+       keystroke.
+
+       A declaration with no source text of its own is dropped, for
+       the same reason `onDecDone' declines to record one.  The parser
+       synthesises an end-of-theory declaration at `(size, size)', so
+       in a file that does not end in a newline it shares the last
+       real declaration's stop -- and the stop is the whole of the
+       binding match, so the two spans find the same values.  Left in,
+       a selection reaching the end of such a file answers *twice*
+       about the last declaration, and a cursor there answers about it
+       under a zero-width range rather than the declaration's own.
+       There is nothing a range can contain, or a cursor can sit at
+       the end of, in a span with no text in it. *)
     val decs = let
       val parseDec = bufferDecs src
       fun loop acc =
         case parseDec () of
             NONE => List.rev acc
-          | SOME d => loop (HOLSourceAST.decSpan d :: acc)
+          | SOME d => let val span as (st, sp) = HOLSourceAST.decSpan d
+                      in loop (if st < sp then span :: acc else acc) end
       in loop [] handle _ => [] end
     (* The compile keyed its bindings by the same `decSpan' stop this
        parse computes, so equality is the whole of the match.  An edit

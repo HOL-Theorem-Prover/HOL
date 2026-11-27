@@ -12,6 +12,10 @@ if ! grep -q '"TheoryPP.include_html_docs"' "$script"; then
     perl -i -pe 'print "val _ = HOLFlags.set_trace \"TheoryPP.include_html_docs\" 0;\n" if /^val _ = export_theory\(\)/' "$script"
 fi
 
+# computeLib.auto_import_definitions is now a HOLFlags.bflag, not a ref.
+perl -i -pe 's/Lib\.with_flag \(computeLib\.auto_import_definitions, false\)/HOLFlags.with_bflags [(computeLib.auto_import_definitions, false)]/g' \
+    A64_ISA_v86A/lib/lem/*.sml A64_ISA_v86A/lib/sail/*.sml
+
 # Correct the snapshot's reversed half-way tests for nearest rounding.
 # In particular, the uncorrected FPToFixed rounds exact zero up to one.
 python3 - "$script" <<'PY'

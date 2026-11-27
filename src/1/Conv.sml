@@ -949,7 +949,7 @@ in
          val (x, P) = dest_exists conj1
                       handle HOL_ERR _ => raise AE_ERR
          val (y, Q) = dest_exists conj2
-                      handle HOL_ERR_ => raise AE_ERR
+                      handle HOL_ERR _ => raise AE_ERR
       in
          if not (aconv x y) then raise AE_ERR
          else if free_in x P orelse free_in x Q
