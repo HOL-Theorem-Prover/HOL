@@ -750,6 +750,13 @@ in
   leaves "Looper splits the simplified goal"
          (SIMP_TAC (add_looper ("conj", K CONJ_TAC) bool_ss) [])
          ([], mk_conj(p, q)) [p, q];
+  leaves "ExclX looper: excludes a looper"
+         (SIMP_TAC (add_looper ("conj", K CONJ_TAC) bool_ss)
+                   [ExclX "looper:conj"])
+         ([], mk_conj(p, q)) [mk_conj(p, q)];
+  leaves "ExclX rule: excludes a rewrite"
+         (SIMP_TAC bool_ss [ExclX "rule:EXISTS_SIMP"])
+         ([], “?x:'a. p”) [“?x:'a. p”];
   leaves "A limit bounds the loopers of one call"
          (SIMP_TAC (limit 1 (add_looper ("conj", K CONJ_TAC) bool_ss)) [])
          ([], list_mk_conj [p, q, r]) [p, mk_conj(q, r)];
@@ -760,6 +767,9 @@ in
               length (fst (runtac (GEN_SIMP_TAC {safe = false} taut_ss [])
                                   g))))
     ([], contrapos);
+  leaves "ExclX solver: excludes a solver"
+         (GEN_SIMP_TAC {safe = true} taut_ss [ExclX "solver:taut"])
+         ([], contrapos) [contrapos];
   gives "Side-condition depth 0 leaves conditional rewrites unused"
         (SIMP_CONV (set_cond_depth 0 bool_ss)
                    [cond_rule, ASSUME “(P:'a -> bool) b”])

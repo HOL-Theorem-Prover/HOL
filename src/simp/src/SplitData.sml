@@ -72,8 +72,16 @@ fun dispatch td =
                 val ds = #reversed_segment r (Theory.current_theory ())
                 (* Match AncestryData.gen_other_tds: only the recorded
                    stream is pruned; local/live rules are left alone.
-                   REMOVE keys are never dropped or resolved again. *)
-                fun current (Add name) = can DB.fetch_knm name
+                   REMOVE keys are never dropped or resolved again.  As
+                   in ThmSetData, rebinding a name retires its ADD. *)
+                fun rebound (Add {Thy,Name}) =
+                      (case td of
+                           TheoryDelta.NewBinding (s,_) =>
+                             s = Name andalso Theory.current_theory () = Thy
+                         | _ => false)
+                  | rebound (Remove _) = false
+                fun current (d as Add name) =
+                      can DB.fetch_knm name andalso not (rebound d)
                   | current (Remove _) = true
               in
                 if List.all current ds then ()

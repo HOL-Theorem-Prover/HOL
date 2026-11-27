@@ -1262,7 +1262,10 @@ fun set_safe_solvers solvers =
   strategy_op (SET_SAFE_SOLVERS_EVENT (dedup_solvers solvers))
 fun set_subgoaler subgoaler =
   strategy_op (SET_SUBGOALER_EVENT (SOME subgoaler))
-fun set_cond_depth depth = strategy_op (SET_COND_DEPTH_EVENT (SOME depth))
+fun set_cond_depth depth =
+  if depth < 0 then
+    raise ERR ("set_cond_depth", "negative depth " ^ Int.toString depth)
+  else strategy_op (SET_COND_DEPTH_EVENT (SOME depth))
 fun set_term_ord term_ord = strategy_op (SET_TERM_ORD_EVENT (SOME term_ord))
 
 (* Deleting an absent looper is a no-op; only the exported [del_looper]

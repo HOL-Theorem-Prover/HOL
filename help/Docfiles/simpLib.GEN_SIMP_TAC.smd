@@ -21,9 +21,11 @@ looper that succeeds and repeats on the resulting subgoals. If the
 simpset has a limit `n` (see `simpLib.limit`), at most `n` loopers are
 applied in one call.
 
-Side conditions of conditional rewrites are always handled by the
-unsafe solvers. Bounded rewrites in `ths` (e.g. `Once th`) are bounded
-across the whole call, including the subgoals produced by loopers.
+A side condition of a conditional rewrite is first simplified, by the
+subgoaler if the simpset has one (see `simpLib.set_subgoaler`); what is
+left, if not `T`, goes to the unsafe solvers, also when `safe` is true.
+Bounded rewrites in `ths` (e.g. `Once th`) are bounded across the whole
+call, including the subgoals produced by loopers.
 
 `GEN_SIMP_TAC_CHILD_FIRST policy` is the same, but simplifies subterms
 before the terms containing them.

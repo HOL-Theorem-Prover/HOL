@@ -463,7 +463,9 @@ fun TRAVERSE_IN_CONTEXT eager (config : run_config) limit rewriters
         val tm' = rand (concl eq)
       in
         if aconv tm' boolSyntax.T then EQT_ELIM eq
-        else EQ_MP (SYM eq) (first_solver solvers tm')
+        else
+          (if plain orelse aconv tm' tm then () else observe tm';
+           EQ_MP (SYM eq) (first_solver solvers tm'))
       end
       fun ctxt_solver stack tm = let
         val _ = if plain then () else observe tm

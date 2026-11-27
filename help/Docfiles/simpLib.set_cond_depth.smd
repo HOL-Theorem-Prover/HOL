@@ -18,7 +18,7 @@ used. Rewrites with other relations, added with
 
 ### Failure
 
-Never fails.
+Fails if the depth is negative.
 
 ### Example
 
