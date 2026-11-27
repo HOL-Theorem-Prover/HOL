@@ -770,6 +770,9 @@ in
         (mk_conj(p, q)) (mk_conj(q, p));
   leaves "Split splits a conditional" (SIMP_TAC bool_ss [Split bool_split])
          ([], cond_goal) [split_goal];
+  tprint "type_asm_split_of gives an assumption rule";
+  require_msg (check_result I) Bool.toString
+    (splitLib.is_asm_split o splitLib.type_asm_split_of) bool;
   leaves "SPLIT_TAC splits a conditional"
          (splitLib.SPLIT_TAC [bool_split]) ([], cond_goal) [split_goal];
   tprint "[split] theorems are split rules until excluded";

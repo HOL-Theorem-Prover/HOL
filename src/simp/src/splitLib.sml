@@ -194,10 +194,9 @@ fun type_splits_in ctxt ty =
           Prim_rec.prove_case_ho_imp_thm
             {case_def = TypeBasePure.case_def_of tyinfo,
              nchotomy = TypeBasePure.nchotomy_of tyinfo}
-        val asm_split = TypeBasePure.case_elim_of tyinfo
+        val asm_split = mk_asm_split (TypeBasePure.case_elim_of tyinfo)
         val splits =
-          {split=split, asm_split=asm_split,
-           rules=[split, mk_asm_split asm_split]}
+          {split=split, asm_split=asm_split, rules=[split, asm_split]}
         val entry = {tyinfo=tyinfo, splits=splits}
         val _ =
           Sref.update type_split_cache (Symtab.update (key, entry))

@@ -11,8 +11,10 @@ simpLib.Split : thm -> thm
 Marks a split rule for use in one simplifier call.
 
 Passing `Split th` in the theorem list of a `simpLib` simplification
-conversion or tactic adds `th` as a split looper for that call, as
-`simpLib.add_split th` does. A rule that is not a split rule is ignored
+tactic adds `th` as a split looper for that call, as
+`simpLib.add_split th` does. Loopers run only in the tactics: in a
+conversion such as `simpLib.SIMP_CONV` the marker is removed and nothing
+is split. A rule that is not a split rule is ignored
 with a warning.
 
 `simpLib.Split` is [`markerLib.Split`](#markerLib.Split).

@@ -28,7 +28,9 @@ component to exclude:
 
 A target without a prefix is first read as for `Excl`. If it names a
 rewrite, conversion or decision procedure, those are excluded; otherwise it
-must name exactly one looper, solver, split rule or case split.
+must name exactly one looper, solver, split rule or case split, by its
+full display name: `split name` or `split_asm name` for a split rule and
+`split.case ty` for a case split.
 
 The simpset itself is unchanged. If an exclusion is added to a simpset
 with `&&`, rule, looper and solver exclusions remove what the simpset
