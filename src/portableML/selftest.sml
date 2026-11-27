@@ -247,4 +247,15 @@ in
               [HashMismatch _] => true | _ => false)) end))
 end
 
+val _ = assert ("DArray.extend fills with the default", fn () => let
+  val a = DArray.fromList ([1, 2, 3], 0)
+  val _ = DArray.extend (a, 2)
+  val ok1 = DArray.toList a = [1, 2, 3]
+  val _ = DArray.extend (a, 6)
+  val ok2 = DArray.toList a = [1, 2, 3, 0, 0, 0]
+  val _ = DArray.clear a
+  val _ = DArray.push (a, 7)
+  val _ = DArray.extend (a, 4)
+  in ok1 andalso ok2 andalso DArray.toList a = [7, 0, 0, 0] end)
+
 val _ = OS.Process.exit OS.Process.success

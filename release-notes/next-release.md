@@ -305,6 +305,14 @@ New tools
     and loads the selected theories. See `src/statementdossier/README.md`
     for examples.
 
+-   A Neovim plugin for HOL's language server (`hol lsp`), in
+    `tools/editor-modes/vim/neovim`. Besides the server's diagnostics,
+    hover, definitions and completion, it has a goals pane that follows
+    the cursor through a proof (with each step's time), SML evaluated in
+    the server's session, theorem search, and background proof checking
+    with marks on each theorem and a statusline tally. It needs Neovim 0.12 or later; see
+    its `README.md`, or `:help hol4` once it is installed.
+
 New examples
 ------------
 

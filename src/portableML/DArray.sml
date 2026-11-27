@@ -32,6 +32,13 @@ fun push (r as ref (a as (_, sz, _:'a)), v) = let
   val _ = Array.update (a, sz, v)
   in r := (a, sz+1, dflt) end
 
+fun extend (r as ref (a as (_, sz, _)), n) =
+  if n <= sz then () else let
+    val (a, _, dflt) = ensureCapacity (a, n)
+    (* positions past the old size may hold values from before a `clear` *)
+    val _ = ArraySlice.modify (fn _ => dflt) (ArraySlice.slice (a, sz, SOME (n - sz)))
+    in r := (a, n, dflt) end
+
 fun size (ref (_, sz, _)) = sz
 
 fun isEmpty a = size a = 0
