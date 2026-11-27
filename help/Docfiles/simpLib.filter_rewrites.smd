@@ -16,10 +16,11 @@ simpLib.filter_rewrites_preserving_controls :
 Removes the rewrites of a simpset that a predicate rejects.
 
 `filter_rewrites keep ss` removes every rewrite `(name, th)`, as it was
-added to `ss`, for which `keep` returns false. Everything else in `ss` is
-kept, including its exclusions, limit, rewrite maker, solvers and
-loopers, which rebuilding from `ssfrags_of ss` would lose. If nothing is
-rejected, `ss` itself is returned.
+added to `ss`, for which `keep` returns false. AC rewrites (`AC`, or a
+fragment's `ac` field) are always kept and not shown to `keep`. Everything
+else in `ss` is kept, including its exclusions, limit, rewrite maker,
+solvers and loopers, which rebuilding from `ssfrags_of ss` would lose. If
+nothing is rejected, `ss` itself is returned.
 
 The simpset is rebuilt, so bounded rewrites (`Once`, `Ntimes`) start again
 with their full number of uses. With `filter_rewrites_preserving_controls`

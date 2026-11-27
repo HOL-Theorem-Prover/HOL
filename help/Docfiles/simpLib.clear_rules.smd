@@ -17,8 +17,8 @@ order and the exclusions of `ss`: the fragment names excluded with
 `exclude_ssfrags`, and the looper, split and case exclusions added with
 `ExclX`. Simplifying with `clear_rules ss` and theorems `ths` therefore
 uses `ths` alone, under the settings of `ss`, except that what `ss`
-excludes stays excluded: a fragment excluded earlier is skipped even when
-supplied with `SF` or `++`.
+excludes stays excluded: a fragment excluded earlier is skipped when added
+with `++`. A fragment supplied with `SF` is added all the same.
 
 ### Failure
 

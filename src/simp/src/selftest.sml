@@ -832,6 +832,31 @@ in
          (GEN_GLOBAL_SIMP_TAC {safe = false} (global false true false)
                               bool_ss [IMP_DISJ_THM])
          ([p], q) [mk_disj(mk_neg p, q)];
+  let
+    val f = “f : 'a -> 'a” and g = “g : 'a -> 'a”
+    val a = “a : 'a” and b = “b : 'a”
+    val x = “x : 'a”
+    val Qx = “(Q : 'a -> bool) x” and Rx = “(R : 'a -> bool) x”
+    (* f (g x) = a only if f (g x) is rewritten before g x *)
+    val fg_rule = ASSUME “!y:'a. ^f (^g y) = ^a”
+    val g_rule = ASSUME “!y:'a. ^g y = ^b”
+    val whole = ASSUME “!y:'a. (^f (^g y) = ^a) ==>
+                               (((Q : 'a -> bool) y ==> (R : 'a -> bool) y)
+                                = T)”
+    val no_charge = mk_HOL_ERR "selftest" "charge" "charged"
+    fun child_first_global ths =
+        GEN_GLOBAL_SIMP_TAC_CHILD_FIRST
+          {charge = fn () => raise no_charge, keep_abstraction = K false}
+          {safe = false} (global false false true)
+          (bool_ss ++ rewrites [fg_rule, g_rule]) ths
+  in
+    (* The rules are assumed, so the tactic's theorem has their hypotheses
+       and is not checked with VALID *)
+    tprint "Child-first global root rewrites solve side conditions \
+           \parent-first, without charging";
+    require_msg (check_result (null o fst)) goals_to_string
+                (runtac (child_first_global [whole])) ([], mk_imp (Qx, Rx))
+  end;
   gives "A rewrite bundle's bound is shared across calls"
         (SIMP_CONV bundled_ss [] THENC SIMP_CONV bundled_ss []) TTp
         “T /\ p”;
