@@ -204,6 +204,21 @@ val _ = if not supported then () else
     val _ = tprint "the loader leaves modules it can't use"
     val _ = probe ["abcd"]
     val _ = expect "refused, writable" [1, 4, 2]
+    val _ = tprint "long-named headers stay on one line; read after 4 KiB"
+    val long = "moduleLongNameThatTheGeneratedTheoryHeaderMustKeepOnOneLine"
+    val _ = command [holmake, "--no-cache", long ^ "Theory.uo"]
+    val _ = (clear "modules"; OS.FileSys.mkDir "modules"; clear "written")
+    val _ = (remove "module-stats";
+             command [hol, "run", "--noconfig", "header.sml"])
+    val stats = String.fields (fn c => c = #"\n") (read "module-stats")
+    val _ = if List.take (stats, 3) = [long ^ " dat-sha1", long ^ " dat-sha1",
+                                        "none"]
+            then OK ()
+            else die ("headers read: " ^ String.concatWith "; " stats)
+    val _ = tprint "an unreadable header or .dat skips only its theory"
+    val _ = if List.drop (stats, 3) = ["6"] then OK ()
+            else die ("writer wrote " ^
+                      String.concatWith " " (List.drop (stats, 3)))
   in
     ()
   end;

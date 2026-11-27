@@ -242,11 +242,22 @@ fun unchanged_bindings () = same_bindings compiled_bindings
 
 (* The theory name and hash a generated FooTheory.sml loads; the source
    loader identifies the theory by the same literals.  The file is read
-   as text, never compiled. *)
+   as text, never compiled, up to the line naming the .dat's path, the
+   header's last field: the opens before it can take any number of
+   lines. *)
 fun sml_header file =
   let
     val input = HOLFileSys.openIn file
-    val text = TextIO.inputN (input, 4096) before HOLFileSys.closeIn input
+    fun read lines =
+      case TextIO.inputLine input of
+          NONE => lines
+        | SOME line =>
+          if String.isSubstring "path = path" line then line :: lines
+          else read (line :: lines)
+    val text =
+        (String.concat (rev (read []))
+         handle e => (HOLFileSys.closeIn input; raise e))
+        before HOLFileSys.closeIn input
     fun literal key =
       let
         val (_, rest) = Substring.position key (Substring.full text)
@@ -605,22 +616,29 @@ fun write_modules {theories, directory, base_state, output, limit} =
         val directory = absolute directory
         val output = absolute output
         val bindings = core_bindings ()
+        (* A theory whose header or .dat can't be read is skipped, not
+           the whole list: its descendants then have no canonical data,
+           so no module of theirs is saved either. *)
+        fun skip what sml =
+          (TextIO.output (TextIO.stdErr,
+                          "theory modules: " ^ what ^ " " ^ sml ^ "\n");
+           NONE)
         fun entry sml =
           let
             val base = OS.Path.base sml
-            val (thy, hash) =
-                case sml_header (base ^ ".sml") of
-                    SOME h => h
-                  | NONE => raise Fail ("no theory header in " ^ sml)
           in
-            if TheoryReader.is_canonical thy then NONE
-            else
-              let val dat_digest = file_digest (base ^ ".dat")
-              in
-                SOME {base = base, thy = thy, hash = hash,
-                      dat_digest = dat_digest,
-                      file = module_file base_id (thy, dat_digest)}
-              end
+            case sml_header (base ^ ".sml") of
+                NONE => skip "no theory header in" sml
+              | SOME (thy, hash) =>
+                if TheoryReader.is_canonical thy then NONE
+                else
+                  case SOME (file_digest (base ^ ".dat"))
+                         handle IO.Io _ => NONE | OS.SysErr _ => NONE of
+                      NONE => skip "no readable .dat for" sml
+                    | SOME dat_digest =>
+                      SOME {base = base, thy = thy, hash = hash,
+                            dat_digest = dat_digest,
+                            file = module_file base_id (thy, dat_digest)}
           end
         fun missing (e : entry) =
           not (exists (OS.Path.concat (directory, #file e)))
