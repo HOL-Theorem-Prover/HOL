@@ -324,7 +324,7 @@ With a prefix ARG, uses `expandf' rather than `e'."
                 genvar tactic-string2 genvar))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
        (etactic-string
-        (format "HOLFLags.trace(\"Parse.show_typecheck_errors\", 0) %s (%s)"
+        (format "HOLFlags.trace(\"Parse.show_typecheck_errors\", 0) %s (%s)"
                 e-string tactic-string2))
        (region-string (with-hol-locpragma (+ start start-offset) etactic-string))
        (sender (if hol-emit-time-elapsed-p
