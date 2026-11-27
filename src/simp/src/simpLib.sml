@@ -1498,13 +1498,7 @@ fun resolve_exclusion {pending} ss original =
                         end
                     | NONE =>
                       let
-                        val excl =
-                          {original=original,
-                           pattern=munge_simpset_name original, strict=false}
-                      in
-                        if simpset_has_rule_target {pending=pending} excl ss
-                        then SOME (ExcludeRule excl)
-                        else
+                        fun other_targets () =
                           let
                             val targets =
                               (if has_looper_id (OrdinaryLooper,original) ss
@@ -1521,6 +1515,21 @@ fun resolve_exclusion {pending} ss original =
                                 NONE => no_target original
                               | target => target
                           end
+                        (* A display name such as "split.case bool" is not
+                           a rule name: it need not parse as one. *)
+                        val rule_excl =
+                          SOME {original=original,
+                                pattern=munge_simpset_name original,
+                                strict=false}
+                          handle HOL_ERR _ => NONE
+                      in
+                        case rule_excl of
+                            SOME excl =>
+                              if simpset_has_rule_target {pending=pending}
+                                                         excl ss
+                              then SOME (ExcludeRule excl)
+                              else other_targets ()
+                          | NONE => other_targets ()
                       end
   end
 
@@ -3738,7 +3747,7 @@ fun gen_global_simp_tac_with_bound traversal bound mode
                    val (invocation_ss,reducer_context) =
                      process_asm_tags ss context
                    val root_rewrite =
-                     Traverse.ROOT_REWRITE_WITH_CONTEXT
+                     Traverse.ROOT_REWRITE_WITH_CONTEXT traversal
                        (traversal_state invocation_ss)
                  in
                    SOME (root_rewrite

@@ -808,6 +808,9 @@ in
   leaves "ExclX case: excludes a datatype from split_ss"
          (SIMP_TAC (bool_ss ++ split_ss) [ExclX "case:bool"])
          ([], cond_goal) [cond_goal];
+  leaves "ExclX excludes a case split by its display name"
+         (SIMP_TAC (bool_ss ++ split_ss) [ExclX "split.case bool"])
+         ([], cond_goal) [cond_goal];
   gives "Threaded congruence rule"
         (SIMP_CONV (bool_ss ++ threaded_cong_ss [threaded])
                    [ASSUME “!y:'a. bnd y ==> (bdy y <=> bdy' y)”])

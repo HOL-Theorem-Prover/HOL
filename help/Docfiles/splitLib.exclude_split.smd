@@ -16,7 +16,7 @@ theorem itself is not deleted. Retracting a name that is not a split rule
 has no effect.
 
 To exclude a split rule from a single simplifier call, use
-`simpLib.ExclX ("split:" ^ name)`.
+`simpLib.ExclX "split:Thy$name"`.
 
 ### Failure
 

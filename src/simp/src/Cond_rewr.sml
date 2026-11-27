@@ -252,8 +252,8 @@ fun ac_term_ord(tm1,tm2) =
                  failwith "looping rewrite")
               else ()
 
-            val _ = if isperm andalso term_ord(l, r) <> GREATER andalso
-                       not bounded
+            val _ = if isperm andalso not bounded andalso
+                       term_ord(l, r) <> GREATER
                     then
                       (trace(4, IGNORE("possibly looping",conditional_eqn));
                        failwith "permutative rewr: not applied")

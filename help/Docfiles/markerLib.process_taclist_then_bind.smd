@@ -37,8 +37,8 @@ The tactic fails if a labelled assumption named by `L` is missing, if an
 
 ### Comments
 
-The simplifier's tactics use this, so that the goals a looper
-produces see the assumptions selected for the original goal.
+The simplifier's tactics use this, so that the assumptions of the goals
+a looper produces are selected in the same way as the original goal's.
 
 ### See also
 

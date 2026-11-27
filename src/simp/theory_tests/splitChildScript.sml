@@ -8,3 +8,6 @@ val _ =
                (map #1 (splitLib.named_split_thms ()))
     then ()
     else raise Fail "splitParent$bool_split is not a split rule"
+
+(* Retracted here, so not a split rule in splitGrandchild *)
+val _ = splitLib.exclude_split "splitParent.bool_split"
