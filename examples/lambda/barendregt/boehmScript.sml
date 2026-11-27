@@ -5650,11 +5650,8 @@ Proof
  >> rw [GSYM BT_ltree_paths_thm]
 QED
 
-Theorem BT_ltree_el_cases :
-    !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
-              p IN ltree_paths (BT' X M r) ==>
-             ?vs y m. ltree_el (BT' X M r) p = SOME (SOME (vs,y),SOME m)
-Proof
+(* shared proof for BT_ltree_el_cases and BT_ltree_el_cases_fromList *)
+val BT_ltree_el_cases_tactics =
     rpt GEN_TAC
  >> qid_specl_tac [‘M’, ‘r’]
  >> Induct_on ‘p’
@@ -5696,7 +5693,26 @@ Proof
  >> Q.PAT_X_ASSUM ‘M0 = _’ (REWRITE_TAC o wrap o SYM)
  >> Suff ‘M0 = M’ >- rw []
  >> qunabbrev_tac ‘M0’
- >> MATCH_MP_TAC principal_hnf_bnf >> art []
+ >> MATCH_MP_TAC principal_hnf_bnf >> art [];
+
+Theorem BT_ltree_el_cases :
+    !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
+              p IN ltree_paths (BT' X M r) ==>
+             ?vs y m. ltree_el (BT' X M r) p = SOME (SOME (vs,y),SOME m)
+Proof
+    BT_ltree_el_cases_tactics
+QED
+
+(* This theorem is a stronger version then BT_ltree_el_cases after the Boehm
+   tree infinite-expansion changes. Theorems using BT_ltree_el_cases should
+   migrate to this new theorem, if needed. -- Chun Tian, 27 nov 2026.
+ *)
+Theorem BT_ltree_el_cases_fromList :
+    !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
+              p IN ltree_paths (BT' X M r) ==>
+             ?vs y m. ltree_el (BT' X M r) p = SOME (SOME (fromList vs,y),SOME m)
+Proof
+    BT_ltree_el_cases_tactics
 QED
 
 Theorem BT_ltree_el_cases' :
@@ -6212,7 +6228,11 @@ Proof
  >> MATCH_MP_TAC BT_ltree_el_cases' >> art []
 QED
 
-TODO
+Theorem LAPPEND_fromList_SNOC[simp] :
+    !vs v. LAPPEND (fromList vs) [|v|] = fromList (SNOC v vs)
+Proof
+    rw [SNOC_APPEND, GSYM LAPPEND_fromList]
+QED
 
 (* NOTE: This lemma is not suitable for induction, because (in general),
    if “compat_closure eta N M” and M is bnf, N may have beta-redexes due
@@ -6293,6 +6313,7 @@ Proof
      simp [LNTH_EQ, LNTH_LGENLIST, LNTH_fromList, EL_MAP] \\
      STRIP_TAC \\
      Q.PAT_X_ASSUM ‘_ = a’ (simp o wrap o SYM) \\
+     simp [from_toList] \\
      Know ‘!i. i < m ==> from_rose (EL i ts) = BT' X (EL i args) (SUC r)’
      >- (rpt STRIP_TAC \\
          Q.PAT_X_ASSUM ‘!(n :num). P’ (MP_TAC o Q.SPEC ‘i’) \\
@@ -6311,7 +6332,7 @@ Proof
            (* goal 2 (of 2) *)
            Q.PAT_X_ASSUM ‘!n. (if n < m + 1 then _ else NONE) = _’
              (MP_TAC o Q.SPEC ‘m + 1’) >> simp [] ]) >> DISCH_TAC \\
-     Q.PAT_X_ASSUM ‘!n. (if n < m + 1 then _ else NONE) = _’ K_TAC \\
+     Q.PAT_X_ASSUM ‘!n. (if n < m + 1 then _ else NONE) = _’ K_TAC (* used *) \\
      Know ‘MAP rose_to_term ts = SNOC (VAR v) args’
      >- (simp [LIST_EQ_REWRITE, EL_MAP] \\
          Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
@@ -6467,9 +6488,10 @@ Proof
      qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp [])
  >> DISCH_TAC
  >> simp [ltree_el_def, LNTH_fromList, EL_MAP]
- (* applying BT_ltree_el_cases *)
- >> Know ‘?vs' y' m'. ltree_el (BT' X N (SUC r)) t = SOME (SOME (vs',y'),SOME m')’
- >- (MATCH_MP_TAC BT_ltree_el_cases \\
+ (* applying BT_ltree_el_cases_fromList *)
+ >> Know ‘?vs' y' m'. ltree_el (BT' X N (SUC r)) t =
+                      SOME (SOME (fromList vs',y'),SOME m')’
+ >- (MATCH_MP_TAC BT_ltree_el_cases_fromList \\
      simp [ltree_paths_alt_ltree_el])
  >> STRIP_TAC
  >> simp []
@@ -6477,9 +6499,10 @@ Proof
  >> Q_TAC (RNEWS_TAC (“vs1 :string list”, “r' :num”, “n1 :num”)) ‘X’
  >> simp [MAP_MAP_o, o_DEF]
  >> qabbrev_tac ‘B = BT' X N (SUC r)’
- >> qabbrev_tac ‘f = OPTION_MAP (\(vs,(y :string)). (SNOC (LAST vs1) vs,y))’
+ >> qabbrev_tac ‘f = OPTION_MAP (λ(vs,(y :string)). (LAPPEND vs [|LAST vs1|],y))’
  (* applying ltree_insert_CONS *)
- >> qmatch_abbrev_tac ‘ltree_insert f (Branch a' ts') (h::t) t0 = Branch a _ ==> _’
+ >> qmatch_abbrev_tac
+     ‘ltree_insert f (Branch a' ts') (h::t) t0 = Branch a _ ==> _’
  >> MP_TAC (Q.SPECL [‘f’, ‘a'’, ‘ts'’, ‘h’, ‘t’, ‘B’, ‘t0’]
                     (INST_TYPE [alpha |-> “:BT_node”] ltree_insert_CONS))
  >> impl_tac >- simp [Abbr ‘ts'’, LNTH_fromList, EL_MAP]
@@ -6487,6 +6510,7 @@ Proof
  >> simp [Abbr ‘ts'’, LLENGTH_fromList, LNTH_fromList, Abbr ‘a'’]
  >> STRIP_TAC
  >> Q.PAT_X_ASSUM ‘_ = a’ (simp o wrap o SYM)
+ >> simp [from_toList]
  >> POP_ASSUM MP_TAC (* LGENLIST _ = fromList (MAP from_rose ts) *)
  >> simp [LNTH_EQ, LNTH_fromList, LNTH_LGENLIST]
  >> DISCH_TAC
@@ -6690,7 +6714,7 @@ Theorem ltree_paths_BT_expand :
 Proof
     rw [BT_expand_def]
  >> qabbrev_tac ‘r' = r + LENGTH p’
- >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘p’, ‘r’] BT_ltree_el_cases) >> rw []
+ >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘p’, ‘r’] BT_ltree_el_cases_fromList) >> rw []
  >> simp [] (* this simp after rw does beta-reduction on paired variables *)
  >> qabbrev_tac ‘n = LENGTH vs’
  >> Q_TAC (RNEWS_TAC (“vs' :string list”, “r' :num”, “SUC n”)) ‘X’
@@ -6699,7 +6723,7 @@ Proof
    ‘ltree_paths (ltree_insert f (BT' X M r) p (BT_VAR v)) = _’
  >> qabbrev_tac ‘t0 = BT_VAR v’
  >> qabbrev_tac ‘t = BT' X M r’
- >> qabbrev_tac ‘a = SOME (vs,y)’
+ >> qabbrev_tac ‘a = SOME (fromList vs,y)’
  (* applying ltree_insert_paths *)
  >> MP_TAC (Q.SPECL [‘f’, ‘p’, ‘t’, ‘m’, ‘t0’]
                     (INST_TYPE [alpha |-> “:BT_node”] ltree_insert_paths))
@@ -6980,13 +7004,16 @@ QED
    NOTE: For ‘y1 = y2’ to be meaningful, here we assumed that vs1 and vs2
    share the same prefix, i.e. either vs1 <<= vs2 or vs2 <<= vs1. In reality,
    we have ‘vs1 = RNEWS r n1 X /\ vs2 = RNEWS r n2 X’ for some X and r.
+
+   NOTE: After the BT-infinite-expansion changes, vs1 and vs2 become llist.
  *)
 Definition head_equivalent_def :
     head_equivalent ((a1,m1) :BT_node # num option)
                     ((a2,m2) :BT_node # num option) =
     case (a1,a2) of
       (SOME (vs1,y1),SOME (vs2,y2)) =>
-       y1 = y2 /\ LENGTH vs1 + THE m2 = LENGTH vs2 + THE m1
+       y1 = y2 /\
+       THE (LLENGTH vs1) + THE m2 = THE (LLENGTH vs2) + THE m1
     | (SOME _,NONE) => F
     | (NONE,SOME _) => F
     | (NONE,NONE)   => T
