@@ -88,7 +88,8 @@ filter, number of facts, TPTP format, type encoding, and lambda
 translation.  The first 16 slices select premises by kNN; the last eight
 use MePo, MaSh, and MeSh.  The slices use FOF and typed `tx0`, `tx0-`,
 `th0`, and `th1` problems.  `slices` caps the number of slices (0, the
-default, runs them all) and `max_facts` the facts per slice.
+default, means 24 per core, enough for all of them) and `max_facts` the
+facts per slice.
 
 `filter`, `format`, `type_enc`, and `lam_trans` override the choice of every
 slice; empty, the default, keeps each slice's own.

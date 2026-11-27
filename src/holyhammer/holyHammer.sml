@@ -128,8 +128,16 @@ fun options_for caller provers =
 fun announce instruction (suggestion : hhSchedule.suggestion) =
   print_endline ("\n" ^ instruction ^ "\n  " ^ #stac suggestion)
 
+fun has_boolty x = type_of x = bool
+fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
+
+fun check_bool caller goal =
+  if has_boolty_goal goal then ()
+  else raise ERR caller "a term is not of type bool"
+
 fun hh_pb directory provers premises goal =
   let
+    val _ = check_bool "hh_pb" goal
     val options = options_for "hh_pb" provers
     val schedule = hhSlice.mk_schedule options
     val suggestion = run_schedule "hh_pb" directory options
@@ -158,23 +166,27 @@ fun main_hh_lemmas directory thmdata goal =
                    (Context.snapshot ())))
   handle HOL_ERR _ => NONE
 
-fun has_boolty x = type_of x = bool
-fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
-
 (* The lists the provers find are replayed in ctxt, the context of the
    proof hh is called from. *)
 fun hh_suggestion goal ctxt =
-  if not (has_boolty_goal goal) then
-    raise ERR "hh_goal" "a term is not of type bool"
-  else
-    let val thmdata = quiet_create_thmdata () in
-      main_hh_result "main_hh" (workdir ()) thmdata goal ctxt
-    end
+  let
+    val _ = check_bool "hh" goal
+    val thmdata = quiet_create_thmdata ()
+  in
+    main_hh_result "main_hh" (workdir ()) thmdata goal ctxt
+  end
 
-(* The context is the caller's, taken before the fork. *)
+(* The context is the caller's, taken before the fork.  The thread
+   prints the outcome itself: nothing receives its result or its
+   exception. *)
 fun hh_fork goal =
-  let val ctxt = Context.snapshot () in
-    Thread.fork (fn () => ignore (hh_suggestion goal ctxt), attrib)
+  let
+    val ctxt = Context.snapshot ()
+    fun search () =
+      announce "Prove the goal with:" (hh_suggestion goal ctxt)
+      handle e as HOL_ERR _ => print_endline (Feedback.exn_to_string e)
+  in
+    Thread.fork (search, attrib)
   end
 
 fun hh goal ctxt =

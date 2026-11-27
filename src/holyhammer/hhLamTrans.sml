@@ -140,7 +140,8 @@ struct
           let
             val (var, matrix) = dest_abs body
             val matrix' =
-              if type_of matrix = Type.bool then formula matrix else term matrix
+              if type_of matrix = Type.bool then formula matrix
+              else term matrix
           in
             if is_comb matrix' andalso aconv (rand matrix') var andalso
                not (var_occurs var (rator matrix')) then term (rator matrix')

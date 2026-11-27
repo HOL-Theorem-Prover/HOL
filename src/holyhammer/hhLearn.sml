@@ -114,7 +114,8 @@ fun idf_of ({weights, ...} : idf_table) feature =
   Redblackmap.peek (weights, feature)
 
 (* Ranking can expand the fetchable subset, but training needs the original
-   proof's completeness and size before any missing dependencies are removed. *)
+   proof's completeness and size before any missing dependencies are
+   removed. *)
 type dep_info =
   {fetchable : mlThmData.thmid list, intact : bool, count : int}
 type dep_table = (mlThmData.thmid, dep_info) Redblackmap.dict
@@ -456,7 +457,8 @@ fun train_nb_indexed constants idf dependencies facts indices =
 
 fun train_nb constants idf dependencies facts =
   (validate_training idf facts;
-   train_nb_indexed constants idf dependencies facts (index_facts #thmid facts))
+   train_nb_indexed constants idf dependencies facts
+     (index_facts #thmid facts))
 
 (* A theorem with hypotheses is no premise: exporters would state its
    conclusion unconditionally (or discharged), and Metis replay cites it
@@ -818,7 +820,8 @@ fun make_context_for theorem_of current (thmdata as (_, facts))
     val model = Susp.delay (fn () =>
       train_nb_indexed default_constants (create_idf_table model_facts)
         dependencies (map fact_info training_facts) indices)
-    val conclusions = map (fn (thmid, _, concl, _) => (thmid, concl)) candidates
+    val conclusions =
+      map (fn (thmid, _, concl, _) => (thmid, concl)) candidates
     val fact_key = Susp.delay (fn () => proposition_key conclusions)
     val unknown =
       case training of
@@ -943,7 +946,8 @@ fun suggestion_limit max_facts =
 
 fun nb_predict model pool features n =
   nb_rank model {pool = pool, n = n, goal_features =
-    map (fn feature => (feature, #unit_weight default_constants)) (features ())}
+    map (fn feature => (feature, #unit_weight default_constants))
+      (features ())}
 
 fun knn_predict thmdata features n =
   mlNearestNeighbor.thmknn thmdata n (features ())

@@ -59,7 +59,6 @@ sig
   val remove_quietly : string -> unit
   val directory_names : string -> string list
   val trim : string -> string
-  val trim_left : string -> string
   val valid_filter : string -> bool
 
   (* HOL4_HAMMER_DIR, else ~/.hol4/hammer; created if missing. *)

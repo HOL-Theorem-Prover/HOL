@@ -19,6 +19,8 @@ ifdef HOLSELFTESTLEVEL
 all: selftest.log
 
 selftest.log: selftest.exe
-	$(tee (d=$$(mktemp -d); HOL4_HAMMER_DIR=$$d HOL4_SCRATCH=$$d/scratch ./selftest.exe 2>&1; s=$$?; rm -rf $$d; exit $$s),$@)
+	$(tee (d=$$(mktemp -d); \
+	       HOL4_HAMMER_DIR=$$d HOL4_SCRATCH=$$d/scratch ./selftest.exe 2>&1; \
+	       s=$$?; rm -rf $$d; exit $$s),$@)
 
 endif

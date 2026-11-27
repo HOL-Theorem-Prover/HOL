@@ -33,7 +33,8 @@ List.app show_prover (hhProver.all ());
     z3: /home/user/.opam/default/bin/z3_tptp (4.11.2.0, tested)
 
     "tested" means the version is one HolyHammer's output parsers were
-    tested against.  z3 is supported but not in the default prover list. *)
+    tested against.  z3 has no slices, so hh never runs it; it is not in
+    the default prover list. *)
 
 (* -------------------------------------------------------------------------
    2. The current settings

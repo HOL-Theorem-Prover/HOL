@@ -131,7 +131,9 @@ struct
                case TypeBase.fetch current of
                    NONE => false
                  | SOME info =>
-                     let val constructors = TypeBasePure.constructors_of info in
+                     let
+                       val constructors = TypeBasePure.constructors_of info
+                     in
                        length constructors >= 2 orelse
                        List.exists (fn constructor =>
                          List.exists (at_least_two seen)
@@ -165,17 +167,11 @@ struct
       infinite [] ty
     end
 
-  fun is_fequal_head head =
-    let
-      val name =
-        if is_const head then fst (dest_const head)
-        else if is_var head then fst (dest_var head)
-        else ""
-    in
-      name = "fequal" orelse name = "pxy.eq"
-    end
+  fun is_eq_proxy_head head =
+    (is_const head andalso fst (dest_const head) = "pxy.eq") orelse
+    (is_var head andalso fst (dest_var head) = "pxy.eq")
 
-  fun types_needing_encoding formulas =
+  fun types_needing_encoding {conjecture, facts} =
     let
       fun insert_type ty (state as (seen, types)) =
         if Redblackset.member (seen, ty) then state
@@ -188,7 +184,7 @@ struct
         let
           val (head, args) = strip_comb tm
           val types =
-            if is_fequal_head head then
+            if is_eq_proxy_head head then
               List.foldl (fn (arg, result) =>
                 if is_universal arg vars then insert_type (type_of arg) result
                 else result) types args
@@ -197,48 +193,52 @@ struct
           List.foldl (fn (arg, result) => scan_term vars arg result) types args
         end
 
-      fun scan_formula vars positive tm types =
-        if is_forall tm then
-          let val (var, body) = dest_forall tm in
-            scan_formula (var :: vars) positive body types
-          end
-        else if is_exists tm then
-          let val (_, body) = dest_exists tm in
-            scan_formula vars positive body types
+      (* polarity: SOME true positive, SOME false negative, NONE unknown;
+         a quantifier binds a possibly universal variable unless its
+         polarity makes it existential. *)
+      fun scan_formula vars polarity tm types =
+        if is_forall tm orelse is_exists tm then
+          let
+            val (var, body) =
+              if is_forall tm then dest_forall tm else dest_exists tm
+            val existential = SOME (is_exists tm) = polarity
+          in
+            scan_formula (if existential then vars else var :: vars)
+              polarity body types
           end
         else if is_neg tm then
-          scan_formula vars (not positive) (dest_neg tm) types
+          scan_formula vars (Option.map not polarity) (dest_neg tm) types
         else if is_imp_only tm then
           let val (left, right) = dest_imp tm in
-            scan_formula vars (not positive) left
-              (scan_formula vars positive right types)
+            scan_formula vars (Option.map not polarity) left
+              (scan_formula vars polarity right types)
           end
         else if is_conj tm orelse is_disj tm then
-          scan_formula vars positive (lhand tm)
-            (scan_formula vars positive (rand tm) types)
+          scan_formula vars polarity (lhand tm)
+            (scan_formula vars polarity (rand tm) types)
+        else if is_eq tm andalso is_bool (type_of (lhand tm)) then
+          scan_formula vars NONE (lhand tm)
+            (scan_formula vars NONE (rand tm) types)
         else if is_eq tm then
           let
             val (left, right) = dest_eq tm
-            val types =
-              if positive andalso is_universal left vars then
-                insert_type (type_of left) types
-              else types
-            val types =
-              if positive andalso is_universal right vars then
-                insert_type (type_of right) types
+            fun add side types =
+              if polarity <> SOME false andalso is_universal side vars then
+                insert_type (type_of side) types
               else types
           in
-            scan_term vars left (scan_term vars right types)
+            scan_term vars left
+              (scan_term vars right (add right (add left types)))
           end
         else scan_term vars tm types
 
-      fun scan_one tm types =
-        scan_formula (free_vars_lr tm) true tm types
-
+      (* The free variables of a fact are universal; those of the
+         conjecture become constants when the prover negates it. *)
+      val initial = insert_type Type.bool (Redblackset.empty Type.compare, [])
       val (_, maybe_nonmono) =
-        List.foldl (fn (formula, types) => scan_one formula types)
-          (insert_type Type.bool (Redblackset.empty Type.compare, []))
-          formulas
+        List.foldl (fn (fact, types) =>
+            scan_formula (free_vars_lr fact) (SOME true) fact types)
+          (scan_formula [] (SOME false) conjecture initial) facts
     in
       List.filter (not o surely_infinite) (rev maybe_nonmono)
     end

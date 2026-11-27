@@ -780,12 +780,9 @@ fun json_corpus_entry {thy, theorem_count, dep_stamp} =
      ("theorem_count", json_int theorem_count),
      ("dep_stamp", JSON.STRING dep_stamp)]
 
-(* The effective options, passed on to the worker processes, except a
-   default mono_instances. *)
+(* The effective options, passed on to the worker processes. *)
 fun eval_hammer_options () =
-  List.mapPartial (fn (key, value, source) =>
-    if key = "mono_instances" andalso source = "default" then NONE
-    else SOME (key, value)) (hhConfig.hh_params ())
+  map (fn (key, value, _) => (key, value)) (hhConfig.hh_params ())
 
 fun json_hammer_options () =
   JSON.OBJECT (map (fn (key, value) => (key, JSON.STRING value))
@@ -2039,7 +2036,8 @@ fun remove_evalscript expdir thy =
 fun write_evalscript expdir thy conditions sample =
   let
     val path = evalscript_path expdir thy
-    val conditions_text = String.concatWith ", " (map condition_text conditions)
+    val conditions_text =
+      String.concatWith ", " (map condition_text conditions)
     val hammer_settings = String.concat (map (fn (key, value) =>
       "val _ = hhConfig.hh_set (" ^ Portable.mlquote key ^ ", " ^
       Portable.mlquote value ^ ");\n") (eval_hammer_options ()))

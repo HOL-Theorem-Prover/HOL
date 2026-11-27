@@ -165,9 +165,6 @@ fun state_dir () =
     dir
   end
 
-fun trim_left s =
-  Substring.string (Substring.dropl Char.isSpace (Substring.full s))
-
 fun trim s =
   Substring.string (Substring.dropr Char.isSpace
     (Substring.dropl Char.isSpace (Substring.full s)))
@@ -450,10 +447,7 @@ fun get key =
   let val _ = remember key
   in Option.map #1 (value_with_source key) end
 
-fun get_int key =
-  case get key of
-      NONE => NONE
-    | SOME value => Int.fromString (trim value)
+fun get_int key = Option.mapPartial int_value (get key)
 
 fun get_bool key = Option.mapPartial bool_value (get key)
 

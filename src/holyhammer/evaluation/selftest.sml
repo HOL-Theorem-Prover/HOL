@@ -455,9 +455,9 @@ fun test_hhEval root =
     val default_script = hhEval.write_evalscript expdir "list" [condition] 7
     val _ = expect "worker script preserves the default monomorph cap"
       (case #mono_instances (hhConfig.snapshot ()) of
-           NONE => not (String.isSubstring
-             "hhConfig.hh_set (\"mono_instances\""
-             (read_text default_script))
+           NONE => String.isSubstring
+             "hhConfig.hh_set (\"mono_instances\", \"\");"
+             (read_text default_script)
          | SOME _ => true)
     val _ = expect "worker script is beside its theory"
       (OS.Path.dir script = join src "one" andalso
@@ -831,23 +831,19 @@ fun test_hhEval_integration () =
           ()
         end
     | NONE =>
-        (case hhProver.probe (hhProver.config_of Eprover) of
-             NONE => (tprint "hhEval integration (skipped: e absent)"; OK ())
-           | SOME _ =>
-               (tprint
-                  "hhEval integration (skipped: set HHEVAL_INTEGRATION_TEST)";
-                OK ()))
+        (tprint "hhEval integration (skipped: set HHEVAL_INTEGRATION_TEST)";
+         OK ())
 
 fun test_hhEval_pool_restriction () =
   let
     val pool = ["kept", "other", "kept"]
     val features =
       [("absent", [0]), ("kept", [1]), ("other", [2]), ("tail", [3])]
-    fun old_restrict rows = List.filter (fn (name, _) =>
+    fun restrict rows = List.filter (fn (name, _) =>
       List.exists (fn allowed => allowed = name) pool) rows
   in
-    expect "hhEval set pool restriction preserves old rows and order"
-      (hhEval.restrict_features_to_pool pool features = old_restrict features)
+    expect "hhEval set pool restriction keeps the pool's rows in order"
+      (hhEval.restrict_features_to_pool pool features = restrict features)
   end
 
 fun test_hhEval_chainy_pools () =

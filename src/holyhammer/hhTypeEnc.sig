@@ -35,14 +35,16 @@ sig
   val surely_infinite : hol_type -> bool
 
   (* The distinct types that mono_guards?? guards: bool and the types of
-     possibly universal naked variables in positive equations or as
-     arguments of an equality proxy (an application headed by a constant
-     or variable named fequal or pxy.eq), except types proved infinite by
-     surely_infinite.  The inputs are HOL formulas after lambda handling
-     and monomorphization: universal quantifiers are boolSyntax.mk_forall
-     and equality is boolSyntax.mk_eq.  Free variables are treated as
-     implicitly universal.  The generator passes its complete formula list
-     in one call. *)
-  val types_needing_encoding : term list -> hol_type list
+     possibly universal naked variables in equations that are not
+     negative, or as arguments of the equality proxy (an application
+     headed by a constant or variable named pxy.eq), except types proved
+     infinite by surely_infinite.  As in Sledgehammer, a variable is
+     possibly universal when it is free in a fact or bound by a
+     quantifier that is universal once the conjecture is negated or whose
+     polarity is unknown (under an iff), and an equation under an iff has
+     unknown polarity.  The inputs are HOL formulas after lambda handling
+     and monomorphization: the conjecture and every fact of the problem. *)
+  val types_needing_encoding :
+    {conjecture : term, facts : term list} -> hol_type list
 
 end

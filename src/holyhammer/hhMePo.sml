@@ -5,9 +5,10 @@
 (* PORTED FROM   : Isabelle's sledgehammer_mepo.ML, faithfully.  The caches  *)
 (*                 of facts and weights and the restriction of a context are *)
 (*                 new.  Only the simp and local stature bonuses apply, the  *)
-(*                 goal's assumptions stand for the chained facts, and a     *)
-(*                 goal without ordinary constants falls back to those of    *)
-(*                 the current theory's facts.                               *)
+(*                 goal's assumptions stand for the chained facts, a goal    *)
+(*                 without ordinary constants falls back to those of the     *)
+(*                 current theory's facts, and the theory pseudo-constant is *)
+(*                 added even when both theory weights of the fudge are 0.   *)
 (* ========================================================================= *)
 
 structure hhMePo :> hhMePo =
@@ -696,7 +697,8 @@ fun create_deferred_context_from_conclusions current conclusions =
   end
 
 fun create_context_from_conclusions current conclusions =
-  prepare_context (create_deferred_context_from_conclusions current conclusions)
+  prepare_context
+    (create_deferred_context_from_conclusions current conclusions)
 
 fun create_context_for current (_, thm_features) statures =
   let
@@ -707,7 +709,8 @@ fun create_context_for current (_, thm_features) statures =
                   hhStature.stature_of statures thmid)
         | _ => NONE
   in
-    create_context_from_conclusions current (List.mapPartial fetch thm_features)
+    create_context_from_conclusions current
+      (List.mapPartial fetch thm_features)
   end
 
 fun create_context thmdata statures =
@@ -841,7 +844,8 @@ fun insert_special_facts _ _ [] _ accepted = accepted
       if null wanted then accepted
       else
         let
-          val add = first_test_n (wanted_thmid o #thmid) max_facts special_facts
+          val add =
+            first_test_n (wanted_thmid o #thmid) max_facts special_facts
           val without = List.filter (not o wanted_thmid o #thmid) accepted
           val trimmed = take (max_facts - length add) without
           val (prefix, after) = split_at (#special_fact_index fudge) trimmed

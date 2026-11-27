@@ -252,7 +252,8 @@ struct
               in
                 if null args then head'
                 else if Portable.pointer_eq (head, head') andalso
-                        ListPair.allEq Portable.pointer_eq (args, args') then tm
+                        ListPair.allEq Portable.pointer_eq (args, args')
+                then tm
                 else rebuild head' args'
               end
           | SOME (name, card, builtin) =>
@@ -332,10 +333,6 @@ struct
     end
   fun is_symbol tm = is_const tm orelse is_generated_var tm
 
-  (* Heads are constants or variables, for which Term.compare is EQUAL
-     exactly when they are aconv. *)
-  val same_head = aconv
-
   (* Collect unique items in reverse order of first occurrence. *)
   fun collect_once item (state as (seen, firsts)) =
     if Redblackset.member (seen, item) then state
@@ -358,7 +355,8 @@ struct
         (add_head head (length args) table) args
     end
 
-  fun heads_of_formula (HQuant (_, _, body)) table = heads_of_formula body table
+  fun heads_of_formula (HQuant (_, _, body)) table =
+        heads_of_formula body table
     | heads_of_formula (HConn (_, bodies)) table =
         List.foldl (fn (body, result) => heads_of_formula body result)
           table bodies
@@ -377,17 +375,15 @@ struct
 
   fun min_arity var_types (head, ordinary) =
     let
-      fun lower count best ty =
-        if count >= ordinary then best
+      fun lower count ty =
+        if count >= ordinary orelse Redblackset.member (var_types, ty) then
+          count
         else
           case dom_rng ty of
-              NONE => best
-            | SOME (_, range) =>
-                lower (count + 1)
-                  (if Redblackset.member (var_types, ty) then count else best)
-                  range
+              NONE => ordinary
+            | SOME (_, range) => lower (count + 1) range
     in
-      lower 0 ordinary (type_of head)
+      lower 0 (type_of head)
     end
 
   fun raw_symbol head =
@@ -440,8 +436,8 @@ struct
     end
 
   (* Pass 6.  Sufficient_App_Op (min_arity) lowers a symbol's direct arity
-     to that of its longest partial application whose type is a quantified
-     variable's, so that the variable can stand for it.  As in
+     to that of its shortest partial application whose type is a
+     quantified variable's, so that the variable can stand for it.  As in
      Sledgehammer, poly_native problems of 45 facts or more use Min_App_Op
      instead: a symbol keeps the fewest arguments it occurs with. *)
   fun uses_variable_types (hhTypeEnc.Native {poly = true, ...}) nfacts =
@@ -737,7 +733,8 @@ struct
         if Thy = "min" andalso Tyop = "fun" then
           (case Args of
                [domain, range] => hhTptpProblem.TyFun
-                 (mono_higher_type mangle domain, mono_higher_type mangle range)
+                 (mono_higher_type mangle domain,
+                  mono_higher_type mangle range)
              | _ => fail "malformed function type")
         else if Thy = "min" andalso Tyop = "bool" then
           hhTptpProblem.TyCon ("$o", [])
@@ -815,7 +812,8 @@ struct
 
   fun encoded_symbol encoding head =
     let val name = raw_symbol head in
-      if is_var head andalso not (is_generated_var head) then variable_name name
+      if is_var head andalso not (is_generated_var head) then
+        variable_name name
       else if name = "$true" orelse name = "$false" orelse name = "$equal" then
         name
       else
@@ -960,7 +958,8 @@ struct
 
   fun guarded_type
       (hhTypeEnc.Guards {level = hhTypeEnc.AllTypes, ...}) _ _ = true
-    | guarded_type (hhTypeEnc.Guards {level = hhTypeEnc.NonmonoNonUniform, ...})
+    | guarded_type
+        (hhTypeEnc.Guards {level = hhTypeEnc.NonmonoNonUniform, ...})
         needs ty = Redblackset.member (needs, ty)
     | guarded_type _ _ _ = false
 
@@ -1026,7 +1025,8 @@ struct
     | heads_of_fo_term (FOApp {left, right, ...}, heads) =
         heads_of_fo_term (right, heads_of_fo_term (left, heads))
     | heads_of_fo_term (FOPred body, heads) = heads_of_fo_term (body, heads)
-    | heads_of_fo_term (FOAbs (_, body), heads) = heads_of_fo_term (body, heads)
+    | heads_of_fo_term (FOAbs (_, body), heads) =
+        heads_of_fo_term (body, heads)
   fun heads_of_fo_formula (FOQuant (_, _, body), heads) =
         heads_of_fo_formula (body, heads)
     | heads_of_fo_formula (FOConn (_, bodies), heads) =
@@ -1053,7 +1053,8 @@ struct
           hhTypeEnc.Native {poly = true, ...} =>
             let val vars = Type.type_vars full_type in
               if null vars then ty else hhTptpProblem.TyPi
-                (map (fn var => "A" ^ aiLib.escape (dest_vartype var)) vars, ty)
+                (map (fn var => "A" ^ aiLib.escape (dest_vartype var)) vars,
+                 ty)
             end
         | _ => ty
     end
@@ -1426,7 +1427,8 @@ struct
             val heads = List.foldl heads_of_fo_formula
               (Redblackset.empty Term.compare, []) all_formulas
             val heads = rev (#2 (List.foldl
-              (fn (head, state) => collect_once head state) heads bool_proxies))
+              (fn (head, state) => collect_once head state) heads
+              bool_proxies))
           in
             unique_symbols (List.filter declared heads)
               (Redblackset.empty String.compare)
@@ -1553,9 +1555,9 @@ struct
   fun needs_input encoding main_terms helpers =
     case encoding of
         hhTypeEnc.Guards {level = hhTypeEnc.NonmonoNonUniform, ...} =>
-          #conjecture main_terms ::
-          map #2 (#facts main_terms @ helpers)
-      | _ => []
+          SOME {conjecture = #conjecture main_terms,
+                facts = map #2 (#facts main_terms @ helpers)}
+      | _ => NONE
 
   (* The problem after the lambda pass: the caller-side work runs at once
      and the function returned is the tail (see prepare_pb in the
@@ -1710,9 +1712,9 @@ struct
           val final_fo = final_firstorder ()
           val needs =
             case needs_terms of
-                [] => Redblackset.empty Type.compare
-              | _ => Redblackset.fromList Type.compare
-                  (hhTypeEnc.types_needing_encoding needs_terms)
+                NONE => Redblackset.empty Type.compare
+              | SOME terms => Redblackset.fromList Type.compare
+                  (hhTypeEnc.types_needing_encoding terms)
         in
           generated_problem format type_enc needs final_fo
             (pp_helpers (#used_pp final_fo))
@@ -1723,20 +1725,28 @@ struct
 
   fun force_tail tail = tail () handle exn => raise describe_failure exn
 
+  (* The lambda pass, by lambda unless combs with a monomorphic encoding
+     needs the problem monomorphized first, and whether it was (if not,
+     make_problem monomorphizes the result). *)
+  fun lambda_stage lambda
+      ({format, type_enc, lam_trans, mono_iters, mono_instances}
+       : problem_options) simplified =
+    if lam_trans = hhLamTrans.Combs andalso is_monomorphic type_enc then
+      (true,
+       pass_lambda format lam_trans
+         (pass_monomorph type_enc
+            {max_iters = mono_iters, max_new_instances = mono_instances}
+            simplified))
+    else (false, lambda simplified)
+
   fun generate_problem options terms =
     let
-      val {format, type_enc, lam_trans, mono_iters, mono_instances} = options
-      val simplified = presimp format terms
-      val pre_mono =
-        lam_trans = hhLamTrans.Combs andalso is_monomorphic type_enc
-      val lambda_input = if pre_mono then
-        pass_monomorph type_enc
-          {max_iters = mono_iters, max_new_instances = mono_instances}
-          simplified
-        else simplified
+      val {format, lam_trans, ...} = options
+      val (pre_mono, lambda_terms) =
+        lambda_stage (pass_lambda format lam_trans) options
+          (presimp format terms)
     in
-      force_tail (make_problem pre_mono options
-        (pass_lambda format lam_trans lambda_input))
+      force_tail (make_problem pre_mono options lambda_terms)
     end
 
   type export_memo =
@@ -1813,18 +1823,10 @@ struct
 
   fun prepare_pb memo options input =
     let
-      val simplified = memoized_presimp memo (#format options) input
-      val {type_enc, lam_trans, mono_iters, mono_instances, ...} = options
-      val pre_mono =
-        lam_trans = hhLamTrans.Combs andalso is_monomorphic type_enc
-      val lambda_input = if pre_mono then
-        pass_monomorph type_enc
-          {max_iters = mono_iters, max_new_instances = mono_instances}
-          simplified
-        else simplified
-      val lambda_terms = if pre_mono then
-        pass_lambda (#format options) lam_trans lambda_input
-        else memoized_lambda memo (#format options) lam_trans lambda_input
+      val {format, lam_trans, ...} = options
+      val (pre_mono, lambda_terms) =
+        lambda_stage (memoized_lambda memo format lam_trans) options
+          (memoized_presimp memo format input)
     in
       make_problem pre_mono options lambda_terms
     end

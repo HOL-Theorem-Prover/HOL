@@ -375,7 +375,7 @@ fof_export_pb hh_dir (cj,namethml);
 fun fof_export_goal file (axl,cj) =
   let
     val _ = if not (all (fn x => type_of x = bool) (cj :: axl))
-            then raise ERR "fof_export_pbtm" "not of type bool"
+            then raise ERR "fof_export_goal" "not of type bool"
             else ()
     fun f i k = (k,"axiom" ^ its i)
     val axlnamed = mapi f axl

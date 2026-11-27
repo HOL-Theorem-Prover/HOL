@@ -94,7 +94,8 @@ fun metis_avail () = quse_string "val _ = metisTools.METIS_TAC;"
 fun import_hh_value slot name f time =
   if metis_avail () andalso quse_string "load \"holyHammer\"" then
     read_slot slot name
-      ("(holyHammer.set_timeout " ^ its time ^ "; holyHammer." ^ f ^ ")")
+      ("(hhConfig.hh_set (\"timeout\", \"" ^ its time ^ "\"); " ^
+       "holyHammer." ^ f ^ ")")
   else NONE
 
 fun import_hh () =

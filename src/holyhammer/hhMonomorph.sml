@@ -55,7 +55,8 @@ struct
         case Type.compare (ty, old) of
             LESS => SOME (ty :: types)
           | EQUAL => NONE
-          | GREATER => Option.map (fn tail => old :: tail) (insert_type ty rest)
+          | GREATER =>
+              Option.map (fn tail => old :: tail) (insert_type ty rest)
 
   fun lookup name table =
     Option.getOpt (Redblackmap.peek (table, name), [])
@@ -256,7 +257,9 @@ struct
               val types = case Redblackmap.peek (!indexed, name) of
                   SOME types => types
                 | NONE =>
-                    let val types = Redblackset.fromList Type.compare grounds in
+                    let
+                      val types = Redblackset.fromList Type.compare grounds
+                    in
                       indexed := Redblackmap.insert (!indexed, name, types);
                       types
                     end

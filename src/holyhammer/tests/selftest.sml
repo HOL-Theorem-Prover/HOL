@@ -82,6 +82,7 @@ fun test_child root =
       "# user configuration\n\
       \priority = user # comments are ignored\n\
       \integer = 42\n\
+      \integer.junk = 12abc\n\
       \enabled = YeS\n\
       \path.value = ~/.fixture\n\
       \plain = key = value\n\
@@ -102,7 +103,8 @@ fun test_child root =
     val _ = expect "system configuration"
       (is_some "system only" (hhConfig.get "system.only"))
     val _ = expect "integer configuration"
-      (hhConfig.get_int "integer" = SOME 42)
+      (hhConfig.get_int "integer" = SOME 42 andalso
+       hhConfig.get_int "integer.junk" = NONE)
     val _ = expect "Boolean configuration"
       (hhConfig.get_bool "enabled" = SOME true)
     val _ = expect "path configuration"
@@ -315,6 +317,15 @@ fun test_child root =
       (List.exists (fn (key, value) =>
          key = "priority" andalso String.isPrefix "config: " value)
        (hhConfig.dump ()))
+    val not_bool = Term.mk_var ("n", Type.alpha)
+    fun rejects_not_bool call =
+      case hh_error call of
+          SOME text => contains "not of type bool" text
+        | NONE => false
+    val _ = expect "hh_pb and holyhammer reject a goal that is not bool"
+      (rejects_not_bool (fn () =>
+         ignore (holyHammer.hh_pb "" [Eprover] [] ([], not_bool))) andalso
+       rejects_not_bool (fn () => ignore (holyHammer.holyhammer not_bool)))
     val (message, printed) = capture_stdout (fn () =>
       hh_error (fn () =>
         ignore (holyHammer.hh_pb "" [Zipperposition] [] ([], boolSyntax.T))))
@@ -704,33 +715,59 @@ fun test_hhTypeEnc () =
     val x = Term.mk_var ("X", one_ty)
     val n = Term.mk_var ("N", num_ty)
     val p = Term.mk_var ("P", Type.mk_type ("fun", [one_ty, Type.bool]))
-    val fequal = Term.mk_var ("fequal",
+    val eq_proxy = Term.mk_var ("pxy.eq",
       Type.mk_type ("fun", [one_ty,
         Type.mk_type ("fun", [one_ty, Type.bool])]))
     val naked = boolSyntax.mk_forall (x, boolSyntax.mk_eq (x, x))
     val guarded = boolSyntax.mk_forall (x, Term.mk_comb (p, x))
     val negative = boolSyntax.mk_forall (x,
       boolSyntax.mk_neg (boolSyntax.mk_eq (x, x)))
-    val fequal_formula = boolSyntax.mk_forall (x,
-      Term.list_mk_comb (fequal, [x, x]))
+    val proxy_formula = boolSyntax.mk_forall (x,
+      Term.list_mk_comb (eq_proxy, [x, x]))
     val infinite_naked = boolSyntax.mk_forall (n, boolSyntax.mk_eq (n, n))
+    fun needing facts =
+      types_needing_encoding {conjecture = boolSyntax.T, facts = facts}
+    fun needing_conjecture conjecture =
+      types_needing_encoding {conjecture = conjecture, facts = []}
     val _ = expect "monotonicity calculus finds naked variables"
-      (same_types [Type.bool, one_ty] (types_needing_encoding [naked]))
+      (same_types [Type.bool, one_ty] (needing [naked]))
     val _ = expect
       "monotonicity calculus ignores guarded and negative variables"
       (same_types [Type.bool]
-        (types_needing_encoding [guarded, negative, infinite_naked]))
-    val _ = expect "monotonicity calculus finds fequal variables"
+        (needing [guarded, negative, infinite_naked]))
+    val _ = expect "monotonicity calculus finds equality proxy variables"
+      (same_types [Type.bool, one_ty] (needing [proxy_formula]))
+    (* The prover refutes the negated conjecture: ?x. x <> c becomes the
+       universal equation !x. x = c, and !x. x <> c the existential
+       ?x. x = c. *)
+    val c = Term.mk_thy_const {Thy = "one", Name = "one", Ty = one_ty}
+    val distinct_witness =
+      boolSyntax.mk_exists (x, boolSyntax.mk_neg (boolSyntax.mk_eq (x, c)))
+    val _ = expect "monotonicity calculus negates the conjecture"
+      (same_types [Type.bool, one_ty] (needing_conjecture distinct_witness)
+       andalso
+       same_types [Type.bool]
+         (needing_conjecture (boolSyntax.mk_forall (x,
+            boolSyntax.mk_neg (boolSyntax.mk_eq (x, c))))))
+    val _ = expect
+      "monotonicity calculus finds variables of negated existentials"
       (same_types [Type.bool, one_ty]
-        (types_needing_encoding [fequal_formula]))
+         (needing [boolSyntax.mk_neg distinct_witness]) andalso
+       same_types [Type.bool]
+         (needing [boolSyntax.mk_exists (x, boolSyntax.mk_eq (x, c))]))
+    val q = Term.mk_var ("Q", Type.bool)
+    val _ = expect "monotonicity calculus finds equations under an iff"
+      (same_types [Type.bool, one_ty]
+         (needing [boolSyntax.mk_forall (x, boolSyntax.mk_eq
+            (boolSyntax.mk_neg (boolSyntax.mk_eq (x, c)), q))]))
     fun naked_at ty =
       let val var = Term.mk_var ("Y", ty) in
         boolSyntax.mk_forall (var, boolSyntax.mk_eq (var, var))
       end
     val _ = expect "monotonicity calculus orders distinct types by occurrence"
       (same_types [Type.bool, enum_ty, one_ty, bool_fun_ty]
-        (types_needing_encoding
-          [naked_at enum_ty, naked, fequal_formula, naked_at bool_fun_ty,
+        (needing
+          [naked_at enum_ty, naked, proxy_formula, naked_at bool_fun_ty,
            naked_at enum_ty]))
   in
     ()
@@ -1593,9 +1630,13 @@ fun test_hhProblemGen () =
       mk_forall (one_y, mk_eq (one_x, one_x)))
     val guards_all = problem fof "mono_guards" (input one_naked)
     val guards_query = problem fof "mono_guards??" (input one_naked)
-    val one_only = mk_forall (one_x, mk_eq (one_x, one_x))
-    val one_all = problem fof "mono_guards" (input one_only)
-    val one_query = problem fof "mono_guards??" (input one_only)
+    (* A fact, since the conjecture's universal variables become
+       existential once it is negated. *)
+    val one_only =
+      {conjecture = boolSyntax.T,
+       facts = [("one_only", mk_forall (one_x, mk_eq (one_x, one_x)))]}
+    val one_all = problem fof "mono_guards" one_only
+    val one_query = problem fof "mono_guards??" one_only
     (* The conjecture's H : num -> num can take pxy.f X, so below the
        cut-over Sufficient_App_Op applies pxy.f to one argument only.  The
        lower side has 40 facts, not 44: the app helper that one-argument
@@ -1614,6 +1655,14 @@ fun test_hhProblemGen () =
       (String.isSubstring "pxy_2Ef(" no_function_variable andalso
        not (app_applies "pxy_2Ef" no_function_variable) andalso
        app_applies "pxy_2Ef" with_function_variable)
+    (* With variables of types num -> num -> num and num -> num, pxy.f
+       takes no direct argument, so that the first can stand for it. *)
+    val both_function_variables = problem fof "mono_guards"
+      {conjecture = mk_forall (Term.mk_var ("G", binary_num),
+         mk_forall (function_var, full_formula)), facts = []}
+    val _ = expect "hhProblemGen lowers an arity to the shortest match"
+      (not (String.isSubstring "pxy_2Ef(" both_function_variables) andalso
+       app_applies "pxy_2Ef" both_function_variables)
     val _ = expect "hhProblemGen switches to Min_App_Op at forty-five facts"
       (occurrences "pxy_2Ef(X,Y)" forty_facts = 0 andalso
        occurrences "pxy_2Ef(X,Y)" forty_five = 46)
@@ -2586,7 +2635,7 @@ fun test_hhSlice () =
       (prover, format, type_enc, lam_trans, nfacts, filter, [], 1)
     fun expected prover format type_enc lam_trans nfacts =
       expected_filter prover format type_enc lam_trans "knn" nfacts
-    val phase1 =
+    val legacy_knn =
       [expected Vampire "fof" "" "" 96,
        expected Eprover "fof" "" "" 128,
        expected Zipperposition "fof" "" "" 128,
@@ -2595,7 +2644,7 @@ fun test_hhSlice () =
        expected Vampire "fof" "" "" 32,
        expected Zipperposition "fof" "" "" 512,
        expected Vampire "fof" "" "" 1024]
-    val phase2 =
+    val typed_knn =
       [expected Vampire "tx0" "mono_native_fool" "lifting" 96,
        expected Eprover "tx0-" "mono_native_fool" "lifting" 128,
        expected Zipperposition "th1" "mono_native_higher_fool"
@@ -2617,27 +2666,26 @@ fun test_hhSlice () =
        expected_filter Eprover "tx0-" "mono_native_fool" "lifting"
          "mash" 128,
        expected_filter Vampire "fof" "" "" "mash" 256]
-    val phase2_golden = phase1 @ phase2
-    val expected_default = phase2_golden @ ensemble
+    val expected_default = legacy_knn @ typed_knn @ ensemble
     val e_slices = map slice_summary (#slices (prover Eprover))
     val vampire_slices = map slice_summary (#slices (prover Vampire))
     val zipperposition_slices =
       map slice_summary (#slices (prover Zipperposition))
     val _ = expect_equal "E slice table"
-      [List.nth (phase1, 1), List.nth (phase1, 4),
-       List.nth (phase2, 1), List.nth (phase2, 3),
-       List.nth (phase2, 5), List.nth (ensemble, 1),
+      [List.nth (legacy_knn, 1), List.nth (legacy_knn, 4),
+       List.nth (typed_knn, 1), List.nth (typed_knn, 3),
+       List.nth (typed_knn, 5), List.nth (ensemble, 1),
        List.nth (ensemble, 4), List.nth (ensemble, 6)] e_slices
     val _ = expect_equal "Vampire slice table"
-      [List.nth (phase1, 0), List.nth (phase1, 3),
-       List.nth (phase1, 5), List.nth (phase1, 7),
-       List.nth (phase2, 0), List.nth (phase2, 4),
-       List.nth (phase2, 6), List.nth (ensemble, 0),
+      [List.nth (legacy_knn, 0), List.nth (legacy_knn, 3),
+       List.nth (legacy_knn, 5), List.nth (legacy_knn, 7),
+       List.nth (typed_knn, 0), List.nth (typed_knn, 4),
+       List.nth (typed_knn, 6), List.nth (ensemble, 0),
        List.nth (ensemble, 3), List.nth (ensemble, 5),
        List.nth (ensemble, 7)] vampire_slices
     val _ = expect_equal "Zipperposition slice table"
-      [List.nth (phase1, 2), List.nth (phase1, 6),
-       List.nth (phase2, 2), List.nth (phase2, 7),
+      [List.nth (legacy_knn, 2), List.nth (legacy_knn, 6),
+       List.nth (typed_knn, 2), List.nth (typed_knn, 7),
        List.nth (ensemble, 2)] zipperposition_slices
     val _ = expect "Z3 stays callable without scheduler slices"
       (List.all (null o (fn config => #slices config))
@@ -2661,30 +2709,25 @@ fun test_hhSlice () =
     val default_schedule = hhSlice.mk_schedule defaults
     val _ = expect_equal "golden 24-slice default schedule"
       expected_default (map (slice_summary o #2) default_schedule)
-    val _ = expect_equal "default schedule: first sixteen slices"
-      phase2_golden
-      (List.take (map (slice_summary o #2) default_schedule, 16))
-    val _ = expect_equal "default schedule: first eight slices"
-      phase1 (List.take (map (slice_summary o #2) default_schedule, 8))
-    val gate = [Provers default_provers, Slices 8, Cores 8, Filter "knn"]
-    val gate30 = hh_options gate
-    val gate10 = hh_options (gate @ [Timeout 10])
-    val gate30_schedule = hhSlice.mk_schedule gate30
-    val gate10_schedule = hhSlice.mk_schedule gate10
-    val expected_gate = List.take (phase1, 8)
+    val eight = [Provers default_provers, Slices 8, Cores 8, Filter "knn"]
+    val options30 = hh_options eight
+    val options10 = hh_options (eight @ [Timeout 10])
+    val schedule30 = hhSlice.mk_schedule options30
+    val schedule10 = hhSlice.mk_schedule options10
+    val expected_eight = List.take (legacy_knn, 8)
     val _ = expect_equal "eight slices are the first eight default slices"
-      expected_gate (map (slice_summary o #2) gate30_schedule)
+      expected_eight (map (slice_summary o #2) schedule30)
     val _ = expect_equal "the timeout leaves the eight-slice schedule alone"
-      (schedule_summary gate30_schedule) (schedule_summary gate10_schedule)
+      (schedule_summary schedule30) (schedule_summary schedule10)
     val _ = expect "eight slices on eight cores get 30 seconds each"
       (List.all (fn (_, slice) =>
-         real_close 30.0 (hhSlice.slice_budget 8 gate30 slice))
-         gate30_schedule)
+         real_close 30.0 (hhSlice.slice_budget 8 options30 slice))
+         schedule30)
     val _ = expect "eight slices on eight cores get 10 seconds each"
       (List.all (fn (_, slice) =>
-         real_close 10.0 (hhSlice.slice_budget 8 gate10 slice))
-         gate10_schedule)
-    val anchors = gate30_schedule
+         real_close 10.0 (hhSlice.slice_budget 8 options10 slice))
+         schedule10)
+    val anchors = schedule30
     fun anchor_command_equal (config, slice) =
       let
         val baseline : hhProver.run_request =
@@ -3650,17 +3693,10 @@ fun capture_stderr f = with_fresh_dir (fn dir =>
       (TextIO.flushOut TextIO.stdErr;
        TextIO.setOutstream (TextIO.stdErr, saved);
        TextIO.closeOut file)
-    fun written () =
-      let
-        val stream = TextIO.openIn path
-        val text = TextIO.inputAll stream
-      in
-        TextIO.closeIn stream; text
-      end
     val _ = TextIO.setOutstream (TextIO.stdErr, TextIO.getOutstream file)
     val result = f () handle e => (restore (); raise e)
   in
-    restore (); (result, written ())
+    restore (); (result, read_text path)
   end)
 
 fun test_schedule_reconstruction_failure parser =

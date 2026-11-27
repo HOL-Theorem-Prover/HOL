@@ -61,7 +61,7 @@ fun genvarl_arity tyl =
 
 (* -------------------------------------------------------------------------
    First-order atoms
-   Warning: a and b are considered atoms is !a. a = b instead of a = b
+   Warning: a and b are considered atoms in !a. a = b instead of a = b
    ------------------------------------------------------------------------- *)
 
 fun must_pred tm =
@@ -281,7 +281,8 @@ fun conjecture_form ([], statement) = statement
    the abstraction it was lifted from. *)
 fun axiom_form ([], statement) = statement
   | axiom_form (defs, statement) =
-      close_lifted boolSyntax.list_mk_exists (list_mk_conj (defs @ [statement]))
+      close_lifted boolSyntax.list_mk_exists
+        (list_mk_conj (defs @ [statement]))
 
 fun translate_nocache tm = conjecture_form (lifted_parts tm)
 
