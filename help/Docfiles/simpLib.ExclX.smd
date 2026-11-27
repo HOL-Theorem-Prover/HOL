@@ -16,8 +16,9 @@ simplification conversion or tactic. Unlike
 component to exclude:
 
 - `rule:name` excludes rewrites, conversions and decision procedures,
-  as `Excl name` does. The name may also be written `Thy$name`, in which
-  case the theory need not be an ancestor and `name` may contain dots.
+  as `Excl name` does, except that in a qualified name `Thy.name` or
+  `Thy$name` the theory need not be an ancestor. Written `Thy$name`,
+  `name` may contain dots.
 - `looper:name` excludes the looper `name`.
 - `solver:name` excludes the safe and unsafe solvers called `name`.
 - `split:name` excludes the split loopers `split name` and

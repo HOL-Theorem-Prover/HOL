@@ -12,9 +12,13 @@ Removes the rules from a simpset, keeping its settings.
 
 `clear_rules ss` removes the rewrites, conversions, congruences, decision
 procedures, loopers and fragments of `ss`. It keeps the rewrite maker, the
-limit, the solvers, the subgoaler, the side-condition depth and the term
-order. Simplifying with `clear_rules ss` and theorems `ths` therefore uses
-`ths` alone, under the settings of `ss`.
+limit, the solvers, the subgoaler, the side-condition depth, the term
+order and the exclusions of `ss`: the fragment names excluded with
+`exclude_ssfrags`, and the looper, split and case exclusions added with
+`ExclX`. Simplifying with `clear_rules ss` and theorems `ths` therefore
+uses `ths` alone, under the settings of `ss`, except that what `ss`
+excludes stays excluded: a fragment excluded earlier is skipped even when
+supplied with `SF` or `++`.
 
 ### Failure
 

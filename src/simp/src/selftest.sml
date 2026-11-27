@@ -836,6 +836,30 @@ in
         (SIMP_CONV bundled_ss [] THENC SIMP_CONV bundled_ss []) TTp
         “T /\ p”;
   let
+    (* The Once allowance of once_ss is shared across its calls *)
+    val once_ss =
+        install_rewrite_bundle (prepare_rewrite_bundle once_ss once_ths) []
+                               once_ss
+    val {normalize, arguments, ...} =
+        prepare_child_first {charge = K (), keep_abstraction = K false}
+                            once_ss
+    val fTpTq = “(f:bool -> bool -> bool) (T /\ p) (T /\ q)”
+  in
+    (* normalize uses the Once rewrite, then restores its one use *)
+    gives "Prepared conversions restore the Once count afterwards"
+          (normalize [] THENC SIMP_CONV once_ss []) TTp p;
+    (* SIMP_CONV has used up the allowance; normalize starts afresh *)
+    gives "Each prepared normalize starts with the full Once allowance"
+          (normalize [] THENC normalize []) TTp p;
+    tprint "Prepared arguments share one Once allowance";
+    require_msg
+      (check_result
+         (fn th => tmem (rhs (concl th))
+                        [“(f:bool -> bool -> bool) p (T /\ q)”,
+                         “(f:bool -> bool -> bool) (T /\ p) q”]))
+      thm_to_string (arguments []) fTpTq
+  end;
+  let
     val a = ASSUME “(fa:'a -> 'a) x = y”
     and b = ASSUME “(fb:'a -> 'a) x = z”
     val av = ASSUME “(fv:'a -> 'a) x = y”
