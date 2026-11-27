@@ -23,6 +23,11 @@ sig
   val Cong   : thm -> thm
   val unCong : thm -> thm
 
+  val genmktagged : thm -> string -> thm
+  val gendest_tagged : term -> thm -> string option
+  val genCong : thm -> thm -> thm
+  val genUnCong : term -> thm -> thm -> thm option
+
   val Split     : thm -> thm
   val destSplit : thm -> thm
 

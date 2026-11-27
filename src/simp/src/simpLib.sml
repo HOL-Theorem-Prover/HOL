@@ -2886,8 +2886,10 @@ fun process_tags0 {report,preserve} ss thl =
                 (congs, splits, acs, LiteralExclusion nm :: excls,
                  exclfrags, frags, rest)
             | SOME (DExclX nm) =>
-                (congs, splits, acs, ExtendedExclusion nm :: excls,
-                 exclfrags, frags, rest)
+                if report then
+                  (congs, splits, acs, ExtendedExclusion nm :: excls,
+                   exclfrags, frags, rest)
+                else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
             | SOME (DExclSF nm) =>
                 (congs, splits, acs, excls, nm :: exclfrags, frags, rest)
             | SOME (DFRAG nm) =>
@@ -2948,7 +2950,8 @@ fun process_tags0 {report,preserve} ss thl =
 
 (* [process_tags] handles a rule list the user wrote; [process_asm_tags]
    handles theorems taken from the goal's assumptions, where a marker is
-   an accident of the terms being reasoned about. *)
+   an accident of the terms being reasoned about: an ExclX assumption is
+   an ordinary fact there. *)
 fun process_tags ss thl =
   process_tags0 {report=true,preserve=false} ss thl
 fun process_asm_tags ss thl =
@@ -3074,7 +3077,7 @@ fun prepare_child_first_with_observer observer
     fun reducible tm =
       not (null (Ho_Net.lookup tm (#initial_net data))) orelse
       (is_comb tm andalso
-       (is_abs (rator tm) orelse
+       (is_abs (rator tm) orelse can (Traverse.eta_argument policy) tm orelse
         reducible (rator tm) orelse reducible (rand tm))) orelse
       (is_abs tm andalso reducible (#2 (dest_abs tm)))
     fun arguments_reducible tm =
@@ -3271,9 +3274,10 @@ fun gen_simp_tac_with_rounds rounds traversal
       markerLib.process_taclist_then_bind {arg=ths} start g
     end)
 
-fun gen_simp_tac_with_xdata traversal xdata solver_context mode ss ths g =
+fun gen_simp_tac_with_xdata traversal xdata solver_context mode ss ths g
+                            ctxt =
   gen_simp_tac_with_rounds (ref (getlimit ss)) traversal
-    xdata solver_context mode ss ths g
+    xdata solver_context mode ss ths g ctxt
 
 fun GEN_SIMP_TAC mode =
   gen_simp_tac_with_xdata ParentFirst xtraversedata_for_ss [] mode
