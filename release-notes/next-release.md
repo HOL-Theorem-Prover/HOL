@@ -197,6 +197,9 @@ Bugs fixed
 
     An uncaught exception is deliberately not treated the same way: the declarations after it still run and the run still succeeds, because the script did reach its end.
 
+-   `COOPER_TAC` failed on some true goals whose normalised form has two existentials with the same bound variable name, *e.g.*, `n MOD 3 + 1 - 1 + k = n ==> n DIV 3 <= n`.
+    It now proves them.
+
 -   `Holmake -r` now overrides `--no_prereqs`, as the documentation has always said it does.
 
 -   `BBLAST_TAC` and `BBLAST_PROVE` called from several threads at once could leave a provable goal unsolved when the threads first met the same word size.
