@@ -32,7 +32,8 @@ without reprocessing it:
   eta-contracts abstraction arguments as the policy allows and repeats
   until nothing changes.
 - `may_reduce_arguments t` is false if no argument of `t` can be
-  simplified. It is always true if `ss` has decision procedures,
+  simplified by `ss` alone, ignoring the theorems later given to
+  `arguments`. It is always true if `ss` has decision procedures,
   congruence rules or relations other than equality.
 
 Each application of `normalize` or `arguments` starts the bounded rewrites

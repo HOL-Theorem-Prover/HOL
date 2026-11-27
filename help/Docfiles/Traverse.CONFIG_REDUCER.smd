@@ -55,6 +55,6 @@ Never fails.
 
 ### See also
 
-[`simpLib.dproc_ss`](#simpLib.dproc_ss),
+[`simpLib.SSFRAG`](#simpLib.SSFRAG),
 [`simpLib.set_cond_depth`](#simpLib.set_cond_depth),
 [`simpLib.xtraversedata_for_ss`](#simpLib.xtraversedata_for_ss).

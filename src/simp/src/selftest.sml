@@ -845,4 +845,42 @@ in
   end
 end
 
+(* User reducers *)
+val _ = let
+  exception Unused
+  val seen = ref ([] : string list)
+  val p = mk_var("p", bool) and q = mk_var("q", bool)
+  fun ord_name term_ord =
+      case term_ord (p, q) of LESS => "<" | EQUAL => "=" | GREATER => ">"
+  fun note s tm = (seen := s :: !seen; NO_CONV tm)
+  val config = Traverse.CONFIG_REDUCER
+    {name = SOME "config", initial = Unused, addcontext = #1,
+     apply = fn {cond_depth, term_ord, ...} =>
+       note ("config " ^ (case cond_depth of NONE => "none"
+                                           | SOME n => Int.toString n) ^
+             ord_name term_ord)}
+  val context = Traverse.CONTEXT_REDUCER
+    {name = SOME "context", initial = Unused, addcontext = #1,
+     apply = fn {cond_depth, term_ord, ...} =>
+       note ("context " ^ Int.toString cond_depth ^ ord_name term_ord)}
+  val ss = set_term_ord (fn _ => GREATER)
+             (set_cond_depth 2
+                (pureSimps.pure_ss ++ dproc_ss config ++ dproc_ss context))
+  fun run () =
+      (seen := [];
+       ignore (QCONV (SIMP_CONV ss []) p);
+       #apply (Traverse.dest_reducer config)
+         {solver = K (K TRUTH), conv = K (K TRUTH), context = Unused,
+          stack = [], relation = (equality, K TRUTH)} p
+         handle HOL_ERR _ => TRUTH;
+       !seen)
+in
+  tprint "User reducers get the side-condition depth and term order";
+  require_msg
+    (check_result (fn l => Lib.mem "config 2>" l andalso
+                           Lib.mem "context 2>" l andalso
+                           List.exists (String.isPrefix "config none") l))
+    (String.concatWith ", ") run ()
+end
+
 val _ = exit_count0 failcount

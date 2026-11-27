@@ -2886,10 +2886,8 @@ fun process_tags0 {report,preserve} ss thl =
                 (congs, splits, acs, LiteralExclusion nm :: excls,
                  exclfrags, frags, rest)
             | SOME (DExclX nm) =>
-                if report then
-                  (congs, splits, acs, ExtendedExclusion nm :: excls,
-                   exclfrags, frags, rest)
-                else (congs, splits, acs, excls, exclfrags, frags, th :: rest)
+                (congs, splits, acs, ExtendedExclusion nm :: excls,
+                 exclfrags, frags, rest)
             | SOME (DExclSF nm) =>
                 (congs, splits, acs, excls, nm :: exclfrags, frags, rest)
             | SOME (DFRAG nm) =>
@@ -2950,8 +2948,7 @@ fun process_tags0 {report,preserve} ss thl =
 
 (* [process_tags] handles a rule list the user wrote; [process_asm_tags]
    handles theorems taken from the goal's assumptions, where a marker is
-   an accident of the terms being reasoned about: an ExclX assumption is
-   an ordinary fact there. *)
+   an accident of the terms being reasoned about. *)
 fun process_tags ss thl =
   process_tags0 {report=true,preserve=false} ss thl
 fun process_asm_tags ss thl =

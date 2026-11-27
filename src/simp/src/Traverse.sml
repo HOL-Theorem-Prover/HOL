@@ -190,6 +190,9 @@ fun initial_context {rewriters:reducer list,
 
 (* With collect_thms, the theorems are also kept for the side-condition
    provers of a configured traversal. *)
+(* The side-condition provers see a bounded rewrite without its bound *)
+fun unbounded th = #1 (BoundedRewrites.DEST_BOUNDED th) handle HOL_ERR _ => th
+
 fun add_context collect_thms rewriters dprocs = let
   val rewrite_collectors' = map (#addcontext o dest_reducer) rewriters
   val dproc_collectors' = map (#addcontext o dest_reducer) dprocs
@@ -214,7 +217,8 @@ fun add_context collect_thms rewriters dprocs = let
       in
         TSTATE{contexts1=newcontexts1,
                contexts2=newcontexts2,
-               context_thms=if collect_thms then thms @ context_thms
+               context_thms=if collect_thms then map unbounded thms @
+                                                 context_thms
                             else context_thms,
                freevars=newfreevars,
                relation=relation, relation_info = relation_info}
