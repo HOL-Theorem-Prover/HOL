@@ -363,7 +363,7 @@ New examples
 ------------
 
 -   `src/holyhammer/examples` is a guided tour of HOLyHammer, replacing
-    the old demo: ten theories of hammered library and case-study goals,
+    the old demo: eleven theories of hammered library and case-study goals,
     an annotated interactive session, and a user guide with tips and a
     FAQ (`README.md`).
 
