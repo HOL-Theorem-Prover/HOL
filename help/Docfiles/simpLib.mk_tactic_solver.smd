@@ -13,7 +13,9 @@ Turns a tactic into a named solver.
 `mk_tactic_solver (name, tac)` is a solver that proves a term `c` by
 solving the goal `(map concl context_thms, c)` with `tac`, where
 `context_thms` are the context theorems supplied by the simplifier. The
-hypotheses of those theorems become hypotheses of the result.
+context theorems whose conclusions `tac`'s proof uses as hypotheses are
+discharged with those theorems, so their hypotheses become hypotheses of
+the result.
 
 Inside a `simpLib` simplification tactic, `tac` is run in the context
 that tactic was given; otherwise, in the ambient context.

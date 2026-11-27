@@ -31,10 +31,12 @@ without reprocessing it:
   `Traverse.NORMALIZE_ARGUMENTS policy (normalize ths)`, which
   eta-contracts abstraction arguments as the policy allows and repeats
   until nothing changes.
-- `may_reduce_arguments t` is false if no argument of `t` can be
+- `may_reduce_arguments t` is false only if no argument of `t` can be
   simplified by `ss` alone, ignoring the theorems later given to
-  `arguments`. It is always true if `ss` has decision procedures,
-  congruence rules or relations other than equality.
+  `arguments`. It is true whenever a rewrite of `ss` matches an
+  argument, even one whose side conditions then fail, and always if `ss`
+  has decision procedures, congruence rules or relations other than
+  equality.
 
 Each application of `normalize` or `arguments` starts the bounded rewrites
 (`Once`, `Ntimes`) of `ss` with their full allowance, and restores their

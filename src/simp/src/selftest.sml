@@ -649,6 +649,17 @@ val _ = let
           SOME th => th
         | NONE => raise mk_HOL_ERR "selftest" "solve" "not in context"
   val budget = mk_HOL_ERR "selftest" "charge" "budget exhausted"
+  fun error_of (HOL_ERR e) = SOME (top_function_of e, message_of e)
+    | error_of _ = NONE
+  fun escapes msg exn traversal t =
+      (tprint msg;
+       require_msg
+         (check_result
+            (fn e => isSome (error_of exn) andalso
+                     Option.mapPartial error_of e = error_of exn))
+         (fn NONE => "no exception" | SOME e => General.exnMessage e)
+         (fn t => (ignore (traversal t); NONE) handle e => SOME e)
+         t)
 in
   gives "Child-first traversal rewrites the argument first"
         (SIMP_CONV_CHILD_FIRST (child_first (fn () => ()))
@@ -669,18 +680,26 @@ in
         (SIMP_CONV (set_subgoaler (fn _ => EQT_INTRO o ASSUME)
                       (ss [cond_rule])) [])
         “^h ^x” b;
-  tprint "Child-first charge exception escapes the traversal";
-  require_msg
-    (check_result
-       (fn e => Option.map General.exnMessage e =
-                SOME (General.exnMessage budget)))
-    (fn NONE => "no exception" | SOME e => General.exnMessage e)
-    (fn t => (ignore (SIMP_CONV_CHILD_FIRST
-                        (child_first (fn () => raise budget))
-                        (ss [g_rule]) [] t);
-              NONE)
-             handle e => SOME e)
-    “^f (^g ^x)”
+  escapes "Child-first charge exception escapes the traversal" budget
+          (SIMP_CONV_CHILD_FIRST (child_first (fn () => raise budget))
+                                 (ss [g_rule]) [])
+          “^f (^g ^x)”;
+  (* The check fails once, at the solver call for the side condition *)
+  let
+    val late = mk_HOL_ERR "selftest" "check" "late abort"
+    val seen = ref false and fired = ref false
+    fun observe t = if t ~~ Px then seen := true else ()
+    fun check () =
+        if !seen andalso not (!fired) then (fired := true; raise late)
+        else ()
+  in
+    escapes "An abort check's exception escapes the traversal" late
+            (CHILD_FIRST_WITH_ABORT check (SOME observe)
+               (child_first (fn () => ()))
+               (xtraversedata_for_ss (ss [cond_rule]))
+               {reducer_context = [], solver_context = []})
+            “^h ^x”
+  end
 end
 
 (* Solvers, loopers, splits and side-condition settings *)
@@ -770,6 +789,11 @@ in
   leaves "ExclX excludes a split rule"
          (SIMP_TAC (add_split bool_split bool_ss)
                    [ExclX ("split:" ^ splitLib.split_thm_name bool_split)])
+         ([], cond_goal) [cond_goal];
+  leaves "split_ss splits a datatype's case expressions"
+         (SIMP_TAC (bool_ss ++ split_ss) []) ([], cond_goal) [split_goal];
+  leaves "ExclX case: excludes a datatype from split_ss"
+         (SIMP_TAC (bool_ss ++ split_ss) [ExclX "case:bool"])
          ([], cond_goal) [cond_goal];
   gives "Threaded congruence rule"
         (SIMP_CONV (bool_ss ++ threaded_cong_ss [threaded])

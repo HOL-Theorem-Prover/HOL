@@ -379,14 +379,15 @@ fun TRAVERSE_IN_CONTEXT eager (config : run_config) limit rewriters
      which reducer dispatch reads as a failed attempt.  Keep the first
      callback exception and raise it at the end. *)
   val aborted = ref (NONE : exn option)
-  fun check_abort () =
-    ((case check_external_abort of NONE => () | SOME check => check ());
-     case !aborted of NONE => () | SOME e => raise e)
   fun protected callback argument =
     case !aborted of
         SOME e => raise e
       | NONE => callback argument
           handle e => (aborted := SOME e; raise e)
+  fun check_abort () =
+    case check_external_abort of
+        NONE => (case !aborted of NONE => () | SOME e => raise e)
+      | SOME check => protected check ()
   val policy =
     case policy of
         ParentFirst => ParentFirst

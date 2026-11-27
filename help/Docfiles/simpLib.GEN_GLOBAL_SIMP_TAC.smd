@@ -39,9 +39,10 @@ flags are:
   assumptions, and start again if it changes;
 - `imp_premises`: first try to rewrite an implicational conclusion as a
   whole, then move its antecedents into the assumptions;
-- `imp_rebuild`: try to rewrite the implications formed from the
-  conclusion and each assumption (most recent first), starting again after
-  the first that succeeds.
+- `imp_rebuild`: try to rewrite the conclusion with assumptions put
+  back as antecedents, one more each time (most recent first, so with
+  assumptions `a` then older `b` and conclusion `w`: `a ==> w`, then
+  `b ==> a ==> w`), starting again after the first that succeeds.
 
 The looper limit and bounded rewrites in `ths` apply across the whole
 call.

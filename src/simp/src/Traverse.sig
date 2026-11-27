@@ -199,7 +199,7 @@ sig
      propagate out of the traversal unchanged, even where a conversion
      combinator would have read them as a failure.
 
-     eta_argument policy contracts the leftmost abstraction argument
+     eta_argument policy contracts the rightmost abstraction argument
      that the ChildFirst policy would contract, failing if there is none.
      NORMALIZE_ARGUMENTS policy c t applies c to the arguments of t (or to
      its body, if t is an abstraction) but not to t itself, eta-contracting

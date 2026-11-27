@@ -24,7 +24,8 @@ type Traverse.simp_prover_ctxt =
 the side conditions already being attempted, `context_thms` the theorems
 in the simplifier's context (supplied theorems, assumptions and facts
 assumed by congruence rules), and `recurse c` simplifies `c`, returning
-`|- c = c'`.
+`|- c = c'`. That theorem, and a solver's result, may have the
+hypotheses of context theorems.
 
 Unsafe solvers prove the side conditions of conditional rewrites that
 the subgoaler (see `simpLib.set_subgoaler`) does not reduce to `T`;

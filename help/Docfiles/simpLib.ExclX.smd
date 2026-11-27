@@ -21,7 +21,8 @@ component to exclude:
 - `looper:name` excludes the looper `name`.
 - `solver:name` excludes the safe and unsafe solvers called `name`.
 - `split:name` excludes the split loopers `split name` and
-  `split_asm name`, including persistent `[split]` rules.
+  `split_asm name`, including persistent `[split]` rules, which are
+  named `Thy$name` (as in `split:Thy$name`).
 - `case:ty` excludes datatype case splitting for the type operator `ty`,
   written `ty` or `Thy$ty`.
 
