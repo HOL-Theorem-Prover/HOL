@@ -14,6 +14,7 @@ struct
 open aiLib
 
 datatype prover = datatype hhConfig.prover
+datatype premise_filter = datatype hhConfig.premise_filter
 
 datatype szs =
     SzsTheorem
@@ -28,7 +29,7 @@ datatype szs =
 
 type slice =
   {prover : prover, format : string, type_enc : string,
-   lam_trans : string, nfacts : int, filter : string,
+   lam_trans : string, nfacts : int, filter : premise_filter,
    extra_opts : string list, slice_size : int}
 
 type run_request =
@@ -350,51 +351,51 @@ val legacy_fof = ("fof", "", "")
    unfiltered slices, and the final eight the filtered ensemble slices.
    Each built-in prover's slice table is its subsequence of this list. *)
 val portfolio =
-  [mk_slice Vampire legacy_fof "knn" 96,
-   mk_slice Eprover legacy_fof "knn" 128,
-   mk_slice Zipperposition legacy_fof "knn" 128,
-   mk_slice Vampire legacy_fof "knn" 512,
-   mk_slice Eprover legacy_fof "knn" 512,
-   mk_slice Vampire legacy_fof "knn" 32,
-   mk_slice Zipperposition legacy_fof "knn" 512,
-   mk_slice Vampire legacy_fof "knn" 1024,
+  [mk_slice Vampire legacy_fof Knn 96,
+   mk_slice Eprover legacy_fof Knn 128,
+   mk_slice Zipperposition legacy_fof Knn 128,
+   mk_slice Vampire legacy_fof Knn 512,
+   mk_slice Eprover legacy_fof Knn 512,
+   mk_slice Vampire legacy_fof Knn 32,
+   mk_slice Zipperposition legacy_fof Knn 512,
+   mk_slice Vampire legacy_fof Knn 1024,
 
-   mk_slice Vampire ("tx0", "mono_native_fool", "lifting") "knn" 96,
-   mk_slice Eprover ("tx0-", "mono_native_fool", "lifting") "knn" 128,
+   mk_slice Vampire ("tx0", "mono_native_fool", "lifting") Knn 96,
+   mk_slice Eprover ("tx0-", "mono_native_fool", "lifting") Knn 128,
    mk_slice Zipperposition ("th1", "mono_native_higher_fool", "keep_lams")
-     "knn" 128,
-   mk_slice Eprover ("th0", "mono_native_higher", "keep_lams") "knn" 512,
+     Knn 128,
+   mk_slice Eprover ("th0", "mono_native_higher", "keep_lams") Knn 512,
    (* Substitution for TF1, which Vampire 5.0.1 rejected when the
       generated TF1 bound formula type variables with !>: TH0 is the next
       tested table candidate, a parser-equivalence correction, not a
       tuning change.  The pinned build runs its generic FOF schedule on
       THF and superposes into lambda bodies with loose bound variables,
       refuting consistent axioms, so its TH0 problems are lambda-lifted. *)
-   mk_slice Vampire ("th0", "mono_native_higher", "lifting") "knn" 512,
+   mk_slice Vampire ("th0", "mono_native_higher", "lifting") Knn 512,
    (* Substitution: E 3.2.5-ho was recorded rejecting the TF0
       combs_and_lifting problems generated at the time; it reads and
       proves the current ones, but the slice stays TX0- (same lambda
       mode) until the portfolio is re-evaluated. *)
-   mk_slice Eprover ("tx0-", "mono_native_fool", "combs_and_lifting") "knn"
+   mk_slice Eprover ("tx0-", "mono_native_fool", "combs_and_lifting") Knn
      1024,
-   mk_slice Vampire ("tx0", "mono_native_fool", "combs") "knn" 512,
+   mk_slice Vampire ("tx0", "mono_native_fool", "combs") Knn 512,
    (* Substitution for FOF/mono_guards??: Zipperposition 2.1 rejected
       those problems with a unification error, as their guard axioms
       applied symbols to all their HOL arguments, more than the rest of
       the problem did.  Guard axioms use the problem's arities, which
       Zipperposition accepts, but the slice stays legacy FOF/32 until the
       portfolio is re-evaluated. *)
-   mk_slice Zipperposition legacy_fof "knn" 32,
+   mk_slice Zipperposition legacy_fof Knn 32,
 
-   mk_slice Vampire legacy_fof "mesh" 96,
-   mk_slice Eprover legacy_fof "mesh" 128,
+   mk_slice Vampire legacy_fof Mesh 96,
+   mk_slice Eprover legacy_fof Mesh 128,
    mk_slice Zipperposition ("th1", "mono_native_higher_fool", "keep_lams")
-     "mesh" 128,
-   mk_slice Vampire ("tx0", "mono_native_fool", "lifting") "mesh" 512,
-   mk_slice Eprover legacy_fof "mepo" 512,
-   mk_slice Vampire legacy_fof "mepo" 1024,
-   mk_slice Eprover ("tx0-", "mono_native_fool", "lifting") "mash" 128,
-   mk_slice Vampire legacy_fof "mash" 256]
+     Mesh 128,
+   mk_slice Vampire ("tx0", "mono_native_fool", "lifting") Mesh 512,
+   mk_slice Eprover legacy_fof Mepo 512,
+   mk_slice Vampire legacy_fof Mepo 1024,
+   mk_slice Eprover ("tx0-", "mono_native_fool", "lifting") Mash 128,
+   mk_slice Vampire legacy_fof Mash 256]
 
 fun portfolio_slices prover =
   List.filter (fn slice => #prover slice = prover) portfolio

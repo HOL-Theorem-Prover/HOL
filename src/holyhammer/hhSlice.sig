@@ -23,7 +23,8 @@ sig
   (* Each distinct filter of a schedule in first-use order, with its
      largest fact count. *)
   val filter_maxima :
-    (hhProver.prover_config * hhProver.slice) list -> (string * int) list
+    (hhProver.prover_config * hhProver.slice) list ->
+    (hhConfig.premise_filter * int) list
   (* slice_budget schedule_length options slice: the seconds slice gets,
      slice_size times the timeout over the number of batches of cores
      slices in the schedule. *)

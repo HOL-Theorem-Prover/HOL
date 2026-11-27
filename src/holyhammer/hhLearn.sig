@@ -146,21 +146,25 @@ sig
     {intact : Thm.thm -> bool * mlThmData.thmid list,
      knn : mlThmData.thmdata -> int -> Abbrev.goal -> mlThmData.thmid list}
   val rank : context ->
-    {filter : string, pool : mlThmData.thmid list option,
+    {filter : hhConfig.premise_filter, pool : mlThmData.thmid list option,
      goal : Abbrev.goal, n : int} -> mlThmData.thmid list
   (* The expected (filter, depth) queries for one goal and pool bound the
      reusable prediction prefixes and cached component rankings. The returned
      function also answers queries beyond those depths. *)
   val rank_for_filters : context ->
     {pool : mlThmData.thmid list option, goal : Abbrev.goal} ->
-    (string * int) list -> (string * int -> mlThmData.thmid list)
+    (hhConfig.premise_filter * int) list ->
+    (hhConfig.premise_filter * int -> mlThmData.thmid list)
   (* Prepared pools use String.compare and retain the corpus order. *)
   val rank_in : context ->
-    {filter : string, pool : (string, unit) Redblackmap.dict option,
+    {filter : hhConfig.premise_filter,
+     pool : (string, unit) Redblackmap.dict option,
      goal : Abbrev.goal, n : int} -> mlThmData.thmid list
   val rank_for_filters_in : context ->
     {pool : (string, unit) Redblackmap.dict option, goal : Abbrev.goal} ->
-    (string * int) list -> (string * int -> mlThmData.thmid list)
+    (hhConfig.premise_filter * int) list ->
+    (hhConfig.premise_filter * int -> mlThmData.thmid list)
   val rank_filters : mlThmData.thmdata -> Abbrev.goal ->
-    (string * int) list -> (string * mlThmData.thmid list) list
+    (hhConfig.premise_filter * int) list ->
+    (hhConfig.premise_filter * mlThmData.thmid list) list
 end

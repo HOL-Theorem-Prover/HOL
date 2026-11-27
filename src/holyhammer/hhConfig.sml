@@ -22,13 +22,26 @@ fun prover_of_name name =
 fun prover_compare (left, right) =
   String.compare (prover_name left, prover_name right)
 
+datatype premise_filter = Knn | Mepo | Mash | Mesh | Unfiltered
+
+val all_filters = [Knn, Mepo, Mash, Mesh, Unfiltered]
+
+fun filter_name Knn = "knn"
+  | filter_name Mepo = "mepo"
+  | filter_name Mash = "mash"
+  | filter_name Mesh = "mesh"
+  | filter_name Unfiltered = "none"
+
+fun filter_of_name name =
+  List.find (fn filter => filter_name filter = name) all_filters
+
 type hh_options =
   {timeout : int,
    provers : prover list,
    slices : int,
    cores : int,
    export_workers : int,
-   filter : string,
+   filter : premise_filter option,
    max_facts : int option,
    format : string,
    type_enc : string,
@@ -286,11 +299,13 @@ fun valid_type_enc value =
 fun valid_lam_trans value =
   trim value = "" orelse hhLamTrans.valid_mode (trim value)
 
-fun one_of choices value =
-  List.exists (fn choice => trim value = choice) choices
+(* SOME NONE for empty, the slices' own filters. *)
+fun filter_override value =
+  case trim value of
+      "" => SOME NONE
+    | name => Option.map SOME (filter_of_name name)
 
-fun valid_filter value =
-  one_of ["", "knn", "mepo", "mash", "mesh", "none"] value
+fun valid_filter value = isSome (filter_override value)
 
 fun parse_provers value =
   case String.tokens Char.isSpace (trim value) of
@@ -334,7 +349,10 @@ val option_specs : option_spec list =
           "the calling thread, 0 means cores; at most cores)",
     valid = nonnegative_int},
    {name = "filter", default = fn () => "",
-    expected = "empty, knn, mepo, mash, mesh, or none",
+    expected = "empty, " ^
+      String.concatWith ", " (map filter_name (List.take
+        (all_filters, length all_filters - 1))) ^
+      ", or " ^ filter_name (List.last all_filters),
     doc = "schedule-wide premise filter override (empty means per-slice)",
     valid = valid_filter},
    {name = "max_facts", default = fn () => "",
@@ -596,7 +614,7 @@ fun snapshot_with overrides =
                       else configured_workers)
     val slices = if configured_slices = 0 then 24 * cores
                  else configured_slices
-    val filter = required "filter" (SOME o trim)
+    val filter = required "filter" filter_override
     val max_facts = required "max_facts" optional_int
     val format = required "format" (SOME o trim)
     val type_enc = required "type_enc" (SOME o trim)

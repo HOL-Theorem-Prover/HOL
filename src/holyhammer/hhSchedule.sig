@@ -51,9 +51,10 @@ sig
     | ExportGenerated of hhProblemGen.problem_options
   type work =
     {index : int, config : hhProver.prover_config, slice : hhProver.slice,
-     path : string, key : string * int, kind : kind}
+     path : string, key : hhConfig.premise_filter * int,
+     kind : kind}
   val ordered_work : string -> hhConfig.hh_options ->
-    (string * string list) list ->
+    (hhConfig.premise_filter * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> work list
   (* run_staged {window} stages works drives each item w through
        prepare w       on the caller, in order;
@@ -121,7 +122,8 @@ sig
      the serial one only in the fresh-name counter: different generated
      names, hence possible prover-cache misses, never wrong bytes. *)
   val export_problems_observed : export_observer -> string ->
-    hhConfig.hh_options -> goal -> (string * string list) list ->
+    hhConfig.hh_options -> goal ->
+    (hhConfig.premise_filter * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit
   (* Prints an event: the progress of a run given no progress function. *)
   val default_progress : event -> unit
@@ -130,7 +132,7 @@ sig
      stay published, it and the later ones are absent and no temporary
      file is left. *)
   val export_problems : string -> hhConfig.hh_options -> goal ->
-    (string * string list) list ->
+    (hhConfig.premise_filter * string list) list ->
     (hhProver.prover_config * hhProver.slice) list -> unit
   (* run_in root request exports the problems of the schedule below root
      as export_problems does, then prunes the cache, probes the provers
@@ -168,7 +170,7 @@ sig
   val run_in : string ->
     {options : hhConfig.hh_options, max_proofs : int, goal : goal,
      context : Context.t,
-     rankings : (string * string list) list,
+     rankings : (hhConfig.premise_filter * string list) list,
      progress : (event -> unit) option} -> result
   (* run_under parent request: run_in in a root that with_problem_dir
      reserves below parent, with that root.  The problems of a non-debug
@@ -177,12 +179,12 @@ sig
   val run_under : string ->
     {options : hhConfig.hh_options, max_proofs : int, goal : goal,
      context : Context.t,
-     rankings : (string * string list) list,
+     rankings : (hhConfig.premise_filter * string list) list,
      progress : (event -> unit) option} -> string * result
   (* run uses the default parent and discards the problem directory path. *)
   val run :
     {options : hhConfig.hh_options, max_proofs : int, goal : goal,
      context : Context.t,
-     rankings : (string * string list) list,
+     rankings : (hhConfig.premise_filter * string list) list,
      progress : (event -> unit) option} -> result
 end

@@ -8,13 +8,21 @@ sig
   val prover_of_name : string -> prover option
   val prover_compare : prover * prover -> order
 
+  (* The premise filters: dependency-aware k-nearest neighbours, MePo,
+     MaSh, MeSh, and every fact unranked.  filter_name is the spelling in
+     option values, problem names and journals. *)
+  datatype premise_filter = Knn | Mepo | Mash | Mesh | Unfiltered
+  val all_filters : premise_filter list
+  val filter_name : premise_filter -> string
+  val filter_of_name : string -> premise_filter option
+
   type hh_options =
     {timeout : int,
      provers : prover list,
      slices : int,
      cores : int,
      export_workers : int,
-     filter : string,
+     filter : premise_filter option,
      max_facts : int option,
      format : string,
      type_enc : string,
@@ -59,7 +67,6 @@ sig
   val remove_quietly : string -> unit
   val directory_names : string -> string list
   val trim : string -> string
-  val valid_filter : string -> bool
 
   (* HOL4_HAMMER_DIR, else ~/.hol4/hammer; created if missing. *)
   val state_dir : unit -> string

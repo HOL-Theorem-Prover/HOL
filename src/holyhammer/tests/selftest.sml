@@ -1,6 +1,7 @@
 open testutils hhTestLib
 
 datatype prover = datatype hhProver.prover
+datatype premise_filter = datatype hhProver.premise_filter
 
 val is_dir = hhConfig.is_dir
 val mkdir = hhConfig.ensure_dir
@@ -139,7 +140,8 @@ fun test_child root =
       (fn filter =>
         (hhConfig.hh_set ("filter", filter);
          expect ("filter vocabulary accepts '" ^ filter ^ "'")
-           (#filter (hhConfig.snapshot ()) = filter)))
+           (getOpt (Option.map hhConfig.filter_name
+              (#filter (hhConfig.snapshot ())), "") = filter)))
       ["", "knn", "mepo", "mash", "mesh", "none"]
     val _ = expect "filter vocabulary rejects unknown names"
       (option_error ["filter", "knn", "mepo", "mash", "mesh", "none"]
@@ -175,7 +177,8 @@ fun test_child root =
       (#timeout options = 23 andalso
        #provers options = [Eprover, Vampire, Zipperposition] andalso
        #cores options = 3 andalso #slices options = 72 andalso
-       #filter options = "none" andalso #max_facts options = SOME 17 andalso
+       #filter options = SOME Unfiltered andalso
+       #max_facts options = SOME 17 andalso
        #format options = "tf0" andalso
        #type_enc options = "mono_native" andalso
        #lam_trans options = "lifting" andalso #mono_iters options = 4 andalso
@@ -221,7 +224,7 @@ fun test_child root =
        "verbose", "preplay_drop_one"]
     val default_options : hhConfig.hh_options = hhConfig.snapshot ()
     val _ = expect "unset per-slice options leave the slice values"
-      (#filter default_options = "none" andalso
+      (#filter default_options = SOME Unfiltered andalso
        #format default_options = "" andalso
        #type_enc default_options = "" andalso
        #lam_trans default_options = "" andalso
@@ -428,7 +431,7 @@ fun test_environment_default root value =
     val _ = expect "empty option defaults map to NONE"
       (#max_facts options = NONE andalso #debug_dir options = NONE)
     val _ = expect "empty filter default keeps per-slice filters"
-      (#filter options = "")
+      (#filter options = NONE)
   in
     ()
   end
@@ -2577,13 +2580,13 @@ val mk_slice = hhProver.mk_slice
 fun legacy prover filter nfacts = mk_slice prover ("fof", "", "") filter nfacts
 
 (* E's slice of a translation triple, over the unfiltered facts. *)
-fun encoded triple = mk_slice Eprover triple "none" 0
+fun encoded triple = mk_slice Eprover triple Unfiltered 0
 
 (* The options of a test: these defaults, changed by the settings given
    (of two settings of a field, the later wins). *)
 datatype setting =
     Timeout of int | Provers of prover list | Slices of int | Cores of int
-  | Workers of int | Filter of string | MaxFacts of int option
+  | Workers of int | Filter of premise_filter option | MaxFacts of int option
   | Encoding of string * string * string | MonoInstances of int option
   | Minimize of bool | DropOne of bool | Cache of bool | CacheDir of string
   | CacheMax of int | Debug of string option
@@ -2601,7 +2604,8 @@ fun hh_options settings : hhConfig.hh_options =
      slices = pick (fn Slices n => SOME n | _ => NONE) 1,
      cores = pick (fn Cores n => SOME n | _ => NONE) 1,
      export_workers = pick (fn Workers n => SOME n | _ => NONE) 1,
-     filter = pick (fn Filter name => SOME name | _ => NONE) "none",
+     filter = pick (fn Filter filter => SOME filter | _ => NONE)
+       (SOME Unfiltered),
      max_facts = pick (fn MaxFacts n => SOME n | _ => NONE) NONE,
      format = format, type_enc = type_enc, lam_trans = lam_trans,
      mono_iters = 3,
@@ -2634,7 +2638,7 @@ fun test_hhSlice () =
     fun expected_filter prover format type_enc lam_trans filter nfacts =
       (prover, format, type_enc, lam_trans, nfacts, filter, [], 1)
     fun expected prover format type_enc lam_trans nfacts =
-      expected_filter prover format type_enc lam_trans "knn" nfacts
+      expected_filter prover format type_enc lam_trans Knn nfacts
     val legacy_knn =
       [expected Vampire "fof" "" "" 96,
        expected Eprover "fof" "" "" 128,
@@ -2655,17 +2659,17 @@ fun test_hhSlice () =
        expected Vampire "tx0" "mono_native_fool" "combs" 512,
        expected Zipperposition "fof" "" "" 32]
     val ensemble =
-      [expected_filter Vampire "fof" "" "" "mesh" 96,
-       expected_filter Eprover "fof" "" "" "mesh" 128,
+      [expected_filter Vampire "fof" "" "" Mesh 96,
+       expected_filter Eprover "fof" "" "" Mesh 128,
        expected_filter Zipperposition "th1"
-         "mono_native_higher_fool" "keep_lams" "mesh" 128,
+         "mono_native_higher_fool" "keep_lams" Mesh 128,
        expected_filter Vampire "tx0" "mono_native_fool" "lifting"
-         "mesh" 512,
-       expected_filter Eprover "fof" "" "" "mepo" 512,
-       expected_filter Vampire "fof" "" "" "mepo" 1024,
+         Mesh 512,
+       expected_filter Eprover "fof" "" "" Mepo 512,
+       expected_filter Vampire "fof" "" "" Mepo 1024,
        expected_filter Eprover "tx0-" "mono_native_fool" "lifting"
-         "mash" 128,
-       expected_filter Vampire "fof" "" "" "mash" 256]
+         Mash 128,
+       expected_filter Vampire "fof" "" "" Mash 256]
     val expected_default = legacy_knn @ typed_knn @ ensemble
     val e_slices = map slice_summary (#slices (prover Eprover))
     val vampire_slices = map slice_summary (#slices (prover Vampire))
@@ -2705,11 +2709,11 @@ fun test_hhSlice () =
        Zipperposition, Eprover]
       (hhSlice.schedule_of_provers [Zipperposition, Eprover] 7)
     val defaults = hh_options
-      [Provers default_provers, Slices (24 * 32), Cores 32, Filter ""]
+      [Provers default_provers, Slices (24 * 32), Cores 32, Filter NONE]
     val default_schedule = hhSlice.mk_schedule defaults
     val _ = expect_equal "golden 24-slice default schedule"
       expected_default (map (slice_summary o #2) default_schedule)
-    val eight = [Provers default_provers, Slices 8, Cores 8, Filter "knn"]
+    val eight = [Provers default_provers, Slices 8, Cores 8, Filter (SOME Knn)]
     val options30 = hh_options eight
     val options10 = hh_options (eight @ [Timeout 10])
     val schedule30 = hhSlice.mk_schedule options30
@@ -2743,42 +2747,43 @@ fun test_hhSlice () =
     val _ = expect "the eight slices add no extra prover options"
       (List.all anchor_command_equal anchors)
     val small = hhSlice.mk_schedule
-      (hh_options [Provers default_provers, Slices 5, Cores 2, Filter "knn"])
+      (hh_options
+         [Provers default_provers, Slices 5, Cores 2, Filter (SOME Knn)])
     val _ = expect_equal "small schedule follows the golden rotation"
       (List.take (schedule_summary default_schedule, 5))
       (schedule_summary small)
     val subset = hhSlice.mk_schedule
       (hh_options [Provers [Zipperposition, Eprover], Slices 7, Cores 4,
-                   Filter "knn"])
+                   Filter (SOME Knn)])
     val _ = expect_equal "prover subset consumes each table head-first"
-      [("e", 128, "knn", []),
-       ("zipperposition", 128, "knn", []),
-       ("e", 512, "knn", []),
-       ("zipperposition", 512, "knn", []),
-       ("e", 128, "knn", []),
-       ("zipperposition", 128, "knn", []),
-       ("e", 512, "knn", [])]
+      [("e", 128, Knn, []),
+       ("zipperposition", 128, Knn, []),
+       ("e", 512, Knn, []),
+       ("zipperposition", 512, Knn, []),
+       ("e", 128, Knn, []),
+       ("zipperposition", 128, Knn, []),
+       ("e", 512, Knn, [])]
       (schedule_summary subset)
     val overridden = hhSlice.mk_schedule
       (hh_options [Slices 20, Cores 2, MaxFacts (SOME 40)])
     val _ = expect_equal "fact and filter overrides precede deduplication"
-      [("e", 40, "none", []),
-       ("e", 40, "none", []),
-       ("e", 40, "none", []),
-       ("e", 40, "none", [])]
+      [("e", 40, Unfiltered, []),
+       ("e", 40, Unfiltered, []),
+       ("e", 40, Unfiltered, []),
+       ("e", 40, Unfiltered, [])]
       (schedule_summary overridden)
     val filter_override = hhSlice.mk_schedule
       (hh_options [Provers default_provers, Slices 24, Cores 24])
     val _ = expect "set filter overrides every per-slice table value"
       (not (null filter_override) andalso
-       List.all (fn (_, slice) => #filter slice = "none") filter_override)
+       List.all (fn (_, slice) => #filter slice = Unfiltered) filter_override)
     val exhausted = hhSlice.mk_schedule
-      (hh_options [Provers default_provers, Slices 100, Cores 8, Filter ""])
+      (hh_options [Provers default_provers, Slices 100, Cores 8, Filter NONE])
     val _ = expect "rotation exhaustion stops at twenty-four slices"
       (length exhausted = 24)
     val _ = expect "Z3 remains outside the slice scheduler"
       (null (hhSlice.mk_schedule
-        (hh_options [Provers [Z3], Slices 100, Cores 8, Filter "knn"])))
+        (hh_options [Provers [Z3], Slices 100, Cores 8, Filter (SOME Knn)])))
     val first_slice = #2 (hd default_schedule)
     val large_slice : hhProver.slice =
       {prover = #prover first_slice, format = #format first_slice,
@@ -2789,7 +2794,7 @@ fun test_hhSlice () =
       (real_close 30.0 (hhSlice.slice_budget (length default_schedule) defaults
         first_slice))
     val budget_options =
-      hh_options [Slices 999, Cores 32, Filter "knn"]
+      hh_options [Slices 999, Cores 32, Filter (SOME Knn)]
     val _ = expect "budget arithmetic uses ceiling batches"
       (let val b = hhSlice.slice_budget
       in real_close 15.0 (b 33 budget_options first_slice) andalso
@@ -2799,7 +2804,7 @@ fun test_hhSlice () =
          real_close 0.0 (b 0 budget_options first_slice)
       end)
     fun triple_schedule triple =
-      hhSlice.mk_schedule (hh_options [Filter "knn", Encoding triple])
+      hhSlice.mk_schedule (hh_options [Filter (SOME Knn), Encoding triple])
     val _ = expect "slice construction accepts a supported full triple"
       (case triple_schedule ("tf0", "mono_native", "lifting") of
            [(_, slice)] => #format slice = "tf0" andalso
@@ -2821,30 +2826,12 @@ fun test_hhSlice () =
       (invalid_triple ("tf0", "", "lifting") andalso
        invalid_triple ("th1", "mono_native_higher", "keep_lams") andalso
        invalid_triple ("tf0", "mono_native", ""))
-    fun filter_test_config filter : hhProver.prover_config =
-      let
-        val slice = legacy Z3 filter 1
-      in
-        {name = "selftest-filter", exec_names = [], env_var = "",
-         version_args = [], parse_version = fn _ => NONE,
-         tested_versions = [], supported_formats = ["fof"],
-         mk_command = fn executable => fn _ => (executable, []),
-         parse_output = fn _ => (hhProver.SzsUnknown "selftest", NONE),
-         mono_instances = 100, slices = [slice], legacy = true}
-      end
-    fun rejects_filter filter =
-      hhProver.with_override Z3 (filter_test_config filter) (fn () =>
-        (ignore (hhSlice.mk_schedule
-          (hh_options [Provers [Z3], Filter ""])); false)
-        handle Fail _ => true)
-    val _ = expect "slice construction validates the filter vocabulary"
-      (List.all rejects_filter ["", "not-a-filter"])
   in
     ()
   end
 
 fun cache_options directory maximum enabled =
-  hh_options [Filter "knn", Cache enabled, CacheDir directory,
+  hh_options [Filter (SOME Knn), Cache enabled, CacheDir directory,
               CacheMax maximum]
 
 fun test_hhCache () = with_fresh_dir (fn root =>
@@ -3496,7 +3483,7 @@ val schedule_sleeper =
 
 fun fixture_slice prover extra size : hhProver.slice =
   {prover = prover, format = "fof", type_enc = "", lam_trans = "",
-   nfacts = 0, filter = "none", extra_opts = extra, slice_size = size}
+   nfacts = 0, filter = Unfiltered, extra_opts = extra, slice_size = size}
 
 fun ranking_fixture_slice prover filter nfacts : hhProver.slice =
   {prover = prover, format = "fof", type_enc = "", lam_trans = "",
@@ -3574,7 +3561,7 @@ fun run_schedule_with max_proofs goal options =
     val events = ref ([] : string list)
     val result = hhSchedule.run
       {options = options, max_proofs = max_proofs, goal = goal,
-       context = Context.snapshot (), rankings = [("none", [])],
+       context = Context.snapshot (), rankings = [(Unfiltered, [])],
        progress = SOME (fn event =>
          events := observe_schedule_event event :: !events)}
   in
@@ -4110,12 +4097,12 @@ fun test_schedule_timeout parser = with_fresh_dir (fn debug =>
 fun test_schedule_filter_rankings parser = with_fresh_dir (fn root =>
   let
     val name = "hh-schedule-filter-rankings"
-    val knn = ranking_fixture_slice Z3 "knn" 1
-    val mepo = ranking_fixture_slice Z3 "mepo" 1
+    val knn = ranking_fixture_slice Z3 Knn 1
+    val mepo = ranking_fixture_slice Z3 Mepo 1
     val slices = [knn, mepo]
     val config = printer_config name slices (fn _ => ()) parser
     val options =
-      hh_options [Timeout 5, Provers [Z3], Slices 2, Filter ""]
+      hh_options [Timeout 5, Provers [Z3], Slices 2, Filter NONE]
     val knn_path = hhSchedule.problem_path root knn
     val mepo_path = hhSchedule.problem_path root mepo
     fun clean () = List.app (remove_tree o OS.Path.dir)
@@ -4127,7 +4114,7 @@ fun test_schedule_filter_rankings parser = with_fresh_dir (fn root =>
          context = Context.snapshot (), rankings = rankings,
          progress = NONE})
     val missing =
-      ((ignore (run_with [("knn", ["boolTheory.TRUTH"])]); false)
+      ((ignore (run_with [(Knn, ["boolTheory.TRUTH"])]); false)
        handle Fail message =>
          contains "missing premise ranking" message)
     val _ = expect "scheduler rejects a missing filter ranking before export"
@@ -4137,7 +4124,7 @@ fun test_schedule_filter_rankings parser = with_fresh_dir (fn root =>
       handle OS.SysErr _ => OK ()
     val result =
       run_with
-        [("knn", ["boolTheory.TRUTH"]), ("mepo", ["boolTheory.T_DEF"])]
+        [(Knn, ["boolTheory.TRUTH"]), (Mepo, ["boolTheory.T_DEF"])]
     val knn_text = read_text knn_path
     val mepo_text = read_text mepo_path
     val _ = expect "filter-only problem keys and directories are distinct"
@@ -4155,12 +4142,12 @@ fun test_schedule_filter_rankings parser = with_fresh_dir (fn root =>
 fun test_schedule_knn_anchor_export () = with_fresh_dir (fn root =>
   let
     val e = prover Eprover
-    fun slice nfacts = legacy Eprover "knn" nfacts
+    fun slice nfacts = legacy Eprover Knn nfacts
     val one = slice 1
     val two = slice 2
     val schedule = [(e, one), (e, two)]
     val ranking = ["boolTheory.TRUTH", "boolTheory.T_DEF"]
-    val options = hh_options [Timeout 5, Slices 2, Filter "knn"]
+    val options = hh_options [Timeout 5, Slices 2, Filter (SOME Knn)]
     val expected_one = join root "expected-one"
     val expected_two = join root "expected-two"
     val _ = List.app mkdir [expected_one, expected_two]
@@ -4172,7 +4159,7 @@ fun test_schedule_knn_anchor_export () = with_fresh_dir (fn root =>
     val _ = List.app (remove_tree o OS.Path.dir)
       [hhSchedule.problem_path root one, hhSchedule.problem_path root two]
     val _ = hhSchedule.export_problems root options ([], boolSyntax.T)
-      [("knn", ranking)] schedule
+      [(Knn, ranking)] schedule
     val _ = expect "all-knn export preserves longest-ranking prefixes"
       (hhSchedule.problem_path root one <> hhSchedule.problem_path root two
        andalso
@@ -4206,11 +4193,11 @@ fun test_schedule_mono_cap_export () = with_fresh_dir (fn root =>
     val facts = ["APPEND_NIL", "APPEND_ASSOC", "LENGTH_APPEND",
                  "REVERSE_APPEND"]
     val slice = mk_slice Eprover ("tx0-", "mono_native_fool", "lifting")
-      "knn" (length facts)
-    val options = hh_options [Timeout 5, Filter "knn"]
+      Knn (length facts)
+    val options = hh_options [Timeout 5, Filter (SOME Knn)]
     val goal = ([], ``LENGTH ([1] ++ [] ++ [2]) = LENGTH (REVERSE [1; 2n])``)
     val _ = hhSchedule.export_problems root options goal
-      [("knn", map (fn fact => "listTheory." ^ fact) facts)]
+      [(Knn, map (fn fact => "listTheory." ^ fact) facts)]
       [(small_cap, slice)]
     val problem =
       read_text (hhSchedule.problem_path root slice)
@@ -4300,16 +4287,17 @@ fun test_schedule_export_wiring () = with_fresh_dir (fn root =>
     val _ = mkdir expected_dir
     val _ = hhExportFof.fof_export_pb expected_dir (boolSyntax.T, [])
     val _ = hhSchedule.export_problems root (options NONE) goal
-      [("none", [])] [(e, legacy)]
+      [(Unfiltered, [])] [(e, legacy)]
     val legacy_empty_text = read_text legacy_path
     val _ = expect "legacy scheduler dispatch is byte-identical"
       (legacy_empty_text =
        read_text (join expected_dir "atp_in"))
     val _ = hhSchedule.export_problems root (options NONE) goal
-      [("none", ["boolTheory.TRUTH"])] [(e, legacy)]
+      [(Unfiltered, ["boolTheory.TRUTH"])] [(e, legacy)]
     val _ = expect "filter=none exports premises beyond the slice fact count"
       (legacy_empty_text <> read_text legacy_path)
-    val _ = hhSchedule.export_problems root (options NONE) goal [("none", [])]
+    val _ = hhSchedule.export_problems root (options NONE) goal
+      [(Unfiltered, [])]
       [(e, lifting), (e, combs), (e, lifting)]
     val lifting_text = read_text lifting_path
     val _ = expect "problem exports re-key full triples"
@@ -4320,15 +4308,16 @@ fun test_schedule_export_wiring () = with_fresh_dir (fn root =>
     val _ = expect "prover config mono-instance cap wins over default"
       (contains "mono_instances=128" lifting_text)
     val _ = hhSchedule.export_problems root
-      (options (SOME 77)) goal [("none", [])] [(e, lifting)]
+      (options (SOME 77)) goal [(Unfiltered, [])] [(e, lifting)]
     val _ = expect "explicit mono-instance option beats the prover config cap"
       (contains "mono_instances=77"
         (read_text lifting_path))
     fun mono_slice prover =
-      mk_slice prover ("th0", "mono_native_higher", "keep_lams") "none" 0
+      mk_slice prover ("th0", "mono_native_higher", "keep_lams") Unfiltered 0
     val e_mono = mono_slice Eprover
     val vampire_mono = mono_slice Vampire
-    val _ = hhSchedule.export_problems root (options NONE) goal [("none", [])]
+    val _ = hhSchedule.export_problems root (options NONE) goal
+      [(Unfiltered, [])]
       [(e, e_mono), (vampire, vampire_mono)]
     val e_mono_path = hhSchedule.problem_path root e_mono
     val vampire_mono_path = hhSchedule.problem_path root vampire_mono
@@ -4389,12 +4378,12 @@ fun test_schedule_legacy_sharing () = with_fresh_dir (fn root =>
         read_text (join dir "atp_in")
       end)
     (* kNN occurs under several slice keys, one selection (length 4). *)
-    val knn_a = legacy Eprover "knn" 3
-    val knn_b = legacy Vampire "knn" 3
-    val knn_c = legacy Eprover "knn" 4
-    val knn_long = legacy Vampire "knn" 100
-    val mepo = legacy Eprover "mepo" 4
-    val _ = run (options NONE) [("knn", ranking), ("mepo", other_ranking)]
+    val knn_a = legacy Eprover Knn 3
+    val knn_b = legacy Vampire Knn 3
+    val knn_c = legacy Eprover Knn 4
+    val knn_long = legacy Vampire Knn 100
+    val mepo = legacy Eprover Mepo 4
+    val _ = run (options NONE) [(Knn, ranking), (Mepo, other_ranking)]
       [(e, knn_a), (vampire, knn_b), (e, knn_c), (vampire, knn_long),
        (e, mepo)]
     val _ = expect "legacy problems with one selection are generated once"
@@ -4412,28 +4401,28 @@ fun test_schedule_legacy_sharing () = with_fresh_dir (fn root =>
        OS.FileSys.fileSize (hhSchedule.problem_path root knn_b) =
          Position.fromInt (String.size (text knn_a)))
     (* filter none: the whole ranking, up to the optional cap. *)
-    val none_a = legacy Eprover "none" 0
-    val none_b = legacy Vampire "none" 7
-    val _ = run (options NONE) [("none", ranking)]
+    val none_a = legacy Eprover Unfiltered 0
+    val none_b = legacy Vampire Unfiltered 7
+    val _ = run (options NONE) [(Unfiltered, ranking)]
       [(e, none_a), (vampire, none_b)]
     val _ = expect "filter none shares the whole ranking"
       (!generated = 1 andalso !copied = 1 andalso
        text none_a = direct ranking 4 andalso text none_b = text none_a)
-    val _ = run (options (SOME 2)) [("none", ranking)]
+    val _ = run (options (SOME 2)) [(Unfiltered, ranking)]
       [(e, none_a), (vampire, none_b)]
     val _ = expect "filter none honours max_facts and still shares"
       (!generated = 1 andalso !copied = 1 andalso
        text none_a = direct ranking 2 andalso text none_b = text none_a)
     (* A retry on the same root re-exports one former duplicate. *)
-    val _ = run (options NONE) [("knn", ranking)]
+    val _ = run (options NONE) [(Knn, ranking)]
       [(e, knn_a), (vampire, knn_b)]
     val before_a = text knn_a
-    val _ = run (options NONE) [("knn", other_ranking)] [(vampire, knn_b)]
+    val _ = run (options NONE) [(Knn, other_ranking)] [(vampire, knn_b)]
     val _ = expect "a retry changes one former duplicate only"
       (!generated = 1 andalso !copied = 0 andalso
        text knn_a = before_a andalso
        text knn_b = direct other_ranking 3 andalso text knn_a <> text knn_b)
-    val _ = run (options NONE) [("knn", other_ranking)]
+    val _ = run (options NONE) [(Knn, other_ranking)]
       [(e, knn_a), (vampire, knn_b)]
     val _ = expect "a retry re-copies over the former duplicate"
       (!generated = 1 andalso !copied = 1 andalso
@@ -4554,7 +4543,7 @@ fun test_schedule_deadline_recon sleeper_parser =
          end,
        max_proofs = max_proofs,
        goal = ([], boolSyntax.T), context = Context.snapshot (),
-       rankings = [("none", [])], progress = SOME progress}
+       rankings = [(Unfiltered, [])], progress = SOME progress}
     fun with_setup slices behave f =
       with_ref (hhSchedule_Test.reconstruct, test_reconstruct behave)
         (fn () => with_fixtures
@@ -4765,11 +4754,11 @@ fun test_schedule_staged () =
     (* The ordered work description. *)
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val schedule =
-      [(e, legacy Eprover "knn" 2), (vampire, legacy Vampire "knn" 2),
-       (e, generated Eprover "knn" 2), (e, legacy Eprover "knn" 3),
-       (vampire, legacy Vampire "knn" 100), (e, generated Eprover "knn" 3)]
+      [(e, legacy Eprover Knn 2), (vampire, legacy Vampire Knn 2),
+       (e, generated Eprover Knn 2), (e, legacy Eprover Knn 3),
+       (vampire, legacy Vampire Knn 100), (e, generated Eprover Knn 3)]
     val work = hhSchedule.ordered_work root (options NONE)
-      [("knn", ranking)] schedule
+      [(Knn, ranking)] schedule
     fun path_of (_, slice) = hhSchedule.problem_path root slice
     val first = path_of (hd schedule)
     val fourth = path_of (List.nth (schedule, 3))
@@ -4777,8 +4766,8 @@ fun test_schedule_staged () =
       (map #index work = [0, 1, 2, 3, 4, 5] andalso
        map #path work = map path_of schedule andalso
        map #key work =
-         [("knn", 2), ("knn", 2), ("knn", 2), ("knn", 3), ("knn", 3),
-          ("knn", 3)])
+         [(Knn, 2), (Knn, 2), (Knn, 2), (Knn, 3), (Knn, 3),
+          (Knn, 3)])
     val _ = expect "work kinds mark legacy sharing and generated jobs"
       (case map #kind work of
            [hhSchedule.ExportLegacy, hhSchedule.CopyLegacy one,
@@ -4909,10 +4898,10 @@ fun test_schedule_staged () =
        List.filter (String.isPrefix "abandon") log =
          ["abandon 3", "abandon 2", "abandon 1"])
     (* The real stages: a fetch failure at a later index. *)
-    val bad_rank = [("knn", bad_ranking)]
-    val failing = [(e, legacy Eprover "knn" 2), (e, generated Eprover "knn" 2),
-                   (vampire, generated Vampire "knn" 4),
-                   (vampire, legacy Vampire "knn" 4)]
+    val bad_rank = [(Knn, bad_ranking)]
+    val failing = [(e, legacy Eprover Knn 2), (e, generated Eprover Knn 2),
+                   (vampire, generated Vampire Knn 4),
+                   (vampire, legacy Vampire Knn 4)]
     val raised = (hhSchedule.export_problems root
       (options NONE) goal bad_rank failing; false)
       handle Feedback.HOL_ERR _ => true
@@ -4934,7 +4923,7 @@ fun test_schedule_staged () =
     val _ = mkdir blocked
     val _ = aiLib.write_file (join blocked "occupied") "x"
     val raised = (hhSchedule.export_problems root
-      (options NONE) goal [("knn", ranking)] failing; false)
+      (options NONE) goal [(Knn, ranking)] failing; false)
       handle OS.SysErr _ => true
     val _ = expect "a failing commit publishes the prefix and leaves no temp"
       (raised andalso
@@ -4950,8 +4939,8 @@ fun test_schedule_staged () =
     (* A legacy failure before the first write leaves no staging file. *)
     val root = hhSchedule.new_problem_dir (hhConfig.state_dir ())
     val raised = (hhSchedule.export_problems root
-      (options NONE) ([], ``\x:num. x``) [("knn", ranking)]
-      [(e, legacy Eprover "knn" 2)]; false) handle Feedback.HOL_ERR _ => true
+      (options NONE) ([], ``\x:num. x``) [(Knn, ranking)]
+      [(e, legacy Eprover Knn 2)]; false) handle Feedback.HOL_ERR _ => true
     val _ = expect "a failing legacy export leaves no staged or final file"
       (raised andalso null (root_files root))
     val file = join root "direct"
@@ -5367,14 +5356,14 @@ fun test_schedule_pool () =
        ("list", "APPEND_ASSOC"), ("combin", "o_THM"), ("combin", "K_THM"),
        ("combin", "I_THM"), ("combin", "S_THM"), ("list", "FOLDL"),
        ("combin", "o_DEF"), ("combin", "S_DEF")]
-    val rankings = [("knn", pool_ranking)]
-    fun gen triple = mk_slice Eprover triple "knn" 11
+    val rankings = [(Knn, pool_ranking)]
+    fun gen triple = mk_slice Eprover triple Knn 11
     val schedule =
       [(e, gen ("tf0", "mono_native", "combs")),
-       (e, legacy Eprover "knn" 4),
+       (e, legacy Eprover Knn 4),
        (e, gen ("tf1", "poly_native", "combs")),
        (vampire, gen ("th1", "poly_native", "combs_and_lifting")),
-       (vampire, legacy Vampire "knn" 6),
+       (vampire, legacy Vampire Knn 6),
        (e, gen ("fof", "mono_guards??", "combs"))]
     val jobs = [0, 2, 3, 5]
     (* The generated jobs, consecutive (no legacy item between them). *)
@@ -5550,16 +5539,16 @@ fun test_schedule_pool () =
        returned.  The earliest failing index (2) is raised, the prefix is
        published and nothing else. *)
     val later_filter =
-      mk_slice Eprover ("tf0", "mono_native", "combs") "mepo" 7
+      mk_slice Eprover ("tf0", "mono_native", "combs") Mepo 7
     val failing_schedule =
       List.take (schedule, 3) @ [(e, later_filter)] @ List.drop (schedule, 4)
-    val failing_rankings = rankings @ [("mepo", bad_ranking)]
+    val failing_rankings = rankings @ [(Mepo, bad_ranking)]
     fun early_error label failure expected = with_fresh_dir (fn root =>
       let
         val (fork, threads, wait_for) = signalling_fork ()
         val observer : hhSchedule.export_observer =
           {generated = fn slice =>
-             if #filter slice = "mepo" then wait_for 1 else (),
+             if #filter slice = Mepo then wait_for 1 else (),
            copied = fn _ => ()}
         fun fail_two index = if index = 2 then raise failure else ()
         val outcome =
@@ -5922,10 +5911,10 @@ fun test_schedule_run_in parser =
     fun names bad = map (fn fact => "listTheory." ^ fact)
       ["LENGTH_APPEND", "APPEND_NIL", "APPEND_ASSOC", "MAP_APPEND",
        "LENGTH_MAP", "REVERSE_APPEND", bad, "LENGTH_REVERSE"]
-    val rankings = [("knn", names "MAP_MAP_o")]
+    val rankings = [(Knn, names "MAP_MAP_o")]
     fun slice prover format type_enc lam_trans count extra : hhProver.slice =
       {prover = prover, format = format, type_enc = type_enc,
-       lam_trans = lam_trans, nfacts = count, filter = "knn",
+       lam_trans = lam_trans, nfacts = count, filter = Knn,
        extra_opts = extra, slice_size = 1}
     fun legacy extra prover count = slice prover "fof" "" "" count extra
     fun mono extra prover count =
@@ -5942,7 +5931,7 @@ fun test_schedule_run_in parser =
         f
     fun options cores slices =
       hh_options [Provers [Eprover, Vampire], Slices slices, Cores cores,
-                  Workers 2, Filter ""]
+                  Workers 2, Filter NONE]
     val (fork, recorded) = recording_fork (fn default => default)
     (* run_in on its own thread, with wrap around it: the result or the
        failure, the events and the files left in the root.  steer runs on
@@ -5998,7 +5987,7 @@ fun test_schedule_run_in parser =
        raised on the caller before any search, with no event, and no
        temporary is left. *)
     val (absent, absent_failure, absent_events, absent_files) =
-      run {opts = options 8 5, ranks = [("knn", names "NO_SUCH_THEOREM")],
+      run {opts = options 8 5, ranks = [(Knn, names "NO_SUCH_THEOREM")],
            legacies = gave_up, monos = gave_up, wrap = fn f => f (),
            steer = ignore}
     val _ = expect "run_in: an export error is raised before any event"
@@ -6972,7 +6961,7 @@ fun test_hhLearn_unselected_stale_fact () =
     expect "hhLearn context tolerates unselected stale learning facts"
       (legacy = [primary] andalso
        hhLearn.rank context
-         {filter = "knn", pool = NONE, goal = goal, n = 1} = legacy);
+         {filter = Knn, pool = NONE, goal = goal, n = 1} = legacy);
     hhLearn.clean_context_cache ()
   end
 
@@ -7073,21 +7062,21 @@ fun test_hhLearn_dispatch_cache_and_knn_anchor () =
     val expected_knn = mlNearestNeighbor.thmknn_wdep thmdata 2
       goal_features
     val actual_knn = hhLearn.rank context
-      {filter = "knn", pool = NONE, goal = goal, n = 2}
+      {filter = Knn, pool = NONE, goal = goal, n = 2}
     val restricted_data : mlThmData.thmdata =
       (weights, [(secondary, [])])
     val expected_restricted_knn = mlNearestNeighbor.thmknn_wdep
       restricted_data 1 goal_features
     val restricted_knn = hhLearn.rank context
-      {filter = "knn", pool = SOME [secondary], goal = goal, n = 1}
+      {filter = Knn, pool = SOME [secondary], goal = goal, n = 1}
     val none = hhLearn.rank context
-      {filter = "none", pool = NONE, goal = goal, n = 1}
+      {filter = Unfiltered, pool = NONE, goal = goal, n = 1}
     val mepo = hhLearn.rank context
-      {filter = "mepo", pool = NONE, goal = goal, n = 1}
+      {filter = Mepo, pool = NONE, goal = goal, n = 1}
     val mash = hhLearn.rank context
-      {filter = "mash", pool = NONE, goal = goal, n = 1}
+      {filter = Mash, pool = NONE, goal = goal, n = 1}
     val mesh = hhLearn.rank context
-      {filter = "mesh", pool = NONE, goal = goal, n = 1}
+      {filter = Mesh, pool = NONE, goal = goal, n = 1}
     val same_key_data : mlThmData.thmdata =
       (#1 mlThmData.empty_thmdata, [(secondary, [])])
     val cached = hhLearn.create_context same_key_data
@@ -7156,15 +7145,15 @@ fun test_hhLearn_production_exclusion_and_mash () =
     val context = hhLearn.create_context thmdata
     fun ranked filter = hhLearn.rank context
       {filter = filter, pool = SOME direct_names, goal = goal, n = 50}
-    val mepo = ranked "mepo"
-    val mash = ranked "mash"
-    val mesh = ranked "mesh"
-    val knn = ranked "knn"
+    val mepo = ranked Mepo
+    val mash = ranked Mash
+    val mesh = ranked Mesh
+    val knn = ranked Knn
     val direct_rows = List.take (rows, 51)
     val direct_data : mlThmData.thmdata = (#1 thmdata, direct_rows)
     val expected_knn = mlNearestNeighbor.thmknn_wdep direct_data 50
       features
-    val none = ranked "none"
+    val none = ranked Unfiltered
     fun exact_regular ranking =
       length ranking = 50 andalso
       not (List.exists (fn name => name = induction_name) ranking) andalso
@@ -7190,11 +7179,7 @@ fun test_hhLearn_production_exclusion_and_mash () =
     val restricted = hhLearn.mash_details partial
       {pool = SOME restricted_names, goal = goal, max_facts = 2}
     val partial_mesh = hhLearn.rank partial
-      {filter = "mesh", pool = NONE, goal = goal, n = 2}
-    val invalid_filter =
-      (ignore (hhLearn.rank context
-        {filter = "bogus", pool = NONE, goal = goal, n = 1}); false)
-      handle Feedback.HOL_ERR _ => true
+      {filter = Mesh, pool = NONE, goal = goal, n = 2}
   in
     expect "hhLearn mepo rank excludes induction with refill"
       (exact_regular mepo);
@@ -7228,9 +7213,7 @@ fun test_hhLearn_production_exclusion_and_mash () =
     expect "hhLearn MaSh removes out-of-pool unknowns from its remainder"
       (null (#unknown restricted));
     expect "hhLearn final mesh uses the partial-model unknown remainder"
-      (partial_mesh = [List.last regular_names, dep_head]);
-    expect "hhLearn rank rejects unknown filter names"
-      invalid_filter
+      (partial_mesh = [List.last regular_names, dep_head])
   end
 
 val _ = test_hhLearn_production_exclusion_and_mash ()
@@ -7333,8 +7316,8 @@ fun test_hhLearn_shared_predictions () =
     val rows = map (fn (name, _) => ("listTheory." ^ name, features)) entries
     val data = (mlFeature.learn_tfidf rows, rows)
     val context = hhLearn.create_context data
-    val filters = [("knn", 3), ("mash", 2), ("mesh", 14), ("knn", 11),
-                   ("mash", 14), ("mepo", 14), ("mesh", 4), ("none", 0)]
+    val filters = [(Knn, 3), (Mash, 2), (Mesh, 14), (Knn, 11),
+                   (Mash, 14), (Mepo, 14), (Mesh, 4), (Unfiltered, 0)]
     fun separate (filter, n) =
       (filter, hhLearn.rank context
         {filter = filter, pool = NONE, goal = goal, n = n})
@@ -7342,7 +7325,7 @@ fun test_hhLearn_shared_predictions () =
       hhLearn.rank_filters data goal requests = map separate requests
     fun cold_mepo_then_mixed () =
       (hhLearn.clean_context_cache ();
-       agrees [("mepo", 14)] andalso agrees filters)
+       agrees [(Mepo, 14)] andalso agrees filters)
     val pool = SOME ("missingTheory.missing" :: #1 (List.last rows) ::
       map #1 (aiLib.first_n 24 (rev rows)))
     fun restricted_agrees requests =
@@ -7352,14 +7335,14 @@ fun test_hhLearn_shared_predictions () =
         fun independent (filter, n) =
           hhLearn.rank context
             {filter = filter, pool = pool, goal = goal, n = n}
-        val queries = requests @ [("mesh", 17), ("mepo", 17), ("mash", 17)]
+        val queries = requests @ [(Mesh, 17), (Mepo, 17), (Mash, 17)]
       in
         map shared queries = map independent queries
       end
-    val lightweight = [("knn", 3), ("knn", 0), ("none", 0), ("knn", 11),
-                       ("knn", 3), ("knn", ~1)]
-    fun independent ("knn", n) =
-          ("knn", mlNearestNeighbor.thmknn_wdep data n features)
+    val lightweight = [(Knn, 3), (Knn, 0), (Unfiltered, 0), (Knn, 11),
+                       (Knn, 3), (Knn, ~1)]
+    fun independent (Knn, n) =
+          (Knn, mlNearestNeighbor.thmknn_wdep data n features)
       | independent (filter, _) = (filter, map #1 rows)
     fun lightweight_agrees requests =
       (hhLearn.clean_context_cache ();
@@ -7396,20 +7379,20 @@ fun test_hypothesis_premises () = with_fresh_dir (fn root =>
     val features = mlFeature.fea_of_goal true goal
     val rows = [(truth, features), (fixture, features)]
     val data = (mlFeature.learn_tfidf rows, rows)
-    val filters = [("knn", 1), ("none", 0)]
+    val filters = [(Knn, 1), (Unfiltered, 0)]
     val lightweight = hhLearn.rank_filters data goal filters
     val warm = hhLearn.rank_filters data goal filters
     val context = hhLearn.create_context data
     val none = hhLearn.rank context
-      {filter = "none", pool = NONE, goal = goal, n = 2}
+      {filter = Unfiltered, pool = NONE, goal = goal, n = 2}
     val knn = hhLearn.rank context
-      {filter = "knn", pool = NONE, goal = goal, n = 1}
+      {filter = Knn, pool = NONE, goal = goal, n = 1}
     val promoted = hhLearn.rank_filters data goal filters
     val options = hh_options []
     val slices =
       [encoded ("fof", "", ""), encoded ("fof", "mono_guards", "lifting")]
     fun export ranking =
-      (hhSchedule.export_problems root options goal [("none", ranking)]
+      (hhSchedule.export_problems root options goal [(Unfiltered, ranking)]
          (map (fn s => (prover Eprover, s)) slices);
        map (String.concat o aiLib.bare_readl o hhSchedule.problem_path root)
          slices)
@@ -7422,7 +7405,7 @@ fun test_hypothesis_premises () = with_fresh_dir (fn root =>
     expect "premise ranking skips theorems with hypotheses"
       (hhLearn.context_thmids context = [truth] andalso none = [truth]);
     expect "lightweight rankings preserve filter order and hypothesis checks"
-      (lightweight = [("knn", knn), ("none", none)] andalso
+      (lightweight = [(Knn, knn), (Unfiltered, none)] andalso
        warm = lightweight andalso promoted = lightweight);
     expect "legacy and generated exports drop theorems with hypotheses"
       (with_fixture = without_fixture);

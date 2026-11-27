@@ -94,10 +94,10 @@ fun string_of_selector Deps = "deps"
   | string_of_selector PerSlice = "perslice"
 
 fun filter_of_selector Deps = "deps"
-  | filter_of_selector (Knn _) = "knn"
-  | filter_of_selector (Mepo _) = "mepo"
-  | filter_of_selector (Mash _) = "mash"
-  | filter_of_selector (Mesh _) = "mesh"
+  | filter_of_selector (Knn _) = hhConfig.filter_name hhConfig.Knn
+  | filter_of_selector (Mepo _) = hhConfig.filter_name hhConfig.Mepo
+  | filter_of_selector (Mash _) = hhConfig.filter_name hhConfig.Mash
+  | filter_of_selector (Mesh _) = hhConfig.filter_name hhConfig.Mesh
   | filter_of_selector PerSlice = "per-slice"
 
 fun regime_of_string "bushy" = Bushy
@@ -312,6 +312,13 @@ fun prover_value value = prover_of_name (JSONUtil.asString value)
 
 fun prover_field name value = prover_value (field name value)
 
+fun filter_field name value =
+  let val text = string_field name value in
+    case hhConfig.filter_of_name text of
+        SOME filter => filter
+      | NONE => raise Fail ("unknown journal premise filter: " ^ text)
+  end
+
 fun parse_engine_params value =
   {provers = JSONUtil.arrayMap prover_value (field "provers" value),
    slices = int_field "slices" value, cores = int_field "cores" value,
@@ -456,7 +463,7 @@ fun json_slice
      ("type_enc", JSON.STRING type_enc),
      ("lam_trans", JSON.STRING lam_trans),
      ("nfacts", json_int nfacts),
-     ("filter", JSON.STRING filter),
+     ("filter", JSON.STRING (hhConfig.filter_name filter)),
      ("extra_opts", JSON.ARRAY (map JSON.STRING extra_opts)),
      ("slice_size", json_int slice_size)]
 
@@ -557,7 +564,7 @@ fun parse_slice value : hhProver.slice =
    type_enc = string_field "type_enc" value,
    lam_trans = string_field "lam_trans" value,
    nfacts = int_field "nfacts" value,
-   filter = string_field "filter" value,
+   filter = filter_field "filter" value,
    extra_opts = string_list (field "extra_opts" value),
    slice_size = int_field "slice_size" value}
 
@@ -1013,7 +1020,8 @@ fun winning_row entry : slice_contribution option =
       | SOME (Sched _) =>
           Option.map (fn slice =>
             row (#format slice, #type_enc slice, #lam_trans slice,
-              #prover slice, #filter slice, #nfacts slice))
+              #prover slice, hhConfig.filter_name (#filter slice),
+              #nfacts slice))
             (#winner entry)
       | NONE => NONE
   end
@@ -1610,8 +1618,8 @@ fun select_knn ({knn, ...} : selection_data)
 fun select_filter (data as {context, ...} : selection_data)
     filter (pool : premise_pool) count goal =
   case filter of
-      "none" => map #1 (#2 (Susp.force (#thmdata pool)))
-    | "knn" => select_knn data pool count goal
+      hhConfig.Unfiltered => map #1 (#2 (Susp.force (#thmdata pool)))
+    | hhConfig.Knn => select_knn data pool count goal
     | _ => hhLearn.rank_in (Susp.force context)
         {filter = filter, pool = SOME (Susp.force (#names pool)),
          goal = goal, n = count}
@@ -1643,7 +1651,7 @@ fun selection_facts (data as {thmdata, ...} : selection_data)
     fun rank_many queries =
       let
         fun context_filter (filter, _) =
-          filter <> "none" andalso filter <> "knn"
+          filter <> hhConfig.Unfiltered andalso filter <> hhConfig.Knn
         val missing = List.filter (fn query =>
           context_filter query andalso not (isSome (lookup query))) queries
         val shared = Susp.delay (fn () =>
@@ -1673,10 +1681,10 @@ fun bushy_selection_facts (data : selection_data) goal dependencies =
 fun selected_premises_at condition {rank, dependencies, ...} knn_count =
   case #selector condition of
       Deps => dependencies
-    | Knn count => rank "knn" (Option.getOpt (knn_count, count))
-    | Mepo count => rank "mepo" count
-    | Mash count => rank "mash" count
-    | Mesh count => rank "mesh" count
+    | Knn count => rank hhConfig.Knn (Option.getOpt (knn_count, count))
+    | Mepo count => rank hhConfig.Mepo count
+    | Mash count => rank hhConfig.Mash count
+    | Mesh count => rank hhConfig.Mesh count
     | PerSlice => raise Fail
         "invalid hhEval premise selection: perslice requires Sched"
 

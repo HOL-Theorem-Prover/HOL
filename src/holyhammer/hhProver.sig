@@ -1,6 +1,7 @@
 signature hhProver =
 sig
   datatype prover = datatype hhConfig.prover
+  datatype premise_filter = datatype hhConfig.premise_filter
 
   datatype szs =
       SzsTheorem
@@ -15,7 +16,7 @@ sig
 
   type slice =
     {prover : prover, format : string, type_enc : string,
-     lam_trans : string, nfacts : int, filter : string,
+     lam_trans : string, nfacts : int, filter : premise_filter,
      extra_opts : string list, slice_size : int}
 
   type run_request =
@@ -49,7 +50,8 @@ sig
   val same_slice : slice -> slice -> bool
   (* mk_slice prover (format, type_enc, lam_trans) filter nfacts: the
      slice without extra options, of size 1. *)
-  val mk_slice : prover -> string * string * string -> string -> int -> slice
+  val mk_slice :
+    prover -> string * string * string -> premise_filter -> int -> slice
   (* Wall-clock slack past a requested time limit: a prover process is
      killed this long after its own limit, and the scheduler extends its
      deadlines by the same amount. *)

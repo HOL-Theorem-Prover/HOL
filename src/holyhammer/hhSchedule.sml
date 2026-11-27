@@ -112,7 +112,8 @@ fun default_progress (SliceStarted slice) =
 
 fun problem_key (slice : hhProver.slice) =
   String.concatWith "."
-    (map aiLib.escape [prover_of slice, #filter slice, #format slice,
+    (map aiLib.escape [prover_of slice, hhConfig.filter_name (#filter slice),
+                       #format slice,
                        #type_enc slice, #lam_trans slice,
                        Int.toString (#nfacts slice)])
 
@@ -213,7 +214,7 @@ fun ranking_for rankings filter =
       SOME (_, ranking) => ranking
     | NONE => raise Fail
         ("HolyHammer: missing premise ranking for filter '" ^
-         filter ^ "'")
+         hhConfig.filter_name filter ^ "'")
 
 (* Count each used ranking once, stopping at its largest requested prefix. *)
 fun selection_sizes (options : hhConfig.hh_options) rankings problems =
@@ -225,7 +226,7 @@ fun selection_sizes (options : hhConfig.hh_options) rankings problems =
     fun size (filter, maximum) =
       let
         val premises = ranking_for rankings filter
-        val bound = if filter = "none" then #max_facts options
+        val bound = if filter = hhConfig.Unfiltered then #max_facts options
                     else SOME maximum
       in
         (filter, case bound of
@@ -243,7 +244,8 @@ datatype kind =
 
 type work =
   {index : int, config : hhProver.prover_config, slice : hhProver.slice,
-   path : string, key : string * int, kind : kind}
+   path : string, key : hhConfig.premise_filter * int,
+   kind : kind}
 
 (* Every ranking is checked before the caller creates a directory or
    problem file. *)
@@ -257,7 +259,7 @@ fun ordered_work_for options rankings scheduled_paths =
         val size = ranking_for sizes filter
         (* The conjecture and the legacy printer are fixed, so slices
            with the same selection share one legacy problem. *)
-        val count = if filter = "none" then size
+        val count = if filter = hhConfig.Unfiltered then size
                     else Int.max (0, Int.min (#nfacts slice, size))
         val key = (filter, count)
         fun work kind =

@@ -48,15 +48,16 @@ being present or committed.
 ## Module map (pipeline order)
 
 - **`hhConfig`** — the `prover` datatype (`Eprover | Vampire |
-  Zipperposition | Z3`) and its name codec, the option system
-  (`hh_set`/`hh_get`/`snapshot` → `hh_options`), config-file + env
-  discovery, executable discovery, and the state dir.  Central; nearly
+  Zipperposition | Z3`) and the `premise_filter` datatype (`Knn |
+  Mepo | Mash | Mesh | Unfiltered`), with their name codecs, the option
+  system (`hh_set`/`hh_get`/`snapshot` → `hh_options`), config-file +
+  env discovery, executable discovery, and the state dir.  Central; nearly
   everything depends on it, so it must not depend on the modules that
   use it (it uses only `hhTypeEnc` and `hhLamTrans`, to validate option
   values).
-  Provers are identified by constructor throughout; `prover_name`
-  strings appear only at text boundaries (option values, config keys,
-  install dirs, journals).
+  Provers and filters are identified by constructor throughout;
+  `prover_name` and `filter_name` strings appear only at text boundaries
+  (option values, config keys, install dirs, problem names, journals).
 - **Premise selection: `hhLearn`, `hhMePo`, `hhFactIndex`,
   `hhStature`** — kNN, MaSh, and MeSh rankings (`hhLearn.rank_filters`),
   MePo relevance filtering, fact lookup by name, and fact statures.

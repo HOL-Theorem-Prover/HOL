@@ -302,13 +302,13 @@ fun test_hhEval root =
     val schedule_slice : hhEval.journal_slice =
       {slice =
          {prover = Eprover, format = "fof", type_enc = "",
-          lam_trans = "", nfacts = 256, filter = "mepo",
+          lam_trans = "", nfacts = 256, filter = hhConfig.Mepo,
           extra_opts = ["--auto"], slice_size = 15},
        szs = hhProver.SzsTheorem, time = 1.75, cached = true}
     val competing_schedule_slice : hhEval.journal_slice =
       {slice =
          {prover = Eprover, format = "tx0-", type_enc = "mono_native_fool",
-          lam_trans = "lifting", nfacts = 256, filter = "mepo",
+          lam_trans = "lifting", nfacts = 256, filter = hhConfig.Mepo,
           extra_opts = ["--auto"], slice_size = 15},
        szs = hhProver.SzsTheorem, time = 1.5, cached = false}
     val sched_entry : hhEval.journal_entry =
@@ -556,9 +556,9 @@ fun test_hhEval root =
       end
     val collision_journal = join report_journal "collision.jsonl"
     val _ = hhEval.append_journal collision_journal
-      (collision_entry "mepo" "mepo" true)
+      (collision_entry "mepo" hhConfig.Mepo true)
     val _ = hhEval.append_journal collision_journal
-      (collision_entry "mesh" "mesh" false)
+      (collision_entry "mesh" hhConfig.Mesh false)
     val report_corrupt = TextIO.openAppend (join report_journal "list.jsonl")
     val _ = TextIO.output (report_corrupt, "{in-progress")
     val _ = TextIO.closeOut report_corrupt
@@ -817,7 +817,8 @@ fun test_hhEval_integration () =
           val _ = expect "hhEval workers use runtime schedule settings"
             (not (null worker_slices) andalso
              List.all (fn {slice, ...} : hhEval.journal_slice =>
-               #filter slice = "mepo" andalso #format slice = "tf0" andalso
+               #filter slice = hhConfig.Mepo andalso
+               #format slice = "tf0" andalso
                #type_enc slice = "mono_native" andalso
                #lam_trans slice = "lifting") worker_slices)
           (* pair and option are built before bossLib, so their workers

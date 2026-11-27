@@ -73,7 +73,6 @@ fun validate_slice (config : hhProver.prover_config)
     (slice : hhProver.slice) =
   let
     val format = #format slice
-    val filter = #filter slice
     val _ = encoding_of slice
     val _ =
       if List.exists (fn supported => supported = format)
@@ -81,10 +80,6 @@ fun validate_slice (config : hhProver.prover_config)
       then ()
       else raise Fail ("HolyHammer prover '" ^ #name config ^
         "' does not support format '" ^ format ^ "'")
-    val _ =
-      if filter <> "" andalso filter = hhConfig.trim filter andalso
-         hhConfig.valid_filter filter then ()
-      else raise Fail ("invalid HolyHammer premise filter '" ^ filter ^ "'")
   in
     slice
   end
@@ -96,7 +91,7 @@ fun adjust_slice (options : hhConfig.hh_options)
    type_enc = overridden (#type_enc options) (#type_enc slice),
    lam_trans = overridden (#lam_trans options) (#lam_trans slice),
    nfacts = cap (#max_facts options) (#nfacts slice),
-   filter = overridden (#filter options) (#filter slice),
+   filter = Option.getOpt (#filter options, #filter slice),
    extra_opts = #extra_opts slice,
    slice_size = #slice_size slice}
 

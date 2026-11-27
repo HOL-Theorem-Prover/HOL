@@ -12,6 +12,8 @@ struct
 
 open HolKernel aiLib
 
+datatype premise_filter = datatype hhConfig.premise_filter
+
 val ERR = mk_HOL_ERR "hhLearn"
 
 type constants =
@@ -1013,7 +1015,7 @@ fun expand_knn with_dependencies n predictions =
   take_unique_expansions I n (map with_dependencies predictions)
 
 fun expand_knn_for filters =
-  case List.filter (fn (filter, _) => filter = "knn") filters of
+  case List.filter (fn (filter, _) => filter = Knn) filters of
       _ :: _ :: _ =>
         expand_knn (memoize String.compare (knn_expander
           (dependency_resolver ())))
@@ -1083,11 +1085,11 @@ fun rank_with_predictions (context as {statures, fact_key, ...} : context)
           first_test_n (not o is_induction statures) n ranking
       in
         case filter of
-            "none" => pool_names ()
-          | "knn" => expand n (knn n)
-          | "mepo" => finish (mepo_leg generous)
-          | "mash" => finish (#ranking (mash generous))
-          | "mesh" =>
+            Unfiltered => pool_names ()
+          | Knn => expand n (knn n)
+          | Mepo => finish (mepo_leg generous)
+          | Mash => finish (#ranking (mash generous))
+          | Mesh =>
               let
                 (* Apply the induction filter and caller's bound before
                    meshing, to preserve normalization and the cutoff. *)
@@ -1102,7 +1104,6 @@ fun rank_with_predictions (context as {statures, fact_key, ...} : context)
                    (#final_mash_weight default_constants,
                     (weight_facts_steeply mash_ranking, unknown))]
               end
-          | _ => raise ERR "rank" ("unknown premise filter " ^ filter)
       end
   in
     rank_one
@@ -1124,8 +1125,8 @@ fun rank_for_filters_in context {pool, goal} filters =
   let
     val {knn, nb} = direct_predictions context goal
     fun limits ((filter, n), (knn_max, nb_max)) =
-      if filter = "knn" then (Int.max (knn_max, n), nb_max)
-      else if (filter = "mash" orelse filter = "mesh") andalso n > 0 then
+      if filter = Knn then (Int.max (knn_max, n), nb_max)
+      else if (filter = Mash orelse filter = Mesh) andalso n > 0 then
         let val depth = suggestion_limit (over_request n) in
           (Int.max (knn_max, depth), Int.max (nb_max, depth))
         end handle Overflow => (knn_max, nb_max)
@@ -1136,7 +1137,7 @@ fun rank_for_filters_in context {pool, goal} filters =
       {knn = shared_prefix knn_max (fn n => knn (Susp.force restricted) n),
        nb = shared_prefix nb_max (fn n => nb (Susp.force names) n)}
     fun component_depth (filter, n) =
-      if filter = "mepo" orelse filter = "mash" orelse filter = "mesh" then
+      if filter = Mepo orelse filter = Mash orelse filter = Mesh then
         SOME (over_request n) handle Overflow => NONE
       else NONE
     val shared_depths = List.mapPartial component_depth filters
@@ -1164,7 +1165,7 @@ fun rank context {filter, pool, goal, n} =
                    goal = goal, n = n}
 
 fun rank_filters thmdata goal filters =
-  if List.all (fn (filter, _) => filter = "knn" orelse filter = "none")
+  if List.all (fn (filter, _) => filter = Knn orelse filter = Unfiltered)
        filters then
     let
       val key = context_key_for (Theory.current_theory ()) thmdata
@@ -1179,12 +1180,12 @@ fun rank_filters thmdata goal filters =
               end
       val goal_features = Susp.delay (fn () => mlFeature.fea_of_goal true goal)
       val names = Susp.delay (fn () => map #1 facts)
-      fun maximum (("knn", n), largest) = Int.max (n, largest)
+      fun maximum ((Knn, n), largest) = Int.max (n, largest)
         | maximum (_, largest) = largest
       val predict = shared_prefix (foldl maximum 0 filters)
         (knn_predict data (fn () => Susp.force goal_features))
       val expand = expand_knn_for filters
-      fun one ("knn", n) = ("knn", expand n (predict n))
+      fun one (Knn, n) = (Knn, expand n (predict n))
         | one (filter, _) = (filter, Susp.force names)
     in
       map one filters

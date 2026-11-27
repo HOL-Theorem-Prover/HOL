@@ -130,7 +130,8 @@ fun run_alone prover goal premises =
 fun run_schedule options max_proofs goal premises =
   hhSchedule.run
     {options = options, max_proofs = max_proofs, goal = goal,
-     context = Context.snapshot (), rankings = [("none", premises)],
+     context = Context.snapshot (),
+     rankings = [(hhConfig.Unfiltered, premises)],
      progress = NONE}
 
 (* The schedule of the schedule goal: three slices on three cores. *)
@@ -151,7 +152,7 @@ fun schedule_verdict (result : hhSchedule.result) =
    the schedule. *)
 datatype kind =
     Alone of hhConfig.prover
-  | Ranked of hhConfig.prover * string * int
+  | Ranked of hhConfig.prover * hhConfig.premise_filter * int
   | Schedule
 
 val goals =
@@ -169,9 +170,9 @@ val goals =
      ("arithmetic", "SUC_NOT_ZERO", Alone Vampire),
      ("arithmetic", "SUC_ADD_SYM", Alone Zipperposition),
      ("arithmetic", "ADD1", Schedule),
-     ("bool", "TRUTH", Ranked (Eprover, "mepo", 96)),
-     ("bool", "EQ_REFL", Ranked (Vampire, "mash", 96)),
-     ("bool", "IMP_CLAUSES", Ranked (Zipperposition, "mesh", 128))]
+     ("bool", "TRUTH", Ranked (Eprover, hhConfig.Mepo, 96)),
+     ("bool", "EQ_REFL", Ranked (Vampire, hhConfig.Mash, 96)),
+     ("bool", "IMP_CLAUSES", Ranked (Zipperposition, hhConfig.Mesh, 128))]
   end
 
 fun ranked thy filter count goal dependencies =
@@ -187,7 +188,7 @@ fun goal_smoke (thy, name, kind) =
       case kind of
           Alone prover => hhConfig.prover_name prover
         | Ranked (prover, filter, _) =>
-            hhConfig.prover_name prover ^ ", " ^ filter
+            hhConfig.prover_name prover ^ ", " ^ hhConfig.filter_name filter
         | Schedule => "schedule"
     fun proof dependencies =
       case kind of
@@ -287,7 +288,8 @@ fun pigeonhole count =
   end
 
 fun matrix_slice prover format type_enc lam_trans nfacts =
-  hhProver.mk_slice prover (format, type_enc, lam_trans) "none" nfacts
+  hhProver.mk_slice prover (format, type_enc, lam_trans) hhConfig.Unfiltered
+    nfacts
 
 (* The typed encodings that the soundness checks query one by one.  The
    final three rows are the table triples that the portfolio's
