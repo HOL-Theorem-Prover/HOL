@@ -586,9 +586,21 @@ in
     end
 end tm
 
+(* finish_pure_goal1 picks variables from strip_exists, which renames a
+   repeated bound name at the inner binder, and then works under
+   STRIP_QUANT_CONV, which renames it at the outer one.  When the two
+   disagree, give the binders the names strip_exists chose. *)
+fun distinct_bvars tm = let
+  val vs = #1 (strip_exists tm)
+in
+  if tml_eq vs (#1 (boolSyntax.strip_exists tm)) then ALL_CONV tm
+  else RENAME_VARS_CONV (map (#1 o dest_var) vs) tm
+end
+
 fun finish_pure_goal tm =
     if is_exists tm then
-      ((REWR_CONV EXISTS_SIMP ORELSEC finish_pure_goal1) THENC
+      ((REWR_CONV EXISTS_SIMP ORELSEC
+        (distinct_bvars THENC finish_pure_goal1)) THENC
        EVERY_DISJ_CONV (obvious_improvements THENC finish_pure_goal)) tm
     else REDUCE_CONV tm
 

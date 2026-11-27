@@ -304,6 +304,7 @@ val omega_test_terms = [
 ]
 
 val cooper_test_terms = [
+  L (``n MOD 3 + 1 - 1 + k = n ==> n DIV 3 <= n``, "DUP_BOUND_NAMES"),
 (*  L (``?s:int e n d m oh r y.
         0 < s /\ s <= 9 /\ 0 <= e /\ e <= 9 /\ 0 <= n /\ n <= 9 /\
         0 <= d /\ d <= 9 /\ 0 < m /\ m <= 9 /\ 0 <= oh /\ oh <= 9 /\
