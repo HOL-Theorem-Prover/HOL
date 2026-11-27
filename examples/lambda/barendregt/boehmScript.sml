@@ -3,6 +3,7 @@
 (* TITLE   : (Effective) Böhm Trees (Barendregt 1984 [1], Chapter 10)         *)
 (*                                                                            *)
 (* AUTHORS : 2023-2024 The Australian National University (Chun Tian)         *)
+(*           2026  Dalian University of Science and Technology (Chun Tian)    *)
 (* ========================================================================== *)
 
 Theory boehm
@@ -53,7 +54,7 @@ val _ = temp_clear_overloads_on "fEL";
    2. ‘LAMl vs (VAR y)’ can easily "expand" (w.r.t. eta reduction) into terms
       such as “LAMl (vs ++ [z0;z1]) t” without changing the head variable.
  *)
-Type BT_node[pp]    = “:(string list # string) option”
+Type BT_node[pp]    = “:(string llist # string) option”
 Type boehm_tree[pp] = “:BT_node ltree”
 
 (* Definition 10.1.9 [1, p.221] (Effective Boehm Tree)
@@ -61,6 +62,9 @@ Type boehm_tree[pp] = “:BT_node ltree”
    NOTE: For the correctness of the definition, ‘FINITE X’ and ‘FV M SUBSET X’,
    or something stronger ‘FV M SUBSET X UNION (RANK r X)’ for induction,
    must be assumed in antecedents.
+
+   NOTE: The binding list ‘vs’ in (vs,y) has been extended to an llist to support
+   (potential) infinite eta-expansions of Boehm trees. -- 26 nov 2026
  *)
 Definition BT_generator_def :
     BT_generator X (M,r) =
@@ -73,7 +77,7 @@ Definition BT_generator_def :
               y = hnf_headvar M1;
               l = MAP (\e. (e,SUC r)) Ms;
          in
-            (SOME (vs,y),fromList l)
+            (SOME (fromList vs,y),fromList l)
       else
             (NONE, LNIL)
 End
@@ -90,7 +94,7 @@ Theorem BT_generator_of_hnf :
              y = hnf_headvar M1;
              l = MAP (\e. (e,SUC r)) Ms
            in
-             (SOME (vs,y),fromList l))
+             (SOME (fromList vs,y),fromList l))
 Proof
     rpt STRIP_TAC
  >> ‘solvable M’ by PROVE_TAC [hnf_solvable]
@@ -748,7 +752,7 @@ Theorem BT_ltree_el_NIL :
                 l = MAP (\e. (e,SUC r)) Ms;
                 m = LENGTH Ms;
              in
-               SOME (SOME (vs,y),SOME m)
+               SOME (SOME (fromList vs,y),SOME m)
           else
                SOME (NONE,SOME 0)
 Proof
@@ -771,7 +775,7 @@ Theorem BT_ltree_el_NIL_alt :
                 y = hnf_headvar M1;
                 l = MAP (\e. (e,SUC r)) Ms
              in
-               SOME (SOME (vs,y),SOME m)
+               SOME (SOME (fromList vs,y),SOME m)
           else
                SOME (NONE,SOME 0)
 Proof
@@ -1269,8 +1273,9 @@ Theorem BT_subterm_thm :
               subterm X M p r <> NONE /\ solvable (subterm' X M p r)
         ==> do (N,r') <- subterm X M p r;
                (t,m') <- ltree_el (BT' X M r) p;
-               (xs,y) <- t;
-                   m <- m';
+               (ls,y) <- t;
+                    m <- m';
+                  xs <<- THE (toList ls);
                   M0 <<- principal_hnf N;
                    n <<- LAMl_size M0;
                   vs <<- RNEWS r' n X;
@@ -1302,7 +1307,7 @@ Proof
  >> rename1 ‘subterm X M p r = SOME (N,r')’
  >> rw [BT_ltree_el_thm]
  >> UNBETA_TAC [BT_def, Once ltree_unfold, BT_generator_def] “BT' X N r'”
- >> simp [LMAP_fromList, Abbr ‘l’]
+ >> simp [LMAP_fromList, Abbr ‘l’, from_toList]
 (* stage work *)
  >> qunabbrev_tac ‘vs’
  >> Q_TAC (RNEWS_TAC (“vs :string list”, “r' :num”, “n :num”)) ‘X’
@@ -5890,20 +5895,23 @@ QED
  *)
 Definition rose_to_term_def :
     rose_to_term =
-    rose_reduce (\x args. case x of
-                            SOME (vs,y) => LAMl vs (VAR y @* args)
-                          | NONE => Omega)
+    rose_reduce (λ(x :BT_node) (args :term list).
+                   case x of
+                     SOME (ls,y) => LAMl (THE (toList ls)) (VAR y @* args)
+                   | NONE => Omega)
 End
 
 (* NOTE: This assumes that the input Boehm tree is finite (ltree_finite). *)
 Overload BT_to_term = “\t. rose_to_term (to_rose t)”
 
 Theorem BT_to_term_def :
-    !t. BT_to_term t =
-          rose_reduce
-            (\x args. case x of
-                        NONE => Omega
-                      | SOME (vs,y) => LAMl vs (VAR y @* args)) (to_rose t)
+    !t. BT_to_term (t :boehm_tree) =
+        rose_reduce
+          (λ(x :BT_node) (args :term list).
+             case x of
+               NONE => Omega
+             | SOME (ls,y) => LAMl (THE (toList ls)) (VAR y @* args))
+          (to_rose t)
 Proof
     rw [rose_to_term_def, o_DEF]
 QED
@@ -5912,7 +5920,7 @@ QED
    BT_expand lemmas.
  *)
 Definition BT_VAR_def :
-    BT_VAR y :boehm_tree = Branch (SOME ([],y)) LNIL
+    BT_VAR y :boehm_tree = Branch (SOME ([||],y)) LNIL
 End
 
 Theorem ltree_finite_BT_VAR[simp] :
@@ -5972,7 +5980,7 @@ Proof
  >> simp [BT_def, BT_generator_def, Once ltree_unfold, Once ltree_finite]
  >> Q.PAT_X_ASSUM ‘ltree_finite _’
       (MP_TAC o REWRITE_RULE [BT_def, BT_generator_def, Once ltree_unfold])
- >> simp [IN_LSET, LNTH_fromList]
+ >> simp [IN_LSET, LNTH_fromList, from_toList]
  >> qabbrev_tac ‘M0 = principal_hnf M’
  >> qabbrev_tac ‘n = LAMl_size M0’
  >> Q_TAC (RNEWS_TAC (“vs :string list”, “r :num”, “n :num”)) ‘X’
@@ -5983,9 +5991,10 @@ Proof
  >> ‘TAKE n vs = vs’ by rw []
  >> POP_ASSUM (rfs o wrap)
  >> qabbrev_tac ‘m = LENGTH args’
- >> simp [GSYM BT_def, LMAP_fromList, MAP_MAP_o, o_DEF, Once ltree_finite, MEM_MAP]
+ >> simp [GSYM BT_def, LMAP_fromList, MAP_MAP_o, o_DEF, Once ltree_finite,
+          MEM_MAP]
  >> rpt STRIP_TAC
- >> Q.PAT_X_ASSUM ‘a = SOME (vs,y)’ K_TAC
+ >> Q.PAT_X_ASSUM ‘a = SOME (fromList vs,y)’ K_TAC
  >> Know ‘M = M0’
  >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
      qunabbrev_tac ‘M0’ \\
@@ -6154,16 +6163,16 @@ QED
    5. THE (ltree_el (BT' X M r) p) <> bot (automatic by “bnf M”)
  *)
 Definition BT_expand_def :
-    BT_expand X t p r =
+    BT_expand X (t :boehm_tree) (p :num list) (r :num) =
        let s = ltree_paths t;
           r' = LENGTH p + r;
      (d,len) = THE (ltree_el t p);
       (vs,y) = THE d;
            m = THE len;
-           n = LENGTH vs;
+           n = THE (LLENGTH vs);
          vs' = RNEWS r' (SUC n) X;
            v = LAST vs';
-           f = OPTION_MAP (\(vs,y). (SNOC v vs,y))
+           f = OPTION_MAP (λ(vs,y). (LAPPEND vs [|v|],y))
         in
            ltree_insert f t p (BT_VAR v)
 End
@@ -6202,6 +6211,8 @@ Proof
  >- (MATCH_MP_TAC ltree_finite_BT_has_bnf >> art [])
  >> MATCH_MP_TAC BT_ltree_el_cases' >> art []
 QED
+
+TODO
 
 (* NOTE: This lemma is not suitable for induction, because (in general),
    if “compat_closure eta N M” and M is bnf, N may have beta-redexes due
