@@ -9,7 +9,7 @@ all: $(DEFAULT_TARGETS)
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe json-selftest.log
+EXTRA_CLEANS = selftest.exe json-printer-selftest.out json-selftest.log
 
 ifdef HOLSELFTESTLEVEL
 all: json-selftest.log

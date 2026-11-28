@@ -1,15 +1,41 @@
-all: $(DEFAULT_TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) hhPool.uo hhStature.uo hhMePo.uo \
+     hhFactIndex.uo hhLearn.uo hhTptpProblem.uo hhTypeEnc.uo \
+     hhLamTrans.uo hhMonomorph.uo hhProblemGen.uo hhConfig.uo \
+     hhProver.uo hhSlice.uo hhCache.uo hhSchedule.uo
+
+hhTptpProblem.uo: hhTptpProblem.sml hhTptpProblem.ui
+
+hhStature.uo: hhStature.sml hhStature.ui
+
+hhFactIndex.uo: hhFactIndex.sml hhFactIndex.ui
+
+hhMePo.uo: hhMePo.sml hhMePo.ui hhFactIndex.uo
+
+hhLearn.uo: hhLearn.sml hhLearn.ui hhStature.uo hhFactIndex.uo hhMePo.uo
+
+hhTypeEnc.uo: hhTypeEnc.sml hhTypeEnc.ui hhTptpProblem.uo
+
+hhLamTrans.uo: hhLamTrans.sml hhLamTrans.ui
+
+hhMonomorph.uo: hhMonomorph.sml hhMonomorph.ui
+
+hhProblemGen.uo: hhProblemGen.sml hhProblemGen.ui hhTptpProblem.uo \
+                 hhTypeEnc.uo hhLamTrans.uo hhMonomorph.uo
+
+hhConfig.uo: hhConfig.sml hhConfig.ui hhTptpProblem.uo hhTypeEnc.uo \
+             hhLamTrans.uo
+
+hhProver.uo: hhProver.sml hhProver.ui hhConfig.uo
+
+hhPool.uo: hhPool.sml hhPool.ui
+
+hhSlice.uo: hhSlice.sml hhSlice.ui hhConfig.uo hhProver.uo
+
+hhCache.uo: hhCache.sml hhCache.ui hhConfig.uo hhProver.uo
+
+hhSchedule.uo: hhSchedule.sml hhSchedule.ui hhPool.uo hhConfig.uo hhProver.uo \
+               hhSlice.uo hhCache.uo hhProblemGen.uo
+
+holyHammer.uo: holyHammer.sml holyHammer.ui hhConfig.uo hhProver.uo \
+               hhSlice.uo hhSchedule.uo hhLearn.uo
 .PHONY: all
-
-selftest.exe: selftest.uo
-	$(HOLMOSMLC) -o $@ $<
-
-EXTRA_CLEANS = selftest.exe selftest.log
-
-ifdef HOLSELFTESTLEVEL
-all: selftest.log
-
-selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1,$@)
-
-endif

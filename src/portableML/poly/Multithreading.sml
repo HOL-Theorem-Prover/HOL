@@ -17,6 +17,9 @@ sig
   val tracing: int -> (unit -> string) -> unit
   val tracing_time: bool -> Time.time -> (unit -> string) -> unit
   val synchronized: string -> Mutex.mutex -> (unit -> 'a) -> 'a
+  val with_lock: Mutex.mutex -> (unit -> 'a) -> 'a
+  val join_threads: ((unit -> unit) -> unit -> unit option) ->
+    (unit -> unit) -> Thread.thread list -> unit
 end;
 
 structure Multithreading: MULTITHREADING =
@@ -116,5 +119,37 @@ fun synchronized name lock e =
         val result = Exn.capture (restore_attributes e) ();
         val _ = Mutex.unlock lock;
       in result end) ());
+
+
+(* [synchronized] masks with the plain [Thread_Attributes.uninterruptible],
+   so the [Mutex.lock] a caller queues on is one more place its Ctrl-C is
+   lost; [with_lock] is otherwise the same function without the tracing, but
+   defers interrupts (see [Thread_Attributes.uninterruptible_defer]). *)
+fun with_lock lock e =
+  Exn.release (Thread_Attributes.uninterruptible_defer (fn restore => fn () =>
+    let
+      val _ = Mutex.lock lock
+      val result = Exn.capture (restore e) ()
+      val _ = Mutex.unlock lock
+    in
+      result
+    end) ());
+
+(* [join_threads observe poll threads] waits until none of the threads is
+   active, calling [poll] between the checks, which are one millisecond
+   apart.  [observe] is the one of [Thread_Attributes.uninterruptible_wait],
+   whose masked region this runs in: the wait then takes an interrupt of the
+   caller (a broadcast one included) only to answer it once the join is
+   done. *)
+fun join_threads observe poll threads =
+  let
+    fun nap () =
+      (poll (); OS.Process.sleep (Time.fromReal 0.001))
+    fun await thread =
+      if not (Thread.isActive thread) then ()
+      else (ignore (observe nap ()); await thread)
+  in
+    List.app await threads
+  end;
 
 end;

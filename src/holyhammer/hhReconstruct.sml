@@ -1,85 +1,212 @@
-(* ===================================================================== *)
-(* FILE          : hhReconstruct.sml                                     *)
-(* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP   *)
-(*                 and minimize them.                                    *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
-(* DATE          : 2015                                                  *)
-(* ===================================================================== *)
+(* ========================================================================= *)
+(* FILE          : hhReconstruct.sml                                         *)
+(* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP       *)
+(*                 and optionally minimize them.                             *)
+(* AUTHORS       : (c) Thibault Gauthier, University of Innsbruck            *)
+(*                 Lukasz Czajka                                             *)
+(* DATE          : 2015                                                      *)
+(* ========================================================================= *)
 
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel Dep Tag boolLib aiLib smlExecute smlTimeout smlRedirect
-  mlThmData psMinimize
+open HolKernel Dep Tag boolLib aiLib smlExecute smlTimeout mlThmData
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Settings
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
-val reconstruct_flag = ref true
-val minimization_timeout = ref 1.0
-val reconstruction_timeout = ref 1.0
+val minimization_timeout = ref hhConfig.default_minimize_timeout
+val reconstruction_timeout = ref hhConfig.default_preplay_timeout
 
-(* --------------------------------------------------------------------------
-   ATP output
-   -------------------------------------------------------------------------- *)
-
-fun remove_white_spaces s =
-  let fun f c = if Char.isSpace c then "" else Char.toString c in
-    String.translate f s
-  end
-
-fun not_reserved s = String.isPrefix "thm." s
-fun is_dot c = c = #"."
-
-fun read_status atp_status =
-  remove_white_spaces (hd (readl atp_status))
-  handle Interrupt => raise Interrupt
-       | _         => "Unknown"
-
-fun read_lemmas atp_out =
-  let
-    val l = filter not_reserved (map unescape (readl atp_out))
-    fun f s = String.concatWith "." (tl (String.fields is_dot s))
-  in
-    mk_string_set (map f l)
-  end
-
-fun get_lemmas (atp_status,atp_out) =
-  if read_status atp_status = "Theorem"
-  then SOME (read_lemmas atp_out)
-  else NONE
-
-(*----------------------------------------------------------------------------
-   Minimization and pretty-printing
- -----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Replay, minimization and lemma naming
+   ------------------------------------------------------------------------- *)
 
 val TC_OFF = HOLFlags.with_bflags [(Parse.show_typecheck_errors, false)]
-(* the trace setting, the timeout and the handler all have to span the
-   context application, which is when the tactic does its work *)
-fun timeout_tactic t tac g =
-  let val ctxt = Context.snapshot() in
-    SOME (fst (timeout t (TC_OFF (Lib.C tac ctxt)) g))
+(* The trace setting, the timeout and the handler all have to span the
+   context application, which is when the tactic does its work.  The
+   limit is on the thread's CPU time, not on wall time: the provers keep
+   running while a proof is replayed, and under a wall-clock limit a
+   replay on a loaded machine gets a small share of a CPU, so that
+   whether a list replays depends on the load. *)
+fun timeout_tactic t tac g ctxt =
+  let
+    val ((goals, _), time) = thread_timeout t (TC_OFF (Lib.C tac ctxt)) g
+  in
+    SOME (goals, time)
   end
   handle Interrupt => raise Interrupt | _ => NONE
 
+type settings =
+  {minimize : bool, preplay_timeout : real, minimize_timeout : real,
+   minimize_deadline : Time.time option}
+
+type reconstruction = {stac : string, tac : tactic, t_replay : real}
+
+(* Compiles stac and runs it on g in ctxt within t CPU seconds; returns
+   the tactic and its replay time when it proves g.  The tactic, which hh
+   also applies, sets the Metis trace to 0 in the context it runs in, so
+   that it prints nothing whatever the trace of the session. *)
+fun replay t stac g ctxt =
+  let
+    val tac = Tactical.trace_tac ("metis.trace", 0) (tactic_of_sml 1.0 stac)
+  in
+    case timeout_tactic t tac g ctxt of
+        SOME ([], time) => SOME (tac, time)
+      | _ => NONE
+  end
+  handle Interrupt => raise Interrupt | _ => NONE
+
+(* A lemma is renamed to its bare name, so that the call uses the name,
+   where the top-level ML value of that name states the same theorem.
+   This matters in two cases.  A theorem of the current theory has no
+   Theory structure yet, so mk_metis_call fetches it from DB, which
+   prints as fetch "thy" "name"; Theorem and Definition bind its name in
+   a script.  And a theory may re-export an ancestor's theorem under the
+   same name, as rich_list does MAP_REVERSE: the bare name then denotes
+   the copy, which the prettifier, comparing pointers, does not
+   recognise.  The value's type is looked up before it is compiled, so
+   that a name bound to something else prints no error. *)
+fun bound_name lemma =
+  let
+    val (thy, name) = split_string "Theory." lemma
+    fun same th stored =
+      aconv (concl th) (concl stored) andalso
+      HOLset.equal (hypset th, hypset stored)
+  in
+    case #lookupVal PolyML.globalNameSpace name of
+        NONE => lemma
+      | SOME value =>
+          if not (is_thm_value [(name, value)] name) then lemma
+          else
+            case thm_of_sml name of
+                SOME (_, th) =>
+                  if same th (DB.fetch thy name)
+                  then namespace_tag ^ "Theory." ^ name
+                  else lemma
+              | NONE => lemma
+  end
+  handle Interrupt => raise Interrupt | _ => lemma
+
+(* Without this limit a failing attempt, the common case for a needed
+   fact, runs out the whole minimize_timeout.  Sledgehammer's minimiser
+   bases the limit on the last successful replay, but then a marginal
+   success (an attempt that only just fits) raises the limit of every
+   later attempt, so that the time of a minimisation depends on whether
+   one attempt beats its limit by a few milliseconds.  With the fastest
+   replay the limit never rises. *)
+val attempt_factor = 2.0
+val attempt_slack = 0.2
+
+fun attempt_timeout minimize_timeout t =
+  Real.min (minimize_timeout, attempt_factor * t + attempt_slack)
+
+fun out_of_time NONE = false
+  | out_of_time (SOME deadline) = Time.>= (Time.now (), deadline)
+
+(* Every intermediate list is verified, so stopping at the deadline
+   returns a verified list. *)
+fun drop_one_minimize try minimize_timeout deadline lemmas best =
+  let
+    fun loop kept [] best _ = (kept, best)
+      | loop kept (lemma :: rest) best t_min =
+          if out_of_time deadline then (kept @ lemma :: rest, best)
+          else
+            case try (attempt_timeout minimize_timeout t_min)
+                     (kept @ rest) of
+                SOME (found as (_, t)) =>
+                  loop kept rest found (Real.min (t_min, t))
+              | NONE => loop (kept @ [lemma]) rest best t_min
+  in
+    loop [] lemmas best (snd best)
+  end
+
+fun minimize_lemmas minimize_timeout deadline g ctxt lemmas best =
+  drop_one_minimize
+    (fn limit => fn candidate =>
+       replay limit (mk_metis_call candidate) g ctxt)
+    minimize_timeout deadline lemmas best
+
+(* A permutative equation, such as commutativity, has sides that are
+   instances of each other but not equal.  Metis cannot orient it, and
+   one such fact can keep it from replaying a list it proves in
+   milliseconds without it: the provers' list for the step case of
+   LENGTH (flatten t) = size t replays in 0.2 s without ADD_COMM and not
+   in 10 s with it. *)
+fun is_permutative_eq tm =
+  let val (l, r) = dest_eq (snd (strip_forall tm)) in
+    not (aconv l r) andalso can (match_term l) r andalso
+    can (match_term r) l
+  end
+  handle HOL_ERR _ => false
+
+fun is_permutative_lemma lemma =
+  case thm_of_name lemma of
+      SOME (_, th) =>
+        List.exists is_permutative_eq
+          (strip_conj (snd (strip_forall (concl th))))
+    | NONE => false
+  handle Interrupt => raise Interrupt | _ => false
+
+(* The lists Metis is asked to replay, in order: the full list, then,
+   if that fails, the list without its permutative equations.  Each try
+   costs at most preplay_timeout, so a list that cannot be replayed still
+   fails quickly. *)
+fun preplay preplay_timeout lemmas g ctxt =
+  case replay preplay_timeout (mk_metis_call lemmas) g ctxt of
+      SOME found => SOME (lemmas, found)
+    | NONE =>
+        let
+          val (permutative, others) =
+            List.partition is_permutative_lemma lemmas
+        in
+          if null permutative then NONE
+          else
+            Option.map (fn found => (others, found))
+              (replay preplay_timeout (mk_metis_call others) g ctxt)
+        end
+
+fun hh_reconstruct_with ({minimize, preplay_timeout, minimize_timeout,
+                          minimize_deadline} : settings) lemmas g ctxt =
+  let
+    fun result stac (tac, time) : reconstruction =
+      {stac = stac, tac = tac, t_replay = time}
+  in
+    (* Replay before minimising: a list Metis cannot replay fails at once
+       instead of being minimised attempt by attempt. *)
+    case preplay preplay_timeout lemmas g ctxt of
+        NONE => raise ERR "hh_reconstruct" "reconstruction failed"
+      | SOME (replayed, full) =>
+          if not minimize then result (mk_metis_call replayed) full
+          else
+            let
+              val (kept, best) = minimize_lemmas minimize_timeout
+                minimize_deadline g ctxt replayed full
+              val raw = mk_metis_call kept
+              val pretty =
+                psMinimize.unsafe_prettify_stac
+                  (mk_metis_call (map bound_name kept))
+            in
+              (* The short names are resolved in the current namespace,
+                 so the printed form is verified on its own. *)
+              case replay preplay_timeout pretty g ctxt of
+                  SOME found => result pretty found
+                | NONE => result raw best
+            end
+  end
+
 fun hh_reconstruct lemmas g =
-  if not (!reconstruct_flag)
-  then (print_endline (mk_metis_call lemmas);
-        raise ERR "hh_minimize" "reconstruction off")
-  else
-    let
-      val stac = mk_metis_call lemmas
-      val t1 = !minimization_timeout
-      val t2 = !reconstruction_timeout
-      val newstac = psMinimize.minimize_stac t1 stac g []
-      val tac = tactic_of_sml 1.0 newstac
-    in
-      case timeout_tactic t2 tac g of
-        SOME _ => (newstac,tac)
-      | NONE   => raise ERR "hh_reconstruct" "reconstruction failed"
-    end
+  let
+    val {stac, tac, ...} =
+      hh_reconstruct_with
+        {minimize = true, preplay_timeout = !reconstruction_timeout,
+         minimize_timeout = !minimization_timeout,
+         minimize_deadline = NONE} lemmas g (Context.snapshot ())
+  in
+    (stac, tac)
+  end
 
 end

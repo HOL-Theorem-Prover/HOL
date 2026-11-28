@@ -3,3 +3,5 @@ export_*
 chainy_*
 bushy_*
 tptp4X
+# Old in-tree prover installs, which HolyHammer does not search.
+/provers/

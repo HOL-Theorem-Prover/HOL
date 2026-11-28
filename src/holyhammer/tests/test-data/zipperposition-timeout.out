@@ -1,0 +1,1 @@
+% SZS status ResourceOut

@@ -85,3 +85,28 @@ local open aiLib in
           then fail ("files left in " ^ scratch_root) else ()
   val _ = run ("rm -rf " ^ shell_quote tmp)
 end
+
+(* smlExecute: a string that does not compile prints nothing, and two
+   threads reading values at once each get their own. *)
+local open aiLib smlExecute in
+  fun fail s = raise Fail ("smlExecute: " ^ s)
+  val output = OS.FileSys.tmpName ()
+  val compiled = smlRedirect.hide_in_file output quse_string
+    "val _ = smlExecute_selftest_unbound"
+  val _ = if compiled then fail "an unbound name compiled" else ()
+  val _ = if null (readl output) then ()
+          else fail "a compiler error was printed"
+  val _ = OS.FileSys.remove output
+  fun reads s n = n = 0 orelse
+    (string_of_sml (mlquote s) = s andalso reads s (n - 1))
+  val other = ref NONE
+  val thread = Thread.fork (fn () => other := SOME (reads "b" 200), [])
+  val own = reads "a" 200
+  fun wait () =
+    if Thread.isActive thread
+    then (OS.Process.sleep (Time.fromMilliseconds 10); wait ())
+    else ()
+  val _ = wait ()
+  val _ = if own andalso !other = SOME true then ()
+          else fail "concurrent reads got each other's values"
+end

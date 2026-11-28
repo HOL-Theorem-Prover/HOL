@@ -1,0 +1,34 @@
+These are the fixtures of `selftest.sml`.
+
+The `.out` files named after a prover are raw stdout recordings of the
+tested binaries: E 3.2.5-ho, Vampire 5.0.1, and Zipperposition 2.1 (captured
+2026-07-15 and 2026-08-04).  `z3-tptp-theorem.out` is a minimal `z3_tptp`
+theorem output.  The theorem recordings use the escaped axiom name
+`thm_2Ekeep__name`, so the parser tests check both unescaping and the
+removal of the `thm.` prefix; the E recording keeps its `--auto-schedule`
+comment chatter.  The recordings with a version and a format in their name
+come from the end-to-end export, proof, parse-back, and reconstruction of
+`arithmeticTheory.ADD1`, one for each of slices 9 to 16 of
+`hhProver.portfolio`, including the Vampire TH0, E TX0-minus, and
+Zipperposition FOF substitutes (see the comments there).
+Pigeonhole instances gave E's `GaveUp`, Vampire's `Timeout`, and
+Zipperposition's `ResourceOut` (its spelling of a timeout); the
+Zipperposition `GaveUp` comes from a small higher-order counterexample.
+The `-version.out` files are raw `--version` output.
+
+`runner-print-e.sh` and `runner-forking-sleeper.sh` are process runner and
+scheduler fixtures.  The former prints the recorded E theorem output by
+default and accepts an optional delay and recording filename.  The latter
+starts a long-lived child, prints its pid, and stays alive, so that the
+process-group cancellation test can check that both generations die.  The
+shell is fixture material only, never used by the runner or the scheduler.
+
+The `schedule-*.out` files, except `schedule-lemmas-*.out`, are minimal
+E-style theorem outputs naming replayable HOL axioms and one deliberately
+unavailable fixture axiom.  Each `schedule-lemmas-*.out` is not prover
+output but one line of comma-separated lemma names, which the
+reconstruction deadline test parses itself, to have lists to tell apart.
+
+`hhproblemgen-roundtrip.out` is TSTP output for the parse-back tests.
+`problems/` holds golden TPTP problems emitted by `hhTptpProblem` and
+`hhProblemGen` for FOF, TF0, TX0, TF1, TH0, and TH1.

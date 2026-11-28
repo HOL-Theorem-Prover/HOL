@@ -1,9 +1,9 @@
-(* ===================================================================== *)
-(* FILE          : hhExportSexpr.sml                                     *)
-(* DESCRIPTION   : Export HOL4 theories in a s-expression format         *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
-(* DATE          : 2018                                                  *)
-(* ===================================================================== *)
+(* ========================================================================= *)
+(* FILE          : hhExportSexpr.sml                                         *)
+(* DESCRIPTION   : Export HOL4 theories in an s-expression format            *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
 structure hhExportSexpr :> hhExportSexpr =
 struct
@@ -86,7 +86,7 @@ fun th1b_thm (thy,name) = escape ("thm" ^ "." ^ thy ^ "." ^ name)
 
 (* -------------------------------------------------------------------------
    S-expression escaping
-   Double quotes needed because lisp is not case senstive.
+   Double quotes needed because Lisp is not case sensitive.
    ------------------------------------------------------------------------- *)
 
 fun double_quote s = "\"" ^ s ^ "\""
@@ -100,7 +100,7 @@ val sexprb_tyop = double_quote o th1b_tyop
 val sexprb_thm = double_quote o th1b_thm
 
 (* -------------------------------------------------------------------------
-   S-expressions terms
+   S-expression terms
    ------------------------------------------------------------------------- *)
 
 fun sexpr_type oc ty =
@@ -141,7 +141,7 @@ fun sexpr_term oc tm =
   else raise ERR "sexpr_term" ""
 
 (* -------------------------------------------------------------------------
-   S-expressions definitions
+   S-expression definitions
    ------------------------------------------------------------------------- *)
 
 fun sexpr_tydef oc thy (tyop,arity) =
@@ -196,7 +196,7 @@ fun sexpr_thmdef oc thy ((name,thm),role) =
   end
 
 (* -------------------------------------------------------------------------
-   Exporting theories using one of the format defined above.
+   Exporting theories using one of the formats defined above.
    ------------------------------------------------------------------------- *)
 
 val hh_dir = HOLDIR ^ "/src/holyhammer"
@@ -267,7 +267,7 @@ fun sexpr_export thyl =
 load "hhExportSexpr"; open hhExportSexpr;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-sexport_export thyl;
+sexpr_export thyl;
 *)
 
 end (* struct *)

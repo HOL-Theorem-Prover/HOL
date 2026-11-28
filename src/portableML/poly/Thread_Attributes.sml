@@ -19,6 +19,9 @@ sig
   val defer_interrupts: attributes -> attributes
   val with_attributes: attributes -> (attributes -> 'a) -> 'a
   val uninterruptible: ((('c -> 'd) -> 'c -> 'd) -> 'a -> 'b) -> 'a -> 'b
+  val uninterruptible_defer: ((('c -> 'd) -> 'c -> 'd) -> 'a -> 'b) -> 'a -> 'b
+  val uninterruptible_wait:
+    ((('c -> 'd) -> 'c -> 'd option) -> 'a -> 'b) -> 'a -> 'b
   val expose_interrupt: unit -> unit  (*exception Interrupt*)
 end;
 
@@ -111,6 +114,60 @@ end;
 fun uninterruptible f x =
   with_attributes no_interrupts (fn atts =>
     f (fn g => fn y => with_attributes atts (fn _ => g y)) x);
+
+(* Masking interrupts the plain way does not defer a Ctrl-C, it loses one.
+   Poly/ML retains a directed [Thread.interrupt] and delivers it when the
+   mask lifts, but HOL raises Ctrl-C as [Thread.broadcastInterrupt], and a
+   broadcast simply skips a thread whose broadcast flag is clear, recording
+   nothing; [no_interrupts] clears that flag along with
+   the rest.  A wait that must run to completion therefore has to stay
+   observant while it waits.
+
+   [uninterruptible_defer f x] is [uninterruptible] with
+   the broadcast flag left as the caller had it: interrupts are deferred
+   rather than refused, so a broadcast arriving inside the masked region is
+   held and delivered when the caller's attributes come back, at a [restore]
+   step or on the way out.  Poly/ML has no attribute constant for that
+   combination, hence the raw [Thread.Thread.setAttributes]; it writes the
+   interrupt-state bits only. *)
+fun uninterruptible_defer f x =
+  let
+    val saved = get_attributes ()
+    val _ =
+      Thread.Thread.setAttributes
+        [Thread.Thread.InterruptState Thread.Thread.InterruptDefer]
+    fun restore g y = with_attributes saved (fn _ => g y)
+    val result = Exn.capture (f restore) x
+    val _ = set_attributes saved
+  in
+    Exn.release result
+  end;
+
+(* [uninterruptible_wait f x] runs [f observe x] masked, as
+   [uninterruptible] does, except that [observe g y] runs
+   [g y] under the caller's own attributes, so a broadcast arriving during
+   that step is delivered.  [observe] answers [SOME] with the result, or
+   records the interrupt and answers [NONE]; once one is recorded, later
+   steps run masked, one being all that is needed.  A recorded interrupt is
+   raised after [f] has returned, so the wait still runs to completion.  An
+   exception from [f] itself wins and the recorded interrupt is dropped: it
+   is [f]'s own outcome the caller is waiting on, and control is leaving for
+   the top level under either exception anyway. *)
+fun uninterruptible_wait f =
+  uninterruptible (fn restore => fn x =>
+    let
+      val pending = ref false
+      fun observe g y =
+        if !pending then SOME (g y)
+        else
+          (SOME (restore g y)
+           handle Exn.Interrupt => (pending := true; NONE))
+      val result = Exn.capture (f observe) x
+    in
+      case result of
+          Exn.Res value => if !pending then raise Exn.Interrupt else value
+        | Exn.Exn _ => Exn.release result
+    end);
 
 fun expose_interrupt () =
   let

@@ -267,6 +267,10 @@ Bugs fixed
     Unless `HOL4_SCRATCH` names a directory, each process now uses a subdirectory of its own there, which is removed when the process exits.
     When `HOL4_TACTICTOE_CACHE` is set, those subdirectories go under its `tmp/scratch` directory, as was intended; before, that setting was ignored whenever `XDG_CACHE_HOME` or `HOME` was set.
 
+-   The readers of `smlExecute` (`thm_of_sml`, `tactic_of_sml` and the others, which TacticToe and HOLyHammer use) handed the value of the compiled string back through a global reference, so that two threads reading at once could each get the other's value.
+    Each thread now has its own slot (the `sml_*_glob` references are gone), and `quse_string` no longer prints the compiler's messages: a string that does not compile only makes it return `false`.
+    TacticToe's parser of tactic strings (`tttToken.pretacl_of_sml`) and its imports of HOLyHammer (`import_hh` of `tacticToe` and `tttEval`) did the same; they now use such slots too (`tttToken.sml_pretacl_glob`, `tacticToe.hh_lemmas` and `tttEval.hh_glob` are gone), and `smlExecute.read_slot` reads a value through a slot made with `smlExecute.new_slot`.
+
 -   An interrupt arriving while `with_flag`, `genwith_flag`, `finally` or `HOLFlags.with_traces` was putting things back could cut the restore short and leave the flag or trace changed.
     With `Timeout.apply`, a tactic that returned just before its deadline could leave a slow restore half done.
     The restores (and the matching ones in `Context.with_context`, `Context.in_proof` and `Context.Data.with_slot_value`) now run with interrupts deferred, on the new `Portable.bracket`; an interrupt that arrives meanwhile is delivered once the restore is done.
@@ -289,6 +293,53 @@ New theories
 New tools
 ---------
 
+-   HOLyHammer now invokes external provers directly, without shell
+    scripts.  E, Vampire, and the newly supported Zipperposition form the
+    default prover set.  Pinned provers can be installed with
+    `tools/download-provers`; supported binaries on `PATH` also work.
+    Executables can be selected through `prover.<name>.executable` in the
+    hammer configuration or the `HOL4_<PROVER>_EXECUTABLE` environment
+    variables (for E, `HOL4_EPROVER_EXECUTABLE`); `src/holyhammer/README`
+    gives the search order.
+
+-   HOLyHammer now runs its provers through a parallel slice scheduler and
+    returns the first proof that Metis replays, printing the `metis_tac`
+    call to paste into a script.  The default timeout is now 30 seconds.  It
+    bounds the proof search; proofs found within it are still
+    reconstructed, so a call can return later.  Options are set with
+    `hhConfig.hh_set`, in a configuration file, or through
+    `HOL4_HAMMER_<OPTION>` environment variables, and
+    `hhConfig.print_params` lists them; `src/holyhammer/README` describes
+    them.  The replay limit (`preplay_timeout`) is now 2.5 seconds, up from
+    1.0, and counts the CPU time of the replaying thread, so that a replay
+    beside busy provers is not cut short.
+
+-   HOLyHammer schedules TPTP formats, type encodings, and lambda
+    translations per prover slice.  Besides FOF, it now proves goals
+    through typed `tf0`, `tf1`, `tx0`, `tx0-`, `th0`, and `th1` problems
+    (`tx0` and `tx0-` are new; the others were previously export-only),
+    with used-axiom parse-back and Metis reconstruction.  The new
+    `hhConfig` keys `format`, `type_enc`, and `lam_trans` provide
+    schedule-wide overrides; `mono_iters` and `mono_instances` control the
+    bounded monomorphization pass.  Empty overrides retain the tested
+    per-slice schedule.
+
+-   HOLyHammer's premise selection now includes MePo relevance filtering, a
+    sparse-Naive-Bayes plus kNN MaSh learner, and their MeSh combination.  Its
+    default 24-slice schedule runs 16 kNN slices followed by eight slices
+    using these ensemble filters.  The `filter` option accepts `knn`, `mepo`,
+    `mash`, `mesh`, and `none`; its empty default retains each slice's tested
+    filter, while a nonempty value overrides the whole schedule.
+
+-   `hhEval` (in `src/holyhammer/evaluation`, which the default build
+    leaves out) is a resumable HOLyHammer evaluation harness.  `run_eval`
+    evaluates experimental conditions (regime, premise selector, single
+    prover or full schedule) over a set of theories in parallel, recording
+    each result in per-theory JSONL journals; `report` summarizes an
+    experiment as `summary.json` and `report.md`.  `smoke.exe` in
+    `src/holyhammer/tests` runs a fixed end-to-end smoke suite against E,
+    Vampire and Zipperposition, all of which it requires.
+
 -   `statementDossierLib` generates Markdown and standalone HTML reports
     of stored theorem statements, their trust tags, assumptions, defining
     equations, datatypes and expansion boundaries. HTML terms use HOL's
@@ -309,6 +360,11 @@ New tools
 New examples
 ------------
 
+-   `src/holyhammer/examples` is a guided tour of HOLyHammer, replacing
+    the old demo: eleven theories of hammered library and case-study goals,
+    an annotated interactive session, and a user guide with tips and a
+    FAQ (`README.md`).
+
 -   Added short-Weierstrass elliptic-curve groups, torsion, morphisms and
     cardinality results, with certified finite-field arithmetic and concrete
     secp256k1, P-256, BN254 and BLS12-381 instances.
@@ -328,6 +384,17 @@ New examples
 
 Incompatibilities
 -----------------
+
+-   The `holyHammer.prover` datatype has gained a `Zipperposition` constructor, so exhaustive matches on it need a new case.
+    The evaluation helpers `holyHammer.hh_pb_eval_thm` and `hh_pb_eval_thy` have been removed in favor of `hhEval`.
+    The file-based `hhReconstruct.get_lemmas` API and its status/output-file protocol have also been removed.
+    The types of `hh`, `holyhammer`, `hh_fork`, `hh_pb`, `main_hh`, and `main_hh_lemmas` are unchanged.
+
+-   The `holyHammer.premise_selection_flag` reference has been removed: `premise_selection_flag := false` becomes `hhConfig.hh_set ("filter", "none")`.
+    The race-result reference `holyHammer.lemmas_glob` has been removed in favor of `main_hh_lemmas`.
+    `hhReconstruct.reconstruct_flag`, which turned reconstruction off, has been removed: every ATP proof is replayed.
+    Z3 is no longer in the default prover set: `z3` remains registered but has no scheduler slices, and it is found only as Z3's TPTP front end, `z3_tptp`.
+    The prover scripts in `src/holyhammer/provers` have been removed, and prover binaries copied there are no longer found: install them with `tools/download-provers`, put them on `PATH`, or set `prover.<name>.executable`.
 
 -   The `cv_compute` translator no longer lets a later `cv_rep` translation of a constant or pattern silently shadow an earlier one.
     Adding a translation for a pattern that already has a different one (via `cv_trans` or the `[cv_rep]` attribute) is now an error; remove the old one first with the new `cv_transLib.cv_rep_delete "thy.name"`.
@@ -445,6 +512,9 @@ Incompatibilities
 
 Deprecations
 ------------
+
+-   `holyHammer.set_timeout n` is deprecated; use
+    `hhConfig.hh_set ("timeout", Int.toString n)`.
 
 -   `Triviality` has been deprecated and may be removed in the future.
     Please update theorems of the form `Triviality foo` and `Triviality foo[..]` to

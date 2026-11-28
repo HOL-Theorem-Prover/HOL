@@ -1,0 +1,39 @@
+% Detected 'Essentially Bernays–Schönfinkel–Ramsey OR Essentially ground' problem, will run a specialized EPR schedule (with support for satisfiability detection).
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% ott+21_1_sil=128000:fs=off:lcm=predicate:random_seed=1259976169:i=102:av=off:fsr=off_1 on prove for (1ds/102Mi)
+% Solution written to "/tmp/claude/vampire-proof-830"
+% Refutation found. Thanks to Tanya!
+% SZS status Theorem for prove
+% SZS output start Proof for prove
+fof(f1,axiom,(
+  p),
+  file('/tmp/hhprover-recordings/prove.p',thm_2Ekeep__name)).
+fof(f3,conjecture,(
+  p),
+  file('/tmp/hhprover-recordings/prove.p',conjecture)).
+fof(f4,negated_conjecture,(
+  ~p),
+  inference(negated_conjecture,[status(cth)],[f3])).
+fof(f5,plain,(
+  ~p),
+  inference(flattening,[],[f4])).
+fof(f7,plain,(
+  p),
+  inference(cnf_transformation,[],[f1])).
+fof(f8,plain,(
+  ~p),
+  inference(cnf_transformation,[],[f5])).
+fof(f9,plain,(
+  $false),
+  inference(resolution,[],[f7,f8])).
+% SZS output end Proof for prove
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Refutation
+% Time elapsed: 0.0000 s
+% Peak memory usage: 10 MB
+% ------------------------------
+% ------------------------------
+% Success in time 0.003 s

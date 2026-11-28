@@ -1,0 +1,71 @@
+% Detected 'Essentially Bernays–Schönfinkel–Ramsey OR Essentially ground' problem, will run a specialized EPR schedule (with support for satisfiability detection).
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% ott+21_1_sil=128000:fs=off:lcm=predicate:random_seed=2663251541:i=102:av=off:fsr=off_1 on php for (1ds/102Mi)
+% Time limit reached!
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Time limit
+% Termination phase: Saturation
+% Time elapsed: 0.100 s
+% Peak memory usage: 36 MB
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% dis+10_1_sil=2000:bsr=unit_only:sac=on:avsqc=5:random_seed=3743455750:avsq=on:i=109:aac=none:nicw=on_1 on php for (1ds/109Mi)
+% Time limit reached!
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Time limit
+% Termination phase: Saturation
+% Time elapsed: 0.100 s
+% Peak memory usage: 16 MB
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% lrs+35_1024_to=lpo:sil=64000:random_seed=2601439516:i=235:fsr=off:amm=off_2 on php for (2ds/235Mi)
+% Time limit reached!
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Time limit
+% Termination phase: Saturation
+% Time elapsed: 0.200 s
+% Peak memory usage: 17 MB
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% fmb+10_1_sil=16000:sas=cadical:random_seed=420839829:i=102_1 on php for (1ds/102Mi)
+% The problem is propositional so there are no sorts!
+% TRYING []
+% Time limit reached!
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Time limit
+% Termination phase: Finite model building SAT solving
+% Time elapsed: 0.100 s
+% Peak memory usage: 12 MB
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% lrs+1010_8_sil=2000:plsq=on:urr=on:bsr=unit_only:br=off:flr=on:random_seed=3653512455:s2a=on:i=181:fsr=off_1 on php for (1ds/181Mi)
+% Time limit reached!
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Time limit
+% Termination phase: Saturation
+% Time elapsed: 0.100 s
+% Peak memory usage: 17 MB
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% lrs+2_1_sil=2000:random_seed=3943102939:i=1183:kws=precedence_3 on php for (3ds/1183Mi)
+% Time limit reached!
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Time limit
+% Termination phase: Saturation
+% Time elapsed: 0.300 s
+% Peak memory usage: 18 MB
+% Proof not found in time 0.921 s
+% SZS status Timeout for php

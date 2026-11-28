@@ -12,7 +12,8 @@ sig
   (* holyhammer function for the evaluation framework *)
   val cheat_flag : bool ref
   val hh_flag : bool ref
-  val hh_glob : (string -> mlThmData.thmdata -> goal -> tactic) option ref
+  val hh_slot :
+    (string -> mlThmData.thmdata -> goal -> tactic) smlExecute.slot
   val hh_timeout : int ref
   val import_hh :
     unit -> (string -> mlThmData.thmdata -> goal -> tactic) option

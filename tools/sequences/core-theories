@@ -6,3 +6,4 @@
 [poly]src/AI/machine_learning
 [poly]src/tactictoe/src
 [poly]src/holyhammer
+[poly]!src/holyhammer/tests

@@ -1,0 +1,16 @@
+% done 1 iterations in 0.002s
+% SZS status Theorem for '/tmp/hhprover-recordings/prove.p'
+% SZS output start Refutation
+thf(p_type, type, p: $o).
+thf(conjecture, conjecture, (p)).
+thf(zf_stmt_0, negated_conjecture, (~( p )),
+  inference('cnf.neg', [status(esa)], [conjecture])).
+thf(zip_derived_cl2, plain, (~ (p)),
+    inference('cnf', [status(esa)], [zf_stmt_0])).
+thf(thm_2Ekeep__name, axiom, (p)).
+thf(zip_derived_cl0, plain, ( (p)),
+    inference('cnf', [status(esa)], [thm_2Ekeep__name])).
+thf(zip_derived_cl3, plain, ($false),
+    inference('demod', [status(thm)], [zip_derived_cl2, zip_derived_cl0])).
+
+% SZS output end Refutation

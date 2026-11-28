@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhExportLib.sml                                           *)
-(* DESCRIPTION   :                                                           *)
+(* DESCRIPTION   : Shared helpers of the TPTP exporters                      *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)

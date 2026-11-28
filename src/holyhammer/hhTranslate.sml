@@ -11,6 +11,10 @@ struct
 open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "hhTranslate"
+datatype translated =
+    Statement of term
+  | Lifted of {conjecture : term Susp.susp, axiom : term Susp.susp}
+
 val translate_cache_glob = ref (dempty Term.compare)
 
 fun foralls (vl,t) = case vl of
@@ -57,7 +61,7 @@ fun genvarl_arity tyl =
 
 (* -------------------------------------------------------------------------
    First-order atoms
-   Warning: a and b are considered atoms is !a. a = b instead of a = b
+   Warning: a and b are considered atoms in !a. a = b instead of a = b
    ------------------------------------------------------------------------- *)
 
 fun must_pred tm =
@@ -247,27 +251,66 @@ fun prepare_tm tm =
 fun rw_conv conv tm = (rhs o concl o conv) tm
 fun sym_def tm = rw_conv (STRIP_QUANT_CONV SYM_CONV) tm
 
-fun translate_nocache tm =
+(* The statement and the definitions of the subterms lifted out of it.
+   Each definition is closed except for the lifted variables F<n>. *)
+fun lifted_parts tm =
   let
     val iref = ref 0
     val tm1  = prepare_tm tm
     val tml1 = map (rand o concl) (RPT_LIFT_CONV iref tm1)
     val tml2 = map (rw_conv APP_CONV_BV_REC) tml1
     val tml3 = map (rw_conv APP_CONV_MAX_REC) tml2
-    val tm2 = list_mk_imp (map sym_def (rev (tl tml3)), hd tml3)
-    val fvl = filter is_tptp_bv (free_vars_lr tm2)
   in
-    list_mk_forall (fvl,tm2)
+    (map sym_def (rev (tl tml3)), hd tml3)
   end
 
-fun translate tm =
+fun close_lifted quant tm =
+  quant (filter is_tptp_bv (free_vars_lr tm), tm)
+
+(* As a conjecture, !F. defs ==> statement: refuting it introduces
+   constants obeying the definitions. *)
+fun conjecture_form ([], statement) = statement
+  | conjecture_form (defs, statement) =
+      close_lifted list_mk_forall (list_mk_imp (defs, statement))
+
+(* As an axiom the lifted variables are existential.  Under !F a prover
+   can use the axiom only after building a term that meets every
+   definition, e.g. for if x = y then .. a term F with
+   F x y <=> x = y; ?F instead makes the clausifier introduce such
+   constants.  Both forms are HOL theorems, as each definition is met by
+   the abstraction it was lifted from. *)
+fun axiom_form ([], statement) = statement
+  | axiom_form (defs, statement) =
+      close_lifted boolSyntax.list_mk_exists
+        (list_mk_conj (defs @ [statement]))
+
+fun translate_nocache tm = conjecture_form (lifted_parts tm)
+
+fun cached_translation tm =
   dfind tm (!translate_cache_glob) handle NotFound =>
-  let val x = translate_nocache tm in
+  let
+    val x = case lifted_parts tm of
+        ([], statement) => Statement statement
+      | parts => Lifted
+          {conjecture = Susp.delay (fn () => conjecture_form parts),
+           axiom = Susp.delay (fn () => axiom_form parts)}
+  in
     translate_cache_glob := dadd tm x (!translate_cache_glob); x
   end
 
-fun translate_thm thm =
-  let val tm = (concl o GEN_ALL o DISCH_ALL) thm in translate tm end
+fun translate tm =
+  case cached_translation tm of
+      Statement statement => statement
+    | Lifted {conjecture, ...} => Susp.force conjecture
+
+fun translate_axiom tm =
+  case cached_translation tm of
+      Statement statement => statement
+    | Lifted {axiom, ...} => Susp.force axiom
+
+fun thm_statement thm = (concl o GEN_ALL o DISCH_ALL) thm
+fun translate_thm thm = translate (thm_statement thm)
+fun translate_axiom_thm thm = translate_axiom (thm_statement thm)
 
 (* -------------------------------------------------------------------------
    Arity equations for constants and free variables.

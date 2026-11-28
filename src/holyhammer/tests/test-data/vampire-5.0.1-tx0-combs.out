@@ -1,0 +1,75 @@
+% Detected formulas, will run a generic FOF schedule.
+% WARNING: time unlimited strategy and instruction limiting not in place - attempting to translate instructions to time
+% lrs+1011_32_sil=2000:tgt=full:alpa=true:random_seed=2663171634:st=5:i=107:sd=1:ss=included:er=filter_1 on atp_in for (1ds/107Mi)
+% Solution written to "/tmp/claude/vampire-proof-1321"
+% Refutation found. Thanks to Tanya!
+% SZS status Theorem for atp_in
+% SZS output start Proof for atp_in
+tff(type_def_5, type, ty_2Enum_2Enum: $tType).
+tff(type_def_6, type, ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cmin_2Ebool_29_29: $tType).
+tff(type_def_7, type, ty_2Emin_2Efun_28num_2Enum_2Cmin_2Ebool_29: $tType).
+tff(type_def_8, type, ty_2Emin_2Ebool: $tType).
+tff(type_def_9, type, ty_2Emin_2Efun_28num_2Enum_2Cnum_2Enum_29: $tType).
+tff(type_def_10, type, ty_2Emin_2Efun_28num_2Enum_2Cmin_2Efun_28num_2Enum_2Cnum_2Enum_29_29: $tType).
+tff(func_def_0, type, c_2Enum_2ESUC: ty_2Enum_2Enum > ty_2Enum_2Enum).
+tff(func_def_1, type, c_2Earithmetic_2E_2B: (ty_2Enum_2Enum * ty_2Enum_2Enum) > ty_2Enum_2Enum).
+tff(func_def_2, type, c_2Earithmetic_2ENUMERAL: ty_2Enum_2Enum > ty_2Enum_2Enum).
+tff(func_def_3, type, c_2Earithmetic_2EBIT1: ty_2Enum_2Enum > ty_2Enum_2Enum).
+tff(func_def_4, type, c_2Earithmetic_2EZERO: ty_2Enum_2Enum).
+tff(func_def_5, type, sK0: ty_2Enum_2Enum).
+tff(func_def_6, type, sF1: ty_2Enum_2Enum).
+tff(func_def_7, type, sF2: ty_2Enum_2Enum).
+tff(func_def_8, type, sF3: ty_2Enum_2Enum).
+tff(f1,axiom,(
+  ! [X0 : ty_2Enum_2Enum] : c_2Enum_2ESUC(X0) = c_2Earithmetic_2E_2B(X0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  file('/tmp/claude/tmp.cLgnDFvttn/problems/tx0.mono__native__fool.combs.512/atp_in',thm_2EarithmeticTheory_2EADD1)).
+tff(f2,conjecture,(
+  ! [X0 : ty_2Enum_2Enum] : c_2Enum_2ESUC(X0) = c_2Earithmetic_2E_2B(X0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  file('/tmp/claude/tmp.cLgnDFvttn/problems/tx0.mono__native__fool.combs.512/atp_in',conjecture)).
+tff(f3,negated_conjecture,(
+  ~! [X0 : ty_2Enum_2Enum] : c_2Enum_2ESUC(X0) = c_2Earithmetic_2E_2B(X0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  inference(negated_conjecture,[status(cth)],[f2])).
+tff(f4,plain,(
+  ? [X0 : ty_2Enum_2Enum] : c_2Enum_2ESUC(X0) != c_2Earithmetic_2E_2B(X0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  inference(ennf_transformation,[],[f3])).
+tff(f5,plain,(
+  ? [X0 : ty_2Enum_2Enum] : c_2Enum_2ESUC(X0) != c_2Earithmetic_2E_2B(X0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))) => c_2Enum_2ESUC(sK0) != c_2Earithmetic_2E_2B(sK0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  introduced(definition,[],[skolem_symbol_introduction])).
+tff(f6,plain,(
+  c_2Enum_2ESUC(sK0) != c_2Earithmetic_2E_2B(sK0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  inference(skolemisation,[status(esa),new_symbols(skolem,[sK0])],[f4,f5])).
+tff(f7,plain,(
+  ( ! [X0 : ty_2Enum_2Enum] : (c_2Enum_2ESUC(X0) = c_2Earithmetic_2E_2B(X0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))) )),
+  inference(cnf_transformation,[],[f1])).
+tff(f8,plain,(
+  c_2Enum_2ESUC(sK0) != c_2Earithmetic_2E_2B(sK0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  inference(cnf_transformation,[],[f6])).
+tff(f9,plain,(
+  c_2Earithmetic_2E_2B(sK0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO))) != c_2Earithmetic_2E_2B(sK0,c_2Earithmetic_2ENUMERAL(c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO)))),
+  inference(definition_unfolding,[],[f8,f7])).
+tff(f10,definition,(
+  c_2Earithmetic_2EBIT1(c_2Earithmetic_2EZERO) = sF1),
+  introduced(definition,[new_symbols(definition,[sF1])],[function_definition])).
+tff(f11,definition,(
+  c_2Earithmetic_2ENUMERAL(sF1) = sF2),
+  introduced(definition,[new_symbols(definition,[sF2])],[function_definition])).
+tff(f12,definition,(
+  c_2Earithmetic_2E_2B(sK0,sF2) = sF3),
+  introduced(definition,[new_symbols(definition,[sF3])],[function_definition])).
+tff(f13,plain,(
+  sF3 != sF3),
+  inference(definition_folding,[],[f9,f12,f11,f10,f12,f11,f10])).
+tff(f14,plain,(
+  $false),
+  inference(trivial_inequality_removal,[],[f13])).
+% SZS output end Proof for atp_in
+% ------------------------------
+% Version: Vampire 5.0.1 (Release build, commit 1b13eaf on 2026-01-18 12:14:50 +0000)
+% Linked with Z3 4.14.0.0 3c47fd96cf5645d0c42b2c819d9e9a84380aa721 NOTFOUND
+% CaDiCaL version: 2.1.3
+% Termination reason: Refutation
+% Time elapsed: 0.0000 s
+% Peak memory usage: 11 MB
+% ------------------------------
+% ------------------------------
+% Success in time 0.003 s

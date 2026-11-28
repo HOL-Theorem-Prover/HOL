@@ -1,0 +1,44 @@
+# Preprocessing class: HSSSSMSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 30 seconds (30 total)
+# Starting new_ho_10 with 30s (1) cores
+# new_ho_10 with pid 1296 completed with status 0
+# Result found by new_ho_10
+# Preprocessing class: HSSSSMSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 30 seconds (30 total)
+# Starting new_ho_10 with 30s (1) cores
+# No SInE strategy applied
+# Search class: HUUPF-FFSF21-MFFFFFNN
+# partial match(1): FUUPF-FFSF21-MFFFFFNN
+# Scheduled 5 strats onto 1 cores with 30 seconds (30 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 17s (1) cores
+# SAT001_MinMin_p005000_rr_RG with pid 1297 completed with status 0
+# Result found by SAT001_MinMin_p005000_rr_RG
+# Preprocessing class: HSSSSMSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 30 seconds (30 total)
+# Starting new_ho_10 with 30s (1) cores
+# No SInE strategy applied
+# Search class: HUUPF-FFSF21-MFFFFFNN
+# partial match(1): FUUPF-FFSF21-MFFFFFNN
+# Scheduled 5 strats onto 1 cores with 30 seconds (30 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 17s (1) cores
+# Presaturation interreduction done
+
+# Proof found!
+# SZS status Theorem
+# SZS output start CNFRefutation
+thf(decl_sort1, type, ty_2Enum_2Enum: $tType).
+thf(decl_23, type, c_2Enum_2ESUC: ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(decl_24, type, c_2Earithmetic_2E_2B: ty_2Enum_2Enum > ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(decl_25, type, c_2Earithmetic_2ENUMERAL: ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(decl_26, type, c_2Earithmetic_2EBIT1: ty_2Enum_2Enum > ty_2Enum_2Enum).
+thf(decl_27, type, c_2Earithmetic_2EZERO: ty_2Enum_2Enum).
+thf(decl_28, type, esk1_0: ty_2Enum_2Enum).
+thf(conjecture, conjecture, ![X1:ty_2Enum_2Enum]:(((c_2Enum_2ESUC @ X1)=(c_2Earithmetic_2E_2B @ X1 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO))))), file('/tmp/claude/tmp.cLgnDFvttn/problems/th0.mono__native__higher.keep__lams.512/atp_in', conjecture)).
+thf(thm_2EarithmeticTheory_2EADD1, axiom, ![X1:ty_2Enum_2Enum]:(((c_2Enum_2ESUC @ X1)=(c_2Earithmetic_2E_2B @ X1 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO))))), file('/tmp/claude/tmp.cLgnDFvttn/problems/th0.mono__native__higher.keep__lams.512/atp_in', thm_2EarithmeticTheory_2EADD1)).
+thf(c_0_2, negated_conjecture, ~(![X1:ty_2Enum_2Enum]:(((c_2Enum_2ESUC @ X1)=(c_2Earithmetic_2E_2B @ X1 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))))), inference(assume_negation,[status(cth)],[conjecture])).
+thf(c_0_3, negated_conjecture, ((c_2Enum_2ESUC @ esk1_0)!=(c_2Earithmetic_2E_2B @ esk1_0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))), inference(fof_nnf,[status(thm)],[inference(skolemize,[status(esa)],[inference(variable_rename,[status(thm)],[inference(fof_nnf,[status(thm)],[c_0_2])])])])).
+thf(c_0_4, plain, ![X4:ty_2Enum_2Enum]:(((c_2Enum_2ESUC @ X4)=(c_2Earithmetic_2E_2B @ X4 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO))))), inference(variable_rename,[status(thm)],[thm_2EarithmeticTheory_2EADD1])).
+thf(c_0_5, negated_conjecture, ((c_2Enum_2ESUC @ esk1_0)!=(c_2Earithmetic_2E_2B @ esk1_0 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO)))), inference(split_conjunct,[status(thm)],[c_0_3])).
+thf(c_0_6, plain, ![X1:ty_2Enum_2Enum]:(((c_2Enum_2ESUC @ X1)=(c_2Earithmetic_2E_2B @ X1 @ (c_2Earithmetic_2ENUMERAL @ (c_2Earithmetic_2EBIT1 @ c_2Earithmetic_2EZERO))))), inference(split_conjunct,[status(thm)],[c_0_4])).
+thf(c_0_7, negated_conjecture, ($false), inference(cn,[status(thm)],[inference(rw,[status(thm)],[c_0_5, c_0_6])]), ['proof']).
+# SZS output end CNFRefutation

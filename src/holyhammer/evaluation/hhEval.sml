@@ -1,0 +1,2174 @@
+(* ========================================================================= *)
+(* FILE          : hhEval.sml                                                *)
+(* DESCRIPTION   : HolyHammer evaluation harness over whole theories         *)
+(* AUTHOR        : Lukasz Czajka                                             *)
+(* ========================================================================= *)
+
+structure hhEval :> hhEval =
+struct
+
+open HolKernel boolLib aiLib
+
+datatype prover = datatype hhProver.prover
+
+datatype regime = Bushy | Chainy
+datatype selector =
+    Deps
+  | Knn of int
+  | Mepo of int
+  | Mash of int
+  | Mesh of int
+  | PerSlice
+datatype engine =
+    Prover of hhProver.prover
+  | Sched of {provers : hhProver.prover list, slices : int,
+              cores : int, max_proofs : int, export_workers : int}
+
+type condition =
+  {cond_id : string, regime : regime, selector : selector,
+   engine : engine, timeout : int, reconstruct : bool}
+
+datatype cell_status =
+    Szs of hhProver.szs
+  | EvalError
+  | BrokenDeps
+  | LoadFailure
+
+type journal_slice =
+  {slice : hhProver.slice, szs : hhProver.szs, time : real, cached : bool}
+
+type journal_entry =
+  {run : string, thy : string, thm : string, goal_id : string,
+   cond : string, regime : regime, selector : selector,
+   engine : engine option, ho : bool, fresh : bool,
+   prover : hhProver.prover option,
+   prover_version : string option, nfacts : int,
+   timeout : int, szs : cell_status, t_prover : real,
+   axioms_used : string list option, recon_ok : bool option,
+   recon_method : string option, t_recon : real option,
+   stac : string option, error : string option, stop : string option,
+   t_total : real option, winner : hhProver.slice option,
+   slices : journal_slice list}
+
+val same_slice = hhProver.same_slice
+
+type corpus_coverage =
+  {srcfiles : string list, dat_theories : string list,
+   added_from_dat : string list}
+
+type corpus_entry =
+  {thy : string, theorem_count : int, dep_stamp : string}
+
+type prover_identity =
+  {prover : hhProver.prover, path : string option, version : string option,
+   sha256 : string option}
+
+type run_header =
+  {expname : string, date : string, host : string, hol_commit : string,
+   provers : prover_identity list, corpus : corpus_entry list,
+   added_from_dat : string list, conditions : condition list, sample : int}
+
+type completed = (string * string) Binaryset.set
+
+fun cell_key_compare ((goal1, cond1), (goal2, cond2)) =
+  case String.compare (goal1, goal2) of
+      EQUAL => String.compare (cond1, cond2)
+    | order => order
+
+fun join left right = OS.Path.concat (left, right)
+
+val is_dir = hhConfig.is_dir
+val ensure_dir = hhConfig.ensure_dir
+val trim = hhConfig.trim
+
+val sorted_unique = mk_string_set
+
+fun string_of_regime Bushy = "bushy"
+  | string_of_regime Chainy = "chainy"
+
+fun string_of_selector Deps = "deps"
+  | string_of_selector (Knn count) = "knn" ^ Int.toString count
+  | string_of_selector (Mepo count) = "mepo" ^ Int.toString count
+  | string_of_selector (Mash count) = "mash" ^ Int.toString count
+  | string_of_selector (Mesh count) = "mesh" ^ Int.toString count
+  | string_of_selector PerSlice = "perslice"
+
+fun filter_of_selector Deps = "deps"
+  | filter_of_selector (Knn _) = hhConfig.filter_name hhConfig.Knn
+  | filter_of_selector (Mepo _) = hhConfig.filter_name hhConfig.Mepo
+  | filter_of_selector (Mash _) = hhConfig.filter_name hhConfig.Mash
+  | filter_of_selector (Mesh _) = hhConfig.filter_name hhConfig.Mesh
+  | filter_of_selector PerSlice = "per-slice"
+
+fun regime_of_string "bushy" = Bushy
+  | regime_of_string "chainy" = Chainy
+  | regime_of_string text = raise Fail ("unknown evaluation regime: " ^ text)
+
+fun selector_of_string "deps" = Deps
+  | selector_of_string "perslice" = PerSlice
+  | selector_of_string text =
+      let
+        fun counted prefix make =
+          if String.isPrefix prefix text then
+            let
+              val digits = String.extract (text, String.size prefix, NONE)
+            in
+              if digits <> "" andalso
+                 List.all Char.isDigit (String.explode digits) then
+                (case Int.fromString digits of
+                     SOME count => SOME (make count)
+                   | NONE => raise Fail
+                       ("bad evaluation selector: " ^ text))
+              else raise Fail ("bad evaluation selector: " ^ text)
+            end
+          else NONE
+      in
+        case counted "knn" Knn of
+            SOME selector => selector
+          | NONE =>
+              (case counted "mepo" Mepo of
+                   SOME selector => selector
+                 | NONE =>
+                     (case counted "mash" Mash of
+                          SOME selector => selector
+                        | NONE =>
+                            (case counted "mesh" Mesh of
+                                 SOME selector => selector
+                               | NONE => raise Fail
+                                   ("unknown evaluation selector: " ^ text))))
+      end
+
+(* This deliberately examines only the normalized goal, never a translation.
+   Quantifier abstractions are consumed by their binder representation;
+   every other abstraction has survived in term position. *)
+fun higher_order_normalized tm =
+  let
+    fun is_fun_type ty =
+      (ignore (dom_rng ty); true) handle HOL_ERR _ => false
+
+    fun member_bound bound tm =
+      List.exists (fn var => aconv var tm) bound
+
+    fun scan bound formula tm =
+      if is_forall tm then
+        if formula then
+          let val (var, body) = dest_forall tm in
+            scan (var :: bound) true body
+          end
+        else true
+      else if is_exists tm then
+        if formula then
+          let val (var, body) = dest_exists tm in
+            scan (var :: bound) true body
+          end
+        else true
+      else if is_neg tm then
+        if formula then scan bound true (dest_neg tm) else true
+      else if is_conj tm then
+        if formula then
+          let val (left, right) = dest_conj tm in
+            scan bound true left orelse scan bound true right
+          end
+        else true
+      else if is_disj tm then
+        if formula then
+          let val (left, right) = dest_disj tm in
+            scan bound true left orelse scan bound true right
+          end
+        else true
+      else if is_imp_only tm then
+        if formula then
+          let val (left, right) = dest_imp tm in
+            scan bound true left orelse scan bound true right
+          end
+        else true
+      else if is_eq tm then
+        if formula then
+          let val (left, right) = dest_eq tm in
+            scan bound false left orelse scan bound false right
+          end
+        else true
+      else if is_abs tm then true
+      else if is_comb tm then
+        let
+          val (head, args) = strip_comb tm
+          val applied_bound_function =
+            not (null args) andalso member_bound bound head andalso
+            is_fun_type (type_of head)
+        in
+          applied_bound_function orelse
+          List.exists (scan bound false) (head :: args)
+        end
+      else false
+  in
+    scan [] true tm
+  end
+
+val normalize_goal = hhProblemGen.beta_eta_contract false
+
+fun is_higher_order_goal tm = higher_order_normalized (normalize_goal tm)
+
+fun fresh_normalized thy tm =
+  isSome (gen_find_term (fn (_, subterm) =>
+    if is_const subterm andalso #Thy (dest_thy_const subterm) = thy
+    then SOME () else NONE) tm)
+
+(* thy is explicit, so that a recorded theorem is classified independently
+   of Theory.current_theory (). *)
+fun is_fresh_goal thy tm = fresh_normalized thy (normalize_goal tm)
+
+(* Computed at most once per theorem, and shared by all its conditions. *)
+fun goal_tags thy thm =
+  Susp.delay (fn () =>
+    let val tm = normalize_goal (list_mk_imp (dest_thm thm)) in
+      (higher_order_normalized tm, fresh_normalized thy tm)
+    end)
+
+fun validate_condition (condition : condition) =
+  case (#selector condition, #engine condition, #reconstruct condition) of
+      (PerSlice, Prover _, _) => raise Fail
+        "invalid hhEval Prover condition: perslice requires Sched"
+    | (Mepo _, Sched _, _) => raise Fail
+        "invalid hhEval Sched condition: mepo selectors require Prover"
+    | (Mash _, Sched _, _) => raise Fail
+        "invalid hhEval Sched condition: mash selectors require Prover"
+    | (Mesh _, Sched _, _) => raise Fail
+        "invalid hhEval Sched condition: mesh selectors require Prover"
+    | (_, Sched _, false) => raise Fail
+        "invalid hhEval Sched condition: reconstruct must be true"
+    | (_, Sched {provers, slices, cores, max_proofs, export_workers}, _) =>
+        if null provers then raise Fail
+          "invalid hhEval Sched condition: provers must not be empty"
+        else if slices < 1 then raise Fail
+          "invalid hhEval Sched condition: slices must be positive"
+        else if cores < 1 then raise Fail
+          "invalid hhEval Sched condition: cores must be positive"
+        else if max_proofs < 1 then raise Fail
+          "invalid hhEval Sched condition: max_proofs must be positive"
+        else if export_workers < 0 then raise Fail
+          "invalid hhEval Sched condition: export_workers must not be negative"
+        else ()
+    | _ => ()
+
+fun json_int number = JSON.INT (IntInf.fromInt number)
+
+fun json_prover_name prover = JSON.STRING (hhConfig.prover_name prover)
+
+fun engine_param_fields {provers, slices, cores, max_proofs, export_workers} =
+  [("provers", JSON.ARRAY (map json_prover_name provers)),
+   ("slices", json_int slices), ("cores", json_int cores),
+   ("max_proofs", json_int max_proofs),
+   ("export_workers", json_int export_workers)]
+
+fun json_condition condition =
+  let
+    val _ = validate_condition condition
+    val common =
+      [("cond_id", JSON.STRING (#cond_id condition)),
+       ("regime", JSON.STRING (string_of_regime (#regime condition))),
+       ("selector", JSON.STRING (string_of_selector (#selector condition)))]
+    val engine_fields =
+      case #engine condition of
+          Prover prover =>
+            [("engine", JSON.STRING "prover"),
+             ("prover", json_prover_name prover)]
+        | Sched parameters =>
+            ("engine", JSON.STRING "sched") :: engine_param_fields parameters
+  in
+    JSON.OBJECT (common @ engine_fields @
+      [("timeout", json_int (#timeout condition)),
+       ("reconstruct", JSON.BOOL (#reconstruct condition))])
+  end
+
+fun parse_json text =
+  let
+    val source = JSONParser.openString text
+    val value = JSONParser.parse source
+    val _ = JSONParser.close source
+  in
+    value
+  end
+
+fun field name value = JSONUtil.lookupField value name
+
+fun optional_field name value = JSONUtil.findField value name
+
+fun string_field name value = JSONUtil.asString (field name value)
+fun int_field name value = JSONUtil.asInt (field name value)
+fun real_field name value = JSONUtil.asNumber (field name value)
+fun bool_field name value = JSONUtil.asBool (field name value)
+
+fun option_field decoder name value =
+  case field name value of JSON.NULL => NONE | item => SOME (decoder item)
+
+fun string_list value = JSONUtil.arrayMap JSONUtil.asString value
+
+fun prover_of_name name =
+  case hhConfig.prover_of_name name of
+      SOME prover => prover
+    | NONE => raise Fail ("unknown HolyHammer prover: " ^ name)
+
+fun prover_value value = prover_of_name (JSONUtil.asString value)
+
+fun prover_field name value = prover_value (field name value)
+
+fun filter_field name value =
+  let val text = string_field name value in
+    case hhConfig.filter_of_name text of
+        SOME filter => filter
+      | NONE => raise Fail ("unknown journal premise filter: " ^ text)
+  end
+
+fun parse_engine_params value =
+  {provers = JSONUtil.arrayMap prover_value (field "provers" value),
+   slices = int_field "slices" value, cores = int_field "cores" value,
+   max_proofs = int_field "max_proofs" value,
+   export_workers =
+     (case optional_field "export_workers" value of
+          NONE => hhConfig.default_export_workers
+        | SOME workers => JSONUtil.asInt workers)}
+
+fun parse_engine value =
+  case optional_field "engine" value of
+      NONE => Prover (prover_field "prover" value)
+    | SOME engine_value =>
+        (case JSONUtil.asString engine_value of
+             "prover" => Prover (prover_field "prover" value)
+           | "sched" => Sched (parse_engine_params value)
+           | name => raise Fail ("unknown evaluation engine: " ^ name))
+
+fun parse_condition_value value : condition =
+  let
+    val condition =
+      {cond_id = string_field "cond_id" value,
+       regime = regime_of_string (string_field "regime" value),
+       selector = selector_of_string (string_field "selector" value),
+       engine = parse_engine value,
+       timeout = int_field "timeout" value,
+       reconstruct = bool_field "reconstruct" value}
+    val _ = validate_condition condition
+  in
+    condition
+  end
+
+fun encode_condition condition =
+  JSONPrinter.valueToString (json_condition condition)
+
+fun parse_condition text = parse_condition_value (parse_json text)
+
+fun theory_of_srcfile line =
+  let
+    val path = trim line
+    val file = OS.Path.file path
+    val name = String.substring (file, 0, String.size file - 6)
+  in
+    if String.isSubstring "/src/" path andalso
+       String.isSuffix "Theory" file andalso name <> ""
+    then SOME name else NONE
+  end
+  handle Subscript => NONE
+
+fun theories_from_srcfile_lines lines =
+  sorted_unique (List.mapPartial theory_of_srcfile lines)
+
+val read_lines = bare_readl
+
+fun theories_from_srcfiles path = theories_from_srcfile_lines (read_lines path)
+
+val directory_names = hhConfig.directory_names
+
+fun dat_paths_under root =
+  let
+    fun walk directory =
+      List.concat (map (fn name =>
+        let val path = join directory name in
+          if is_dir path then walk path
+          else if String.isSuffix "Theory.dat" name then [path]
+          else []
+        end) (directory_names directory))
+  in
+    walk root
+  end
+
+fun dat_theories_under root =
+  sorted_unique (map (fn path =>
+    let val name = OS.Path.file path in
+      String.substring (name, 0, String.size name - 10)
+    end) (dat_paths_under root))
+
+fun coverage_check {srcfiles, dat_theories} =
+  let val sources = Redblackset.fromList String.compare srcfiles in
+    List.filter (fn theory => not (Redblackset.member (sources, theory)))
+      dat_theories
+  end
+
+fun holdir () =
+  case OS.Process.getEnv "HOLDIR" of
+      SOME directory => directory
+    | NONE => Globals.HOLDIR
+
+fun source_theories root =
+  theories_from_srcfiles (join (join root "sigobj") "SRCFILES")
+
+fun stdlib_coverage () =
+  let
+    val root = holdir ()
+    val srcfiles = source_theories root
+    val dat_theories = dat_theories_under (join root "src")
+    val added_from_dat = coverage_check
+      {srcfiles = srcfiles, dat_theories = dat_theories}
+  in
+    {srcfiles = srcfiles, dat_theories = dat_theories,
+     added_from_dat = added_from_dat}
+  end
+
+fun stdlib_theories () =
+  let
+    val {srcfiles, added_from_dat, ...} = stdlib_coverage ()
+    val _ =
+      if null added_from_dat then ()
+      else TextIO.output (TextIO.stdErr,
+        "hhEval: adding " ^ Int.toString (length added_from_dat) ^
+        " theories absent from sigobj/SRCFILES\n")
+  in
+    sorted_unique (srcfiles @ added_from_dat)
+  end
+
+fun eval_dir () =
+  case hhConfig.get_path "eval.dir" of
+      SOME directory => directory
+    | NONE => join (join (join (holdir ()) "src") "holyhammer") "eval"
+
+fun experiment_dir expname = join (eval_dir ()) expname
+fun journal_path expdir theory =
+  join (join expdir "journal") (theory ^ ".jsonl")
+
+fun json_string_option NONE = JSON.NULL
+  | json_string_option (SOME text) = JSON.STRING text
+
+fun json_real_option NONE = JSON.NULL
+  | json_real_option (SOME number) = JSON.FLOAT number
+
+fun json_bool_option NONE = JSON.NULL
+  | json_bool_option (SOME truth) = JSON.BOOL truth
+
+fun json_string_list_option NONE = JSON.NULL
+  | json_string_list_option (SOME items) = JSON.ARRAY (map JSON.STRING items)
+
+fun json_slice
+    {prover, format, type_enc, lam_trans, nfacts, filter, extra_opts,
+     slice_size} =
+  JSON.OBJECT
+    [("prover", json_prover_name prover), ("format", JSON.STRING format),
+     ("type_enc", JSON.STRING type_enc),
+     ("lam_trans", JSON.STRING lam_trans),
+     ("nfacts", json_int nfacts),
+     ("filter", JSON.STRING (hhConfig.filter_name filter)),
+     ("extra_opts", JSON.ARRAY (map JSON.STRING extra_opts)),
+     ("slice_size", json_int slice_size)]
+
+(* Journal spelling: a RunFailure's message lives in the entry's error
+   field, so the status itself is just "RunFailure". *)
+fun szs_name (hhProver.RunFailure _) = "RunFailure"
+  | szs_name szs = hhProver.szs_name szs
+
+fun szs_of_name "RunFailure" = hhProver.RunFailure ""
+  | szs_of_name name = hhProver.status_of_word name
+
+fun cell_status_name (Szs szs) = szs_name szs
+  | cell_status_name EvalError = "Error"
+  | cell_status_name BrokenDeps = "BrokenDeps"
+  | cell_status_name LoadFailure = "LoadFailure"
+
+fun cell_status_of_name "Error" = EvalError
+  | cell_status_of_name "BrokenDeps" = BrokenDeps
+  | cell_status_of_name "LoadFailure" = LoadFailure
+  | cell_status_of_name name = Szs (szs_of_name name)
+
+fun json_journal_slice {slice, szs, time, cached} =
+  JSON.OBJECT
+    [("slice", json_slice slice), ("szs", JSON.STRING (szs_name szs)),
+     ("time", JSON.FLOAT time), ("cached", JSON.BOOL cached)]
+
+(* A journal entry's prover is spelled "" when there is none: no slice ran
+   in a Sched cell, or the entry records a theory that failed to load.
+   The latter has no engine either and is written as a Prover entry. *)
+fun journal_prover_text NONE = ""
+  | journal_prover_text (SOME prover) = hhConfig.prover_name prover
+
+fun journal_prover_of_text "" = NONE
+  | journal_prover_of_text name = SOME (prover_of_name name)
+
+fun journal_json
+    {run, thy, thm, goal_id, cond, regime, selector, engine, ho, fresh, prover,
+     prover_version, nfacts, timeout, szs, t_prover, axioms_used,
+     recon_ok, recon_method, t_recon, stac, error, stop, t_total, winner,
+     slices} =
+  let
+    val common =
+      [("run", JSON.STRING run), ("thy", JSON.STRING thy),
+       ("thm", JSON.STRING thm), ("goal_id", JSON.STRING goal_id),
+       ("cond", JSON.STRING cond),
+       ("regime", JSON.STRING (string_of_regime regime)),
+       ("selector", JSON.STRING (string_of_selector selector)),
+       ("ho", JSON.BOOL ho), ("fresh", JSON.BOOL fresh)]
+    val winning =
+      [("prover", JSON.STRING (journal_prover_text prover)),
+       ("prover_version", json_string_option prover_version),
+       ("nfacts", json_int nfacts),
+       ("timeout", json_int timeout),
+       ("szs", JSON.STRING (cell_status_name szs)),
+       ("t_prover", JSON.FLOAT t_prover),
+       ("axioms_used", json_string_list_option axioms_used),
+       ("recon_ok", json_bool_option recon_ok),
+       ("recon_method", json_string_option recon_method),
+       ("t_recon", json_real_option t_recon),
+       ("stac", json_string_option stac),
+       ("error", json_string_option error)]
+    val engine_fields =
+      case engine of
+          NONE =>
+            if prover = NONE then [("engine", JSON.STRING "prover")]
+            else raise Fail
+              "invalid hhEval journal entry: prover without an engine"
+        | SOME (Prover engine_prover) =>
+            if prover = SOME engine_prover then
+              [("engine", JSON.STRING "prover")]
+            else raise Fail
+              "invalid hhEval Prover journal entry: engine/prover mismatch"
+        | SOME (Sched parameters) =>
+            (case (stop, t_total) of
+                 (SOME reason, SOME total) =>
+                   [("engine", JSON.STRING "sched"),
+                    ("engine_params",
+                     JSON.OBJECT (engine_param_fields parameters))] @
+                   winning @
+                   [("stop", JSON.STRING reason),
+                    ("t_total", JSON.FLOAT total),
+                    ("winner", case winner of
+                         NONE => JSON.NULL
+                       | SOME slice => json_slice slice),
+                    ("slices", JSON.ARRAY (map json_journal_slice slices))]
+               | _ => raise Fail
+                   ("invalid hhEval Sched journal entry: stop and " ^
+                    "t_total are required"))
+  in
+    case engine of
+        SOME (Sched _) => JSON.OBJECT (common @ engine_fields)
+      | _ => JSON.OBJECT (common @ engine_fields @ winning)
+  end
+
+fun parse_slice value : hhProver.slice =
+  {prover = prover_field "prover" value,
+   format = string_field "format" value,
+   type_enc = string_field "type_enc" value,
+   lam_trans = string_field "lam_trans" value,
+   nfacts = int_field "nfacts" value,
+   filter = filter_field "filter" value,
+   extra_opts = string_list (field "extra_opts" value),
+   slice_size = int_field "slice_size" value}
+
+fun parse_journal_slice value : journal_slice =
+  {slice = parse_slice (field "slice" value),
+   szs = szs_of_name (string_field "szs" value),
+   time = real_field "time" value,
+   cached = bool_field "cached" value}
+
+fun parse_journal_engine value prover =
+  case string_field "engine" value of
+      "prover" => Option.map Prover prover
+    | "sched" =>
+        SOME (Sched (parse_engine_params (field "engine_params" value)))
+    | name => raise Fail ("unknown journal engine: " ^ name)
+
+(* Only the format written by journal_json is accepted.  The schedule
+   fields are present exactly on Sched entries. *)
+fun parse_journal_value value : journal_entry =
+  let
+    val prover = journal_prover_of_text (string_field "prover" value)
+    val engine = parse_journal_engine value prover
+    val (stop, t_total, winner, slices) =
+      case engine of
+          SOME (Sched _) =>
+            (SOME (string_field "stop" value),
+             SOME (real_field "t_total" value),
+             option_field parse_slice "winner" value,
+             JSONUtil.arrayMap parse_journal_slice (field "slices" value))
+        | _ => (NONE, NONE, NONE, [])
+  in
+    {run = string_field "run" value, thy = string_field "thy" value,
+     thm = string_field "thm" value, goal_id = string_field "goal_id" value,
+     cond = string_field "cond" value,
+     regime = regime_of_string (string_field "regime" value),
+     selector = selector_of_string (string_field "selector" value),
+     engine = engine,
+     ho = bool_field "ho" value, fresh = bool_field "fresh" value,
+     prover = prover,
+     prover_version = option_field JSONUtil.asString "prover_version" value,
+     nfacts = int_field "nfacts" value, timeout = int_field "timeout" value,
+     szs = cell_status_of_name (string_field "szs" value),
+     t_prover = real_field "t_prover" value,
+     axioms_used = option_field string_list "axioms_used" value,
+     recon_ok = option_field JSONUtil.asBool "recon_ok" value,
+     recon_method = option_field JSONUtil.asString "recon_method" value,
+     t_recon = option_field JSONUtil.asNumber "t_recon" value,
+     stac = option_field JSONUtil.asString "stac" value,
+     error = option_field JSONUtil.asString "error" value,
+     stop = stop, t_total = t_total, winner = winner, slices = slices}
+  end
+
+fun encode_journal_line entry = JSONPrinter.valueToString (journal_json entry)
+fun parse_journal_line text = parse_journal_value (parse_json text)
+
+fun append_journal path entry =
+  let
+    val _ = ensure_dir (OS.Path.dir path)
+    val output = TextIO.openAppend path
+    val _ = TextIO.output (output, encode_journal_line entry ^ "\n")
+    val _ = TextIO.flushOut output
+    val _ = TextIO.closeOut output
+  in
+    ()
+  end
+
+fun fold_journal path add initial =
+  if OS.FileSys.access (path, [OS.FileSys.A_READ]) then
+    let
+      (* A torn line can appear anywhere, not just at the end: a resume
+         appends past the truncated tail left by an interrupted worker.
+         Such a line is not JSON, and is skipped rather than losing the
+         journal.  Well-formed JSON in any other shape is an entry from an
+         unsupported journal format, which must not silently vanish from
+         reports or resumption. *)
+      fun parse line =
+        case (SOME (parse_json line)
+              handle Interrupt => raise Interrupt | _ => NONE) of
+            NONE => NONE
+          | SOME value =>
+              (SOME (parse_journal_value value)
+               handle Interrupt => raise Interrupt
+                    | error => raise Fail
+                        ("unsupported hhEval journal entry in " ^ path ^
+                         ": " ^ General.exnMessage error))
+      val input = HOLFileSys.openIn path
+      fun loop acc =
+        case HOLFileSys.inputLine input of
+            NONE => acc
+          | SOME line =>
+              if Substring.isEmpty
+                   (Substring.dropl Char.isSpace (Substring.full line))
+              then loop acc
+              else
+                case parse line of
+                    NONE => loop acc
+                  | SOME entry => loop (add (entry, acc))
+      val result = loop initial
+        handle error => (HOLFileSys.closeIn input; raise error)
+    in
+      HOLFileSys.closeIn input;
+      result
+    end
+  else initial
+  handle OS.SysErr _ => initial | IO.Io _ => initial
+
+fun read_journal path = List.rev (fold_journal path (op ::) [])
+
+(* Environment-level failures (no prover binary, prover would not start)
+   say nothing about the cell, so they must not mark it done: otherwise a
+   sweep started before the provers were installed can never be resumed. *)
+fun retryable_szs EvalError = true
+  | retryable_szs (Szs (hhProver.RunFailure _)) = true
+  | retryable_szs _ = false
+
+fun add_completed entry pairs =
+  if retryable_szs (#szs entry) then pairs
+  else Binaryset.add (pairs, (#goal_id entry, #cond entry))
+
+fun read_completed path =
+  fold_journal path (fn (entry, pairs) => add_completed entry pairs)
+    (Binaryset.empty cell_key_compare)
+
+fun cell_completed pairs pair = Binaryset.member (pairs, pair)
+
+fun journal_complete path cells =
+  let val pairs = read_completed path in
+    List.all (cell_completed pairs) cells
+  end
+
+(* Not Unix.execute: its pipes are not close-on-exec, so a prover that
+   another thread spawns meanwhile inherits one, and reading the command's
+   output waits for that prover to exit.  hhProver's spawn is serialised
+   with the prover spawns and makes its pipe close-on-exec. *)
+fun read_command path arguments =
+  let
+    val {output, exec_failed, killed, status, ...} =
+      hhProver.read_stdout path arguments 60.0
+  in
+    if exec_failed orelse killed orelse status <> Posix.Process.W_EXITED
+    then NONE
+    else SOME output
+  end
+  handle OS.SysErr _ => NONE
+
+(* The first word, if it is a SHA-1 or SHA-256 digest in hex. *)
+fun hex_digest text =
+  case String.tokens Char.isSpace text of
+      word :: _ =>
+        if (size word = 40 orelse size word = 64) andalso
+           CharVector.all Char.isHexDigit word
+        then SOME word
+        else NONE
+    | [] => NONE
+
+fun sha256 path =
+  let
+    fun digest executable arguments =
+      case read_command executable arguments of
+          NONE => NONE
+        | SOME output => hex_digest output
+  in
+    if OS.FileSys.access (path, [OS.FileSys.A_READ]) then
+      case digest "/usr/bin/sha256sum" [path] of
+          SOME hash => SOME hash
+        | NONE => digest "/usr/bin/shasum" ["-a", "256", path]
+    else NONE
+  end
+  handle OS.SysErr _ => NONE
+
+val distinct_provers = mk_sameorder_set hhConfig.prover_compare
+
+fun prover_identity prover =
+  case hhProver.probe (hhProver.config_of prover) of
+      NONE => {prover = prover, path = NONE, version = NONE, sha256 = NONE}
+    | SOME {path, version, ...} =>
+        {prover = prover, path = SOME path, version = version,
+         sha256 = sha256 path}
+
+fun engine_provers (Prover prover) = [prover]
+  | engine_provers (Sched {provers, ...}) = provers
+
+fun current_prover_identities (conditions : condition list) =
+  map prover_identity
+    (distinct_provers
+      (List.concat (map (engine_provers o #engine) conditions)))
+
+fun host_name () =
+  case List.find (fn (name, _) => name = "nodename")
+                 (Posix.ProcEnv.uname ()) of
+      SOME (_, host) => host
+    | NONE => "unknown"
+
+fun hol_commit () =
+  case read_command "/usr/bin/git" ["rev-parse", "HEAD"] of
+      SOME output =>
+        (case hex_digest output of SOME hash => hash | NONE => "unknown")
+    | NONE => "unknown"
+
+fun loaded_corpus_entry thy =
+  {thy = thy, theorem_count = length (DB.theorems thy),
+   dep_stamp = Theory.hash thy}
+
+fun new_run_header
+    {expname, corpus, added_from_dat, conditions, sample} =
+  {expname = expname, date = Date.toString (Date.fromTimeLocal (Time.now ())),
+   host = host_name (), hol_commit = hol_commit (),
+   provers = current_prover_identities conditions, corpus = corpus,
+   added_from_dat = added_from_dat, conditions = conditions, sample = sample}
+
+fun json_prover {prover, path, version, sha256} =
+  JSON.OBJECT
+    [("name", json_prover_name prover), ("path", json_string_option path),
+     ("version", json_string_option version),
+     ("sha256", json_string_option sha256)]
+
+fun json_corpus_entry {thy, theorem_count, dep_stamp} =
+  JSON.OBJECT
+    [("thy", JSON.STRING thy),
+     ("theorem_count", json_int theorem_count),
+     ("dep_stamp", JSON.STRING dep_stamp)]
+
+(* The effective options, passed on to the worker processes. *)
+fun eval_hammer_options () =
+  map (fn (key, value, _) => (key, value)) (hhConfig.hh_params ())
+
+fun json_hammer_options () =
+  JSON.OBJECT (map (fn (key, value) => (key, JSON.STRING value))
+    (eval_hammer_options ()))
+
+fun header_json
+    {expname, date, host, hol_commit, provers, corpus, added_from_dat,
+     conditions, sample} =
+  JSON.OBJECT
+    [("schema", JSON.INT 4),
+     ("expname", JSON.STRING expname), ("date", JSON.STRING date),
+     ("host", JSON.STRING host), ("hol_commit", JSON.STRING hol_commit),
+     ("provers", JSON.ARRAY (map json_prover provers)),
+     ("corpus", JSON.ARRAY (map json_corpus_entry corpus)),
+     ("added_from_dat", JSON.ARRAY (map JSON.STRING added_from_dat)),
+     ("conditions", JSON.ARRAY (map json_condition conditions)),
+     ("sample", json_int sample),
+     ("hammer_options", json_hammer_options ())]
+
+fun write_run_header expdir header =
+  (ensure_dir expdir;
+   write_file (join expdir "run.json")
+     (JSONPrinter.valueString true (header_json header) ^ "\n"))
+
+fun validate_run_header expdir header =
+  let
+    val saved = JSONParser.parseFile (join expdir "run.json")
+    val requested = header_json header
+    fun check name =
+      case optional_field name saved of
+          NONE => raise Fail ("cannot resume evaluation: run.json lacks " ^
+            name ^ "; use a new experiment name")
+        | SOME value =>
+            if JSONPrinter.valueToString value =
+               JSONPrinter.valueToString (field name requested) then ()
+            else raise Fail ("cannot resume evaluation: " ^ name ^
+              " differs from run.json; use a new experiment name")
+  in
+    app check ["schema", "expname", "conditions", "sample", "corpus",
+      "hammer_options"]
+  end
+
+fun sample_hash text =
+  let
+    val modulus = IntInf.fromInt 2147483647
+    fun step (character, value) =
+      IntInf.mod (value * 65599 + IntInf.fromInt (Char.ord character), modulus)
+  in
+    List.foldl step 0 (String.explode text)
+  end
+
+fun sample_goal factor goal_id =
+  if factor < 1 then raise Fail "--sample must be a positive integer"
+  else factor = 1 orelse
+    IntInf.mod (sample_hash goal_id, IntInf.fromInt factor) = 0
+
+(* -------------------------------------------------------------------------
+   Experiment reports
+   ------------------------------------------------------------------------- *)
+
+type metrics =
+  {goals : int, attempted : int, proved : int, reconstructed : int,
+   proved_pct : real option, reconstructed_pct : real option,
+   p50 : real option, p90 : real option, maximum : real option}
+
+fun journal_files expdir =
+  let
+    val directory = join expdir "journal"
+    fun is_journal name = String.isSuffix ".jsonl" name
+  in
+    dict_sort String.compare
+      (List.filter is_journal (directory_names directory))
+  end
+
+fun cell_key entry = (#goal_id entry, #cond entry)
+
+fun latest_cells paths =
+  let
+    (* Record file and row order so the latest rows can be returned
+       newest first after streaming the journals in their original order. *)
+    fun add_latest (entry, (position, cells)) =
+      (position + 1,
+       Redblackmap.insert (cells, cell_key entry, (position, entry)))
+    val (_, cells) = List.foldl (fn (path, state) =>
+      fold_journal path add_latest state)
+      (0, Redblackmap.mkDict cell_key_compare) paths
+    val positioned = Redblackmap.foldl (fn (_, item, acc) => item :: acc)
+      [] cells
+  in
+    map #2 (Listsort.sort (fn ((left, _), (right, _)) =>
+      Int.compare (right, left)) positioned)
+  end
+
+fun regular_cell entry =
+  #cond entry <> "__load__" andalso #thm entry <> "__load__"
+
+fun prover_cell entry =
+  case #engine entry of SOME (Prover _) => true | _ => false
+
+fun sched_cell entry = not (prover_cell entry)
+
+fun proven_cell entry = #szs entry = Szs hhProver.SzsTheorem
+fun reconstructed_cell entry = #recon_ok entry = SOME true
+fun attempted_cell entry = #szs entry <> BrokenDeps
+
+fun quantiles values =
+  case dict_sort Real.compare values of
+      [] => (NONE, NONE, NONE)
+    | ordered =>
+        let
+          val sorted = Vector.fromList ordered
+          val count = Vector.length sorted
+          val p50_index = (count + 1) div 2 - 1
+          val p90_index = (9 * count + 9) div 10 - 1
+        in
+          (SOME (Vector.sub (sorted, p50_index)),
+           SOME (Vector.sub (sorted, p90_index)),
+           SOME (Vector.sub (sorted, count - 1)))
+        end
+
+fun percentage numerator denominator =
+  if denominator = 0 then NONE
+  else SOME (100.0 * Real.fromInt numerator / Real.fromInt denominator)
+
+fun metrics_for_counts (goals, attempted, proved, reconstructed) entries
+    : metrics =
+  let
+    fun cell_time entry =
+      case #engine entry of
+          SOME (Sched _) =>
+            (case #t_total entry of
+                 SOME total => total
+               | NONE => #t_prover entry)
+        | _ => #t_prover entry
+    val times = map cell_time (List.filter proven_cell entries)
+    val (p50, p90, maximum) = quantiles times
+  in
+    {goals = goals, attempted = attempted, proved = proved,
+     reconstructed = reconstructed, proved_pct = percentage proved attempted,
+     reconstructed_pct = percentage reconstructed attempted, p50 = p50,
+     p90 = p90, maximum = maximum}
+  end
+
+(* Within one condition, latest_cells has already deduplicated the goals. *)
+fun count_cells entries predicate =
+  List.foldl (fn (entry, count) =>
+    if predicate entry then count + 1 else count) 0 entries
+
+fun make_metrics entries =
+  metrics_for_counts
+    (length entries, count_cells entries attempted_cell,
+     count_cells entries proven_cell, count_cells entries reconstructed_cell)
+    entries
+
+(* Groups keyed and ordered by [key], each in its original entry order. *)
+fun group_by key items =
+  let
+    fun add (item, groups) =
+      let val k = key item in
+        Redblackmap.insert (groups, k,
+          item :: Option.getOpt (Redblackmap.peek (groups, k), []))
+      end
+  in
+    map (fn (k, group) => (k, List.rev group))
+      (Redblackmap.listItems
+        (List.foldl add (Redblackmap.mkDict String.compare) items))
+  end
+
+(* Each distinct value in [compare] order with its number of occurrences. *)
+fun distribution compare values =
+  let
+    fun add (value, counts) =
+      Redblackmap.insert (counts, value,
+        1 + Option.getOpt (Redblackmap.peek (counts, value), 0))
+  in
+    Redblackmap.listItems
+      (List.foldl add (Redblackmap.mkDict compare) values)
+  end
+
+type condition_report =
+  {name : string, cells : journal_entry list, metrics : metrics,
+   ho : metrics, non_ho : metrics, seen : metrics, fresh : metrics}
+
+type slice_contribution =
+  {format : string, type_enc : string, lam_trans : string,
+   prover : hhProver.prover, filter : string, nfacts : int, wins : int,
+   reconstructed : int}
+
+type portfolio_report =
+  {key : string, cells : journal_entry list, metrics : metrics,
+   unique : (hhProver.prover * int * int) list}
+
+type schedule_report =
+  {name : string, slices_run : (int * int) list,
+   stop_reasons : (string * int) list}
+
+type comparison_report =
+  {name : string, key : string, schedule : metrics, union : metrics}
+
+type report_data =
+  {conditions : condition_report list,
+   contributions : slice_contribution list,
+   portfolios : portfolio_report list,
+   schedules : schedule_report list,
+   comparisons : comparison_report list,
+   theories : (string * condition_report list) list}
+
+fun condition_report (name, cells) : condition_report =
+  let
+    fun subset predicate = make_metrics (List.filter predicate cells)
+  in
+    {name = name, cells = cells, metrics = make_metrics cells,
+     ho = subset #ho, non_ho = subset (not o #ho),
+     seen = subset (not o #fresh), fresh = subset #fresh}
+  end
+
+fun winning_row entry : slice_contribution option =
+  let
+    val reconstructed = if reconstructed_cell entry then 1 else 0
+    fun row (format, type_enc, lam_trans, prover, filter, nfacts) =
+      {format = format, type_enc = type_enc, lam_trans = lam_trans,
+       prover = prover, filter = filter, nfacts = nfacts, wins = 1,
+       reconstructed = reconstructed}
+  in
+    case #engine entry of
+        SOME (Prover prover) => SOME (row ("fof", "", "", prover,
+          filter_of_selector (#selector entry), #nfacts entry))
+      | SOME (Sched _) =>
+          Option.map (fn slice =>
+            row (#format slice, #type_enc slice, #lam_trans slice,
+              #prover slice, hhConfig.filter_name (#filter slice),
+              #nfacts slice))
+            (#winner entry)
+      | NONE => NONE
+  end
+
+fun contribution_key (row : slice_contribution) =
+  String.concatWith "\000"
+    [#format row, #type_enc row, #lam_trans row,
+     hhConfig.prover_name (#prover row), #filter row,
+     Int.toString (#nfacts row)]
+
+fun slice_contributions entries : slice_contribution list =
+  let
+    fun merge (_, rows : slice_contribution list) =
+      let val first = hd rows in
+        {format = #format first, type_enc = #type_enc first,
+         lam_trans = #lam_trans first, prover = #prover first,
+         filter = #filter first, nfacts = #nfacts first,
+         wins = length rows,
+         reconstructed = List.foldl op+ 0 (map #reconstructed rows)}
+      end
+  in
+    map merge (group_by contribution_key
+      (List.mapPartial winning_row (List.filter proven_cell entries)))
+  end
+
+fun portfolio_key entry =
+  string_of_regime (#regime entry) ^ "/" ^
+  Int.toString (#timeout entry) ^ "s"
+
+datatype attribution = NoOutcome | Unique of hhProver.prover | Nonunique
+
+fun merge_attribution (NoOutcome, other) = other
+  | merge_attribution (other, NoOutcome) = other
+  | merge_attribution (Unique left, Unique right) =
+      if left = right then Unique left else Nonunique
+  | merge_attribution _ = Nonunique
+
+fun portfolio_report (key, cells) : portfolio_report =
+  let
+    fun merge ((attempted, proved, reconstructed),
+               (also_attempted, also_proved, also_reconstructed)) =
+      (attempted orelse also_attempted,
+       merge_attribution (proved, also_proved),
+       merge_attribution (reconstructed, also_reconstructed))
+    fun add (entry, (goals, provers)) =
+      let
+        val prover = #prover entry
+        (* An anonymous success covers its goal and precludes uniqueness. *)
+        val outcome = case prover of NONE => Nonunique | SOME p => Unique p
+        val coverage =
+          (attempted_cell entry,
+           if proven_cell entry then outcome else NoOutcome,
+           if reconstructed_cell entry then outcome else NoOutcome)
+      in
+        (Redblackmap.insertWith merge (goals, #goal_id entry, coverage),
+         case prover of
+             NONE => provers
+           | SOME name => Redblackset.add (provers, name))
+      end
+    val (goals, provers) = List.foldl add
+      (Redblackmap.mkDict String.compare,
+       Redblackset.empty hhConfig.prover_compare) cells
+    fun count covered total = if covered then total + 1 else total
+    fun credit (Unique prover) counts =
+          Redblackmap.insertWith (op +) (counts, prover, 1)
+      | credit _ counts = counts
+    fun tally (_, (attempted, proved, reconstructed),
+               (attempts, proofs, replays, unique_proofs, unique_replays)) =
+      (count attempted attempts, count (proved <> NoOutcome) proofs,
+       count (reconstructed <> NoOutcome) replays,
+       credit proved unique_proofs, credit reconstructed unique_replays)
+    val (attempts, proofs, replays, unique_proofs, unique_replays) =
+      Redblackmap.foldl tally
+        (0, 0, 0, Redblackmap.mkDict hhConfig.prover_compare,
+         Redblackmap.mkDict hhConfig.prover_compare) goals
+    fun credits table prover =
+      Option.getOpt (Redblackmap.peek (table, prover), 0)
+    val metrics = metrics_for_counts
+      (Redblackmap.numItems goals, attempts, proofs, replays) cells
+    val unique = map (fn prover =>
+      (prover, credits unique_proofs prover, credits unique_replays prover))
+      (Redblackset.listItems provers)
+  in
+    {key = key, cells = cells, metrics = metrics, unique = unique}
+  end
+
+fun schedule_report (name, cells) : schedule_report =
+  {name = name,
+   slices_run = distribution Int.compare (map (length o #slices) cells),
+   stop_reasons = distribution String.compare (List.mapPartial #stop cells)}
+
+fun report_data entries : report_data =
+  let
+    val conditions = map condition_report (group_by #cond entries)
+    val (prover_entries, schedule_entries) = List.partition prover_cell entries
+    val portfolios =
+      map portfolio_report (group_by portfolio_key prover_entries)
+    val schedule_groups = group_by #cond schedule_entries
+    val condition_metrics = List.foldl
+      (fn ({name, cells, metrics, ...} : condition_report, lookup) =>
+        if List.all sched_cell cells then
+          Redblackmap.insert (lookup, name, metrics)
+        else lookup)
+      (Redblackmap.mkDict String.compare) conditions
+    val portfolio_metrics = List.foldl
+      (fn ({key, metrics, ...} : portfolio_report, lookup) =>
+        Redblackmap.insert (lookup, key, metrics))
+      (Redblackmap.mkDict String.compare) portfolios
+    fun comparison (name, cells) =
+      let val key = portfolio_key (hd cells) in
+        Option.map (fn union =>
+          {name = name, key = key,
+           schedule = (case Redblackmap.peek (condition_metrics, name) of
+                           SOME metrics => metrics
+                           | NONE => make_metrics cells),
+           union = union})
+          (Redblackmap.peek (portfolio_metrics, key))
+      end
+  in
+    {conditions = conditions,
+     contributions = slice_contributions entries,
+     portfolios = portfolios,
+     schedules = map schedule_report schedule_groups,
+     comparisons = List.mapPartial comparison schedule_groups,
+     theories = map (fn (theory, cells) =>
+       (theory, map condition_report (group_by #cond cells)))
+       (group_by #thy entries)}
+  end
+
+(* summary.json *)
+
+fun json_metrics
+    {goals, attempted, proved, reconstructed, proved_pct, reconstructed_pct,
+     p50, p90, maximum} =
+  JSON.OBJECT
+    [("goals", json_int goals), ("attempted", json_int attempted),
+     ("proved", json_int proved),
+     ("proved_pct", json_real_option proved_pct),
+     ("reconstructed", json_int reconstructed),
+     ("reconstructed_pct", json_real_option reconstructed_pct),
+     ("t_prover_p50", json_real_option p50),
+     ("t_prover_p90", json_real_option p90),
+     ("t_prover_max", json_real_option maximum)]
+
+fun subset_json label metrics =
+  JSON.OBJECT
+    [("subset", JSON.STRING label), ("metrics", json_metrics metrics)]
+
+fun condition_json ({name, cells, metrics, ho, non_ho, seen, fresh}
+                    : condition_report) =
+  let
+    val first = hd cells
+    val schedule_fields =
+      case #engine first of
+          SOME (Sched {provers, slices, cores, max_proofs, export_workers}) =>
+            [("engine", JSON.STRING "sched"),
+             ("provers", JSON.ARRAY (map json_prover_name provers)),
+             ("requested_slices", json_int slices),
+             ("cores", json_int cores), ("max_proofs", json_int max_proofs),
+             ("export_workers", json_int export_workers)]
+        | _ => []
+  in
+    JSON.OBJECT
+      ([("cond", JSON.STRING name),
+        ("regime", JSON.STRING (string_of_regime (#regime first))),
+        ("selector", JSON.STRING (string_of_selector (#selector first))),
+        ("filter", JSON.STRING (filter_of_selector (#selector first))),
+        ("prover", JSON.STRING (journal_prover_text (#prover first))),
+        ("timeout", json_int (#timeout first)),
+        ("metrics", json_metrics metrics),
+        ("subsets", JSON.ARRAY
+          [subset_json "HO" ho, subset_json "non-HO" non_ho]),
+        ("fresh_subsets", JSON.ARRAY
+          [subset_json "seen" seen, subset_json "fresh" fresh])] @
+       schedule_fields)
+  end
+
+fun contribution_json (row : slice_contribution) =
+  JSON.OBJECT
+    [("format", JSON.STRING (#format row)),
+     ("type_enc", JSON.STRING (#type_enc row)),
+     ("lam_trans", JSON.STRING (#lam_trans row)),
+     ("prover", json_prover_name (#prover row)),
+     ("nfacts", json_int (#nfacts row)),
+     ("filter", JSON.STRING (#filter row)),
+     ("wins", json_int (#wins row)),
+     ("reconstructed", json_int (#reconstructed row))]
+
+fun portfolio_json ({key, cells, metrics, unique} : portfolio_report) =
+  JSON.OBJECT
+    [("key", JSON.STRING key),
+     ("regime", JSON.STRING (string_of_regime (#regime (hd cells)))),
+     ("selectors", JSON.ARRAY (map JSON.STRING
+       (sorted_unique (map (string_of_selector o #selector) cells)))),
+     ("timeout", json_int (#timeout (hd cells))),
+     ("condition_ids", JSON.ARRAY
+       (map JSON.STRING (sorted_unique (map #cond cells)))),
+     ("metrics", json_metrics metrics),
+     ("provers", JSON.ARRAY (map (fn (prover, proved, reconstructed) =>
+       JSON.OBJECT
+         [("prover", json_prover_name prover),
+          ("unique_proved", json_int proved),
+          ("unique_reconstructed", json_int reconstructed)]) unique))]
+
+fun schedule_json ({name, slices_run, stop_reasons} : schedule_report) =
+  let
+    fun counts json values = JSON.ARRAY (map (fn (value, count) =>
+      JSON.OBJECT [("value", json value), ("count", json_int count)]) values)
+  in
+    JSON.OBJECT
+      [("cond", JSON.STRING name),
+       ("slices_run", counts json_int slices_run),
+       ("stop_reasons", counts JSON.STRING stop_reasons)]
+  end
+
+fun comparison_json ({name, key, schedule, union} : comparison_report) =
+  JSON.OBJECT
+    [("condition", JSON.STRING name), ("portfolio", JSON.STRING key),
+     ("schedule", json_metrics schedule), ("union", json_metrics union),
+     ("proved_delta", json_int (#proved schedule - #proved union)),
+     ("reconstructed_delta",
+      json_int (#reconstructed schedule - #reconstructed union))]
+
+fun summary_json (data : report_data) =
+  JSON.OBJECT
+    ([("schema", JSON.STRING "hhEval-summary-v1"),
+      ("conditions", JSON.ARRAY (map condition_json (#conditions data))),
+      ("portfolios", JSON.ARRAY (map portfolio_json (#portfolios data))),
+      ("slice_contributions",
+       JSON.ARRAY (map contribution_json (#contributions data))),
+      ("theories", JSON.ARRAY (map (fn (theory, conditions) =>
+        JSON.OBJECT
+          [("theory", JSON.STRING theory),
+           ("conditions", JSON.ARRAY (map condition_json conditions))])
+        (#theories data)))] @
+     (if null (#schedules data) then []
+      else
+        [("schedule_distributions",
+          JSON.ARRAY (map schedule_json (#schedules data))),
+         ("schedule_vs_union",
+          JSON.ARRAY (map comparison_json (#comparisons data)))]))
+
+(* report.md *)
+
+fun option_text NONE = "-"
+  | option_text (SOME number) = Real.fmt (StringCvt.FIX (SOME 2)) number
+
+fun metrics_cells (metrics : metrics) =
+  [Int.toString (#goals metrics), Int.toString (#attempted metrics),
+   Int.toString (#proved metrics), option_text (#proved_pct metrics),
+   Int.toString (#reconstructed metrics),
+   option_text (#reconstructed_pct metrics),
+   option_text (#p50 metrics), option_text (#p90 metrics),
+   option_text (#maximum metrics)]
+
+val metrics_columns =
+  ["G", "A", "P", "P%", "R", "R%", "p50", "p90", "max"]
+
+fun markdown_row cells = "| " ^ String.concatWith " | " cells ^ " |\n"
+
+(* A table whose [left] columns are left-aligned and [right] columns
+   right-aligned. *)
+fun markdown_table title left right rows =
+  "## " ^ title ^ "\n\n" ^ markdown_row (left @ right) ^ "|" ^
+  String.concat (map (fn _ => "---|") left @ map (fn _ => "---:|") right) ^
+  "\n" ^ String.concat rows
+
+fun metrics_table title labels rows =
+  markdown_table title labels metrics_columns
+    (map (fn (cells, metrics) =>
+      markdown_row (cells @ metrics_cells metrics)) rows)
+
+fun encoding_text "" = "legacy"
+  | encoding_text text = text
+
+fun distribution_text to_string [] = "-"
+  | distribution_text to_string counts =
+      String.concatWith ", " (map (fn (value, count) =>
+        to_string value ^ ":" ^ Int.toString count) counts)
+
+fun signed number =
+  if number < 0 then "-" ^ Int.toString (~number) else Int.toString number
+
+fun report_markdown (data : report_data) =
+  let
+    val conditions = #conditions data
+    fun first_filter (condition : condition_report) =
+      filter_of_selector (#selector (hd (#cells condition)))
+    fun engine_text (condition : condition_report) =
+      case #engine (hd (#cells condition)) of
+          SOME (Sched _) => "schedule"
+        | _ => journal_prover_text (#prover (hd (#cells condition)))
+    val tables =
+      [metrics_table "Conditions" ["condition", "prover", "filter"]
+         (map (fn condition =>
+           ([#name condition, engine_text condition, first_filter condition],
+            #metrics condition)) conditions),
+       metrics_table "HO subsets" ["condition", "subset"]
+         (List.concat (map (fn condition =>
+           [([#name condition, "HO"], #ho condition),
+            ([#name condition, "non-HO"], #non_ho condition)]) conditions)),
+       metrics_table "Seen/fresh subsets" ["condition", "filter", "subset"]
+         (List.concat (map (fn condition =>
+           [([#name condition, first_filter condition, "seen"],
+             #seen condition),
+            ([#name condition, first_filter condition, "fresh"],
+             #fresh condition)]) conditions)),
+       markdown_table "Slice contributions"
+         ["format", "encoding", "lambda", "prover", "filter"]
+         ["facts", "wins", "reconstructed"]
+         (map (fn (row : slice_contribution) => markdown_row
+           [#format row, encoding_text (#type_enc row),
+            encoding_text (#lam_trans row),
+            hhConfig.prover_name (#prover row), #filter row,
+            Int.toString (#nfacts row), Int.toString (#wins row),
+            Int.toString (#reconstructed row)]) (#contributions data)),
+       metrics_table "Portfolio unions" ["portfolio"]
+         (map (fn (portfolio : portfolio_report) =>
+           ([#key portfolio], #metrics portfolio)) (#portfolios data)),
+       markdown_table "Unique solves" ["portfolio", "prover"]
+         ["proved", "reconstructed"]
+         (List.concat (map (fn (portfolio : portfolio_report) =>
+           map (fn (prover, proved, reconstructed) => markdown_row
+             [#key portfolio, hhConfig.prover_name prover,
+              Int.toString proved,
+              Int.toString reconstructed]) (#unique portfolio))
+           (#portfolios data)))] @
+      (if null (#schedules data) then []
+       else
+         [markdown_table "Schedule distributions"
+            ["condition", "slices run (value:count)",
+             "stop reasons (value:count)"] []
+            (map (fn (schedule : schedule_report) => markdown_row
+              [#name schedule,
+               distribution_text Int.toString (#slices_run schedule),
+               distribution_text (fn text => text)
+                 (#stop_reasons schedule)]) (#schedules data))]) @
+      (if null (#comparisons data) then []
+       else
+         [markdown_table "Schedule vs portfolio union"
+            ["schedule", "portfolio"]
+            ["S P", "U P", "ΔP", "S R", "U R", "ΔR"]
+            (map (fn {name, key, schedule, union} => markdown_row
+              [name, key, Int.toString (#proved schedule),
+               Int.toString (#proved union),
+               signed (#proved schedule - #proved union),
+               Int.toString (#reconstructed schedule),
+               Int.toString (#reconstructed union),
+               signed (#reconstructed schedule - #reconstructed union)])
+              (#comparisons data))]) @
+      [metrics_table "Theories" ["theory", "condition"]
+         (List.concat (map (fn (theory, conditions) =>
+           map (fn (condition : condition_report) =>
+             ([theory, #name condition], #metrics condition)) conditions)
+           (#theories data)))]
+  in
+    "# hhEval report\n\n" ^
+    "Partial journals are reported as observed cells only. For schedule " ^
+    "runs, size `ncore` to `machine_cores div cores_per_cell`; peak prover " ^
+    "load is `ncore × cores_per_cell`.\n\n" ^
+    String.concatWith "\n" tables
+  end
+
+fun report expdir =
+  let
+    val paths = map (join (join expdir "journal")) (journal_files expdir)
+    val entries = List.filter regular_cell (latest_cells paths)
+    val data = report_data entries
+    val _ = ensure_dir expdir
+  in
+    write_file (join expdir "report.md") (report_markdown data);
+    write_file (join expdir "summary.json")
+      (JSONPrinter.valueString true (summary_json data) ^ "\n")
+  end
+
+(* -------------------------------------------------------------------------
+   Evaluation driver and per-theory workers
+   ------------------------------------------------------------------------- *)
+
+val worker_conditions = ref ([] : condition list)
+val worker_sample = ref 1
+
+fun set_worker_settings {conditions, sample} =
+  if sample < 1 then raise Fail "eval.sample must be a positive integer"
+  else
+    (app validate_condition conditions;
+     worker_conditions := conditions;
+     worker_sample := sample)
+
+fun worker_selects goal_id = sample_goal (!worker_sample) goal_id
+
+fun run_name expdir = OS.Path.file expdir
+
+fun safe_component text =
+  String.map (fn character =>
+    if Char.isAlphaNum character orelse character = #"_" orelse
+       character = #"-" then character else #"_") text
+
+fun goal_id thy name = thy ^ "." ^ name
+
+fun run_failure_error (hhProver.RunFailure message) = SOME message
+  | run_failure_error _ = NONE
+
+(* The tail of a journal entry, i.e. everything only known once the prover
+   has run. *)
+type outcome =
+  {recon_ok : bool option, recon_method : string option,
+   t_recon : real option, stac : string option, error : string option}
+
+val no_outcome : outcome =
+  {recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
+   error = NONE}
+
+fun failed message : outcome =
+  {recon_ok = NONE, recon_method = NONE, t_recon = NONE, stac = NONE,
+   error = SOME message}
+
+fun base_entry_for expdir thy name {cond_id, regime, selector, timeout}
+    engine ho fresh nfacts szs t_prover axioms version (outcome : outcome) =
+  {run = run_name expdir, thy = thy, thm = name, goal_id = goal_id thy name,
+   cond = cond_id, regime = regime, selector = selector, engine = engine,
+   ho = ho, fresh = fresh,
+   prover = (case engine of SOME (Prover prover) => SOME prover | _ => NONE),
+   prover_version = version, nfacts = nfacts, timeout = timeout,
+   szs = szs, t_prover = t_prover, axioms_used = axioms,
+   recon_ok = #recon_ok outcome, recon_method = #recon_method outcome,
+   t_recon = #t_recon outcome, stac = #stac outcome,
+   error = #error outcome,
+   stop = (case engine of
+                SOME (Sched _) => SOME "Unavailable"
+              | _ => NONE),
+   t_total = (case engine of
+                  SOME (Sched _) => SOME 0.0
+                | _ => NONE),
+   winner = NONE, slices = []} : journal_entry
+
+fun base_entry expdir thy name (condition : condition) =
+  base_entry_for expdir thy name
+    {cond_id = #cond_id condition, regime = #regime condition,
+     selector = #selector condition, timeout = #timeout condition}
+    (SOME (#engine condition))
+
+fun append_theory_error path expdir thy message =
+  append_journal path
+    (base_entry_for expdir thy "__load__"
+       {cond_id = "__load__", regime = Bushy, selector = Deps, timeout = 0}
+       NONE false false 0 LoadFailure 0.0 NONE NONE (failed message))
+
+fun journal_theory_error expdir thy message =
+  append_theory_error (journal_path expdir thy) expdir thy message
+
+(* Share ancestor membership across goals. When a ranking needs a complete
+   pool, build only the local checkpoints reached by its age lookup. The
+   persistent maps share unchanged branches. *)
+fun chainy_pool_by_age ancestors oldest_facts =
+  let
+    val block = 128
+    val size = Redblackmap.numItems oldest_facts
+    fun scan age = Redblackmap.foldl
+      (fn (name, fact_age, pool) =>
+        if fact_age < age then dadd name () pool else pool)
+      ancestors oldest_facts
+    val indexed = Susp.delay (fn () =>
+      let
+        val facts = Vector.fromList (Listsort.sort
+          (fn ((_, left), (_, right)) => Int.compare (left, right))
+          (Redblackmap.listItems oldest_facts))
+        val checkpoints = Array.array (size div block + 1, ancestors)
+        val built = ref 0
+        fun prefix age start stop =
+          if start = stop then start
+          else
+            let val middle = start + (stop - start) div 2 in
+              if #2 (Vector.sub (facts, middle)) < age then
+                prefix age (middle + 1) stop
+              else prefix age start middle
+            end
+        fun extend start stop pool =
+          if start = stop then pool
+          else extend (start + 1) stop
+            (dadd (#1 (Vector.sub (facts, start))) () pool)
+        fun build checkpoint =
+          if !built >= checkpoint then ()
+          else
+            let
+              val previous = !built
+              val next = previous + 1
+              val pool = extend (previous * block) (next * block)
+                (Array.sub (checkpoints, previous))
+            in
+              Array.update (checkpoints, next, pool);
+              built := next;
+              build checkpoint
+            end
+      in
+        fn age =>
+          let
+            val count = prefix age 0 size
+            val checkpoint = count div block
+            val _ = build checkpoint
+          in
+            extend (checkpoint * block) count
+              (Array.sub (checkpoints, checkpoint))
+          end
+      end)
+    (* A sampled or resumed evaluation may need a single pool. Scan for
+       that first request, and index only if another pool is requested. *)
+    val requested = ref false
+  in
+    fn age =>
+      if size <= block then scan age
+      else if !requested then (Susp.force indexed) age
+      else (requested := true; scan age)
+  end
+
+fun chainy_for thy theorems =
+  let
+    val order = hhExportLib.sorted_ancestry [thy]
+    val earlier_theories =
+      if List.exists (fn name => name = thy) order then
+        hhExportLib.before_elem thy order
+      else order
+    fun qualify theory name = theory ^ "Theory." ^ name
+    fun add_theory (theory, names) =
+      foldl (fn ((name, _), pool) => dadd (qualify theory name) () pool)
+        names (DB.thms theory)
+    val ancestors = foldl add_theory (dempty String.compare) earlier_theories
+    val local_facts =
+      if null theorems then []
+      else map (fn (name, thm) =>
+        (qualify thy name, mlThmData.depnumber_of_thm thm)) (DB.thms thy)
+    fun add_fact ((name, age), ages) =
+      let val age = case Redblackmap.peek (ages, name) of
+                        NONE => age
+                      | SOME other => Int.min (age, other)
+      in Redblackmap.insert (ages, name, age) end
+    val oldest_facts = List.foldl add_fact
+      (Redblackmap.mkDict String.compare) local_facts
+    val pool_by_age = chainy_pool_by_age ancestors oldest_facts
+    (* Goals with duplicate names use the first theorem's age. *)
+    val goal_ages = if null local_facts then Redblackmap.mkDict String.compare
+      else List.foldr (fn ((name, thm), dict) =>
+        Redblackmap.insert (dict, name, mlThmData.depnumber_of_thm thm))
+        (Redblackmap.mkDict String.compare) theorems
+    fun earlier name = Redblackmap.inDomain (ancestors, name)
+    fun facts name =
+      case Redblackmap.peek (goal_ages, name) of
+          NONE => {pool = fn () => ancestors, permits = earlier}
+        | SOME age =>
+            {pool = fn () => pool_by_age age,
+             permits = fn fact => earlier fact orelse
+               (case Redblackmap.peek (oldest_facts, fact) of
+                    NONE => false
+                  | SOME fact_age => fact_age < age)}
+  in
+    facts
+  end
+
+fun restrict_features permits = List.filter (permits o #1)
+
+fun restrict_features_to_pool pool features =
+  let val permitted = dset String.compare pool in
+    restrict_features (fn name => dmem name permitted) features
+  end
+
+type selection_data =
+  {thmdata : mlThmData.thmdata Susp.susp,
+   fact_index : (mlThmData.thmid * mlFeature.fea) hhFactIndex.index Susp.susp,
+   context : hhLearn.context Susp.susp,
+   intact : thm -> bool * mlThmData.thmid list,
+   knn : mlThmData.thmdata -> int -> goal -> mlThmData.thmid list}
+
+type premise_pool =
+  {names : (string, unit) Redblackmap.dict Susp.susp,
+   thmdata : mlThmData.thmdata Susp.susp}
+
+fun selection_data thy : selection_data =
+  let
+    val thmdata = Susp.delay (fn () => hhLearn.create_thmdata_for thy)
+    val fact_index = Susp.delay (fn () =>
+      hhFactIndex.create #1 (#2 (Susp.force thmdata)))
+    val context = Susp.delay (fn () =>
+      hhLearn.create_deferred_context_for thy (Susp.force thmdata))
+    val {intact, knn} = hhLearn.make_dependency_lookup ()
+  in
+    {thmdata = thmdata, fact_index = fact_index, context = context,
+     intact = intact, knn = knn}
+  end
+
+fun select_knn ({knn, ...} : selection_data)
+    ({thmdata, ...} : premise_pool) count goal =
+  knn (Susp.force thmdata) count goal
+
+fun select_filter (data as {context, ...} : selection_data)
+    filter (pool : premise_pool) count goal =
+  case filter of
+      hhConfig.Unfiltered => map #1 (#2 (Susp.force (#thmdata pool)))
+    | hhConfig.Knn => select_knn data pool count goal
+    | _ => hhLearn.rank_in (Susp.force context)
+        {filter = filter, pool = SOME (Susp.force (#names pool)),
+         goal = goal, n = count}
+
+fun selection_facts (data as {thmdata, ...} : selection_data)
+    goal {pool, restrict} dependencies =
+  let
+    val names = Susp.delay pool
+    val restricted = Susp.delay (fn () =>
+      let val (weights, features) = Susp.force thmdata in
+        (weights, restrict (fn () => Susp.force names) features)
+      end)
+    val pool = {names = names, thmdata = restricted}
+    (* Conditions for this goal and regime share successful selections.
+       The filter and requested depth can both change the ranking. *)
+    val rankings = ref []
+    fun lookup key =
+      Option.map #2 (List.find (fn (other, _) => other = key) (!rankings))
+    fun select (filter, count) = select_filter data filter pool count goal
+    fun memoize calculate key =
+      case lookup key of
+          SOME premises => premises
+        | NONE =>
+            let val premises = calculate key in
+              rankings := (key, premises) :: !rankings;
+              premises
+            end
+    fun rank filter count = memoize select (filter, count)
+    fun rank_many queries =
+      let
+        fun context_filter (filter, _) =
+          filter <> hhConfig.Unfiltered andalso filter <> hhConfig.Knn
+        val missing = List.filter (fn query =>
+          context_filter query andalso not (isSome (lookup query))) queries
+        val shared = Susp.delay (fn () =>
+          hhLearn.rank_for_filters_in (Susp.force (#context data))
+            {pool = SOME (Susp.force names), goal = goal} missing)
+        fun calculate query =
+          if context_filter query then (Susp.force shared) query
+          else select query
+      in
+        map (fn (query as (filter, _)) =>
+          (filter, memoize calculate query)) queries
+      end
+  in
+    {rank = rank, rank_many = rank_many, dependencies = dependencies}
+  end
+
+fun bushy_selection_facts (data : selection_data) goal dependencies =
+  let
+    fun restrict wanted _ =
+      hhFactIndex.select (Susp.force (#fact_index data)) (wanted ())
+  in
+    selection_facts data goal
+      {pool = fn () => dset String.compare dependencies, restrict = restrict}
+      dependencies
+  end
+
+fun selected_premises_at condition {rank, dependencies, ...} knn_count =
+  case #selector condition of
+      Deps => dependencies
+    | Knn count => rank hhConfig.Knn (Option.getOpt (knn_count, count))
+    | Mepo count => rank hhConfig.Mepo count
+    | Mash count => rank hhConfig.Mash count
+    | Mesh count => rank hhConfig.Mesh count
+    | PerSlice => raise Fail
+        "invalid hhEval premise selection: perslice requires Sched"
+
+fun reconstruction_settings () : hhReconstruct.settings =
+  let val options = hhConfig.snapshot () in
+    {minimize = true, preplay_timeout = #preplay_timeout options,
+     minimize_timeout = #minimize_timeout options,
+     minimize_deadline = NONE}
+  end
+
+fun reconstruct condition result goal =
+  if not (#reconstruct condition) orelse
+     #szs result <> hhProver.SzsTheorem then
+    (NONE, NONE, NONE, NONE)
+  else
+    case #used_axioms result of
+        NONE => (NONE, NONE, NONE, NONE)
+      | SOME axioms =>
+          ((let
+              val ({stac, ...}, elapsed) =
+                add_time (hhReconstruct.hh_reconstruct_with
+                  (reconstruction_settings ()) axioms goal)
+                  (Context.snapshot ())
+            in
+              (SOME true, SOME "metis", SOME elapsed, SOME stac)
+            end)
+           handle Interrupt => raise Interrupt
+                | error =>
+                    (SOME false, SOME "metis", NONE,
+                     SOME (General.exnMessage error)))
+
+fun schedule_stop_name hhSchedule.MaxProofs = "MaxProofs"
+  | schedule_stop_name hhSchedule.Timeout = "Timeout"
+  | schedule_stop_name hhSchedule.Exhausted = "Exhausted"
+  | schedule_stop_name hhSchedule.Interrupted = "Interrupted"
+
+fun schedule_options condition
+    {provers, slices, cores, max_proofs = _, export_workers} =
+  hhConfig.snapshot_with
+    [("timeout", Int.toString (#timeout condition)),
+     ("provers",
+      String.concatWith " " (map hhConfig.prover_name provers)),
+     ("slices", Int.toString slices), ("cores", Int.toString cores),
+     ("export_workers", Int.toString export_workers),
+     ("cache", "true"), ("debug_dir", "")]
+
+fun max_schedule_facts schedule =
+  foldl Int.max 0 (map (#nfacts o #2) schedule)
+
+fun rankings_for_schedule schedule premises =
+  map (fn (filter, _) => (filter, premises)) (hhSlice.filter_maxima schedule)
+
+fun version_of_prover prover =
+  case hhProver.probe (hhProver.config_of prover) of
+      NONE => NONE
+    | SOME {version, ...} => version
+
+fun schedule_cell_entry expdir thy (name, thm, tags) facts condition
+      parameters =
+  let
+    val goal = dest_thm thm
+    val options = schedule_options condition parameters
+    val schedule = hhSlice.mk_schedule options
+    val maximum = max_schedule_facts schedule
+    val rankings =
+      case #selector condition of
+          PerSlice => #rank_many facts (hhSlice.filter_maxima schedule)
+        | _ =>
+            let
+              (* Every filter of the schedule gets the selector's single
+                 ranking; Knn ranks as many facts as the largest slice
+                 takes. *)
+              val premises = selected_premises_at condition facts
+                (SOME maximum)
+            in
+              rankings_for_schedule schedule premises
+            end
+    val first_proof = ref (NONE : (hhProver.slice * string list) option)
+    fun progress (hhSchedule.ProofFound proof) =
+          if isSome (!first_proof) then () else first_proof := SOME proof
+      | progress _ = ()
+    val result = hhSchedule.run
+      {options = options, max_proofs = #max_proofs parameters, goal = goal,
+       context = Context.snapshot (), rankings = rankings,
+       progress = SOME progress}
+    val slices = map (fn (slice, status, elapsed, cached) =>
+      {slice = slice, szs = status, time = elapsed,
+       cached = cached} : journal_slice) (#slices_run result)
+    fun slice_result wanted =
+      List.find (fn (slice, _, _, _) =>
+        same_slice slice wanted) (#slices_run result)
+    fun finish winner prover nfacts szs t_prover axioms recon_ok
+        recon_method t_recon stac error =
+      let val (ho, fresh) = Susp.force tags in
+        {run = run_name expdir, thy = thy, thm = name,
+         goal_id = goal_id thy name, cond = #cond_id condition,
+         regime = #regime condition, selector = #selector condition,
+         engine = SOME (#engine condition),
+         ho = ho, fresh = fresh,
+         prover = prover,
+         prover_version = Option.mapPartial version_of_prover prover,
+         nfacts = nfacts,
+         timeout = #timeout condition, szs = szs, t_prover = t_prover,
+         axioms_used = axioms, recon_ok = recon_ok,
+         recon_method = recon_method, t_recon = t_recon, stac = stac,
+         error = error, stop = SOME (schedule_stop_name (#stopped result)),
+         t_total = SOME (#t_total result), winner = winner,
+         slices = slices} : journal_entry
+      end
+  in
+    case #suggestions result of
+        suggestion :: _ =>
+          finish (SOME (#slice suggestion)) (SOME (#prover suggestion))
+            (#nfacts (#slice suggestion)) (Szs hhProver.SzsTheorem)
+            (#t_prover suggestion)
+            (SOME (#lemmas suggestion)) (SOME true) (SOME "metis")
+            (SOME (#t_recon suggestion)) (SOME (#stac suggestion)) NONE
+      | [] =>
+          (case !first_proof of
+               SOME (slice, lemmas) =>
+                 let
+                   val elapsed =
+                     case slice_result slice of
+                         SOME (_, _, time, _) => time
+                       | NONE => 0.0
+                 in
+                   finish (SOME slice) (SOME (#prover slice)) (#nfacts slice)
+                     (Szs hhProver.SzsTheorem) elapsed (SOME lemmas)
+                     (SOME false) (SOME "metis") NONE NONE
+                     (SOME "ATP proof found but reconstruction failed")
+                 end
+             | NONE =>
+                 (case #slices_run result of
+                      (slice, status, elapsed, _) :: _ =>
+                        finish NONE (SOME (#prover slice)) (#nfacts slice)
+                          (Szs status) elapsed NONE NONE NONE NONE NONE
+                          (run_failure_error status)
+                    | [] => finish NONE NONE maximum
+                        (Szs (hhProver.RunFailure "")) 0.0 NONE
+                        NONE NONE NONE NONE
+                        (SOME "schedule contained no runnable slices")))
+  end
+
+fun prover_cell_entry expdir thy (name, thm, tags) facts condition prover =
+  let
+    val goal = dest_thm thm
+    val premises = selected_premises_at condition facts NONE
+    val named_premises = mlThmData.thml_of_namel premises
+    val nfacts = length named_premises
+    val directory = join (join (join expdir "pb") (safe_component thy))
+      (safe_component (name ^ "-" ^ #cond_id condition))
+    val _ = ensure_dir directory
+    val _ = hhExportFof.fof_export_pb directory
+      (list_mk_imp goal, named_premises)
+    val result = hhProver.run (hhProver.config_of prover)
+      {timeout = #timeout condition,
+       problem = join directory "atp_in", extra = [],
+       debug_dir = SOME (join expdir "out")}
+    val (recon_ok, recon_method, t_recon, stac_or_error) =
+      reconstruct condition result goal
+    val (stac, recon_error) =
+      case recon_ok of
+          SOME false => (NONE, stac_or_error)
+        | _ => (stac_or_error, NONE)
+    val outcome : outcome =
+      {recon_ok = recon_ok, recon_method = recon_method,
+       t_recon = t_recon, stac = stac,
+       error = case recon_error of
+                   SOME message => SOME message
+                 | NONE => run_failure_error (#szs result)}
+    val (ho, fresh) = Susp.force tags
+  in
+    base_entry expdir thy name condition ho fresh nfacts
+      (Szs (#szs result)) (#time result)
+      (#used_axioms result) (#version result) outcome
+  end
+
+fun evaluation_error_cell expdir thy name tags condition message =
+  let val (ho, fresh) = Susp.force tags in
+    append_journal (journal_path expdir thy)
+      (base_entry expdir thy name condition ho fresh 0 EvalError 0.0
+         NONE NONE (failed message))
+  end
+
+fun run_cell expdir thy (theorem as (name, _, tags)) facts condition =
+  let
+    val entry =
+      case #engine condition of
+          Sched parameters =>
+            schedule_cell_entry expdir thy theorem facts condition
+              parameters
+        | Prover prover =>
+            prover_cell_entry expdir thy theorem facts condition prover
+  in
+    append_journal (journal_path expdir thy) entry
+  end
+  handle Interrupt => raise Interrupt
+       | error =>
+           evaluation_error_cell expdir thy name tags condition
+             (General.exnMessage error)
+
+fun broken_deps_cell expdir thy name tags condition =
+  let val (ho, fresh) = Susp.force tags in
+    append_journal (journal_path expdir thy)
+      (base_entry expdir thy name condition ho fresh 0 BrokenDeps 0.0
+         NONE NONE no_outcome)
+  end
+
+fun eval_loaded_theory expdir thy =
+  let
+    val completed = read_completed (journal_path expdir thy)
+    val theorems = DB.theorems thy
+    val data = selection_data thy
+    val chainy_data = Susp.delay (fn () =>
+      if List.exists (fn condition => #regime condition = Chainy)
+         (!worker_conditions)
+      then SOME (chainy_for thy theorems)
+           handle Interrupt => raise Interrupt | error => NONE
+      else SOME (fn _ => {pool = fn () => dempty String.compare,
+                         permits = fn _ => false}))
+    fun evaluate (name, thm) =
+      let
+        val id = goal_id thy name
+        val pending = if worker_selects id then
+            List.filter (fn condition =>
+              not (cell_completed completed (id, #cond_id condition)))
+              (!worker_conditions)
+          else []
+      in
+        if null pending then ()
+        else
+          let
+            val (dependencies_ok, intact_deps) =
+              #intact data thm
+            val tags = goal_tags thy thm
+            val theorem = (name, thm, tags)
+            fun evaluate_cells facts_for =
+              let
+                val {pool, permits} = facts_for name
+                val chainy_dependencies =
+                  if List.exists (fn condition =>
+                       #regime condition = Chainy andalso
+                       #selector condition = Deps) pending
+                  then List.filter permits intact_deps
+                  else []
+                val goal = dest_thm thm
+                val bushy_facts =
+                  bushy_selection_facts data goal intact_deps
+                (* kNN can scan feature rows using the age predicate without
+                   materializing the local part of the membership map. *)
+                fun restrict _ = restrict_features permits
+                val chainy_facts =
+                  selection_facts data goal {pool = pool, restrict = restrict}
+                    chainy_dependencies
+                fun one condition =
+                  case #regime condition of
+                      Bushy =>
+                        if dependencies_ok then
+                          run_cell expdir thy theorem bushy_facts condition
+                        else broken_deps_cell expdir thy name tags condition
+                    | Chainy =>
+                        run_cell expdir thy theorem chainy_facts condition
+              in
+                app one pending
+              end
+          in
+            case Susp.force chainy_data of
+                NONE => app (fn condition =>
+                  evaluation_error_cell expdir thy name tags condition
+                  "could not construct the chainy premise pool") pending
+              | SOME facts_for => evaluate_cells facts_for
+          end
+      end
+  in
+    app evaluate theorems
+  end
+
+fun eval_thy expdir thy =
+  (eval_loaded_theory expdir thy
+   handle Interrupt => raise Interrupt
+        | error => append_theory_error (journal_path expdir thy)
+            expdir thy (General.exnMessage error))
+
+fun condition_text condition =
+  "hhEval.parse_condition " ^ Portable.mlquote (encode_condition condition)
+
+val source_script_directories = Susp.delay (fn () =>
+  let
+    fun source_entry line =
+      let
+        val path = trim line
+        val file = OS.Path.file path
+      in
+        if String.isSuffix "Theory" file then
+          SOME (String.substring (file, 0, String.size file - 6),
+                OS.Path.dir path)
+        else NONE
+      end
+    fun dat_entry path =
+      let val file = OS.Path.file path in
+        if String.isSuffix "Theory.dat" file then
+          SOME (String.substring (file, 0, String.size file - 10),
+                OS.Path.dir (OS.Path.dir (OS.Path.dir path)))
+        else NONE
+      end
+    val root = holdir ()
+    val srcfiles = read_lines (join (join root "sigobj") "SRCFILES")
+    (* Preserve the first reported directory for duplicate theory names. *)
+    fun index entries =
+      List.foldr (fn ((thy, directory), locations) =>
+        Redblackmap.insert (locations, thy, directory))
+        (Redblackmap.mkDict String.compare) entries
+    val sources = index (List.mapPartial source_entry srcfiles)
+    val fallback = Susp.delay (fn () =>
+      index (List.mapPartial dat_entry (dat_paths_under (join root "src"))))
+  in
+    (sources, fallback)
+  end)
+
+fun source_script_directory thy =
+  let
+    val (sources, fallback) = Susp.force source_script_directories
+    fun find directories = Redblackmap.peek (directories, thy)
+  in
+    case find sources of
+        SOME directory => directory
+      | NONE =>
+          case find (Susp.force fallback) of
+              SOME directory => directory
+            | NONE => raise Fail ("no source directory for theory " ^ thy)
+  end
+
+fun load_theory thy =
+  let
+    val old_directory = OS.FileSys.getDir ()
+    fun restore () = OS.FileSys.chDir old_directory
+    val _ = OS.FileSys.chDir (source_script_directory thy)
+  in
+    (load (thy ^ "Theory") before restore ())
+    handle error => (restore (); raise error)
+  end
+
+(* A theory UI is found relative to its source directory.  In particular,
+   a script in <expdir>/scripts run from hol.state cannot load theories
+   outside the default heap. *)
+fun evalscript_path expdir thy =
+  join (source_script_directory thy)
+    (".hheval_" ^ safe_component (OS.Path.file expdir) ^ "_" ^
+     safe_component thy ^ ".sml")
+
+(* Worker scripts live in the source tree, so they must not outlive their
+   worker.  Theories without a source directory have no script. *)
+fun remove_evalscript expdir thy =
+  OS.FileSys.remove (evalscript_path expdir thy)
+  handle Interrupt => raise Interrupt | _ => ()
+
+fun write_evalscript expdir thy conditions sample =
+  let
+    val path = evalscript_path expdir thy
+    val conditions_text =
+      String.concatWith ", " (map condition_text conditions)
+    val hammer_settings = String.concat (map (fn (key, value) =>
+      "val _ = hhConfig.hh_set (" ^ Portable.mlquote key ^ ", " ^
+      Portable.mlquote value ^ ");\n") (eval_hammer_options ()))
+    val settings =
+      "val _ = hhEval.set_worker_settings {conditions = [" ^
+      conditions_text ^ "], sample = " ^ Int.toString sample ^ "};"
+    val action = "val _ = hhEval.eval_thy " ^ Portable.mlquote expdir ^
+      " " ^ Portable.mlquote thy ^ ";"
+    val worker_theory = "hheval_worker_" ^ safe_component thy
+    (* hhEval is not in sigobj: the worker loads it from the evaluation
+       directory of the tree whose bin/hol runs it. *)
+    val evaluation_dir =
+      join (join (join Globals.HOLDIR "src") "holyhammer") "evaluation"
+    (* Reconstruction replays a Metis tactic, whose structure the heap of
+       a theory built before bossLib lacks. *)
+    val _ = write_file path
+      ("load \"BasicProvers\";\n" ^
+       "load \"metisTools\";\n" ^
+       "load " ^ Portable.mlquote (thy ^ "Theory") ^ ";\n" ^
+       "val _ = Feedback.quiet_messages Theory.new_theory " ^
+       Portable.mlquote worker_theory ^ ";\n" ^
+       "val _ = loadPath := " ^ Portable.mlquote evaluation_dir ^
+       " :: !loadPath;\n" ^
+       "load \"hhEval\";\n" ^ hammer_settings ^ settings ^ "\n" ^
+       action ^ "\n")
+  in
+    path
+  end
+
+fun configured_sample () =
+  case hhConfig.get_int "eval.sample" of
+      NONE => 1
+    | SOME sample =>
+        if sample < 1 then raise Fail "eval.sample must be a positive integer"
+        else sample
+
+fun theory_goals thy sample =
+  let
+    val _ = load_theory thy
+    fun selected (name, _) =
+      let val id = goal_id thy name in
+        if sample_goal sample id then SOME id else NONE
+      end
+  in
+    SOME (List.mapPartial selected (DB.theorems thy))
+  end
+  handle Interrupt => raise Interrupt | _ => NONE
+
+fun run_eval {expname, ncore, thyl, conditions} =
+  if ncore < 1 then raise Fail "run_eval requires at least one worker"
+  else
+    let
+      val _ = app validate_condition conditions
+      val sample = configured_sample ()
+      val expdir = experiment_dir expname
+      val _ = ensure_dir expdir
+      val _ = ensure_dir (join expdir "journal")
+      val _ = ensure_dir (join expdir "out")
+      val _ = ensure_dir (join expdir "pb")
+      val root = holdir ()
+      val sources = Redblackset.fromList String.compare (source_theories root)
+      val requested = Redblackset.fromList String.compare thyl
+      val missing = Redblackset.difference (requested, sources)
+      val included_from_dat =
+        if Redblackset.isEmpty missing then []
+        else List.filter (fn name => Redblackset.member (missing, name))
+          (dat_theories_under (join root "src"))
+      fun corpus_entry thy =
+        ((load_theory thy; loaded_corpus_entry thy)
+         handle Interrupt => raise Interrupt
+              | _ => {thy = thy, theorem_count = 0, dep_stamp = ""})
+      val header =
+        new_run_header {expname = expname, corpus = map corpus_entry thyl,
+            added_from_dat = included_from_dat,
+            conditions = conditions, sample = sample}
+      val _ =
+        if exists_file (join expdir "run.json") then
+          validate_run_header expdir header
+        else write_run_header expdir header
+      val condition_ids = map #cond_id conditions
+      fun complete thy goals =
+        let
+          val completed = read_completed (journal_path expdir thy)
+          fun goal_done id = List.all (fn cond =>
+            cell_completed completed (id, cond)) condition_ids
+        in
+          List.all goal_done goals
+        end
+      fun pending thy =
+        case theory_goals thy sample of
+            NONE =>
+              (journal_theory_error expdir thy
+                 "theory could not be loaded by the evaluation driver";
+               NONE)
+          | SOME goals =>
+              if complete thy goals then NONE
+              else SOME (length goals, (thy, goals))
+      (* Largest theories first, so the long poles start on a free core
+         before the short ones fill it up. *)
+      val pending_states = List.mapPartial pending thyl
+      val queued_names =
+        map (#1 o #2) (dict_sort (fn ((a, _), (b, _)) => Int.compare (b, a))
+          pending_states)
+      (* A killed driver runs no handlers; resuming the experiment sweeps
+         whatever scripts it left behind. *)
+      val _ = app (remove_evalscript expdir) thyl
+      (* Each script exists only while its worker runs, so a killed driver
+         leaves at most [ncore] of them. *)
+      fun run_worker thy =
+        let val script = write_evalscript expdir thy conditions sample in
+          (smlExecScripts.exec_script script;
+           remove_evalscript expdir thy)
+          handle error => (remove_evalscript expdir thy; raise error)
+        end
+      val _ = with_flag (aiLib.scratch_dir, join expdir "out")
+        (smlParallel.parapp_queue ncore run_worker) queued_names
+      fun note_unfinished (_, (thy, goals)) =
+        if complete thy goals then ()
+        else journal_theory_error expdir thy
+          "evaluation worker ended before completing its journal"
+      val _ = app note_unfinished pending_states
+    in
+      ()
+    end
+
+end

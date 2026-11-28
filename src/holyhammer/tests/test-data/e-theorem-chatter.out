@@ -1,0 +1,34 @@
+# Preprocessing class: FSSSSLSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 2s (1) cores
+# SAT001_MinMin_p005000_rr_RG with pid 828 completed with status 0
+# Result found by SAT001_MinMin_p005000_rr_RG
+# Preprocessing class: FSSSSLSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 2s (1) cores
+# No SInE strategy applied
+# Search class: FUUNF-FFSF00-SFFFFFNN
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 2s (1) cores
+# SAT001_MinMin_p005000_rr_RG with pid 829 completed with status 0
+# Result found by SAT001_MinMin_p005000_rr_RG
+# Preprocessing class: FSSSSLSSSSSNFFN.
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 2s (1) cores
+# No SInE strategy applied
+# Search class: FUUNF-FFSF00-SFFFFFNN
+# Scheduled 1 strats onto 1 cores with 2 seconds (2 total)
+# Starting SAT001_MinMin_p005000_rr_RG with 2s (1) cores
+# Presaturation interreduction done
+
+# Proof found!
+# SZS status Theorem
+# SZS output start CNFRefutation
+fof(conjecture, conjecture, p, file('/tmp/hhprover-recordings/prove.p', conjecture)).
+fof(thm_2Ekeep__name, axiom, p, file('/tmp/hhprover-recordings/prove.p', thm_2Ekeep__name)).
+fof(c_0_2, negated_conjecture, ~p, inference(fof_simplification,[status(thm)],[inference(assume_negation,[status(cth)],[conjecture])])).
+fof(c_0_3, negated_conjecture, ~p, inference(fof_nnf,[status(thm)],[c_0_2])).
+cnf(c_0_4, negated_conjecture, (~p), inference(split_conjunct,[status(thm)],[c_0_3])).
+cnf(c_0_5, plain, (p), inference(split_conjunct,[status(thm)],[thm_2Ekeep__name])).
+cnf(c_0_6, negated_conjecture, ($false), inference(cn,[status(thm)],[inference(rw,[status(thm)],[c_0_4, c_0_5])]), ['proof']).
+# SZS output end CNFRefutation

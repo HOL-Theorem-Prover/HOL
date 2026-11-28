@@ -6,13 +6,20 @@ sig
   (* execution function *)
   val quse_string : string -> bool
 
-  (* globals *)
-  val sml_bool_glob     : bool ref
-  val sml_tactic_glob   : tactic ref
-  val sml_string_glob   : string ref
-  val sml_goal_glob     : goal ref
-  val sml_thm_glob      : thm ref
-  val sml_thml_glob     : thm list ref
+  (* result slots of the thread running a compiled string, set by the
+     strings the readers compile *)
+  type 'a slot
+  val new_slot          : unit -> 'a slot
+  val put               : 'a slot -> 'a -> unit
+  (* read_slot slot name e: the value of the expression e compiled on this
+     thread, through slot, whose long name is name *)
+  val read_slot         : 'a slot -> string -> string -> 'a option
+  val sml_bool_slot     : bool slot
+  val sml_tactic_slot   : tactic slot
+  val sml_string_slot   : string slot
+  val sml_goal_slot     : goal slot
+  val sml_thm_slot      : thm slot
+  val sml_thml_slot     : thm list slot
 
   (* tests *)
   val is_thm_value     :

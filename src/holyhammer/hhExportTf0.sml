@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : hhExportTf0.sml                                           *)
-(* DESCRIPTION   :                                                           *)
+(* DESCRIPTION   : Export of HOL4 theories to TPTP TF0                       *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
