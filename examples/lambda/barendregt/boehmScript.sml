@@ -133,8 +133,7 @@ Definition subterm_def :
          in
              if h < m then subterm X (EL h Ms) p (SUC r)
              else NONE
-      else
-         NONE
+      else NONE
 End
 
 (* The use of ‘subterm' X M p r’ assumes that ‘subterm X M p r <> NONE’ *)
@@ -305,17 +304,16 @@ Theorem subterm_alt :
     !X M h p r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
        subterm X M (h::p) r =
        if solvable M then
-         let M0 = principal_hnf M;
-              n = LAMl_size M0;
-              m = hnf_children_size M0;
-             vs = RNEWS r n X;
-             M1 = principal_hnf (M0 @* MAP VAR vs);
-             Ms = hnf_children M1
-         in
-             if h < m then subterm X (EL h Ms) p (SUC r)
-             else NONE
-       else
-         NONE
+          let M0 = principal_hnf M;
+               n = LAMl_size M0;
+               m = hnf_children_size M0;
+              vs = RNEWS r n X;
+              M1 = principal_hnf (M0 @* MAP VAR vs);
+              Ms = hnf_children M1
+          in
+              if h < m then subterm X (EL h Ms) p (SUC r)
+              else NONE
+       else NONE
 Proof
     RW_TAC std_ss [subterm_def]
  >> ‘n = n'’ by rw [Abbr ‘n’, Abbr ‘n'’]
@@ -339,7 +337,7 @@ QED
 Overload bot = “Branch NONE (LNIL :boehm_tree llist)”
 
 (* Another form of ‘bot’, usually returned by “THE (ltree_el A p)” *)
-Overload bot = “(NONE, SOME 0) :(BT_node # num option)”
+Overload bot = “(NONE,SOME 0) :(BT_node # num option)”
 
 (* Unicode name: "base" *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x22A5, tmnm = "bot"};
@@ -1275,7 +1273,7 @@ Theorem BT_subterm_thm :
                (t,m') <- ltree_el (BT' X M r) p;
                (ls,y) <- t;
                     m <- m';
-                  xs <<- THE (toList ls);
+                   xs <- toList ls;
                   M0 <<- principal_hnf N;
                    n <<- LAMl_size M0;
                   vs <<- RNEWS r' n X;
