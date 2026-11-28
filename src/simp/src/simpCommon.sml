@@ -718,7 +718,7 @@ fun process_tags {frag_of, remove_ssfrags, add, force_add, cong_ac,
                   extension, exclude} ss thl =
     let
       open markerLib
-      val report = case extension of SOME {report,...} => report
+      val report = case extension of SOME {report, add_split = _} => report
                                    | NONE => true
       (* A further bound is not itself a content directive. Look through
          all bounds to classify, but retain the original real rewrite so
@@ -799,7 +799,7 @@ fun process_tags {frag_of, remove_ssfrags, add, force_add, cong_ac,
           val withSplits =
             case extension of
                 NONE => withFrags
-              | SOME {add_split,...} =>
+              | SOME {add_split, report = _} =>
                   List.foldl (fn (sp,ss) => add_split sp ss) withFrags splits
         in
           (exclude withSplits excludes, rst)
