@@ -136,13 +136,25 @@ signature Refute_Core = sig
 
   val change_mf : mf_update -> mf_config -> mf_config
   val bounded_rewrites : thm list
-  val normal_rewrites : thm list
+  (* a definition's bounded quantifiers rewritten into list searches, its
+     left sides untouched *)
+  val normalize_definition : thm -> thm
   (* The rewrites and the unwinding conversions together. *)
   val normal_conv : term -> thm
   val has_bounded_quantifier : term -> bool
   val normalize : term -> term
   val has_unexpanded_binder : term -> bool
   val register_literal_constants : (term -> term list option) -> unit
+  (* the compset's keys, the theory definitions
+     of a constant outside the compset, and what a term reaches through
+     them *)
+  type constant_key = string * string
+  val constant_key : term -> constant_key
+  val executable_keys : computeLib.compset -> constant_key Redblackset.set
+  val theory_definitions : term -> thm list
+  val theory_definition_group : term -> term list
+  val definition_closure : constant_key Redblackset.set -> term list ->
+    {defined : term list, definitions : thm list, missing : term list}
   val nonexecutable_constants : term list -> term list
   val show_constants : term list -> string
   val rebuild_instance :

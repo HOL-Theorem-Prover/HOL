@@ -76,6 +76,11 @@ structure Refute_Core :> Refute_Core = struct
       size_mode : bound_mode,
       iterations : int,
       depth : int,
+      (* Rewrite steps one candidate's evaluation may take on the Compute
+         substrate before it stops and the candidate counts as stuck
+         (never as a counterexample or as exhausted).  At least 1;
+         default 1000000. *)
+      max_steps : int,
       finite_types : bool,
       finite_type_size : int,
       default_type : hol_type list,
@@ -223,6 +228,7 @@ structure Refute_Core :> Refute_Core = struct
       size_mode = IterativeDeepening,
       iterations = 100,
       depth = 10,
+      max_steps = 1000000,
       finite_types = true,
       finite_type_size = 3,
       default_type = [``:num``],
@@ -381,6 +387,7 @@ structure Refute_Core :> Refute_Core = struct
       QcSize of int * bound_mode
     | QcIterations of int
     | QcDepth of int
+    | QcMaxSteps of int
     | QcFiniteTypes of bool
     | QcFiniteTypeSize of int
     | QcDefaultType of hol_type list
@@ -404,6 +411,8 @@ structure Refute_Core :> Refute_Core = struct
       iterations = (case update of QcIterations value => value
                     | _ => #iterations qc),
       depth = (case update of QcDepth value => value | _ => #depth qc),
+      max_steps = (case update of QcMaxSteps value => value
+                   | _ => #max_steps qc),
       finite_types = (case update of QcFiniteTypes value => value
                       | _ => #finite_types qc),
       finite_type_size = (case update of QcFiniteTypeSize value => value
@@ -459,6 +468,11 @@ structure Refute_Core :> Refute_Core = struct
       val _ = if #iterations qc < 0 then invalid "iterations" else ()
       val _ = bounded "depth" (#depth qc)
       val _ =
+        if #max_steps qc >= 1 then ()
+        else raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
+          ("max_steps: must be at least 1; got " ^
+           Int.toString (#max_steps qc))
+      val _ =
         if #finite_type_size qc < 1 orelse #finite_type_size qc > 6 then
           raise Feedback.mk_HOL_ERR "Refute_Core" "validate_qc_config"
             "finite_type_size: must lie between 1 and 6"
@@ -506,6 +520,7 @@ structure Refute_Core :> Refute_Core = struct
     update_qc (QcSize (value, IterativeDeepening))
   fun upd_iterations value = update_qc (QcIterations value)
   fun upd_depth value = update_qc (QcDepth value)
+  fun upd_max_steps value = update_qc (QcMaxSteps value)
   fun upd_finite_types value = update_qc (QcFiniteTypes value)
   fun upd_finite_type_size value = update_qc (QcFiniteTypeSize value)
   fun upd_default_type value = update_qc (QcDefaultType value)
@@ -793,11 +808,13 @@ structure Refute_Core :> Refute_Core = struct
 
   fun strip_outer_forall_body tm = #2 (boolSyntax.strip_forall tm)
 
-  (* Three consumers: [Refute_Cert.eval_original] uses this list
-     directly; [Refute_Cert.normalize_to_pnf] and [Refute_Core.normalize]
-     reach it only via [normal_conv] below.  Ablating any one
-     consumer, or [normal_rewrites] alone, is not decisive; only disabling
-     entries here cuts all three. *)
+  (* [Refute_Cert.eval_original] and [Refute_Extract.definition_body_conv]
+     use this list directly; [Refute_Cert.normalize_to_pnf],
+     [Refute_Core.normalize] and [rebuild_instance] reach it only via
+     [bounded_conv] in [normal_pass] below, never among the prenex
+     rewrites.  Ablating any
+     one consumer is not decisive; only disabling entries here cuts them
+     all. *)
   val bounded_rewrites =
     [ refuteTheory.bounded_forall_less,
       refuteTheory.bounded_exists_less,
@@ -838,8 +855,6 @@ structure Refute_Core :> Refute_Core = struct
       optionTheory.SOME_11 ] @
     Drule.CONJUNCTS boolTheory.PULL_EXISTS @
     Drule.CONJUNCTS boolTheory.PULL_FORALL
-
-  val normal_rewrites = prenex_rewrites @ bounded_rewrites
 
   fun has_bounded_quantifier tm =
     let
@@ -1071,6 +1086,113 @@ structure Refute_Core :> Refute_Core = struct
       in
         Thm.INST [{redex = v, residue = e}] th
       end
+    (* [body = middle], where [body] is a quantifier's matrix: a
+       conjunction (an existential), or an implication from one or the
+       negation of one (a universal), of [equation] and [rest] in any
+       order; [middle] is [equation /\ branch] or [equation ==> branch],
+       with [branch] built from [rest] as [shape]'s [assemble] builds it.
+       Proved by the laws of conjunction alone, in this process. *)
+    fun rearrange existential body equation rest middle =
+      if Term.aconv body middle then Thm.REFL body
+      else
+        let
+          fun reorder conjunction =
+            Drule.EQT_ELIM
+              (Conv.AC_CONV (boolTheory.CONJ_ASSOC, boolTheory.CONJ_COMM)
+                 (boolSyntax.mk_eq
+                    (conjunction,
+                     boolSyntax.mk_conj
+                       (equation, boolSyntax.list_mk_conj rest))))
+          fun clause n th = List.nth (Drule.CONJUNCTS th, n)
+        in
+          if existential then
+            if null rest then
+              (* [equation = equation /\ T] *)
+              Thm.SYM (clause 1 (Thm.SPEC equation boolTheory.AND_CLAUSES))
+            else reorder body
+          else if boolSyntax.is_neg body then
+            if null rest then
+              (* [~equation = (equation ==> F)] *)
+              Thm.SYM (clause 4 (Thm.SPEC equation boolTheory.IMP_CLAUSES))
+            else
+              let
+                val others = boolSyntax.list_mk_conj rest
+              in
+                (* [~(equation /\ others) = (equation ==> ~others)] *)
+                Thm.TRANS
+                  (Thm.AP_TERM boolSyntax.negation
+                     (reorder (boolSyntax.dest_neg body)))
+                  (Thm.TRANS
+                     (clause 0
+                        (Drule.SPECL [equation, others]
+                           boolTheory.DE_MORGAN_THM))
+                     (Thm.SYM
+                        (Drule.SPECL [equation, boolSyntax.mk_neg others]
+                           boolTheory.IMP_DISJ_THM)))
+              end
+          else
+            let
+              val (antecedent, consequent) = boolSyntax.dest_imp body
+            in
+              (* [(equation /\ others ==> c) = (equation ==> others ==> c)] *)
+              Thm.TRANS
+                (Thm.AP_THM
+                   (Thm.AP_TERM boolSyntax.implication (reorder antecedent))
+                   consequent)
+                (Thm.SYM
+                   (Drule.SPECL
+                      [equation, boolSyntax.list_mk_conj rest, consequent]
+                      boolTheory.AND_IMP_INTRO))
+            end
+        end
+    (* [tm = target], where [tm] quantifies [binders] over a matrix
+       holding [equation], [e = C xs], [branch] is the matrix without it
+       and [make branch] is [target].  Proving [tm = target] by cases
+       itself could unwind an argument of [C] by another equation of the
+       matrix ([n = f y] beside [e = C n]) on the left side only, and
+       leave the sides different.  So the split is proved with the branch
+       a variable [P], where [equation] is the only equation to unwind
+       by, and [P] is then instantiated to the branch; [tm] is the
+       instance's left side up to rearranging its matrix ([rearrange]). *)
+    fun prove_case existential binders equation rest branch make e tm
+                   target =
+      let
+        val (connect, quantify, strip) =
+          if existential then
+            (boolSyntax.mk_conj, boolSyntax.list_mk_exists,
+             boolSyntax.strip_exists)
+          else
+            (boolSyntax.mk_imp, boolSyntax.list_mk_forall,
+             boolSyntax.strip_forall)
+        val P = Term.variant (binders @ Term.free_varsl [tm, target])
+          (Term.mk_var ("P", boolSyntax.list_mk_fun
+                               (map Term.type_of binders, Type.bool)))
+        val applied = Term.list_mk_comb (P, binders)
+        val schema =
+          prove_by_cases e (boolSyntax.mk_eq
+            (quantify (binders, connect (equation, applied)), make applied))
+        val instance =
+          Thm.INST [{redex = P, residue = Term.list_mk_abs (binders, branch)}]
+            schema
+        (* Both sides beta-normalised, so a redex [tm] holds already is
+           reduced alike and never told apart from the instance's. *)
+        val normalise = Conv.QCONV (Conv.REDEPTH_CONV Thm.BETA_CONV)
+        val middle = connect (equation, branch)
+        val expected =
+          boolSyntax.mk_eq (quantify (binders, middle), target)
+        val instance =
+          Thm.EQ_MP
+            (Thm.TRANS (normalise (Thm.concl instance))
+               (Thm.SYM (normalise expected)))
+            instance
+        val body = #2 (strip tm)
+        val rearranged =
+          List.foldr (fn (v, th) =>
+              (if existential then Drule.EXISTS_EQ else Drule.FORALL_EQ) v th)
+            (rearrange existential body equation rest middle) binders
+      in
+        Thm.TRANS rearranged instance
+      end
     (* The binders of [tm]'s prefix, its matrix, and how to rebuild a
        branch: [conjuncts] are the matrix's conjuncts that the equation
        is drawn from, [assemble rest] the branch from the others. *)
@@ -1126,20 +1248,25 @@ structure Refute_Core :> Refute_Core = struct
                    (Lib.enumerate 0 conjuncts) of
                  SOME (index, (e, constructor, arguments)) =>
                    let
-                     val (_, rest) = split_at index conjuncts
+                     val (equation, rest) = split_at index conjuncts
                      val others =
                        List.filter (not o is_binder arguments) binders
                      val _ = if List.exists (fixes others) rest
                              then raise Conv.UNCHANGED else ()
-                     val target =
-                       case_term e (constructor, arguments) (assemble rest)
-                         default
-                     (* outside the case, so the prefix stays prenex *)
-                     val target =
-                       if null others then target
-                       else requantify (others, target)
+                     fun make branch =
+                       let
+                         val target =
+                           case_term e (constructor, arguments) branch
+                             default
+                       in
+                         (* outside the case, so the prefix stays prenex *)
+                         if null others then target
+                         else requantify (others, target)
+                       end
+                     val branch = assemble rest
                    in
-                     prove_by_cases e (boolSyntax.mk_eq (tm, target))
+                     prove_case (boolSyntax.is_exists tm) binders equation
+                       rest branch make e tm (make branch)
                    end
                | NONE =>
                    if List.exists (pair_split_equation binders) conjuncts
@@ -1173,26 +1300,20 @@ structure Refute_Core :> Refute_Core = struct
                    constructor_unwind_ss))
       [pairTheory.PAIR_EQ, optionTheory.SOME_11]
 
-  (* The quantifiers are pulled into the prefix first, so that none is
-     left inside a case split the unwinding makes; one under a
-     disjunction is not pulled out, so it stays in the branch.  The
-     unwinding comes before [bounded_rewrites], so that a bounded
-     existential whose bound is not its first conjunct is unwound rather
-     than turned into a list search over its bound. *)
-  fun normal_pass tm =
-    Conv.EVERY_CONV
-      [Ho_Rewrite.REWRITE_CONV prenex_rewrites,
-       Conv.STRIP_BINDER_CONV (SOME boolSyntax.universal) unwind_conv,
-       (* built per call, so that implicit rewrites registered
-          after this module loaded count *)
-       Ho_Rewrite.REWRITE_CONV normal_rewrites] tm
-
-  val normal_conv = Conv.QCONV (Conv.REPEATC (Conv.CHANGED_CONV normal_pass))
-
-  fun normalize tm =
-    #2 (boolSyntax.dest_eq (Thm.concl (normal_conv tm)))
-    handle Interrupt => raise Interrupt
-         | _ => tm
+  fun has_unexpanded_binder tm =
+    if boolSyntax.is_forall tm orelse boolSyntax.is_exists tm orelse
+       boolSyntax.is_select tm then
+      true
+    else if Term.is_abs tm then
+      has_unexpanded_binder (Term.body tm)
+    else if Term.is_comb tm then
+      let
+        val (left, right) = Term.dest_comb tm
+      in
+        has_unexpanded_binder left orelse has_unexpanded_binder right
+      end
+    else
+      false
 
   fun expand_quantifiers tm =
     let
@@ -1241,20 +1362,69 @@ structure Refute_Core :> Refute_Core = struct
       expand tm
     end
 
-  fun has_unexpanded_binder tm =
-    if boolSyntax.is_forall tm orelse boolSyntax.is_exists tm orelse
-       boolSyntax.is_select tm then
-      true
-    else if Term.is_abs tm then
-      has_unexpanded_binder (Term.body tm)
-    else if Term.is_comb tm then
-      let
-        val (left, right) = Term.dest_comb tm
-      in
-        has_unexpanded_binder left orelse has_unexpanded_binder right
-      end
-    else
-      false
+  (* A bounded quantifier becomes a list search only when its body is
+     left with no binder that [visible] still shows:
+     [EVERY (\x. ?y:num. P x y) l] traps [?y] where no prenexing reaches
+     it, and its extraction meets [@].  Bottom-up, so that an inner bound
+     is expanded before the guard looks at the outer one.
+     [has_unexpanded_binder] looks through [?!]'s abstraction, so [?!] is
+     refused on its own. *)
+  fun bounded_conv visible =
+    let
+      val rewrite = Ho_Rewrite.GEN_REWRITE_CONV Lib.I bounded_rewrites
+    in
+      fn tm =>
+        let
+          val th = rewrite tm
+          val body = boolSyntax.rhs (Thm.concl th)
+        in
+          if has_unexpanded_binder (visible body) orelse
+             Lib.can (HolKernel.find_term boolSyntax.is_exists1) body
+          then
+            raise Feedback.mk_HOL_ERR "Refute_Core" "bounded_conv"
+              "the body keeps a binder"
+          else th
+        end
+    end
+
+  (* The quantifiers are pulled into the prefix first, so that none is
+     left inside a case split the unwinding makes; one under a
+     disjunction is not pulled out, so it stays in the branch.  The
+     unwinding comes before [bounded_conv], so that a bounded existential
+     whose bound is not its first conjunct is unwound rather than turned
+     into a list search over its bound.  The bounded rewrites run once
+     the antecedents are folded, and again after the prenexing the
+     unwinding may have enabled. *)
+  fun normal_pass visible tm =
+    let
+      val bounded = Conv.QCONV (Conv.DEPTH_CONV (bounded_conv visible))
+    in
+      Conv.EVERY_CONV
+        [Ho_Rewrite.REWRITE_CONV prenex_rewrites,
+         Conv.STRIP_BINDER_CONV (SOME boolSyntax.universal) unwind_conv,
+         bounded,
+         (* built per call, so that implicit rewrites registered
+            after this module loaded count *)
+         Ho_Rewrite.REWRITE_CONV prenex_rewrites,
+         bounded] tm
+    end
+
+  (* Narrowing and the certificates search a prenex form, so no binder
+     may stay inside a list search.  An instance's goal, which exhaustive
+     and random search test, keeps a list search whose binders
+     [expand_quantifiers] enumerates ([EVERY (\x. ?b:bool. P x b) l]), as
+     [rebuild_instance] expands them. *)
+  fun normal_conv_with visible =
+    Conv.QCONV (Conv.REPEATC (Conv.CHANGED_CONV (normal_pass visible)))
+  val normal_conv = normal_conv_with Lib.I
+  val instance_conv = normal_conv_with expand_quantifiers
+
+  fun normalize_with conv tm =
+    #2 (boolSyntax.dest_eq (Thm.concl (conv tm)))
+    handle Interrupt => raise Interrupt
+         | _ => tm
+
+  val normalize = normalize_with normal_conv
 
   (* Optional literal support returns the constants that still need an
      evaluator; SOME [] denotes an already-decided value. *)
@@ -1293,37 +1463,276 @@ structure Refute_Core :> Refute_Core = struct
 
   (* [{}] is a value, as a datatype constructor is, so the compset keys
      no rule on it.  [INSERT] has [INSERT_CONV], and [FEMPTY]/[FUPDATE]
-     are family constructors. *)
-  val data_constants = [pred_setSyntax.empty_tm]
+     are family constructors.  Integers are built from [&] the same way:
+     [&n] over a numeral is a literal the integer rules evaluate, and
+     native code compiles [&] as the identity ([Refute_Extract]). *)
+  val data_constants = [pred_setSyntax.empty_tm, intSyntax.int_injection]
 
-  fun nonexecutable_constants terms =
+  (* Bounded quantifiers inside a definition's right-hand side, read the
+     same way by extraction and by [definition_closure] below.
+     [normalize] rewrites a goal's bounded quantifiers into
+     list searches, but a definition's equations reach the clause compiler
+     as [DefnBase] presents them, so [!x. MEM x l ==> P x] in a body
+     compiled through [FORALL_DEF] as a function equality.  The same
+     rewrites are applied to each equation's right side here, after
+     currying the antecedents ([a /\ b ==> c] to [a ==> b ==> c]) and
+     pushing a binder past the antecedents and conjuncts that do not
+     mention it, so that [!x y. MEM x l /\ MEM y (f x) ==> P] becomes
+     [!x. MEM x l ==> !y. MEM y (f x) ==> P] before the bound of each
+     binder is read.  The two-index shape [!i j. i < j ==> j < n ==> P i j]
+     is a nested count, [refuteTheory.forall_lt_lt_count_list].  Patterns
+     on the left side are untouched. *)
+  fun definition_body_conv tm =
     let
-      val comp_items = computeLib.listItems (computeLib.the_compset ())
-      val executable_keys =
-        List.foldl (fn ((key, transforms), keys) =>
-          if null transforms then keys else Redblackset.add (keys, key))
-          (Redblackset.empty
-            (Portable.pair_compare (String.compare, String.compare)))
-          comp_items
-      fun executable_constant constant =
+      fun pass theorems = Ho_Rewrite.REWRITE_CONV theorems
+    in
+      (* Curried first: the pair lemma needs [i < j] and [j < n] as
+         separate antecedents, and an interval rule applied to the raw
+         conjunction would consume the inner binder and leave [!i] with
+         no bound.  The bounded rules run on the curried form, where
+         [n < e ==> P n] takes any P, then again refolded, where the
+         interval shapes are conjunctions. *)
+      Conv.EVERY_CONV
+        [pass [Conv.GSYM boolTheory.AND_IMP_INTRO],
+         pass [refuteTheory.forall_lt_lt_count_list],
+         pass [boolTheory.RIGHT_FORALL_IMP_THM,
+               boolTheory.RIGHT_EXISTS_AND_THM],
+         pass bounded_rewrites,
+         pass [boolTheory.AND_IMP_INTRO],
+         pass bounded_rewrites] tm
+    end
+
+  (* Only a right side with a quantifier is rewritten; any other equation
+     stays as [DefnBase] presents it. *)
+  fun normalize_definition theorem =
+    let
+      fun quantified tm =
+        boolSyntax.is_forall tm orelse boolSyntax.is_exists tm
+      fun rhs_of tm =
+        case Lib.total boolSyntax.dest_eq tm of
+            SOME (_, right) => right
+          | NONE => boolSyntax.T
+      fun equations tm =
+        if boolSyntax.is_forall tm then
+          Conv.STRIP_QUANT_CONV equations tm
+        else if boolSyntax.is_conj tm then
+          Conv.BINOP_CONV equations tm
+        else if Lib.can (HolKernel.find_term quantified) (rhs_of tm) then
+          Conv.RAND_CONV definition_body_conv tm
+        else Conv.ALL_CONV tm
+    in
+      Conv.CONV_RULE (Conv.QCONV equations) theorem
+    end
+
+  type constant_key = string * string
+
+  fun constant_key constant =
+    let val {Name, Thy, ...} = Term.dest_thy_const constant
+    in (Name, Thy) end
+
+  fun executable_keys compset =
+    List.foldl (fn ((key, transforms), keys) =>
+      if null transforms then keys else Redblackset.add (keys, key))
+      (Redblackset.empty
+        (Portable.pair_compare (String.compare, String.compare)))
+      (computeLib.listItems compset)
+
+  (* The definitions of [constant] in the theory
+     that created it, oldest first, at their own types and cut to the
+     conjuncts headed by [constant]: what [Definition.new_definition] and
+     [Prim_rec.new_recursive_definition] leave there without adding the
+     constant to [DefnBase] or the compset.  A recursive definition with
+     no termination proof has only its [WFREC] primitive there, which
+     nothing evaluates, so none. *)
+  fun theory_entries constant =
+    let
+      val {Name, Thy, ...} = Term.dest_thy_const constant
+      val entries =
+        (* A script run with [hol run] has no current theory. *)
+        if Lib.total Theory.current_theory () = SOME Thy then
+          Theory.current_definitions ()
+        else DB.definitions Thy
+      fun is_primitive equation =
+        case Lib.total Term.dest_thy_const (#1 (boolSyntax.strip_comb
+               (boolSyntax.rhs (#2 (boolSyntax.strip_forall
+                  (Thm.concl equation)))))) of
+          SOME {Name = "WFREC", Thy = "relation", ...} => true
+        | _ => false
+      fun usable (_, theorem) =
+        if not (Theory.uptodate_thm theorem) then NONE
+        else
+          let
+            val equations = DefnBase.defn_eqns theorem
+              handle DefnBase.nonstdform => []
+          in
+            if List.exists (fn (key, _) => key = {Name = Name, Thy = Thy})
+                 equations andalso
+               not (List.exists (is_primitive o #2) equations)
+            then SOME equations
+            else NONE
+          end
+    in
+      List.mapPartial usable entries
+    end
+
+  fun theory_definitions constant =
+    let val {Name, Thy, ...} = Term.dest_thy_const constant
+    in
+      map (fn equations =>
+             Drule.LIST_CONJ (map #2 (List.filter
+               (fn (key, _) => key = {Name = Name, Thy = Thy}) equations)))
+        (theory_entries constant)
+    end
+
+  (* The constants the theorem behind [theory_definition constant] defines
+     together with [constant], at its type instance: those that call it
+     and that it calls, through that theorem's equations.  A
+     [Prim_rec.new_recursive_definition] over a mutually recursive
+     datatype defines several at once; one that neither calls the other
+     is compiled on its own. *)
+  fun theory_definition_group constant =
+    case theory_entries constant of
+      [] => [constant]
+    | entries =>
+        let
+          val equations =
+            map (#2 o boolSyntax.strip_forall o Thm.concl o #2)
+              (List.last entries)
+          fun head equation =
+            #1 (boolSyntax.strip_comb (boolSyntax.lhs equation))
+          fun member c = List.exists (Term.same_const c)
+          val heads = List.foldl (fn (equation, heads) =>
+              if member (head equation) heads then heads
+              else heads @ [head equation]) [] equations
+          fun calls c =
+            List.filter (fn h => List.exists (fn equation =>
+                Term.same_const c (head equation) andalso
+                Lib.can (HolKernel.find_term (Term.same_const h))
+                  (boolSyntax.rhs equation)) equations) heads
+          fun reach seen [] = seen
+            | reach seen (c :: rest) =
+                if member c seen then reach seen rest
+                else reach (c :: seen) (calls c @ rest)
+          val generic = valOf (List.find (Term.same_const constant) heads)
+          val called = reach [] [generic]
+          val group = List.filter (fn h =>
+              member h called andalso member generic (reach [] [h])) heads
+          val theta =
+            Type.match_type (Term.type_of generic) (Term.type_of constant)
+        in
+          map (Term.inst theta) group
+        end
+
+  fun theory_definition constant =
+    case theory_definitions constant of
+      [] => NONE
+    | definitions => SOME (List.last definitions)
+
+  (* [theory_definition] and its normalization, kept per constant until a
+     theory changes.  Finding a constant's definition reads every definition
+     of its theory ([theory_entries]), a quarter of a second on a large one,
+     and evaluation asks for the same constants for every candidate
+     ([Refute_Cert.default_compset]).  The definition depends only on the
+     constant's name and theory and on the theories, so it is session state: a
+     restored context brings back the entries made in it, and a pinned proof's
+     entries stay in its pin.  Normalizing also reads the implicit rewrites,
+     so a normalized theorem is reused only under the same set, and is redone
+     from the stored one otherwise.  A lookup that began before a theory
+     changed is not stored. *)
+  local
+    type entry =
+      {stored : thm option, rewrites : thm list, normalized : thm option}
+    type table =
+      {generation : unit ref,
+       entries : (constant_key, entry) Redblackmap.dict}
+    fun empty () : table =
+      {generation = ref (),
+       entries = Redblackmap.mkDict
+         (Portable.pair_compare (String.compare, String.compare))}
+    val table = Refute_Session.state "theory_definitions" (empty ())
+    val _ = Theory.register_hook ("Refute_Core.normalized_definition",
+      fn _ => Refute_Session.publish table (fn _ => empty ()))
+  in
+    fun normalized_definition constant =
+      let
+        val key = constant_key constant
+        val {generation, entries} = Refute_Session.read table
+        val rewrites = Ho_Rewrite.implicit_rewrites ()
+        fun keep stored =
+          let
+            val normalized = Option.map normalize_definition stored
+            val entry =
+              {stored = stored, rewrites = rewrites, normalized = normalized}
+          in
+            Refute_Session.update table (fn current : table =>
+              if #generation current = generation then
+                {generation = generation,
+                 entries = Redblackmap.insert (#entries current, key, entry)}
+              else current);
+            normalized
+          end
+      in
+        case Redblackmap.peek (entries, key) of
+          SOME (entry : entry) =>
+            if PolyML.pointerEq (#rewrites entry, rewrites) then
+              #normalized entry
+            else keep (#stored entry)
+        | NONE => keep (theory_definition constant)
+      end
+  end
+
+  (* The constants [terms] reach that [known]
+     doesn't hold: those with a theory definition ([defined], with
+     [definitions]), whose right sides are followed in turn, and those
+     with none ([missing]).  A definition is read as extraction reads it,
+     its bounded quantifiers rewritten ([normalize_definition]), so a
+     binder left on a right side is one nothing bounds.  [known] holds the
+     compset's keys, so a
+     constant evaluation already reduces is never unfolded.  The binders
+     are never unfolded either: [bool] defines [!] as [\P. P = \x. T],
+     which nothing evaluates, and the search handles them itself. *)
+  fun definition_closure known terms =
+    let
+      val binders =
+        [boolSyntax.universal, boolSyntax.existential, boolSyntax.exists1,
+         boolSyntax.select]
+      fun definition constant =
+        if List.exists (fn binder => Term.same_const binder constant) binders
+        then NONE
+        else normalized_definition constant
+      fun executable constant =
         Refute_TypeBase.is_constructor constant orelse
         List.exists (fn data => Term.same_const data constant)
           data_constants orelse
-        Refute_Gen.is_family_constructor constant orelse
-        let
-          val {Name, Thy, ...} = Term.dest_thy_const constant
-        in
-          Redblackset.member (executable_keys, (Name, Thy))
-        end
-      fun add (term, constants) =
-        List.foldl (fn (constant, collected) =>
-          if List.exists (fn old => Term.same_const old constant) collected
-          then collected
-          else constant :: collected) constants (term_constants term)
-      val constants = List.foldl add [] terms
+        Refute_Gen.is_family_constructor constant
+      fun right_constants theorem =
+        List.concat (map (term_constants o boolSyntax.rhs o #2 o
+                          boolSyntax.strip_forall)
+                       (boolSyntax.strip_conj (Thm.concl theorem)))
+      fun visit (constant, state as (seen, defined, definitions, missing)) =
+        if Redblackset.member (seen, constant_key constant) orelse
+           executable constant then state
+        else
+          let val seen = Redblackset.add (seen, constant_key constant)
+          in
+            case definition constant of
+              SOME theorem =>
+                List.foldl visit
+                  (seen, constant :: defined, theorem :: definitions, missing)
+                  (right_constants theorem)
+            | NONE => (seen, defined, definitions, constant :: missing)
+          end
+      val (_, defined, definitions, missing) =
+        List.foldl visit (known, [], [], [])
+          (List.concat (map term_constants terms))
     in
-      List.filter (not o executable_constant) constants
+      {defined = List.rev defined, definitions = List.rev definitions,
+       missing = List.rev missing}
     end
+
+  fun nonexecutable_constants terms =
+    #missing (definition_closure
+      (executable_keys (computeLib.the_compset ())) terms)
 
   fun show_constants constants =
     String.concatWith ", "
@@ -1396,7 +1805,7 @@ structure Refute_Core :> Refute_Core = struct
   fun rebuild_instance {original, raw_goal, evals_for, card, transport} =
     let
       val goal = expand_quantifiers
-        (strip_outer_forall_body (normalize raw_goal))
+        (strip_outer_forall_body (normalize_with instance_conv raw_goal))
       val evals = evals_for goal
     in
       {original = original, goal = goal,
@@ -1695,6 +2104,7 @@ structure Refute_Core :> Refute_Core = struct
             "\n",
           "iterations = " ^ Int.toString (#iterations q) ^ "\n",
           "depth = " ^ Int.toString (#depth q) ^ "\n",
+          "max_steps = " ^ Int.toString (#max_steps q) ^ "\n",
           "finite_types = " ^ Bool.toString (#finite_types q) ^
             "\n",
           "finite_type_size = " ^ Int.toString (#finite_type_size q) ^

@@ -9,8 +9,57 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
      (src/compute/src/equations.sml:185).  So nothing is caught here:
      every exception escaping evaluation is an evaluator defect and must
      reach the GaveUp handlers in [run] rather than be filed as a stuck
-     candidate.  Stuckness is read off the shape of tm' instead. *)
-  fun eval_rhs env tm = rhs_of (eval (instantiate env tm))
+     candidate.  Stuckness is read off the shape of tm' instead.  The one
+     exception caught is the step budget's own, below. *)
+
+  (* A candidate's evaluation stops after the search's [max_steps]
+     rewrite steps and leaves the candidate unevaluated, so the search
+     reads it as stuck.  A candidate computing a hash function by
+     rewriting ran for millions of steps without finishing while its terms
+     filled the heap; the evaluations seen deciding candidates take under
+     10,000 steps.  [computeLib.CBVn_CONV] can't bound it: it sets the
+     global [computeLib.stoppers] for the length of its call, which races
+     with backends evaluating on other threads, and its stopper only
+     refuses a rewrite, so the evaluation goes on with the others. *)
+  exception OutOfSteps
+
+  (* The [max_steps] of the search running on this thread, set by
+     [compile]'s runs, and the steps its current candidate has left *)
+  val step_budget : int Thread_Data.var = Thread_Data.var ()
+  val steps_left : int ref Thread_Data.var = Thread_Data.var ()
+
+  (* One stopper, put in [computeLib.stoppers] when this structure loads
+     and never replaced from here, counts the steps of a thread evaluating
+     under a budget and hands every other thread's to the stopper it found
+     there, so evaluation outside the search is unchanged.  A
+     [Lib.with_flag] on [computeLib.stoppers] elsewhere puts its own
+     stopper there for the length of its call: [CBVn_CONV]'s calls this
+     one, [RESTR_EVAL_CONV]'s doesn't, so while one of the latter runs on
+     another thread the steps go uncounted, and counting resumes once it
+     restores this stopper. *)
+  local
+    val previous = !computeLib.stoppers
+    fun stop head =
+      case Thread_Data.get steps_left of
+          SOME left =>
+            if !left <= 0 then raise OutOfSteps
+            else (left := !left - 1; false)
+        | NONE => (case previous of SOME f => f head | NONE => false)
+  in
+    val _ = computeLib.stoppers := SOME stop
+  end
+
+  fun eval_rhs env tm =
+    let
+      val instance = instantiate env tm
+      val budget =
+        case Thread_Data.get step_budget of
+            SOME steps => steps
+          | NONE => raise Fail "compute evaluation outside a search's run"
+    in
+      rhs_of (Thread_Data.setmp steps_left (SOME (ref budget)) eval instance)
+      handle OutOfSteps => instance
+    end
 
   datatype boolean_value = IsTrue | IsFalse | IsStuck
 
@@ -795,12 +844,19 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
                | reasons => Inapplicable reasons
            end)
           handle EnumInvalid reason => Inapplicable [reason]
+        fun budgeted build programs =
+          let val test : compiled_test = build programs in
+            {run = Thread_Data.setmp step_budget
+                     (SOME (#max_steps (#qc config))) (#run test),
+             close = #close test, max_chunk = #max_chunk test,
+             last_stats = #last_stats test}
+          end
       in
         ground_strategy strategy
           {exhaustive = fn () =>
-             attempt (exhaustive_compile config plans),
+             attempt (budgeted (exhaustive_compile config plans)),
            random = fn seed =>
-             attempt (fn _ => random_compile plans (ref seed))}
+             attempt (budgeted (fn _ => random_compile plans (ref seed)))}
       end)
 
   val compute_substrate : substrate =

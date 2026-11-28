@@ -54,12 +54,18 @@ repository.
 - The selftest exercises only the `Refute` signature and the shipped
   theories' ancestry: user-visible outcomes, messages, registrations, and
   what a descendant theory inherits.  Mechanism-level checks (internal
-  modules, counters, serializer goldens) do not belong there.  Two
-  exceptions, both flagged in the file's header:
-  `Refute_ModelFinder_Model.lookup_term_postprocessor`, a registry entry
-  point kept out of the signature for want of a user; and
+  modules, counters, serializer goldens) do not belong there.  The
+  exceptions are listed, each with its reason, in the file's header;
+  among them `Refute_ModelFinder_Model.lookup_term_postprocessor`, a
+  registry entry point kept out of the signature for want of a user;
   `Refute_QC.strategy_run`, because an expired deadline's verdict has no
-  public route that is not decided by the same budget it tests.
+  public route that is not decided by the same budget it tests;
+  `Refute_Core.normal_conv`, because the shape a goal is normalised to
+  is not visible through `Refute`; and
+  `Refute_ModelFinder_Util.apply_within_budget` with its clock
+  `Refute_ThreadClock`, for the inner-proof budget tests, because the
+  budget is CPU time, which only a loaded machine would show through
+  `Refute`.
 - The root CLAUDE.md's `--seq=tools/sequences/upto-parallel` pass does not
   reach this directory and adds no signal: it stops before
   `src/parallel_builds`, which is what pulls in HolRefute (POLY-only
@@ -137,10 +143,10 @@ repository.
   user's theory on any path (success, failure, timeout, interrupt); if safe
   cleanup is unavailable, report inapplicable instead.
   `theory_tests/refuteMfClean*` and `refuteRegistrationClean*` check this.
-- Ancestry: refuteTheory's parents are real, words, rat, finite_map and
-  listRange (the declared `sorting` folds into `finite_map`); its
-  `Ancestors` declaration is exact and the selftest asserts the parent
-  set.
+- Ancestry: refuteTheory's parents are words, frac, finite_map,
+  finite_set and listRange (the declared `sorting` folds into
+  `finite_map`); its `Ancestors` declaration is exact and the selftest
+  asserts the parent set.
 
 ## Testing Guidelines
 
@@ -153,8 +159,11 @@ repository.
 - No wall clock in a verdict.  `Timeout.apply` raises only if its timer
   thread beats the body, so "was the deadline reached" is unassertable.
   A spent budget is decided by `Util.apply_within_budget`, degradation
-  polarity by `abandoned_mono_verdict`; never assert the race.
-  Three level-2 flakes so far: 8f042b080, 757301f92, and `tac_timeout 0.0`.
+  polarity by `abandoned_mono_verdict`; never assert the race.  A test of
+  `apply_within_budget` itself accepts every TIMEOUT its contract allows:
+  one after the thread's CPU time reached the budget, or one past the wall
+  backstop.  Three level-2 flakes so far: 8f042b080, 757301f92, and
+  `tac_timeout 0.0`; one at level 1, the CPU-budget test at 0642fc4a80.
 - Gate by cost on `selftest_level` (reads HOLSELFTESTLEVEL, default 1):
   cheap and targeted ungated; expensive or matrix-shaped behind
   `if selftest_level >= 2`.

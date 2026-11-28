@@ -8,7 +8,7 @@ open Refute
 open refutePersistentTypeTheory
 local open Refute_Rat Refute_Real in end
 
-(* Five deliberate reaches outside the [Refute] signature.  One is a
+(* Seven deliberate reaches outside the [Refute] signature.  One is a
    registry entry point with no user outside these tests: the composed
    display callback a registration installs, aliased here.  The second is
    [Refute_QC.strategy_run], called by "an expired deadline never claims
@@ -24,6 +24,13 @@ local open Refute_Rat Refute_Real in end
    deadline.  The fifth is [Refute_Cert_Model.certify_portfolio_detailed_rich],
    called by "a failed case split goes on to the next candidate": the
    order in which the model replay tries its candidates is not visible
+   through [Refute].  The sixth is [Refute_Core.normal_conv], called by
+   "a constructor equation beside a binder equation is unwound": the
+   shape a goal is normalised to before the backends see it is not
+   visible through [Refute].  The seventh is
+   [Refute_ModelFinder_Util.apply_within_budget] with its clock
+   [Refute_ThreadClock], called by the model finder's inner-proof budget
+   tests: the budget is CPU time, which only a loaded machine would show
    through [Refute]. *)
 val lookup_term_postprocessor =
   Refute_ModelFinder_Model.lookup_term_postprocessor
@@ -53,16 +60,113 @@ val selftest_level =
 (* Harness                                                             *)
 (* ------------------------------------------------------------------- *)
 
+(* Keep call details until the test is checked; formatting them only on
+   failure keeps quiet/captured output unchanged. *)
+val refute_calls = Synchronized.var "selftest refute calls"
+  ([] : (unit -> string) list)
+
+fun certainty_text Genuine = "Genuine"
+  | certainty_text (QuasiGenuine reasons) =
+      "QuasiGenuine: " ^ String.concatWith "; " reasons
+  | certainty_text (Potential reasons) =
+      "Potential: " ^ String.concatWith "; " reasons
+
+fun witnesses_text kind witnesses =
+  kind ^ " " ^ Int.toString (length witnesses) ^ " [" ^
+  String.concatWith "; " (map (fn (c : counterexample) =>
+    #backend c ^ "/" ^ #substrate c ^ " " ^ certainty_text (#certainty c))
+    witnesses) ^ "]"
+
+fun outcome_text (Counterexample cs) = witnesses_text "Counterexample" cs
+  | outcome_text NoCounterexample = "NoCounterexample"
+  | outcome_text (Model cs) = witnesses_text "Model" cs
+  | outcome_text NoModel = "NoModel"
+  | outcome_text (Unknown reasons) =
+      "Unknown: " ^ String.concatWith "; " reasons
+
+fun record_refute_call api (assumptions, goal) describe action =
+  let
+    val started = Time.now ()
+    val finished = ref NONE
+    fun details () =
+      " " ^ api ^ ": " ^
+      String.concatWith ", " (map Parse.term_to_string assumptions) ^
+      " |- " ^ Parse.term_to_string goal ^ "\n    " ^
+      (case !finished of
+           NONE => "did not return"
+         | SOME (elapsed, result) =>
+             (case result of
+                  Exn.Res value => describe value
+                | Exn.Exn e => "raised: " ^ General.exnMessage e) ^
+             " (" ^ Time.toString elapsed ^ " s)")
+    (* Reserve the row before calling: a backend can call back into Refute. *)
+    val _ = Synchronized.change refute_calls (fn calls => details :: calls)
+    val result = Exn.capture action ()
+    val _ = finished := SOME (Time.- (Time.now (), started), result)
+  in
+    Exn.release result
+  end
+
+(* A call's details name the back ends, substrate and deadline it ran
+   with: an Unknown carries none of them. *)
+fun config_text (cfg : config) =
+  (case #backends cfg of
+       SOME backends => String.concatWith ", " backends
+     | NONE => "all back ends") ^ " on " ^
+  (case #substrate (#qc cfg) of
+       Auto => "Auto"
+     | Compute => "Compute"
+     | NativeSML => "NativeSML") ^ ", " ^
+  Real.fmt (StringCvt.FIX (SOME 1)) (#timeout cfg) ^ " s deadline"
+
+fun refute cfg goal =
+  record_refute_call ("refute (" ^ config_text cfg ^ ")") ([], goal)
+    outcome_text (fn () => Refute.refute cfg goal)
+fun refute_goal cfg goal =
+  record_refute_call ("refute_goal (" ^ config_text cfg ^ ")") goal
+    outcome_text (fn () => Refute.refute_goal cfg goal)
+fun refute_with updates goal =
+  record_refute_call "refute_with" ([], goal) outcome_text
+    (fn () => Refute.refute_with updates goal)
+fun quickcheck goal = record_refute_call "quickcheck" ([], goal) outcome_text
+  (fn () => Refute.quickcheck goal)
+fun try_refute cfg goal =
+  record_refute_call ("try_refute (" ^ config_text cfg ^ ")") goal
+  (fn NONE => "NONE (no counterexample returned)"
+    | SOME (backend, result) => "SOME " ^ backend ^ ": " ^ outcome_text result)
+  (fn () => Refute.try_refute cfg goal)
+
 fun check_result P =
   testutils.check_result (fn r =>
     P r handle Interrupt => raise Interrupt
              | e => (print ("\n  raised: " ^ General.exnMessage e ^ "\n");
                      false))
 
+(* CI shows only the end of the log, so the names of failed tests are
+   printed again there, each with the last call it made: the one whose
+   outcome failed the check, for a test that stops at its first failure *)
+val failed_tests = ref ([] : (string * string) list)
+
+fun test_msg name pred msg =
+  let val failures = !erc in
+    Synchronized.change refute_calls (K []);
+    tprint name;
+    require_msg (check_result pred) msg (fn () => ()) ();
+    if !erc > failures then
+      failed_tests :=
+        (name, case Synchronized.value refute_calls of
+                   details :: _ => "last call" ^ details ()
+                 | [] => "no refute call") :: !failed_tests
+    else ();
+    Synchronized.change refute_calls (K [])
+  end
+
 fun test name pred =
-  (tprint name;
-   require_msg (check_result pred) (fn () => name ^ " failed")
-     (fn () => ()) ())
+  test_msg name pred (fn () =>
+    name ^ " failed" ^ String.concat
+      (Portable.mapi (fn i => fn details =>
+         "\n  call " ^ Int.toString (i + 1) ^ details ())
+        (rev (Synchronized.value refute_calls))))
 
 fun section name = print ("\n== " ^ name ^ "\n")
 fun skip name why = (tprint name; print ("skipped: " ^ why ^ "\n"))
@@ -146,6 +250,7 @@ val genuine_uncertified = cex_where (fn c => is_genuine c andalso
 val potential = cex_where is_potential
 
 fun reasons_of (Unknown rs) = rs | reasons_of _ = []
+
 fun unknown_with needle outcome =
   is_unknown outcome andalso
   List.exists (String.isSubstring needle) (reasons_of outcome)
@@ -563,15 +668,15 @@ val same_string_set : string list -> string list -> bool = Lib.set_eq
    declared but is not a computed parent -- [finite_map] already ancestors
    it, so HOL4's minimal-parent computation folds it in there.  [listRange]
    is one because the offset-interval rewrites are stated over
-   [listRangeLHI]/[listRangeINC]. *)
+   [listRangeLHI]/[listRangeINC], and [finite_set] because the finite-set
+   chain theorems are stated over it. *)
 fun refute_ancestry_is_exact () =
   same_string_set (Theory.parents "refute")
-    ["words", "frac", "finite_map", "listRange"]
+    ["words", "frac", "finite_map", "finite_set", "listRange"]
 
-val _ = tprint "refuteTheory has exactly its declared parents"
-val _ = require_msg (check_result refute_ancestry_is_exact) (fn () =>
-  "refute parents: " ^ String.concatWith ", " (Theory.parents "refute"))
-  (fn () => ()) ()
+val _ = test_msg "refuteTheory has exactly its declared parents"
+  refute_ancestry_is_exact (fn () =>
+    "refute parents: " ^ String.concatWith ", " (Theory.parents "refute"))
 
 (* ------------------------------------------------------------------- *)
 (* Facade and tactics                                                  *)
@@ -818,7 +923,8 @@ val _ = test "show_config prints every field" (fn () =>
       "no_assms = false", "evals = 0 terms", "expect = NoExpectation",
       "max_counterexamples = 1", "tag = ", "widths = [1, 2, 3, 4]",
       "size = 10", "size_mode = IterativeDeepening", "iterations = 100",
-      "depth = 10", "finite_types = true", "finite_type_size = 3",
+      "depth = 10", "max_steps = 1000000", "finite_types = true",
+      "finite_type_size = 3",
       "default_type = :num", "instantiate = []", "substrate = Auto",
       "seed = NONE", "allow_existentials = true", "finite_functions = true",
       "certify = false", "smart_quantifier = true",
@@ -1366,6 +1472,118 @@ val _ = test "non-executable goals report the gate reason" (fn () =>
   unknown_with "GSPEC" (refute (exhaustive |> upd_size 4)
                           ``!x : num. x IN {y | y < 3}``))
 
+(* [&] builds integers as [{}] builds sets: the compset has no rules
+   keyed on it, yet a goal using it runs, on every Quickcheck back end and
+   substrate at level 2. *)
+val _ = test "the integer injection is executable" (fn () =>
+  let
+    val goal = ``!(n : num) (i : int). (i = &n) = (i = 0)``
+    val configs =
+      if selftest_level >= 2 then
+        [(Exhaustive, NativeSML), (Exhaustive, Compute),
+         (Random, NativeSML), (Random, Compute)]
+      else [(Exhaustive, NativeSML)]
+  in
+    List.all (fn (backend, substrate) =>
+      case refute (default_config |> only [backend] |> quiet
+                     |> upd_substrate substrate) goal of
+        Counterexample (c :: _) => certifies goal c
+      | _ => false) configs
+  end)
+
+(* Constants only their theories define
+   ([new_definition], [new_recursive_definition]: neither in [DefnBase]
+   nor in the compset), in the current theory or a loaded one, are
+   executable through those definitions, followed to what they call,
+   under every Quickcheck back end and substrate, with certified
+   counterexamples and the caller's compset unchanged.  A definition
+   reaching [ARB] stays refused, and a constant defined again evaluates
+   by its new definition. *)
+local
+  val _ = Datatype.Datatype
+    `rf_thy_pkg = <| rf_thy_exports : num list; rf_thy_size : num |>`
+  val _ = Datatype.Datatype `rf_thy_loc = RFThyA | RFThyB num`
+  val _ = new_definition ("rf_thy_inc_def", ``rf_thy_inc (x : num) = x + 1``)
+  val _ = new_definition ("rf_thy_twice_def",
+    ``rf_thy_twice (x : num) = rf_thy_inc x * 2``)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_sum_def", rec_axiom = prim_recTheory.num_Axiom,
+     def = ``(rf_thy_sum 0 = 0) /\
+             (!n. rf_thy_sum (SUC n) = rf_thy_twice n + rf_thy_sum n)``}
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_slot_def", rec_axiom = TypeBase.axiom_of ``:rf_thy_loc``,
+     def = ``(rf_thy_slot RFThyA = rf_thy_twice 0) /\
+             (!k. rf_thy_slot (RFThyB k) = rf_thy_inc k)``}
+  val _ = new_definition ("rf_thy_package_def",
+    ``rf_thy_package = rf_thy_pkg [rf_thy_inc 1] 2``)
+  val _ = Datatype.Datatype
+    `rf_thy_tree = RFTLeaf num | RFTNode rf_thy_forest ;
+     rf_thy_forest = RFTNil | RFTCons rf_thy_tree rf_thy_forest`
+  (* one theorem defines both, each calling the other *)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_tsize_def",
+     rec_axiom = TypeBase.axiom_of ``:rf_thy_tree``,
+     def = ``(rf_thy_tsize (RFTLeaf n) = n) /\
+             (rf_thy_tsize (RFTNode f) = rf_thy_fsize f + 1) /\
+             (rf_thy_fsize RFTNil = 0) /\
+             (rf_thy_fsize (RFTCons t f) = rf_thy_tsize t + rf_thy_fsize f)``}
+  (* one theorem defines both, and only the second calls the first: the
+     first is compiled without the second, which chooses *)
+  val _ = Prim_rec.new_recursive_definition
+    {name = "rf_thy_tleaf_def",
+     rec_axiom = TypeBase.axiom_of ``:rf_thy_tree``,
+     def = ``(rf_thy_tleaf (RFTLeaf n) = n) /\
+             (rf_thy_tleaf (RFTNode f) = 0) /\
+             (rf_thy_fbad RFTNil = @m : num. 0 < m) /\
+             (rf_thy_fbad (RFTCons t f) = rf_thy_tleaf t + rf_thy_fbad f)``}
+  val _ = new_definition ("rf_thy_opt_def",
+    ``rf_thy_opt (x : num) = SOME (x + 1)``)
+  val _ = new_definition ("rf_thy_arb_def",
+    ``rf_thy_arb (x : num) = x + ARB``)
+  val _ = new_definition ("rf_thy_small_def",
+    ``rf_thy_small (l : num list) <=> !x. MEM x l ==> x < 3``)
+  val configs =
+    List.concat (map (fn backend =>
+      map (fn substrate =>
+        default_config |> only [backend] |> quiet |> upd_substrate substrate)
+        [NativeSML, Compute]) [Exhaustive, Random])
+  fun refuted_everywhere goal =
+    List.all (fn cfg =>
+      case refute cfg goal of
+          Counterexample (c :: _) => certifies goal c
+        | _ => false) configs
+in
+  val _ = if selftest_level < 2 then () else
+    test "theory definitions outside the compset are executable" (fn () =>
+      let
+        fun keys () = map #1 (computeLib.listItems (computeLib.the_compset ()))
+        val initial = keys ()
+        val outside = not (List.exists (fn (name, _) => Lib.mem name
+          ["rf_thy_inc", "rf_thy_twice", "rf_thy_sum", "rf_thy_slot",
+           "rf_thy_package", "rf_thy_tsize", "rf_thy_arb", "rf_thy_small"])
+          initial)
+        val refuted = List.all refuted_everywhere
+          [``!x. rf_thy_inc x = 0``, ``!x. rf_thy_twice x < 5``,
+           ``!n. rf_thy_sum n < 3``, ``!l. rf_thy_slot l < 4``,
+           ``rf_thy_package.rf_thy_exports = []``, ``!l. rf_thy_small l``,
+           ``!t. rf_thy_tsize t < 3``, ``!t. rf_thy_tleaf t < 2``,
+           ``!x n. rf_thy_opt x = SOME n ==> n < 3``,
+           ``!x. zoo_thy_outer x < 9``]
+        val refused = List.all (fn cfg =>
+            refute cfg ``!x. rf_thy_arb x = 0``
+              == Unknown ["not executable: ARB"]) configs
+        val _ = new_definition ("rf_thy_again_def",
+          ``rf_thy_again (x : num) = x + 1``)
+        val first = refuted_everywhere ``!x. rf_thy_again x = 0``
+        val _ = new_definition ("rf_thy_again_again_def",
+          ``rf_thy_again (x : num) = x + 5``)
+        val again = refuted_everywhere ``!x. rf_thy_again x = x + 1``
+      in
+        outside andalso refuted andalso refused andalso first andalso
+        again andalso keys () = initial
+      end)
+end
+
 val _ = test "an any-goal backend still receives gated instances" (fn () =>
   let
     val enabled = ref false
@@ -1623,6 +1841,46 @@ in
                          (a, x + 1)) /\ a < 3``))
 end
 
+(* A binder fixed by the constructor equation and by another equation of
+   the matrix ([n = LENGTH xs]): proving the case split could unwind it
+   by the latter on one side only, and the proof failed, leaving the
+   constructor equation in place: the result must split on [a0] and
+   keep no equation on it.  Each shape is checked: either
+   orientation, an implication and a negation (under a disjunction, as
+   [normal_conv] strips the outer universals), binders the equation
+   leaves quantified, and nothing else. *)
+val _ = Datatype.Datatype `ubox = UBox num bool | UNone`
+
+val _ = test "a constructor equation beside a binder equation is unwound"
+  (fn () =>
+    let
+      val a0 = mk_var ("a0", ``:ubox``)
+      fun equation_on_a0 t =
+        is_eq t andalso (aconv (lhs t) a0 orelse aconv (rhs t) a0)
+      fun case_on_a0 t =
+        TypeBase.is_case t andalso aconv (#1 (TypeBase.strip_case t)) a0
+      fun unwound tm =
+        let
+          val normal = rhs (concl (Refute_Core.normal_conv tm))
+        in
+          not (can (find_term equation_on_a0) normal) andalso
+          can (find_term case_on_a0) normal
+        end
+      val goals =
+        [``?n b xs. a0 = UBox n b /\ a1 = SOME xs /\ n = LENGTH xs /\
+                    (b <=> NULL xs) /\ 0 < n``,
+         ``?n b xs. a0 = UBox n b /\ a1 = SOME xs /\ LENGTH xs = n /\
+                    (NULL xs <=> b) /\ 0 < n``,
+         ``c \/ !n b xs. a0 = UBox n b /\ a1 = SOME xs /\
+                         n = LENGTH xs /\ (b <=> NULL xs) ==> 0 < n``,
+         ``c \/ !n b xs. ~(a0 = UBox n b /\ a1 = SOME xs /\
+                           n = LENGTH xs /\ 0 < n)``,
+         ``?n b k. k < n /\ a0 = UBox n b /\ EVEN k``,
+         ``?n b. a0 = UBox n b``]
+    in
+      List.all unwound goals
+    end)
+
 (* ------------------------------------------------------------------- *)
 (* Random backend                                                      *)
 (* ------------------------------------------------------------------- *)
@@ -1703,6 +1961,20 @@ val _ = test "two LENGTH premises of one element type both generate"
 val _ = section "narrowing backend"
 
 val nar = narrowing |> upd_substrate NativeSML
+
+(* A true goal's narrowing search must run through its size: a search the
+   deadline ended, or one that gave up on part of the space, would leave
+   the goal unrefuted having covered nothing in particular.  A give-up only
+   adds its reason and the search goes on, so the size marker alone shows
+   neither; the reasons must be exactly the exhaustion and the size.  At
+   size 5 each such goal here takes under 0.2 s; one takes 2.6 s at
+   size 6. *)
+fun narrowing_ran_through size outcome =
+  outcome == Unknown ["narrowing: narrowing search exhausted",
+                      "narrowing: searched up to size " ^ Int.toString size]
+
+fun narrowed_through cfg goal =
+  narrowing_ran_through 5 (refute (cfg |> upd_size 5) goal)
 
 fun has_hole tm = String.isSubstring "_" (Parse.term_to_string tm)
 
@@ -1849,6 +2121,77 @@ val _ = test "partial function and product witnesses" (fn () =>
                                           (pairSyntax.dest_pair v |> #1))))
            | _ => false))
 
+(* A bounded universal whose body keeps a binder is not made a list
+   search: [EVERY (\x. ?y. P x y) l] traps the existential where no
+   prenexing reaches it, and its extraction met [@]; so does [?!y]. *)
+val _ = test "an existential under a bounded implication is refuted"
+  (fn () =>
+    List.all (fn goal =>
+      List.all (fn cfg =>
+        refute cfg goal |> single_cex_where (fn c =>
+          is_genuine c andalso certifies goal c))
+        [narrowing, nar])
+      [``!x : num. x < 5 ==> ?y. y + 1 = x``,
+       ``!z : num. z = 3 ==> !x : num. x < 5 ==> ?y. y + 1 = x``,
+       ``!x : num. x < 5 ==> ?!y. y + 1 = x``,
+       ``!n : num. n < 5 ==> ?b : bool. if b then n = 0 else n = 1``,
+       ``!x : num. x < 5 ==> ?y : word8. w2n y + 1 = x``] andalso
+    List.all (fn goal =>
+      List.all (fn cfg => narrowed_through cfg goal) [narrowing, nar])
+      [``!x : num. 0 < x ==> ?y. y + 1 = x``,
+       ``!z : num. z = 3 ==> !x : num. x < 5 ==> 0 < x ==> ?y. y + 1 = x``,
+       ``!x : num. 0 < x ==> ?!y. y + 1 = x``,
+       ``!n : num. n < 5 ==> ?b : bool. if b then n < 3 else 2 < n``]
+    andalso
+    (* nested where no prefix strips it, a bounded universal whose body
+       has a binder over an enumerable type is a list search for
+       exhaustive search *)
+    let
+      val goal = ``!p : bool. p =
+        !n : num. n < 5 ==> ?b : bool. if b then n = 0 else n = 1``
+    in
+      refute exhaustive goal |> single_cex_where (fn c =>
+        is_genuine c andalso certifies goal c)
+    end)
+
+(* A record holding a function is finitized as a product of its fields,
+   so narrowing generates it, as a binder, as an existential, and as a
+   function's range or domain.  A field the search never looked at is
+   the irrelevant marker, a free variable named [_]. *)
+val _ = Datatype.Datatype
+  `rg_account = <| rg_nonce : num; rg_flag : bool;
+                   rg_store : rg_enum -> num |>`
+
+val _ = test "records with a function field are narrowed" (fn () =>
+  let
+    val nonce = ``!a : rg_account. a.rg_nonce = 0``
+    val store = ``!a : rg_account. a.rg_store RGRed = 0``
+    val ranged =
+      ``!f : rg_enum -> rg_account. (f RGRed).rg_store RGBlue = 0``
+    val exists = ``!x : num. x < 3 ==> ?a : rg_account. a.rg_nonce + 1 = x``
+    val domain = ``!(g : rg_account -> bool) a. g a``
+    val owner = ``!(own : rg_enum -> rg_account -> bool) a. own RGRed a``
+    val true_goals =
+      [``!a : rg_account. (a with rg_nonce := 1).rg_store = a.rg_store``,
+       ``!x : num. 0 < x ==> ?a : rg_account. a.rg_nonce + 1 = x``,
+       ``!(g : rg_account -> num) a b. a = b ==> g a = g b``]
+    fun irrelevant tm =
+      List.exists (fn v => #1 (Term.dest_var v) = "_") (Term.free_vars tm)
+    fun refuted cfg goal =
+      refute cfg goal |> single_cex_where (fn c =>
+        is_genuine c andalso certifies goal c)
+  in
+    List.all (fn cfg =>
+      (refute cfg nonce |> single_cex_where (fn c =>
+         is_genuine c andalso certifies nonce c andalso
+         (case #bindings c of [(_, v)] => irrelevant v | _ => false))) andalso
+      refuted cfg store andalso refuted cfg ranged andalso
+      refuted cfg exists andalso refuted cfg domain andalso
+      refuted cfg owner andalso
+      List.all (fn goal => narrowed_through cfg goal) true_goals)
+      [narrowing, nar]
+  end)
+
 val _ = test "function witnesses are updates and lambdas" (fn () =>
   refute (nar |> upd_size 2) ``(f : bool -> bool) F = f T``
     |> single_cex_where (fn c =>
@@ -1994,7 +2337,14 @@ val _ = section "finite maps"
 
 val flookup_goal = ``FLOOKUP (fm : num |-> num) 0 = SOME 0``
 
-val _ = test "finite sets ask for a generator" (fn () =>
+(* A type with a TypeBase entry but no constructors and no generator. *)
+val _ = new_type ("rf_opaque", 0)
+val rf_opaque_ty =
+  mk_thy_type {Thy = current_theory (), Tyop = "rf_opaque", Args = []}
+val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info (rf_opaque_ty,
+          {nchotomy = NONE, induction = NONE, size = NONE, encode = NONE})]
+
+val _ = test "a constructorless type asks for a generator" (fn () =>
   let
     fun clean outcome =
       is_unknown outcome andalso not (null (reasons_of outcome)) andalso
@@ -2002,12 +2352,14 @@ val _ = test "finite sets ask for a generator" (fn () =>
         r <> "" andalso not (Char.isSpace (String.sub (r, 0))) andalso
         not (List.exists (fn bad => String.isSubstring bad r)
                ["Exception", "induction_of0", "Match"])) (reasons_of outcome)
-    val member = ``fIN (0 : num) (fs : num fset)``
+    val member = mk_comb (mk_var ("p", rf_opaque_ty --> bool),
+                          mk_var ("x", rf_opaque_ty))
   in
     List.all (fn outcome => clean outcome andalso
                             unknown_with "register a generator" outcome)
       [refute exhaustive member, refute narrowing member] andalso
-    clean (refute exhaustive ``(fs : num fset) = fEMPTY``)
+    clean (refute exhaustive (mk_eq (mk_var ("x", rf_opaque_ty),
+                                     mk_var ("y", rf_opaque_ty))))
   end)
 
 val _ = test "FLOOKUP on an empty map is refuted and certified" (fn () =>
@@ -2258,21 +2610,109 @@ val _ = test "native handles MEM, option maps and compound updates" (fn () =>
 (* Native exhaustive and random testing, and narrowing, all through
    extraction: a counterexample from each, certified. *)
 val native_small = native |> upd_size 3
-val narrowing_small = nar |> upd_timeout 3.0
 
 fun native_refuted goal =
   let
     fun certified c = native_genuine c andalso Option.isSome (#cert c)
   in
     both_strategies native_small goal certified andalso
-    refute narrowing_small goal |> cex_where certified
+    cex_where certified (refute nar goal)
   end
 
 fun native_not_refuted goal =
   not_refuted (refute (native_small |> only [Exhaustive]) goal) andalso
   not_refuted (refute (native_small |> only [Random] |> upd_seed (SOME 1))
-                 goal) andalso
-  not_refuted (refute narrowing_small goal)
+                      goal) andalso
+  narrowed_through nar goal
+
+(* Finite sets are fEMPTY/fINSERT chains: native code reads a set through
+   its elements, and the compset through chain rules (Refute_EvalFset), so
+   both substrates see the set and not the chain.  Narrowing refines a set
+   through the same constructors. *)
+val fset_cfg = exhaustive |> upd_size 3
+val fset_substrates = [(NativeSML, "native"), (Compute, "compute")]
+
+fun fset_refuted goal =
+  List.all (fn (substrate, name) =>
+    both_strategies (fset_cfg |> upd_substrate substrate) goal (fn c =>
+      #substrate c = name andalso is_genuine c andalso
+      Option.isSome (#cert c)))
+    fset_substrates andalso
+  refute nar goal |> cex_where (fn c =>
+    native_genuine c andalso Option.isSome (#cert c))
+
+(* A refusal or a timeout would leave a goal unrefuted too, so every back
+   end must report the search run through its sizes.  The true goals run
+   uncertified, as the finite-map equalities do: certification would
+   discard a wrong native answer and the search would go on, where
+   uncertified it surfaces as a counterexample.  A stuck Compute instance
+   is skipped rather than reported, so [fset_evaluates] shows separately
+   that the compset decides each operation on ground chains. *)
+fun fset_not_refuted goal =
+  let
+    fun searched outcome =
+      not_refuted outcome andalso unknown_with "searched up to size 2" outcome
+    val cfg = default_config |> quiet |> upd_size 2 |> upd_certify false
+  in
+    List.all (fn (substrate, _) =>
+      let val cfg = cfg |> upd_substrate substrate
+      in
+        searched (refute (cfg |> only [Exhaustive]) goal) andalso
+        searched (refute (cfg |> only [Random] |> upd_seed (SOME 1)
+                            |> upd_iterations 200) goal)
+      end)
+      fset_substrates andalso
+    narrowing_ran_through 2
+      (refute (cfg |> only [Narrowing] |> upd_substrate NativeSML) goal)
+  end
+
+fun fset_evaluates tm = aconv (rhs (concl (bossLib.EVAL tm))) T
+
+val _ = Datatype.Datatype `fs_box = FsNone | FsSome (num fset)`
+val _ = Datatype.Datatype `fs_rec = <| fs_tags : num fset; fs_count : num |>`
+
+val _ = test "finite sets are generated and refuted" (fn () =>
+  List.all fset_refuted
+    [``fIN 1 (s : num fset) ==> fIN 2 s``,
+     ``fIN 1w (s : word8 fset) ==> fIN 2w s``,
+     ``fEMPTY = (s : num fset)``,
+     ``fINSERT (x : num) s = s``,
+     ``fUNION (s : num fset) t = s``,
+     ``fDELETE (x : num) s = s``,
+     ``fIMAGE SUC (s : num fset) = s``,
+     ``fBIGUNION (ss : num fset fset) = fEMPTY``,
+     ``fset_ABS (l : num list) = fEMPTY``,
+     ``fset_ABS (l : string) = fEMPTY``,
+     ``fCARD (fINSERT (1 : num) s) = fCARD s + 1``,
+     ``(b = FsSome s) ==> fIN (1 : num) s``,
+     ``fIN 1 r.fs_tags ==> r.fs_count = fCARD r.fs_tags``])
+
+val _ = test "the compset decides finite-set operations on chains" (fn () =>
+  List.all fset_evaluates
+    [``fIN (2 : num) (fINSERT 2 (fINSERT 1 fEMPTY))``,
+     ``~fIN (3 : num) (fINSERT 2 (fINSERT 1 fEMPTY))``,
+     ``fIN (3 : num) (fUNION (fINSERT 1 fEMPTY) (fINSERT 3 fEMPTY))``,
+     ``~fIN (1 : num) (fDELETE 1 (fINSERT 1 (fINSERT 2 (fINSERT 1 fEMPTY))))``,
+     ``fIN (2 : num) (fIMAGE SUC (fINSERT 1 fEMPTY))``,
+     ``fIN (2 : num) (fBIGUNION (fINSERT (fINSERT 1 fEMPTY)
+                                   (fINSERT (fINSERT 2 fEMPTY) fEMPTY)))``,
+     ``fIN (2 : num) (fset_ABS [1; 2])``,
+     ``fCARD (fINSERT (1 : num) (fINSERT 2 (fINSERT 1 fEMPTY))) = 2``,
+     ``fINSERT 1 (fINSERT 2 (fINSERT 1 fEMPTY)) =
+       fINSERT 2 (fINSERT 1 (fEMPTY : num fset))``,
+     ``fINSERT 1 (fINSERT 2 fEMPTY) <> fINSERT 1 (fEMPTY : num fset)``])
+
+val _ = test "finite-set operations leave true properties alone" (fn () =>
+  List.all fset_not_refuted
+    [``fIN (x : num) (fINSERT x s)``,
+     ``fIN (x : num) (fUNION s t) <=> fIN x s \/ fIN x t``,
+     ``fIN (y : num) s /\ y <> x ==> fIN y (fDELETE x s)``,
+     ``fIN (x : num) s ==> fIN (SUC x) (fIMAGE SUC s)``,
+     ``fIN (x : num) s /\ fIN s ss ==> fIN x (fBIGUNION ss)``,
+     ``fIN (x : num) (fset_ABS l) <=> MEM x l``,
+     ``fCARD (fINSERT (x : num) s) <= fCARD s + 1``,
+     ``fINSERT 1 (fINSERT 2 (s : num fset)) = fINSERT 2 (fINSERT 1 s)``,
+     ``fINSERT 1 (fINSERT 1 (s : num fset)) = fINSERT 1 s``])
 
 (* A let-bound local function reaches the extractor as the binding
    [f x y = e] whichever way it was written (pairSyntax's [dest_anylet]
@@ -2465,8 +2905,8 @@ fun fmap_searched goal =
   in
     searched (refute (uncertified |> only [Exhaustive]) goal) andalso
     searched (refute (uncertified |> only [Random] |> upd_seed (SOME 1))
-                goal) andalso
-    searched (refute (narrowing_small |> upd_certify false) goal)
+                     goal) andalso
+    narrowed_through (nar |> upd_certify false) goal
   end
 
 val _ = test "native finite-map equality is extensional" (fn () =>
@@ -2489,14 +2929,14 @@ fun set_refuted goal =
     fun certified c = native_genuine c andalso Option.isSome (#cert c)
   in
     both_strategies set_native goal certified andalso
-    refute narrowing_small goal |> cex_where certified
+    cex_where certified (refute nar goal)
   end
 
 fun set_not_refuted goal =
   not_refuted (refute (set_native |> only [Exhaustive]) goal) andalso
   not_refuted (refute (set_native |> only [Random] |> upd_seed (SOME 1))
-                 goal) andalso
-  not_refuted (refute narrowing_small goal)
+                      goal) andalso
+  narrowed_through nar goal
 
 val _ = test "sets and DRESTRICT are extracted" (fn () =>
   List.all set_refuted
@@ -2570,6 +3010,22 @@ val _ = test "word64 random draws agree across substrates" (fn () =>
           is_genuine a andalso is_genuine b andalso same_bindings a b
       | _ => false
   end)
+
+(* A premise [n = 0] (or [n = SUC m]) is bound, not split on: every
+   substrate computes a num as a numeral, never a constructor term, so a
+   [Split] on [0] could not be compiled to native code ("unknown
+   constructor num$0"). *)
+val _ = test "native code refutes a zero premise" (fn () =>
+  List.all (fn goal =>
+    List.all (fn (substrate, name) =>
+      List.all (fn cfg =>
+        refute (cfg |> upd_substrate substrate) goal
+        |> cex_where (fn c => #substrate c = name andalso is_genuine c
+                              andalso certifies goal c))
+        [exhaustive, random |> upd_seed (SOME 1)])
+      [(NativeSML, "native"), (Compute, "compute")])
+    [``(n : num) = 0 ==> F``, ``(n : num) = SUC m ==> F``,
+     ``(n : num) <> 0``, ``(if b then 1 else 0) = (0 : num) ==> b``])
 
 (* Compute defines its enumerator programs inside the theory bracket, so
    the smart-generator goal is what actually drives the revert. *)
@@ -3111,6 +3567,146 @@ val _ = test "print_unused_assms counts inconclusive probes" (fn () =>
 (* ------------------------------------------------------------------- *)
 
 val _ = section "model finder"
+
+(* The model finder's own proofs (monotonicity, well-foundedness, the
+   fixpoint lemma) run under [tac_timeout] of the calling thread's CPU
+   time, so that a loaded machine doesn't change what they prove.  A call
+   returns its work's value, or raises TIMEOUT once the calling thread has
+   used the budget, to a tick, or [backstop_factor] times the budget of
+   wall time has passed.  The checks assert that contract, which holds
+   whatever the load: a thread kept from its CPU only moves a call from
+   one side of it to the other. *)
+(* reached only through the alias below (holdep) *)
+local open Refute_ThreadClock in end
+local
+  val within = Refute_ModelFinder_Util.apply_within_budget
+  val backstop_factor = Refute_ModelFinder_Util.backstop_factor
+  structure Clock = Refute_ThreadClock
+  fun seconds s = Time.fromReal s
+  fun idle s () = (OS.Process.sleep (seconds s); true)
+  fun spin n = spin (n + 1) : bool
+  fun spin_for s =
+    let
+      val clock = Clock.start ()
+      fun loop () = Clock.seconds clock >= s orelse loop ()
+    in
+      loop ()
+    end
+  fun times_out f =
+    (ignore (f ()); false) handle Timeout.TIMEOUT _ => true
+  (* waits on a condition nothing signals: only an interrupt ends it *)
+  fun block () : bool =
+    let
+      val lock = Mutex.mutex ()
+      val never = ConditionVar.conditionVar ()
+      fun wait () = (ConditionVar.wait (never, lock); wait ())
+    in
+      Mutex.lock lock; wait ()
+    end
+  datatype 'a outcome =
+      Returned of 'a
+    | Stopped of {used : real, elapsed : real}
+  (* [within] for [budget] seconds, with the CPU time the calling thread
+     used and the wall time TIMEOUT reports *)
+  fun run budget work x =
+    let val clock = Clock.start () in
+      Returned (within (seconds budget) work x)
+      handle Timeout.TIMEOUT t =>
+        Stopped {used = Clock.seconds clock, elapsed = Time.toReal t}
+    end
+  fun past_backstop budget elapsed = elapsed >= backstop_factor * budget
+  fun in_contract budget {used, elapsed} =
+    used >= budget - Clock.tick orelse past_backstop budget elapsed
+in
+(* Work that waits returns, unless the backstop stops it; work that
+   computes forever is stopped, and not before its budget unless the
+   backstop came first; and, on Linux, another thread computing twice the
+   budget is not charged to the clock [within] reads.  That clock is
+   started here and read from the other thread, as the watcher reads the
+   caller's, while this thread blocks rather than polls. *)
+val _ = test "an inner proof's budget is its thread's CPU time" (fn () =>
+  let
+    fun other_thread () =
+      let
+        val clock = Clock.start ()
+        val lock = Mutex.mutex ()
+        val spun = ConditionVar.conditionVar ()
+        val charged = ref NONE
+        fun spinner () =
+          (ignore (spin_for 0.1);
+           Mutex.lock lock;
+           charged := SOME (Clock.seconds clock);
+           ConditionVar.signal spun;
+           Mutex.unlock lock)
+        fun wait () =
+          case !charged of
+              SOME s => s
+            | NONE => (ConditionVar.wait (spun, lock); wait ())
+        val _ = Mutex.lock lock
+        val _ = Thread.fork (spinner, [])
+        val s = wait ()
+        val _ = Mutex.unlock lock
+      in
+        s < 0.05
+      end
+  in
+    (case run 0.05 (idle 0.3) () of
+         Returned b => b
+       | Stopped s => in_contract 0.05 s) andalso
+    (case run 0.2 spin 0 of
+         Returned _ => false
+       | Stopped s => in_contract 0.2 s) andalso
+    (not (OS.FileSys.access ("/proc/thread-self", [])) orelse
+     other_thread ())
+  end)
+
+(* Work that never ends by itself stops at the wall backstop (under a
+   budget of several ticks, which the CPU time the call uses before the
+   work blocks can't reach), and the largest budget [upd_tac_timeout]
+   accepts (the largest number of seconds Time can hold; its backstop, 20
+   times that, is past it) still runs its work. *)
+val _ = test "an inner proof that waits stops at the wall backstop" (fn () =>
+  let
+    fun representable s = (ignore (seconds s); true) handle Time.Time => false
+    (* until no real lies between [lo], representable, and [hi], not *)
+    fun narrow lo hi =
+      let val mid = (lo + hi) / 2.0 in
+        if mid <= lo orelse mid >= hi then lo
+        else if representable mid then narrow mid hi
+        else narrow lo mid
+      end
+    fun widen s =
+      if representable (2.0 * s) then widen (2.0 * s) else narrow s (2.0 * s)
+  in
+    (case run 0.05 block () of
+         Returned _ => false
+       | Stopped {elapsed, ...} => past_backstop 0.05 elapsed) andalso
+    within (seconds (widen 1.0)) (fn () => true) ()
+  end)
+
+(* An outer deadline that falls first stops the call and stays the outer
+   call's own, and no watcher interrupts after its call has returned:
+   interruptible work after many calls, some stopped, runs undisturbed. *)
+val _ = test "an inner proof's interrupts stay its own" (fn () =>
+  let
+    val finished = ref false
+    val outer_first =
+      times_out (fn () =>
+        Timeout.apply (seconds 0.2)
+          (fn () =>
+             (within (seconds 100.0) spin 0
+              handle Timeout.TIMEOUT _ => (finished := true; true))) ())
+    fun calls 0 = ()
+      | calls n =
+          (ignore (run 0.01 (fn () => true) ());
+           if n mod 10 = 0 then ignore (run 0.01 spin 0) else ();
+           calls (n - 1))
+  in
+    outer_first andalso not (!finished) andalso
+    ((calls 200; idle 0.2 () andalso spin_for 0.05)
+     handle Interrupt => false)
+  end)
+end
 
 val hand_gfp_and_def = TotalDefn.Define
   `hand_gfp_and = fixedPoint$gfp (\X (b:bool). b /\ X b)`
@@ -4431,8 +5027,10 @@ val _ = mf_group "baseline" I [
   ("function application", ``(f : bool -> num) b = 0``, I, V ExpectGenuine,
    CSome),
   ("TotalDefn equation", ``zoo_total n = 0``, I, V ExpectGenuine, CSome),
+  (* [zoo_height]'s equations are only its theory's definition, which
+     certification evaluates *)
   ("DefnBase equation", ``zoo_height (ZooLeaf n) = SUC n``, I,
-   V ExpectGenuine, CNone),
+   V ExpectGenuine, CSome),
   ("unary natural", ``SUC n = n``, I, V ExpectGenuine, CSome),
   ("unary integer", ``(i : int) + 1 = i``, I, V ExpectGenuine, CSome),
   ("choice spec", ``zoo_spec = 1``, I, V ExpectGenuine, CNone),
@@ -5676,6 +6274,21 @@ val _ = test "a looping srw_ss conversion stops at the step limit" (fn () =>
       | NONE => false
   end)
 
+(* Every candidate here is a counterexample once its 10^5 iterations are
+   evaluated.  With a budget of 1000 steps each evaluation is cut short
+   and the candidate counts as stuck, so the search ends incomplete
+   instead of finding one or evaluating until the deadline. *)
+val _ = test "a candidate's evaluation stops at its step budget" (fn () =>
+  let
+    val outcome =
+      refute (exhaustive |> upd_substrate Compute |> upd_size 1
+                         |> upd_max_steps 1000 |> upd_timeout 60.0)
+             ``n < 2 ==> FUNPOW SUC 100000 n = 0``
+  in
+    unknown_with "search space not exhausted" outcome andalso
+    not (unknown_with "timed out" outcome)
+  end)
+
 (* ------------------------------------------------------------------- *)
 (* Potential counterexamples and retries.  Registers a restricted       *)
 (* ``:num list`` generator, so this stays last.                         *)
@@ -5700,4 +6313,10 @@ val _ = test "a certifiable hit is upgraded to Genuine" (fn () =>
          ``~(HD (MAP (f : num -> num) xs) = f (HD xs))``
   |> cex_where (fn c => is_genuine c andalso Option.isSome (#cert c)))
 
+val _ =
+  if null (!failed_tests) then ()
+  else print ("\nFailed tests:\n" ^
+              String.concat (map (fn (name, call) =>
+                                    "  " ^ name ^ "\n    " ^ call ^ "\n")
+                                 (rev (!failed_tests))))
 val _ = exit_count0 erc
