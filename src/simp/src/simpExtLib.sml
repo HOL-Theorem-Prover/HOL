@@ -22,8 +22,7 @@ open HolKernel boolLib liteLib Trace Cond_rewr Travrules TraverseExt Ho_Net
 
 type thname = KernelSig.kernelname
 
-val source_serial = ref 0
-fun source_token () = (source_serial := !source_serial + 1; !source_serial)
+val source_token = Portable.make_counter {init = 1, inc = 1}
 type 'a source_slot = {item : 'a, token : int}
 fun source_slot item = {item=item, token=source_token ()}
 type source_origin =

@@ -56,7 +56,8 @@ val _ =
       ("assumption", fn () => th),
       ("reflexive equation", fn () => REFL “x:'a”),
       ("equation", fn () => ASSUME “x:'a = y”),
-      ("implication from a marker", fn () => ASSUME “marker$Req0 ==> p”)
+      ("implication from a marker", fn () => ASSUME “marker$Req0 ==> p”),
+      ("IgnAsm of a non-variable", fn () => ASSUME “marker$IgnAsm T”)
     ]
   end
 

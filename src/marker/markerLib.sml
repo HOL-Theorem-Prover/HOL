@@ -728,7 +728,7 @@ fun dest_directive th =
             else if same_const Cong_tm head then SOME (DCong (unCong th))
             else if same_const Split_tm head then SOME (DSplit (destSplit th))
             else if aconv c NoAsms_t then SOME DNoAsms
-            else if same_const IgnAsm_t head then
+            else if same_const IgnAsm_t head andalso is_var (rand c) then
               SOME (DIgnAsm (#1 (dest_var (rand c))))
             else if same_const boolSyntax.equality head then
               if is_abbr th then SOME (DAbbr (dest_abbr th))

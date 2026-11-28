@@ -129,7 +129,7 @@ Its `Split` and `ExclX` directives are markers in `src/marker` (`markerLib`), so
 
 The extension types are distinct from the ordinary ones, and conversion is one-way: `simpExtLib.lift_ssfrag` and `simpExtLib.lift_simpset` (which replays the ordinary simpset's history) bring ordinary fragments and simpsets into the extension engine, and `TraverseExt.lift` an ordinary `reducer`.
 There is no conversion back.
-`simpExtLib.SF` falls back to fragments registered with `simpLib`, lifting them; `simpLib` never sees extension fragments.
+Resolving a fragment by name in the extension engine (`simpExtLib.lookup_named_frag`, behind `frag_of` and `SF` markers) falls back to fragments registered with `simpLib`, lifting them; `simpLib` never sees extension fragments.
 
 To avoid duplication, the two engines share their implementation:
 
