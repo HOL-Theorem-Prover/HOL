@@ -68,11 +68,10 @@ val ubeta_arrow = "-" ^ UnicodeChars.beta ^ "->"
 val _ = Unicode.unicode_version {u = ubeta_arrow, tmnm = "-b->"}
 val _ = Unicode.unicode_version {u = ubeta_arrow^"*", tmnm = "-b->*"}
 
-val _ = TeX_notation { hol = "-b->",
-        TeX = ("\\ensuremath{\\rightarrow}", 1) };
-
-val _ = TeX_notation { hol = "-b->*",
-        TeX = ("\\ensuremath{\\twoheadrightarrow}", 1) };
+val _ = TeX_notation { hol = ubeta_arrow,
+        TeX = ("\\ensuremath{\\rightarrow_{\\beta}}", 1) };
+val _ = TeX_notation { hol = ubeta_arrow ^ "*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow_{\\beta}}", 1) };
 
 Theorem permutative_beta[simp]:
   permutative beta
@@ -1370,10 +1369,9 @@ val ueta_arrow = "-" ^ UnicodeChars.eta ^ "->"
 val _ = Unicode.unicode_version {u = ueta_arrow, tmnm = "-e->"}
 val _ = Unicode.unicode_version {u = ueta_arrow^"*", tmnm = "-e->*"}
 
-val _ = TeX_notation { hol = "-e->",
+val _ = TeX_notation { hol = ueta_arrow,
         TeX = ("\\ensuremath{\\rightarrow_{\\eta}}", 1) };
-
-val _ = TeX_notation { hol = "-e->*",
+val _ = TeX_notation { hol = ueta_arrow ^ "*",
         TeX = ("\\ensuremath{\\twoheadrightarrow_{\\eta}}", 1) };
 
 val _ = set_fixity "-be->"  (Infix(NONASSOC, 450))
@@ -1385,10 +1383,9 @@ val ubeta_eta_arrow = "-" ^ UnicodeChars.beta ^ UnicodeChars.eta ^ "->"
 val _ = Unicode.unicode_version {u = ubeta_eta_arrow, tmnm = "-be->"}
 val _ = Unicode.unicode_version {u = ubeta_eta_arrow^"*", tmnm = "-be->*"}
 
-val _ = TeX_notation { hol = "-be->",
+val _ = TeX_notation { hol = ubeta_eta_arrow,
         TeX = ("\\ensuremath{\\rightarrow_{\\beta\\eta}}", 1) };
-
-val _ = TeX_notation { hol = "-be->*",
+val _ = TeX_notation { hol = ubeta_eta_arrow ^ "*",
         TeX = ("\\ensuremath{\\twoheadrightarrow_{\\beta\\eta}}", 1) };
 
 Theorem bestar_lameta :

@@ -9846,16 +9846,16 @@ QED
 
 (*   +---------------- =/== ---------------+
      |                                     |
-     M'    ===    M    =/==    N    ===    N' (BT M' = BT N' = BT M UNION BT N)
+     M'   <-e--   M    =/==    N   --e->   N' (BT M' = BT N' = BT M UNION BT N)
     / \          / \          / \         / \
    /   \        /   \        /   \       /   \
   /     \      /  ___\      /___  \     /     \ q   subtree_equiv X M' N' q r
- /_______\    /___\   _         \__\   /_______\
-          p          (p)            p           p  ~subtree_equiv X M' N' p r
+ /_______\    /___\             \__\   /_______\   ~subtree_equiv X M' N' p r
+          p          (p)            p           p
           |           |             |           |
-          +--- ~=~ ---+---- ~=~ ----+--- ~=~ ---+  ~=~ : ~equivalent
-                      |             |
-                    M^p0 -- ~=~ -- N^p0
+          +--- ~~~ ---+---- ~/~ ----+--- ~~~ ---+  ~~~ : equivalent
+                      |             |              ~/~ : not equivalent
+                    M^p0 -- ~/~ -- N^p0
  *)
 Theorem beta_separability_strong :
     !X M N r. FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r /\
@@ -9871,7 +9871,7 @@ Proof
  >> DISCH_TAC
  >> ‘ltree_paths (BT' X M r) SUBSET paths /\
      ltree_paths (BT' X N r) SUBSET paths’
-      by (qunabbrev_tac ‘paths’ >> SET_TAC [])
+       by (qunabbrev_tac ‘paths’ >> SET_TAC [])
  >> Know ‘parent_inclusive paths’
  >- (qunabbrev_tac ‘paths’ \\
      MATCH_MP_TAC parent_inclusive_union \\

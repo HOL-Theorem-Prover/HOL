@@ -5,6 +5,7 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+
 Theory appFOLDL
 Ancestors
   arithmetic list rich_list pred_set finite_map pair term
@@ -12,9 +13,10 @@ Ancestors
 Libs
   hurdUtils listLib binderLib NEWLib
 
-
 val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
+val _ = TeX_notation { hol = "··",
+        TeX = ("\\ensuremath{\\!\\bigcdot\\,\\bigcdot\\!}", 1) };
 
 Overload "@*" = “\f (args:term list). FOLDL APP f args”
 
