@@ -114,3 +114,4 @@ Resume foo[label,exclude_simps=AND_CLAUSES,smlname=bar]:
 QED
 Finalise foo
 Finalise bar
+Finalise next_sym_def

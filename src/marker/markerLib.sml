@@ -1202,14 +1202,10 @@ fun lookup_suspension_unqualified nm =
                 if n = nm then (t, th) :: acc else acc)
             tab []
     in
-      case matches of
-          [] => NONE
-        | [(thy, th)] => SOME (thy, th)
-        | _ =>
-            (* Multiple matches - ambiguous. For now, just pick the first.
-               A future enhancement could raise an error and require
-               qualified syntax. *)
-            SOME (hd matches)
+      (* Several theories may hold one; the current theory's comes first *)
+      case List.find (fn (t, _) => t = Theory.current_theory ()) matches of
+          SOME m => SOME m
+        | NONE => (case matches of [] => NONE | m :: _ => SOME m)
     end
 
 (* Main entry point: supports both "foo" and "thyname.foo" forms *)
@@ -1247,6 +1243,51 @@ fun slab_owner_lookup slab =
 
 val _ = boolLib.slab_owner_lookup := slab_owner_lookup
 
+(* Finalisers of the current theory's names, such as a definition still
+   to be completed: what finalising the suspended theorem of that name
+   does in place of saving it.  Resume and Finalise of such a name look
+   only in the current theory. *)
+val finaliser_slot : (string * (thm -> thm)) list Context.Data.slot =
+    Context.Data.new {name = "markerLib.finalisers", empty = [],
+                      pp = String.concatWith ", " o map #1}
+
+fun finalisers () = Context.Data.get finaliser_slot (Context.snapshot ())
+
+fun set_finaliser name f =
+    Context.Data.modify finaliser_slot
+      (fn fs => (case f of NONE => [] | SOME f => [(name, f)]) @
+                List.filter (fn (n, _) => n <> name) fs)
+
+fun has_finaliser name = List.exists (fn (n, _) => n = name) (finalisers ())
+
+(* A theory is exported only once its finalisers have run; a new theory
+   drops those of the previous one *)
+val _ = Theory.register_hook
+  ("markerLib.finalisers",
+   fn TheoryDelta.ExportTheory _ =>
+        (case finalisers () of
+             [] => ()
+           | fs => raise ERR "export_theory"
+                     ("These must be completed and finalised in their own \
+                      \theory: " ^
+                      String.concatWith ", " (map #1 fs)))
+    | TheoryDelta.NewTheory {newseg, ...} =>
+        (Context.Data.write finaliser_slot [];
+         (* A restarted theory starts again without its suspensions *)
+         update_susp_global
+           (fn tab => KNametab.fold
+                        (fn (k, th) => fn acc =>
+                            if #Thy k = newseg then acc
+                            else KNametab.update (k, th) acc)
+                        tab empty_susp_table);
+         update_res_global
+           (fn dict => ResTab.fold
+                         (fn (k as (t, _, _), v) => fn acc =>
+                             if t = newseg then acc
+                             else ResTab.update (k, v) acc)
+                         dict empty_res_dict))
+    | _ => ())
+
 (* ----------------------------------------------------------------------
     Finding the parent theorem for a Resume / Finalise.
 
@@ -1265,24 +1306,30 @@ datatype parent_source =
     FromStore  (* normal suspended theorem *)
   | FromDB     (* fallback: likely --fast, possibly already-finalised *)
 
-(* Returns (source, parent_thy, thm) *)
+(* Returns (source, parent_thy, thm).  A theorem of the current theory
+   comes before an ancestor's suspended one if it is suspended, or was
+   proved by the fast prover (--fast), which completes it at once. *)
 fun find_parent nm : (parent_source * string * thm) option =
-    case lookup_suspension nm of
-        SOME (thy, th) => SOME (FromStore, thy, th)
-      | NONE =>
-          let
-            val cur = Theory.current_theory ()
-            val thys = cur :: Theory.ancestry cur
-            fun search [] = NONE
-              | search (t::rest) =
-                (case Lib.total (DB.fetch t) nm of
-                     SOME th => SOME (t, th)
-                   | NONE => search rest)
-          in
-            case search thys of
-                NONE => NONE
-              | SOME (t, th) => SOME (FromDB, t, th)
-          end
+    let
+      val cur = Theory.current_theory ()
+      fun in_db t =
+          Option.map (fn th => (FromDB, t, th)) (Lib.total (DB.fetch t) nm)
+      fun fast (_, _, th) =
+          Lib.mem "fast_proof" (#1 (Tag.dest_tag (Thm.tag th)))
+      fun search [] = NONE
+        | search (t::rest) =
+          case in_db t of NONE => search rest | found => found
+      val own = has_finaliser nm
+    in
+      case if own then lookup_suspension_qualified (cur, nm)
+           else lookup_suspension nm of
+          SOME (thy, th) =>
+          (case if thy = cur then NONE
+                else Option.mapPartial (Option.filter fast) (in_db cur) of
+               NONE => SOME (FromStore, thy, th)
+             | found => found)
+        | NONE => if own then NONE else search (cur :: Theory.ancestry cur)
+    end
 
 (* ----------------------------------------------------------------------
     resume : save one (or more) resumption proofs
@@ -1521,14 +1568,26 @@ fun finalise_suspended_thm loc nm0 =
                     raise ERR "finalise_suspended_thm"
                        ("Theorem retains unproved subgoals: " ^
                         String.concatWith ", " remaining)
+            val own =
+                if parent_thy <> Theory.current_theory () then NONE
+                else Option.map #2 (List.find (fn (n, _) => n = name)
+                                              (finalisers ()))
+            val _ = not (Option.isSome own) orelse
+                    null (#attrs attrblock) andalso
+                    null (#reserved attrblock) andalso
+                    null (#unknown attrblock) orelse
+                    raise ERR "finalise_suspended_thm"
+                      ("Give the attributes of " ^ name ^
+                       " where its proof started, not here")
             (* Save under the user name.  For FromStore this is the
                first time the name hits the DB; for FromDB (--fast or
                re-finalise) it's already there and we need rebind. *)
             val saved =
-                case src of
-                    FromStore =>
+                case (src, own) of
+                    (FromStore, SOME f) => f clean_th
+                  | (FromStore, NONE) =>
                       boolLib.save_thm_attrs loc (attrblock, clean_th)
-                  | FromDB =>
+                  | (FromDB, _) =>
                       HOLFlags.with_bflags [(Theory.allow_rebinds, true)]
                         (fn () =>
                             boolLib.save_thm_attrs loc (attrblock, clean_th)) ()
@@ -1539,6 +1598,8 @@ fun finalise_suspended_thm loc nm0 =
                       (RemoveSuspended {Thy = parent_thy, Name = name})
             (* Also clean up the resumption proofs for this theorem. *)
             val _ = record_resumption_delta (RemoveResumptions (parent_thy, name))
+            val _ = if Option.isSome own then set_finaliser name NONE
+                    else ()
           in
             saved
           end

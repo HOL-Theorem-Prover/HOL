@@ -19,6 +19,10 @@ sig
 
   val defn_consts : defn -> {introduced: term list, support: term list}
   val tupled_suffix : string
+  (* support_consts defn after before: the constants made between the
+     theory-constant snapshots before and after that are not among defn's
+     introduced constants; delete_support deletes them *)
+  val support_consts : defn -> term list -> term list -> term list
   val delete_support : defn -> term list -> term list -> unit
 
   (* Used to control context tracking during termination condition extraction *)
