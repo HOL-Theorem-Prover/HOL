@@ -604,7 +604,8 @@ end
 
 (* The simpset layer must never use a directive as a rewrite: requirement
    directives are refused (their marker$ hypothesis would otherwise reach
-   the result), tactic-only ones are dropped. *)
+   the result), as are the extension simplifier's Split and ExclX;
+   tactic-only ones are dropped. *)
 val _ =
   let
     val q = mk_var("q", bool)
@@ -622,7 +623,10 @@ val _ =
          require_msg (check_result (fn th => rhs (concl th) ~~ t))
                      thm_to_string (QCONV (SIMP_CONV bool_ss [d])) t)
   in
-    List.app refuses [("Req0", Req0 th), ("ReqD", ReqD th)];
+    List.app refuses [("Req0", Req0 th), ("ReqD", ReqD th),
+                      ("Split", markerLib.Split th),
+                      ("ExclX", markerLib.ExclX "nm"),
+                      ("Once Split", Once (markerLib.Split th))];
     List.app drops [("NoAsms", markerLib.NoAsms, concl markerLib.NoAsms),
                     ("IgnAsm", markerLib.IgnAsm ‘x = _’,
                      concl (markerLib.IgnAsm ‘x = _’))]

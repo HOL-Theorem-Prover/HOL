@@ -78,6 +78,19 @@ sig
   val frag_rewrites : ssfrag -> thm list
   val frag_name : ssfrag -> string option
 
+  (* A fragment's contents, so that other engines (simpExtLib.lift_ssfrag)
+     can take ordinary fragments *)
+  val dest_ssfrag :
+      ssfrag ->
+      {name : string option,
+       convs : {thypart : string option, cd : convdata} list,
+       rewrs : (thname option * thm) list,
+       ac : (thm * thm) list,
+       filter : (controlled_thm -> controlled_thm list) option,
+       dprocs : Traverse.reducer list,
+       congs : thm list,
+       relsimps : relsimpdata list}
+
   val register_frag : ssfrag -> ssfrag
   val lookup_named_frag : string -> ssfrag option
   val all_named_frags : unit -> string list
@@ -149,6 +162,16 @@ sig
   val add_named_rwt   : (thname * thm) -> ssfrag -> ssfrag
 
   val add_weakener : weakener_data -> simpset -> simpset
+
+  (* How a simpset was built, oldest event first, so that other engines
+     (simpExtLib.lift_simpset) can take ordinary simpsets *)
+  datatype history_item = ADDFRAG of ssfrag
+                        | DELETE_EVENT of string list
+                        | ADDWEAKENER of weakener_data
+  val dest_simpset :
+      simpset ->
+      {history : history_item list, limit : int option,
+       excluded : string list}
 
   val add_relsimp  : relsimpdata -> simpset -> simpset
 

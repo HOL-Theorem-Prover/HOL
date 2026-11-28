@@ -1,0 +1,38 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_cond_depth`
+
+``` hol4
+simpExtLib.set_cond_depth : int -> simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Sets the side-condition depth limit of an extension simpset.
+
+A conditional rewrite is not applied if its side conditions, together
+with those already being solved, number more than the limit. If no limit
+is set, the current value of `Cond_rewr.stack_limit` (initially 4) is
+used.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>>_ val ss = simpExtLib.add_unsafe_solver decide ext_bool_ss;
+>> QCONV (simpExtLib.SIMP_CONV (simpExtLib.set_cond_depth 0 ss)
+     [arithmeticTheory.LESS_MOD]) “x MOD (x + 1)”;
+>> simpExtLib.SIMP_CONV (simpExtLib.set_cond_depth 1 ss)
+     [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
+```
+
+### See also
+
+[`simpExtLib.set_subgoaler`](#simpExtLib.set_subgoaler),
+[`simpExtLib.set_term_ord`](#simpExtLib.set_term_ord),
+[`simpExtLib.xtraversedata_for_ss`](#simpExtLib.xtraversedata_for_ss).

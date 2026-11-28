@@ -1,13 +1,14 @@
 structure markerSyntax :> markerSyntax =
 struct
 
-open HolKernel boolLib markerTheory
+open HolKernel boolSyntax Drule Abbrev markerTheory
 
 val ERR = mk_HOL_ERR "markerSyntax";
 
 val stmarker_tm = prim_mk_const{Name="stmarker", Thy="marker"};
 val AC_tm       = prim_mk_const{Name="AC",       Thy="marker"};
 val Cong_tm     = prim_mk_const{Name="Cong",     Thy="marker"};
+val Split_tm    = prim_mk_const{Name="Split",    Thy="marker"};
 val abbrev_tm   = prim_mk_const{Name="Abbrev",   Thy="marker"};
 val label_tm    = prim_mk_const{Name=":-",       Thy="marker"};
 val Case_tm     = prim_mk_const{Name="Case",     Thy="marker"};
@@ -65,7 +66,7 @@ fun Abbr q =
  end;
 
 fun is_abbr th = let
-  val (l,r,ty) = dest_eq_ty (concl th)
+  val (l,r,ty) = boolLib.dest_eq_ty (concl th)
   val vname = dest_vartype ty
 in
   vname = "'abbrev" andalso #1 (dest_var l) = #1 (dest_var r)
@@ -164,10 +165,10 @@ fun DEST_USING th =
                handle HOL_ERR _ =>
                       raise ERR "DEST_USING"
                             ("Theorem "^Thy^"$"^Name^" doesn't exist"))
-            | SOME (Local n) => valOf (DB.local_thm n)
-                                handle Option =>
-                                       raise ERR "DEST_USING"
-                                             "Local theorem doesn't exist"
+            | SOME (DB.Local n) => valOf (DB.local_thm n)
+                                   handle Option =>
+                                          raise ERR "DEST_USING"
+                                                "Local theorem doesn't exist"
         end
       else if same_const f usingThm_t then
         EQ_MP (SPEC x usingThm_def) th

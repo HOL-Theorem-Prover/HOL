@@ -1,0 +1,37 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `mk_tactic_solver`
+
+``` hol4
+simpExtLib.mk_tactic_solver : string * tactic -> TraverseExt.ssolver
+```
+
+------------------------------------------------------------------------
+
+Turns a tactic into a named extension solver.
+
+`mk_tactic_solver (name, tac)` is a solver that proves a term `c` by
+solving the goal `(map concl context_thms, c)` with `tac`, where
+`context_thms` are the context theorems supplied by the simplifier. The
+hypotheses of those theorems become hypotheses of the result.
+
+Inside a `simpExtLib` simplification tactic, `tac` is run in the context
+that tactic was given; otherwise, in the ambient context.
+
+### Failure
+
+Never fails. The solver fails if `tac` fails or leaves subgoals.
+
+### Example
+
+``` hol4
+>> val em : TraverseExt.ssolver = simpExtLib.mk_tactic_solver
+     ("excluded middle", MATCH_ACCEPT_TAC EXCLUDED_MIDDLE);
+>> #solve em {stack = [], context_thms = [], recurse = REFL} “q ∨ ¬q”;
+```
+
+### See also
+
+[`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
+[`simpExtLib.add_safe_solver`](#simpExtLib.add_safe_solver),
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC).

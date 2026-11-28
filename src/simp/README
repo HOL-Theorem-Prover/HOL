@@ -1,25 +1,16 @@
-+ =====================================================================	+
-|									|
-| LIBRARY	: simp							|
-|									|
-| DESCRIPTION   : A conditional/contextual Isabelle-style simplifier.	|
-|									|
-| AUTHOR	: D.R.Syme						|
-| DATE		: 1996							|
-|									|
-| MODIFIED      : R.J.Boulton						|
-| DATE		: 6 August 1996						|
-+ =====================================================================	+
+HOL4 conditional/contextual simplifier
+======================================
 
-A conditional/contextual Isabelle-style simplifier, with additional
-integration of the "ARITH" decision procedure for natural numbers.
-There is some documentation in doc/simp.tex.  Some test code is included in
-src/test.sml.
+simpLib is the simplifier, and congLib simplifies with respect to
+preorders other than equality.  Both are built on Traverse, Cond_rewr,
+Opening and Travrules; pureSimps, boolSimps and combinSimps provide the
+basic fragments.
 
-Structures: Simplifier, Simpsets, arith_ss, Trace, Theorems and others
+simpExtLib is an opt-in extension of the simplifier, adding solvers,
+loopers, split rules, configurable side-condition handling and child-first
+traversal; congExtLib extends congLib in the same way.  Loading simpLib or
+congLib does not load them.  Their reference documentation is in
+help/Docfiles/simpExtLib.*.smd.
 
-Important functions:
-   Tactics:         SIMP_TAC, ASM_SIMP_TAC, FULL_SIMP_TAC
-   Making simpsets: rewrites, mk_simpset , see examples in src/Simpsets.sml
-   Tracing:         trace_level := ...
-
+src/notes.md describes the main types and how the modules fit together;
+src/MANIFEST summarises each file.

@@ -87,6 +87,8 @@ sig
 
 
   val mk_travrules : preorder list -> thm list -> travrules
+  (* As mk_travrules, with Opening.THREADED_CONGPROC congruence procedures *)
+  val mk_threaded_travrules : preorder list -> thm list -> travrules
   val cong2proc : preorder list -> thm -> Opening.congproc
 
   (* the equality case - all theorems are interpeted as equality congruences *)

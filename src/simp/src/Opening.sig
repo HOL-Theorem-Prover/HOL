@@ -76,6 +76,10 @@ signature Opening = sig
                     depther : (thm list * term) -> conv} -> conv
    val samerel            : term -> term -> bool
    val CONGPROC           : ({Rinst:term,arg:term} -> thm) -> thm -> congproc
+   (* As CONGPROC, but an antecedent may state an intermediate result that a
+      later antecedent consumes, and a rebuilt term is beta-reduced where
+      instantiating a higher-order rule variable left a redex. *)
+   val THREADED_CONGPROC  : ({Rinst:term,arg:term} -> thm) -> thm -> congproc
    val rel_of_congrule    : thm -> term
    val nconds_of_congrule : thm -> int
 

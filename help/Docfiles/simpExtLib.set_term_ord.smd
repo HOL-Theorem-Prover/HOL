@@ -1,0 +1,34 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_term_ord`
+
+``` hol4
+simpExtLib.set_term_ord : (term * term -> order) ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Sets the order guarding permutative rewrites. An unbounded rule whose sides
+are equal up to variable permutation applies only when `ord (l,r)` is
+`GREATER`. Use a total, AC-compatible order. Bounded rewrites (`Once`,
+`Ntimes`) are not guarded. The default is `Cond_rewr.ac_term_ord`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> fun reverse_ord p = Cond_rewr.ac_term_ord (swap p);
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> simpExtLib.SIMP_CONV
+     (simpExtLib.set_term_ord reverse_ord ext_bool_ss)
+     [arithmeticTheory.ADD_COMM] “a + b”;
+```
+
+### See also
+
+[`simpExtLib.set_cond_depth`](#simpExtLib.set_cond_depth),
+[`BoundedRewrites.Once`](#BoundedRewrites.Once).

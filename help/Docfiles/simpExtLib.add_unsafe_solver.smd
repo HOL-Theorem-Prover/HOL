@@ -1,0 +1,58 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_unsafe_solver`
+
+``` hol4
+simpExtLib.add_unsafe_solver : TraverseExt.ssolver ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Adds an unsafe solver to an extension simpset.
+
+Solvers have the types
+
+``` hol4
+type TraverseExt.ssolver =
+  {name : string, solve : simp_prover_ctxt -> term -> thm}
+type TraverseExt.simp_prover_ctxt =
+  {stack : term list, context_thms : thm list, recurse : term -> thm}
+```
+
+`solve ctxt c` must prove `c` or raise `HOL_ERR`. In `ctxt`, `stack` holds
+the side conditions already being attempted, `context_thms` the theorems
+in the simplifier's context (supplied theorems, assumptions and facts
+assumed by congruence rules), and `recurse c` simplifies `c`, returning
+`|- c = c'`.
+
+Unsafe solvers prove the side conditions of conditional rewrites that
+the subgoaler (see `simpExtLib.set_subgoaler`) does not reduce to `T`;
+they are tried on the subgoaler's result. They are also the final solvers of
+`simpExtLib.GEN_SIMP_TAC {safe = false}`. The solver is added after the
+existing unsafe solvers, unless one with the same name is already present,
+in which case the simpset is unchanged.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val decide : TraverseExt.ssolver = {name = "decide", solve = K DECIDE};
+>> simpExtLib.SIMP_CONV
+     (simpExtLib.add_unsafe_solver decide
+        (simpExtLib.lift_simpset boolSimps.bool_ss))
+     [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
+```
+
+### See also
+
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
+[`simpExtLib.add_safe_solver`](#simpExtLib.add_safe_solver),
+[`simpExtLib.set_unsafe_solvers`](#simpExtLib.set_unsafe_solvers),
+[`simpExtLib.remove_solver`](#simpExtLib.remove_solver),
+[`simpExtLib.solver_ss`](#simpExtLib.solver_ss),
+[`simpExtLib.mk_tactic_solver`](#simpExtLib.mk_tactic_solver),
+[`simpExtLib.set_subgoaler`](#simpExtLib.set_subgoaler).

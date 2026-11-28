@@ -58,7 +58,7 @@
     (I.e., it has no weakening congprocs.)
 
     The travrules is a static piece of information for guiding simplification.
-    The dynamic data that is maintained during simplification (containing context values, the relation currently being used and the context’s free variables) is a `trav_state`, which is private to module `Traverse`.
+    The dynamic data that is maintained during simplification (containing context values, the relation currently being used and the context’s free variables) is a `trav_state`, which is private to module `TraverseCore`.
 
     Each simpset contains a list of `travrules` values.
 
@@ -110,3 +110,45 @@
 
     and the reprocess flag will be set to true for the `~p’` assumption (it’s not just a variable).
     Sure, if negation descends over a disjunction or similar, this is an important thing to do (though the `mk_cond_rewr` could presumably do it too), but if nothing simplifies at the top level, it’s painful to have to descend into `p’` again.
+
+# The extension engine
+
+`simpExtLib` is a second, opt-in simplifier alongside `simpLib`.
+It adds loopers, safe and unsafe solvers, a subgoaler, a configurable side-condition depth and term order, split rules, extended exclusions (`ExclX`), threaded congruences and child-first traversal; its reference documentation is in `help/Docfiles/simpExtLib.*`.
+Loading `simpLib` or `congLib` does not load any of it.
+
+| Module | Role |
+| --- | --- |
+| `simpExtLib` | Extension `ssfrag`/`simpset` types, their strategy settings and tactics. |
+| `TraverseExt` | Extension `reducer` type, solvers/subgoalers (`simp_prover_ctxt`), `XTRAVERSE` and root/child-first traversal. |
+| `Cond_rewrExt` | Conditional rewriting with configurable depth and term order. |
+| `congExtLib` | `congLib` over extension simpsets. |
+| `splitLib`, `SplitData`, `splitPersistLib` | Case splitting, and the persistent `[split]` attribute. |
+
+Its `Split` and `ExclX` directives are markers in `src/marker` (`markerLib`), so that code built before `src/simp` can recognise them; the ordinary simplifier rejects them.
+
+The extension types are distinct from the ordinary ones, and conversion is one-way: `simpExtLib.lift_ssfrag` and `simpExtLib.lift_simpset` (which replays the ordinary simpset's history) bring ordinary fragments and simpsets into the extension engine, and `TraverseExt.lift` an ordinary `reducer`.
+There is no conversion back.
+Resolving a fragment by name in the extension engine (`simpExtLib.lookup_named_frag`, behind `frag_of` and `SF` markers) falls back to fragments registered with `simpLib`, lifting them; `simpLib` never sees extension fragments.
+
+To avoid duplication, the two engines share their implementation:
+
+- `TraverseCore` is the traversal engine of both `Traverse` and `TraverseExt`, polymorphic in the reducer type.
+- `congLibFn` is the functor behind both `congLib` and `congExtLib`.
+- `simpCommon` holds the code shared by `simpLib` and `simpExtLib`.
+- `Cond_rewr.COND_REWR_CONVS` prepares a conditional rewrite once for both the ordinary and the configurable runner.
+- `Opening.THREADED_CONGPROC` and `Travrules.mk_threaded_travrules` share the code of `CONGPROC` and `mk_travrules`.
+
+Both engines use the same `Cond_rewr.stack_limit`, `Trace` settings and rewrite tracking (`Cond_rewr.with_tracking`, which `simpExtLib.track` is), so `simpLib.track` reports the rewrites of both engines.
+
+## Tracked rewrites
+
+An extension simpset records, for each rewrite made from a theorem, a `rewrite_source` handle identifying it.
+Handles survive rebuilding the simpset from its history, so bounded rewrites (`Once`, `Ntimes`) can keep their remaining uses when a simpset is rebuilt (the `_preserving_controls` operations), and aliases ("views") of a rewrite can share its bound and disappear with it.
+A rewrite bundle (`prepare_rewrite_bundle`) is a theorem-list argument turned into rewrites once, so that every use of it shares one count of remaining uses.
+
+## Persistent split rules
+
+The `[split]` attribute is not registered until `splitLib.enable_split_attribute` is called, so that the ordinary simplifier is unaffected by it.
+Its rules are stored as theory data by `SplitData`, which installs the attribute and a theory-load listener that replays ancestors' additions and removals.
+A theory declaring `[split]` rules must record an ML dependency on `splitPersistLib`, whose loading enables the attribute, so that the attribute exists before the theory's data is loaded.

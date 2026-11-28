@@ -1,0 +1,35 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `set_subgoaler`
+
+``` hol4
+simpExtLib.set_subgoaler : TraverseExt.subgoaler ->
+  simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Sets the procedure reducing side conditions before unsafe solvers run.
+Its type is `TraverseExt.simp_prover_ctxt -> term -> thm`; it returns
+`|- c = c'`. If `c'` is `T`, `c` is proved; otherwise unsafe solvers try
+`c'`. The default simplifies recursively; after replacement the default
+cannot be restored by this setter.
+
+### Failure
+
+Never fails at installation.
+
+### Example
+
+``` hol4
+>> fun arith_subgoaler _ c = EQT_INTRO (DECIDE c);
+>>_ val ext_bool_ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> simpExtLib.SIMP_CONV
+     (simpExtLib.set_subgoaler arith_subgoaler ext_bool_ss)
+     [arithmeticTheory.LESS_MOD] “x MOD (x + 1)”;
+```
+
+### See also
+
+[`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
+[`simpExtLib.set_cond_depth`](#simpExtLib.set_cond_depth).

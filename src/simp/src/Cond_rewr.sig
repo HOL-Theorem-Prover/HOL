@@ -41,10 +41,32 @@ sig
   val IMP_EQ_CANON   : controlled_thm -> controlled_thm list
   val COND_REWR_CONV : string * thm -> bool ->
                        (term list -> term -> thm) -> term list -> conv
+
+  (* COND_REWR_CONV's matcher, prepared once, behind two runners.  legacy
+     is COND_REWR_CONV.  configured takes the side-condition depth (NONE:
+     read stack_limit at each application) and the order deciding whether
+     a permutative rewrite applies. *)
+  type config =
+    {solver : term list -> term -> thm, stack : term list,
+     cond_depth : int option, term_ord : term * term -> order}
+  type runners =
+    {legacy : (term list -> term -> thm) -> term list -> conv,
+     configured : config -> conv}
+  val COND_REWR_CONVS : string * thm -> bool -> runners
+  (* Apply a bounded rewrite's conversion: fail once its count is 0, and
+     take one off the count each time it succeeds *)
+  val bounded_apply : int ref -> conv -> conv
+  (* Compose rewrite makers *)
+  val oo : ('b -> 'c list) * ('a -> 'b list) -> 'a -> 'c list
+  val is_var_perm : term * term -> bool
   val QUANTIFY_CONDITIONS : controlled_thm -> controlled_thm list
   val stack_limit : int ref
 
   (* run something, and report which rewrites fired while it ran *)
   val with_tracking : ('a -> 'b) -> 'a -> 'b * thm list
+
+  (* report a fired rewrite to the current tracking extent, if any;
+     used by the extension engine so both share one extent *)
+  val note_rewrite : thm -> unit
 
 end

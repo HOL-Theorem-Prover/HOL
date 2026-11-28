@@ -1,0 +1,36 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `del_split`
+
+``` hol4
+simpExtLib.del_split : string -> simpExtLib.simpset -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes split loopers from an extension simpset.
+
+`del_split name ss` removes the loopers `split name` and `split_asm name`
+added by `add_split`. If `name` itself begins with `split ` or
+`split_asm `, only that looper is removed. Rules with the persistent
+`[split]` attribute are not affected; use `ExclX ("split:" ^ name)` to
+exclude one from a simplifier call, or `splitLib.exclude_split` to
+retract it.
+
+### Failure
+
+Never fails. If there is no matching looper, `ss` is returned.
+
+### Example
+
+``` hol4
+>>_ val ss = simpExtLib.add_split (splitLib.type_split_of “:'a option”)
+     (simpExtLib.lift_simpset boolSimps.bool_ss);
+>>_ val ss' = simpExtLib.del_split "option$option_CASE" ss;
+```
+
+### See also
+
+[`simpExtLib.add_split`](#simpExtLib.add_split),
+[`splitLib.exclude_split`](#splitLib.exclude_split),
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).

@@ -1,0 +1,11 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+INCLUDES = ../../src
+EXTRA_CLEANS = selftest.exe
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+# Poly/ML only: the launcher elaborates the *.ML clients with PolyML.use.
+.PHONY: check
+check: selftest.exe
+	./selftest.exe

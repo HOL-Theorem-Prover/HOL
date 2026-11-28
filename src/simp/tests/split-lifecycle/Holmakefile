@@ -1,0 +1,39 @@
+HOLHEAP = $(HOLDIR)/bin/hol.state0
+INCLUDES = ../../src
+EXTRA_CLEANS = selftest.exe repair.exe split-proof.state
+
+# Prerequisites are built, never linked into the clean launcher heap.
+selftest.exe: selftest.uo ../../src/simpExtLib.uo ../../src/congExtLib.uo \
+  ../../src/boolSimps.uo ../../src/splitPersistLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+repair.exe: repair.uo
+	$(HOLMOSMLC) -o $@ $<
+
+.PHONY: check matrix exports repair
+check: matrix exports repair
+repair: repair.exe
+	./repair.exe
+matrix: selftest.exe
+	@status=0; for order in simp cong; do \
+	  for owner in none attribute set syntax; do \
+	    for timing in before middle after; do \
+	      if test $$owner = none && test $$timing != before; then continue; fi; \
+	      SPLIT_LIFECYCLE_MODE=matrix SPLIT_LIFECYCLE_ORDER=$$order \
+	        SPLIT_LIFECYCLE_OWNER=$$owner SPLIT_LIFECYCLE_TIMING=$$timing \
+	        SPLIT_LIFECYCLE_SRC=$$(cd ../../src && pwd) \
+	        ./selftest.exe || status=1; \
+	    done; \
+	  done; \
+	done; exit $$status
+
+exports: selftest.exe
+	$(HOLDIR)/bin/Holmake --no-project --no-cache -j1 \
+	  -C ../split-persistence splitDescendantTheory.uo
+	@rm -f split-proof.state; status=0; trap 'rm -f split-proof.state' 0; \
+	for mode in export-save export-reload; do \
+	  SPLIT_LIFECYCLE_MODE=$$mode \
+	    SPLIT_LIFECYCLE_SRC=$$(cd ../../src && pwd) \
+	    SPLIT_LIFECYCLE_THEORY=$$(pwd)/../split-persistence/splitDescendantTheory \
+	    ./selftest.exe || status=1; \
+	done; exit $$status

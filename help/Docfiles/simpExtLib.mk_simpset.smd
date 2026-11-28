@@ -1,0 +1,62 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `mk_simpset`
+
+``` hol4
+simpExtLib.mk_simpset : simpExtLib.ssfrag list -> simpExtLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Constructs an extension simpset from a list of fragments.
+
+`mk_simpset frags` adds `frags`, in order, to `simpExtLib.empty_ss`. As
+with `simpLib.mk_simpset`, the order matters for rewrite makers and
+congruence rules.
+
+`simpExtLib` is an opt-in simplifier that adds solvers, loopers, split
+rules, configurable side-condition handling and child-first traversal to
+the ordinary simplifier of `simpLib`. Its `ssfrag` and `simpset` types are
+distinct from those of `simpLib`:
+
+- `simpExtLib.lift_ssfrag` turns an ordinary fragment into an extension
+  fragment, and `simpExtLib.lift_simpset` an ordinary simpset into an
+  extension simpset; for example,
+  `simpExtLib.lift_simpset boolSimps.bool_ss`. A simpset that is extended
+  over time, such as `bossLib.srw_ss()`, must be lifted again to see the
+  additions.
+- Decision procedures in extension fragments have type
+  `TraverseExt.reducer`; `TraverseExt.lift` turns an ordinary
+  `Traverse.reducer` into one.
+- Fragments registered with `simpExtLib.register_frag` are found by
+  `simpExtLib.SF`, as are fragments registered with
+  `simpLib.register_frag`, unless an extension fragment of the same name
+  is registered. The ordinary simplifier does not see extension
+  registrations.
+
+`simpExtLib.ssfrags_of ss` gives only the fragments of `ss`: a simpset
+rebuilt from them loses the deletions, exclusions, limit and settings of
+`ss`.
+
+### Failure
+
+Fails if adding a fragment fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpExtLib.mk_simpset
+     [simpExtLib.lift_ssfrag pureSimps.PURE_ss,
+      simpExtLib.rewrites [boolTheory.AND_CLAUSES]];
+>> simpExtLib.SIMP_CONV ss [] “T ∧ p”;
+```
+
+### See also
+
+[`simpLib.mk_simpset`](#simpLib.mk_simpset),
+[`simpExtLib.lift_ssfrag`](#simpExtLib.lift_ssfrag),
+[`TraverseExt.CONFIG_REDUCER`](#TraverseExt.CONFIG_REDUCER),
+[`simpExtLib.GEN_SIMP_TAC`](#simpExtLib.GEN_SIMP_TAC),
+[`simpExtLib.filter_rewrites`](#simpExtLib.filter_rewrites),
+[`simpExtLib.prepare_rewrite_bundle`](#simpExtLib.prepare_rewrite_bundle),
+[`splitLib.enable_split_attribute`](#splitLib.enable_split_attribute).

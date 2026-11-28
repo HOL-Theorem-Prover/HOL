@@ -1,5 +1,8 @@
 High-level view of what the simplifier files in this directory do
 
+The opt-in extension engine (the *Ext* modules and splitLib) depends on
+the ordinary simplifier, never the reverse; see notes.md.
+
 Cache.sml:     Caching for context-aware decision procedures.
 
 Cond_rewr.sml: The fundamental rewriting-at-a-point implementation:
@@ -10,6 +13,9 @@ Cond_rewr.sml: The fundamental rewriting-at-a-point implementation:
                Also includes the fundamental functions for
                transforming arbitrary theorems into rewrite rules
                (e.g.,  p /\ q  --> [p, q])
+
+Cond_rewrExt.sml: Conditional rewriting for the extension engine, with
+               configurable side-condition depth and term order.
 
 Opening.sml:   Moving into a term under the control of a congruence
                rule.
@@ -32,6 +38,14 @@ Traverse.sml:  High-level specification of traversal strategy.
                  something changed, then try for another rewrite.  If
                  there is one, loop.  Otherwise, try a decision
                  procedures.  If any succeeds, loop.
+
+TraverseCore.sml:
+               The traversal engine itself, shared by Traverse and
+               TraverseExt; polymorphic in the reducer type.
+
+TraverseExt.sml:
+               Traversal for the extension engine: its reducer type,
+               solvers and subgoalers, root and child-first traversal.
 
 Travrules.sml: Generic datatype for storing information on how to
                traverse terms.  This types stores congruence rule
@@ -58,9 +72,31 @@ pureSimps.sml: A simpset that transforms rewrites according to
                mk_cond_rewr from Cond_rewr.sml, but wrapping each in
                the BOUNDED/UNBOUNDED tag.
 
-selftest.sml:  Regression tests
+SplitData.sml: Storage of the persistent [split] rules as theory data.
+
+splitLib.sml:  Case splitting with split rules, and the [split] attribute.
+
+splitPersistLib.sml:
+               Loading it enables the [split] attribute; theories declaring
+               [split] rules depend on it (see
+               splitLib.enable_split_attribute).
+
+selftest.sml:  Regression tests for the ordinary simplifier.  The extension
+               engine's tests are under ../tests.
 
 simpLib.sml:   Puts it all together. The simpset data structure is
                implemented here, as is the code that wraps up
                user-supplied conversions and rewrites, and makes them
                fit into the simplifier's data structures.
+
+simpCommon.sml: Code shared by simpLib and simpExtLib.
+
+simpExtLib.sml:
+               The extension engine's simpsets, fragments and tactics.
+
+congLibFn.sml: The congLib functor, instantiated by congLib and congExtLib.
+
+congLib.sml:   Ordinary preorder simplification with ordinary simpsets.
+
+congExtLib.sml:
+               Preorder simplification with extension simpsets.

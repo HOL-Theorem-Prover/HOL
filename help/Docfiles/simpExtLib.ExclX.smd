@@ -1,0 +1,60 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `ExclX`
+
+``` hol4
+simpExtLib.ExclX : string -> thm
+```
+
+------------------------------------------------------------------------
+
+Excludes named simplifier components from one extension simplifier call.
+
+`ExclX target` is used in the theorem list of a `simpExtLib`
+simplification conversion or tactic. Unlike
+[`simpLib.Excl`](#simpLib.Excl), the target may select what kind of
+component to exclude:
+
+- `rule:name` excludes rewrites, conversions and decision procedures,
+  as `Excl name` does. The name may also be written `Thy$name`, in which
+  case the theory need not be an ancestor and `name` may contain dots.
+- `looper:name` excludes the looper `name`.
+- `solver:name` excludes the safe and unsafe solvers called `name`.
+- `split:name` excludes the split loopers `split name` and
+  `split_asm name`, including persistent `[split]` rules.
+- `case:ty` excludes datatype case splitting for the type operator `ty`,
+  written `ty` or `Thy$ty`.
+
+A target without a prefix is first read as for `Excl`. If it names a
+rewrite, conversion or decision procedure, those are excluded; otherwise it
+must name exactly one looper, solver, split rule or case split.
+
+The simpset itself is unchanged. If an exclusion is added to a simpset
+with `&&`, rule, looper and solver exclusions remove what the simpset
+contains at that point, while split and case exclusions also suppress
+matching split rules added later.
+
+`simpExtLib.ExclX` is [`markerLib.ExclX`](#markerLib.ExclX). The ordinary
+simplifier (`simpLib`) cannot honour it, and fails if given it.
+
+### Failure
+
+Never fails. The simplifier call fails if the target is malformed,
+ambiguous or matches nothing.
+
+### Example
+
+``` hol4
+>>_ val ss = simpExtLib.lift_simpset boolSimps.bool_ss;
+>> QCONV (simpExtLib.SIMP_CONV ss
+     [simpExtLib.ExclX "rule:bool$AND_CLAUSES"]) “p ∧ T”;
+```
+
+### See also
+
+[`simpLib.Excl`](#simpLib.Excl),
+[`markerLib.ExclX`](#markerLib.ExclX),
+[`simpExtLib.add_looper`](#simpExtLib.add_looper),
+[`simpExtLib.add_unsafe_solver`](#simpExtLib.add_unsafe_solver),
+[`simpExtLib.add_split`](#simpExtLib.add_split),
+[`simpExtLib.split_ss`](#simpExtLib.split_ss).

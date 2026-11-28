@@ -1,7 +1,13 @@
 structure Opening :>  Opening =
 struct
 
-open HolKernel boolLib liteLib Trace;
+open Abbrev
+
+local
+open Feedback Lib Type Term Thm boolSyntax Drule Conv Trace
+in
+
+val dest_imp = liteLib.dest_imp
 
 
 fun samerel t1 t2 = can (match_term t1) t2
@@ -12,8 +18,8 @@ type congproc  = term -> (* relation *)
                   depther : thm list * term -> conv} -> conv
 
 
-fun WRAP_ERR x = STRUCT_WRAP "Opening" x;
-fun ERR x = STRUCT_ERR "Opening" x;
+fun WRAP_ERR x = liteLib.STRUCT_WRAP "Opening" x;
+fun ERR x = liteLib.STRUCT_ERR "Opening" x;
 
 (* ---------------------------------------------------------------------
  * is_congruence
@@ -55,12 +61,14 @@ in
   (f,x,y)
 end
 
+fun head_of t = if is_comb t then head_of (rator t) else t
+
 fun is_congruence tm =
     is_eq tm orelse let
       val (rel,left,right) = dest_binop tm
     in
-      (can (ho_match_term [] empty_tmset left) right) andalso
-      (can (ho_match_term [] empty_tmset right) left)
+      (can (HolKernel.ho_match_term [] empty_tmset left) right) andalso
+      (can (HolKernel.ho_match_term [] empty_tmset right) left)
     end
    handle HOL_ERR _ => false
 
@@ -89,6 +97,9 @@ fun strip_n_imp 0 tm = ([],tm)
       in (x::z,w)
       end;
 
+fun skip_n_imp 0 tm = tm
+  | skip_n_imp n tm = skip_n_imp (n - 1) (#2 (dest_imp tm))
+
 fun strip_ncomb 0 A tm = SOME (tm, A)
   | strip_ncomb n A tm =
     case Lib.total dest_comb tm of
@@ -99,31 +110,71 @@ fun strip_ncomb 0 A tm = SOME (tm, A)
  * strip_imp_until_rel
  *
  * this function strips implications off a sub-congruence until
- * it is a relation (i.e. the rhs is one of the genvars we have chosen)
+ * it is a relation (i.e. the rhs is a variable [is_result] accepts)
  * or it is no longer an implication (in which case the sub-congruence
  * is really a side condition.
  *
  * ---------------------------------------------------------------------*)
 
 
-fun strip_imp_until_rel genvars tm =
-  if is_var (rand tm) andalso op_mem aconv (rand tm) genvars then ([],tm)
+fun strip_imp_until_rel is_result tm =
+  let val right = rand tm
+  in
+    if is_var right andalso is_result right then ([],tm)
+    else
+      let
+        val (x,y) = dest_imp tm
+        val (z,w) = strip_imp_until_rel is_result y
+      in (x::z,w) end handle HOL_ERR _ => ([],tm)
+  end;
+
+(* ---------------------------------------------------------------------
+ * beta_reduce_rebuilt
+ *
+ * A congruence rule whose conclusion applies a higher-order variable to
+ * the bound variables of the subterm that variable stands for -- as
+ * (?x. P x /\ f x) = (?x. Q x /\ g x) applies Q and g -- has that
+ * variable instantiated below with the abstraction the sub-rewrite was
+ * generalised into, which leaves every such application a beta redex.
+ * A rebuilt term is not traversed again, so the redex would survive into
+ * the result and no rule stated in the source spelling could read it.
+ * Rules that mention the variable unapplied -- MAP_CONG's MAP f' l2 --
+ * instantiate to no redex and are left alone.
+ *
+ * Only the rebuilt term is reduced.  The conclusion's left-hand side is
+ * the term the traversal asked about; it can hold redexes of its own,
+ * and an equation about a reduced form of it answers a question nobody
+ * asked -- the caller that composes the result rejects it.  The integer
+ * is the number of antecedents still to be discharged, which is how deep
+ * the rebuilt term sits under the conclusion's implications.
+ * ---------------------------------------------------------------------*)
+
+fun beta_reduce_rebuilt nconds abstraction thm =
+  if not (is_abs abstraction) then thm
   else
     let
-      val (x,y) = dest_imp tm
-      val (z,w) = strip_imp_until_rel genvars y
+      fun reduce term =
+        if aconv (rator term) abstraction then BETA_CONV term
+        else liteLib.failwith "beta_reduce_rebuilt"
+      fun rebuilt 0 = RAND_CONV (liteLib.DEPTH_CONV reduce)
+        | rebuilt n = RAND_CONV (rebuilt (n - 1))
     in
-      (x::z,w)
-    end handle HOL_ERR _ => ([],tm);
+      CONV_RULE (rebuilt nconds) thm
+      handle HOL_ERR _ => thm | UNCHANGED => thm
+    end
 
 (* ---------------------------------------------------------------------
  * CONGPROC : REFL -> congrule -> congproc
+ * THREADED_CONGPROC : REFL -> congrule -> congproc
  *
+ * The threaded variant also lets an antecedent state an intermediate
+ * result that a later antecedent consumes, and beta-reduces the rebuilt
+ * term (see beta_reduce_rebuilt).
  * ---------------------------------------------------------------------*)
 
 val equality = boolSyntax.equality
 
-fun CONGPROC refl congrule =
+fun GEN_CONGPROC threaded refl congrule =
 let
 
    (* this discharges each antecedent of the congruence rule.  Each
@@ -141,7 +192,7 @@ let
                   can (match_term l) r andalso can (match_term r) l
                 end
    val matcher =
-      HO_PART_MATCH (rator o snd o strip_n_imp nconds) congrule'
+      HO_PART_MATCH (rator o skip_n_imp nconds) congrule'
 
  (* work out whether context assumptions need to be reprocessed *)
  (* e.g "~g" in the "else" branch of COND_CONG needs to be.     *)
@@ -149,13 +200,42 @@ let
    val vars = free_vars (concl congrule')
    fun reprocess_flag assum = if is_var assum then false else true;
    val reprocess_flags =
-       map (map reprocess_flag o fst o strip_imp_until_rel vars o
+       map (map reprocess_flag o fst o
+            strip_imp_until_rel (fn v => op_mem aconv v vars) o
             #2 o strip_forall)
            conditions
 
+   (* Instantiating a rule variable can leave a beta redex in the rebuilt
+      term only where it is an operator or sits inside the arguments of a
+      non-constant operator (a matched variable may become an abstraction
+      that applies it); a variable renamed by the matcher is not a rule
+      variable and is always reduced.  Only threaded construction
+      reduces. *)
+   val may_leave_redex =
+       if not threaded then K false
+       else
+       let
+           fun applicable tm acc =
+               case dest_term tm of
+                   COMB _ =>
+                     let val (f,args) = strip_comb tm
+                     in
+                       if is_const f then itlist applicable args acc
+                       else map (#1 o dest_var) (free_vars tm) @ acc
+                     end
+                 | LAMB (_,b) => applicable b acc
+                 | _ => acc
+           val applied_names = applicable (rand conc) []
+           val var_names = map (#1 o dest_var) vars
+         in
+           fn genv =>
+             let val name = #1 (dest_var genv)
+             in not (mem name var_names) orelse mem name applied_names end
+       end
+
 in fn relation =>
-  if not (samerel rel relation) andalso not (same_const rel relation) then
-    failwith "not applicable"
+  if not (same_const rel relation) andalso not (samerel rel relation) then
+    liteLib.failwith "not applicable"
   else
     fn {solver,depther,freevars} => fn tm =>
   let
@@ -163,8 +243,36 @@ in fn relation =>
     val relation' = Term.inst theta relation
     val match_thm = matcher (mk_comb(relation',tm))
     val _ = trace(3,OPENING(tm,match_thm))
-    val (_,conc) = strip_n_imp nconds (concl match_thm)
-    val genvars = filter is_genvar (free_vars (rand conc))
+    val conc = skip_n_imp nconds (concl match_thm)
+    (* The results the traversal has to supply.  Ordinarily these are the
+       genvars of the right-hand side.  Threaded: every rule variable the
+       match did not determine is a result, whether the conclusion names
+       it or a later antecedent does.  Reading them off the conclusion
+       alone would call an antecedent that states an intermediate result
+       -- the rebuilt form a further antecedent consumes -- a side
+       condition, and hand a term with an unknown in it to the solver.
+       The right-hand side answers the usual case cheaply; the whole
+       conclusion, which holds the traversed term, is scanned at most
+       once and only for a genvar the right-hand side lacks. *)
+    val rhs_genvars = filter is_genvar (free_vars (rand conc))
+    val is_result =
+        if not threaded then (fn v => op_mem aconv v rhs_genvars)
+        else
+        let
+            val all_genvars = ref NONE
+            fun conclusion_genvars () =
+                case !all_genvars of
+                    SOME gvs => gvs
+                  | NONE =>
+                      let
+                        val gvs = filter is_genvar
+                                         (free_vars (concl match_thm))
+                      in all_genvars := SOME gvs; gvs end
+          in
+            fn v => is_genvar v andalso
+                    (op_mem aconv v rhs_genvars orelse
+                     op_mem aconv v (conclusion_genvars ()))
+        end
 
     (* this function does all the work of solving the side conditions
        one by one.  The integer is the number of side conditions
@@ -182,18 +290,9 @@ in fn relation =>
               in the congruence (see subterms above) then it
               is a congruence condition *)
             val (ho_vars,bdy1) = strip_forall condition
-            val (assums,bdy2) = strip_imp_until_rel genvars bdy1
-            val (oper,args) = let
-              val (f,x,y) = dest_binop bdy2
-            in
-              (f,[x,y])
-            end handle HOL_ERR _ => strip_comb bdy2
-        in
-          if length args = 2 andalso
-             op_mem aconv (#1 (strip_comb (el 2 args))) genvars
-          then let
-                val (orig,res) = case args of [x,y] => (x,y) | _ => raise Bind
-                val genv = #1 (strip_comb res)
+            val (assums,bdy2) = strip_imp_until_rel is_result bdy1
+            fun discharge oper orig genv =
+              let
                 val assum_thms = map ASSUME assums
                 fun reprocess thm flag =
                   if flag then CONV_RULE (depther ([],equality)) thm
@@ -207,7 +306,7 @@ in fn relation =>
                   let val thm = refl {Rinst = oper, arg = orig}
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));(thm,false))
                   end
-                val absify = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars))
+                val absify = CONV_RULE (RAND_CONV (liteLib.MK_ABSL_CONV ho_vars))
                 val abs_rewr_thm =
                     if null ho_vars then rewr_thm
                     else
@@ -231,19 +330,32 @@ in fn relation =>
                 val gen_abs_res =
                     funpow (length ho_vars) rator (rand (concl abs_rewr_thm))
                 val spec_match_thm = SPEC gen_abs_res (GEN genv match_thm)
-                val new_match_thm = MP spec_match_thm gen_abs_rewr_thm
-            in process_subgoals (n-1,new_match_thm,more_flags,
-                                 allunch andalso not changed)
-            end
-          else let
+                val rebuilt_thm = MP spec_match_thm gen_abs_rewr_thm
+                val new_match_thm =
+                    if may_leave_redex genv then
+                      beta_reduce_rebuilt (n - 1) gen_abs_res rebuilt_thm
+                    else rebuilt_thm
+              in
+                process_subgoals (n-1,new_match_thm,more_flags,
+                                  allunch andalso not changed)
+              end
+            fun side_condition () = let
               fun output() =
                   "Instantiated congruence condition is a side condition: "^
-                  term_to_string condition
+                  Hol_pp.term_to_string condition
               val _ = trace (6, LZ_TEXT output)
               val side_condition_thm = solver condition
               val new_match_thm = MP match_thm side_condition_thm
             in process_subgoals (n-1,new_match_thm,more_flags,allunch)
             end
+        in
+          case (SOME (dest_binop bdy2) handle HOL_ERR _ => NONE) of
+              SOME (oper,orig,res) =>
+                let val genv = head_of res
+                in if is_result genv then discharge oper orig genv
+                   else side_condition ()
+                end
+            | NONE => side_condition ()
         end
 
     val (final_thm,allunch) =
@@ -258,6 +370,9 @@ in fn relation =>
   end
 end;
 
+val CONGPROC = GEN_CONGPROC false
+val THREADED_CONGPROC = GEN_CONGPROC true
+
 
 (* ---------------------------------------------------------------------
  * EQ_CONGPROC
@@ -266,7 +381,8 @@ end;
  * ---------------------------------------------------------------------*)
 
 fun EQ_CONGPROC relation =
- if not (same_const relation boolSyntax.equality) then failwith "not applicable"
+ if not (same_const relation boolSyntax.equality) then
+   liteLib.failwith "not applicable"
  else
  fn {depther,solver,freevars} => fn tm =>
  case dest_term tm
@@ -296,5 +412,7 @@ fun EQ_CONGPROC relation =
           end
    | _ => raise UNCHANGED
 
+
+end
 
 end (* struct *)
