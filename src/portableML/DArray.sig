@@ -3,7 +3,7 @@ signature DArray = sig
 type 'a darray
 
 (* `new (n, a)` constructs a new array with capacity `n` and default value `a`
-   (the value `a` will not be visible) *)
+   (the value `a` is visible only through `extend`) *)
 val new: int * 'a -> 'a darray
 
 (* Returns the underlying array, the size, and the default element *)
@@ -23,6 +23,10 @@ val clone: 'a darray * int -> 'a darray
 
 (* `push (a, v)` adds an element at the end of the array, growing if needed *)
 val push: 'a darray * 'a -> unit
+
+(* `extend (a, n)` grows the size of `a` to `n` if it is smaller, filling the
+   new elements with the default value *)
+val extend: 'a darray * int -> unit
 
 (* `size a` returns the number of stored elements *)
 val size: 'a darray -> int

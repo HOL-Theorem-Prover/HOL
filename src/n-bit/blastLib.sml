@@ -57,7 +57,11 @@ fun mk_size_thm (i,ty) = mk_less_thm (i, wordsSyntax.mk_dimindex ty)
                     !k. BIT (k + m) L = BIT k (L DIV 2 ** m)
                   for the largest m reached so far and advances m one bit
                   at a time, so the bits of a literal cost O(1) inferences
-                  each.  The last few literals are remembered.
+                  each.  The last few literals are remembered, but only
+                  within one BBLAST_CONV call (see reset_bit_lits): a
+                  theorem kept from an earlier call mentions that call's
+                  copy of L, and aconv cannot short-cut on pointer equality
+                  when comparing terms that mix the two copies.
    ------------------------------------------------------------------------ *)
 
 local
@@ -158,6 +162,7 @@ local
            end
       end
 in
+   fun reset_bit_lits () = memo := []
    fun BIT_LIT_CONV tm =
       let
          val (i, l) = bitSyntax.dest_bit tm
@@ -724,10 +729,6 @@ local
     val WORD_SUM_ZERO_CONV =
        Conv.REWR_CONV thm THENC Conv.RHS_CONV wordsLib.WORD_EVAL_CONV
 
-   val word_ss = std_ss++wordsLib.SIZES_ss++wordsLib.WORD_ARITH_ss++
-                 wordsLib.WORD_LOGIC_ss++wordsLib.WORD_SHIFT_ss++
-                 wordsLib.WORD_CANCEL_ss
-
    val SYM_WORD_NOT_LOWER = GSYM WORD_NOT_LOWER
 
    val bit_rwts = [word_lsb_def, word_msb_def, word_bit_def]
@@ -745,13 +746,17 @@ local
       WORD_0_LS, WORD_LESS_0_word_T,
       WORD_LS_word_0, WORD_LO_word_0]
 in
-   val WORD_SIMP_CONV =
-      SIMP_CONV word_ss bit_rwts
+   (* The word simpset takes its cancellation fragment as a parameter. *)
+   fun WORD_SIMP_CONV_WITH_CANCEL cancel_ss =
+      SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_ARITH_ss++
+                 wordsLib.WORD_LOGIC_ss++wordsLib.WORD_SHIFT_ss++cancel_ss)
+                bit_rwts
       THENC Conv.TRY_CONV WORD_SUM_ZERO_CONV
       THENC REWRITE_CONV order_rwts
       THENC Conv.DEPTH_CONV wordsLib.SIZES_CONV
       THENC Conv.DEPTH_CONV SMART_MUL_LSL_CONV
       THENC Conv.DEPTH_CONV WORD_DIV_LSR_CONV
+   val WORD_SIMP_CONV = WORD_SIMP_CONV_WITH_CANCEL wordsLib.WORD_CANCEL_ss
 end
 
 (* ------------------------------------------------------------------------
@@ -1036,7 +1041,7 @@ fun SAT_CONV tm = HolSatLib.SAT_PROVE tm (* HolSatLib.SAT_ORACLE *)
 
 fun DPLL_CONV tm = Thm.CCONTR tm (Lib.trye dpll.DPLL_TAUT tm)
 
-fun BIT_TAUT_CONV defs tm =
+fun BIT_TAUT_CONV_WITH_PROVER prover defs tm =
    let
       val insts =
          HOLset.listItems (non_prop_terms (boolSyntax.list_mk_conj (tm::defs)))
@@ -1052,11 +1057,14 @@ fun BIT_TAUT_CONV defs tm =
                        ; real_time)
               else I
       val thm =
-         f (PROP_PROVE (if sz < 100 then DPLL_CONV else SAT_CONV) defs') tm'
+         f (PROP_PROVE (prover (if sz < 100 then DPLL_CONV else SAT_CONV))
+                       defs') tm'
       val theta' = Lib.map2 (Lib.curry (op |->)) vars insts
    in
       Thm.INST theta' thm
    end
+
+fun BIT_TAUT_CONV defs = BIT_TAUT_CONV_WITH_PROVER Lib.I defs
 
 local
   fun eq_fst_partition [] = []
@@ -1259,7 +1267,7 @@ local
                    (Thm.INST theta thm) theta
      end
 in
-  fun BIT_BLAST_CONV tm =
+  fun BIT_BLAST_CARRY_CONV tm =
      let
         val _ = is_blastable tm orelse
                 raise ERR "BIT_BLAST_CONV" "term not suited to bit blasting"
@@ -1296,12 +1304,19 @@ in
                      end
              end
      end
-  fun BBLAST_CONV tm =
+  (* BIT_BLAST_CARRY_CONV with its carry definitions discharged, so the
+     theorem has no hypotheses.  Literals are shown as their sets of bits. *)
+  fun BIT_BLAST_CONV tm =
+     DISCH_CARRIES
+       (Conv.RIGHT_CONV_RULE WORD_LIT_CONV (BIT_BLAST_CARRY_CONV tm))
+
+  fun bblast_with word_simp taut_profile tm =
      let
+        val () = reset_bit_lits ()
         val _ = Term.type_of tm = Type.bool orelse
                 raise ERR "BBLAST_CONV" "not a bool term"
         val (vars,tm') = boolSyntax.strip_forall tm
-        val thm = Conv.QCONV WORD_SIMP_CONV tm'
+        val thm = Conv.QCONV word_simp tm'
         val tms =
             Lib.op_mk_set aconv (HolKernel.find_terms is_blastable (rhsc thm))
         (* a theorem with carry hypotheses can't rewrite under a binder of
@@ -1313,7 +1328,8 @@ in
            let
               (* literals left under operators that aren't blasted are
                  shown as their sets of bits, as before *)
-              val th = Conv.RIGHT_CONV_RULE WORD_LIT_CONV (BIT_BLAST_CONV t)
+              val th =
+                 Conv.RIGHT_CONV_RULE WORD_LIT_CONV (BIT_BLAST_CARRY_CONV t)
            in
               if List.exists (fn v => HOLset.member (bvs, v)) (Term.free_vars t)
                  then DISCH_CARRIES th
@@ -1322,8 +1338,37 @@ in
         val thms = Lib.mapfilter blast tms
         val thm = Conv.RIGHT_CONV_RULE (Rewrite.ONCE_REWRITE_CONV thms) thm
         val thm = Conv.RIGHT_CONV_RULE
-                    (Conv.TRY_CONV (BIT_TAUT_CONV (Thm.hyp thm))) thm
+                    (Conv.TRY_CONV
+                       (taut_profile (BIT_TAUT_CONV (Thm.hyp thm)))) thm
         val res = FORALL_EQ_RULE vars (DISCH_CARRIES thm)
+     in
+        if term_eq (rhsc res) tm then raise Conv.UNCHANGED else res
+     end
+
+  fun BBLAST_CONV tm = bblast_with WORD_SIMP_CONV Lib.I tm
+
+  (* BBLAST_CONV with the caller's word normalizer, and a wrapper (e.g. a
+     profiler) around the propositional phase. *)
+  val BBLAST_CONV_WITH_PROFILES = bblast_with
+  (* Replay callers may retain checked bit conversions and supply a native
+     Boolean prover. Collection owns ordinary declines and terminal errors;
+     the caller supplies the rewrite over those same completed conversions.
+     The retained conversions are BIT_BLAST_CONV's, without hypotheses, so
+     the Boolean check has no carry definitions. *)
+  fun BBLAST_CONV_WITH_STAGES {word_simp,bit_blast,rewrite,prover} tm =
+     let
+        val _ = Term.type_of tm = Type.bool orelse
+                raise ERR "BBLAST_CONV" "not a bool term"
+        val (vars,tm') = boolSyntax.strip_forall tm
+        val thm = Conv.QCONV word_simp tm'
+        val tms =
+            Lib.op_mk_set aconv (HolKernel.find_terms is_blastable (rhsc thm))
+        val thms = bit_blast BIT_BLAST_CONV tms
+        val res = FORALL_EQ_RULE vars
+                    (Conv.RIGHT_CONV_RULE
+                       (rewrite thms
+                        THENC Conv.TRY_CONV
+                          (BIT_TAUT_CONV_WITH_PROVER prover [])) thm)
      in
         if term_eq (rhsc res) tm then raise Conv.UNCHANGED else res
      end
@@ -1366,10 +1411,11 @@ local
         s2 @ (List.filter (okay o #redex) s1)
      end
 in
-  fun BBLAST_PROVE tm =
+  (* BBLAST_PROVE, deciding the goal's body with converter. *)
+  fun BBLAST_PROVE_WITH_CONVERSION converter tm =
      let
         val (vars,tm') = boolSyntax.strip_exists tm
-        val thm = Conv.QCONV BBLAST_CONV tm'
+        val thm = Conv.QCONV converter tm'
      in
         if List.null vars
            then Drule.EQT_ELIM thm
@@ -1417,6 +1463,7 @@ in
                      end
         end
      end
+  val BBLAST_PROVE = BBLAST_PROVE_WITH_CONVERSION BBLAST_CONV
 end
 
 val BBLAST_RULE = Conv.CONV_RULE BBLAST_CONV

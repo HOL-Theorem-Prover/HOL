@@ -73,20 +73,35 @@ in
 end
 
 fun uptodate_term tm = let
+  val tsig = termsig ()    (* one snapshot for the whole traversal *)
+  (* constants (with their types) already found up to date during this
+     traversal, in a direct-mapped cache indexed by the id's epoch, so that
+     the repeated constants of a large term cost two pointer comparisons *)
+  val csize = 1024
+  val cache = Array.array (csize, NONE)
   fun recurse tmlist =
       case tmlist of
         [] => true
-      | tm :: rest => let
-        in
-          case tm of
-            Var(s, ty) => uptodate_type ty andalso recurse rest
-          | Const(info, ty) =>
-              KernelSig.uptodate_id (termsig()) info andalso
-              uptodate_type (to_hol_type ty) andalso
-              recurse rest
-          | App(f, x) => recurse (f::x::rest)
-          | Abs(v, body) => recurse (v::body::rest)
-        end
+      | tm :: rest =>
+        case tm of
+          Var(s, ty) => uptodate_type ty andalso recurse rest
+        | Const(info, ty) => let
+          val slot = KernelSig.epoch_of info mod csize
+          val hit = case Array.sub (cache, slot) of
+            SOME (info', ty') =>
+            Portable.pointer_eq (info', info) andalso
+            Portable.pointer_eq (ty', ty)
+          | NONE => false
+          in
+            if hit then recurse rest
+            else if KernelSig.uptodate_id tsig info andalso
+                    uptodate_type (to_hol_type ty)
+            then (Array.update (cache, slot, SOME (info, ty));
+                  recurse rest)
+            else false
+          end
+        | App(f, x) => recurse (f::x::rest)
+        | Abs(v, body) => recurse (v::body::rest)
 in
   recurse [tm]
 end
@@ -1221,6 +1236,50 @@ in
   pp [] [ppTM tm]
 end
 val write_raw = pp_raw_term
+
+fun raw_fold {atom, bv, comb, abs} base tm = let
+  fun go p t =
+      case t of
+          App(f, x) =>
+          let
+            val (a, sa) = go (p + 1) f
+            val (b, sb) = go (p + 1 + sa) x
+          in (comb p a b, 1 + sa + sb) end
+        | Abs(v, body) =>
+          let
+            val _ = atom (p + 1) v
+            val (b, sb) = go (p + 2) body
+          in (abs p v b, 2 + sb) end
+        | _ => (atom p t, 1)
+in
+  #1 (go base tm)
+end
+
+datatype pospptask = PT of term * int | PLAM | PAPP of int
+fun write_raw_at {shared, size} base tm = let
+  fun mkAPP (PAPP n :: rest) = PAPP (n + 1) :: rest
+    | mkAPP rest = PAPP 1 :: rest
+  fun index p = case shared p of
+                    SOME i => i
+                  | NONE => raise ERR "write_raw_at" "atom not in table"
+  fun pp acc tasklist =
+      case tasklist of
+          [] => String.concat (List.rev acc)
+        | PT (Abs(Bvar, Body), p) :: rest =>
+            pp acc (PT (Bvar, p + 1) :: PT (Body, p + 2) :: PLAM :: rest)
+        | PT (App(Rator, Rand), p) :: rest =>
+          (case shared p of
+               SOME i => pp (percent ^ Int.toString i :: acc) rest
+             | NONE => pp acc (PT (Rator, p + 1) ::
+                               PT (Rand, p + 1 + size (p + 1)) ::
+                               mkAPP rest))
+        | PT (_, p) :: rest => pp (percent ^ Int.toString (index p) :: acc) rest
+        | PLAM :: rest => pp ("|" :: acc) rest
+        | PAPP n :: rest =>
+            pp ("@" ^ (if n = 1 then "" else Int.toString n) :: acc) rest
+in
+  pp [] [PT (tm, base)]
+end
 
 local
 datatype tok = lam | id of int | app of int

@@ -1,0 +1,422 @@
+*hol4.txt*  HOL4 through its language server
+
+==============================================================================
+CONTENTS                                                       *hol4-contents*
+
+  1. Introduction ........................................ |hol4-introduction|
+  2. Setup ...................................................... |hol4-setup|
+  3. Options .................................................. |hol4-options|
+  4. Commands ................................................ |hol4-commands|
+  5. Goals pane .............................................. |hol4-goals|
+  6. Theorem search .......................................... |hol4-search|
+  7. Proof checking .......................................... |hol4-proofs|
+  8. Keymaps .................................................. |hol4-keymaps|
+  9. Lua API ...................................................... |hol4-api|
+ 10. Highlights .............................................. |hol4-highlights|
+
+==============================================================================
+1. INTRODUCTION                                        *hol4* *hol4-introduction*
+
+A client for HOL's language server, `bin/hol lsp`. Open a `*Script.sml` file
+and the server loads its ancestors, compiles it as you edit, and reports
+errors as diagnostics. Hover, go to definition and completion work as for any
+language server, with whatever keymaps you already have for them.
+
+On top of that, this plugin adds a goals pane that follows the cursor through
+a proof, SML evaluated in the server's session, theorem search, and proof
+checking in the background.
+
+==============================================================================
+2. SETUP                                                          *hol4-setup*
+
+Requires Neovim 0.12 or later and a built HOL. Add this directory to
+'runtimepath', or with lazy.nvim: >lua
+    {
+      dir = '/path/to/HOL/tools/editor-modes/vim/neovim',
+      name = 'hol4',
+      ft = 'hol4script',
+      cmd = 'Hol',
+      opts = {},
+    }
+<
+Without a call to |hol4.setup()|, the plugin sets itself up with the defaults
+when the first HOL script opens.
+
+For each script, the plugin runs the `hol` that last built the script's
+directory, from `.hol/make-deps/lastmaker`. Failing that, it runs the `hol`
+option, which defaults to the `bin/hol` of the HOL checkout the plugin is in.
+
+                                                            *hol4-checkhealth*
+`:checkhealth hol4` checks the setup. Run from a HOL script, it also checks
+the `hol` that script would use, and starts it to catch a stale build: the
+usual sign of one is every goal state coming back empty.
+
+A lazy-loading plugin manager keeps the plugin off 'runtimepath' until a
+script opens, and neither `:checkhealth` nor this help can be found before
+then. Open a script first or, with lazy.nvim, run `:Lazy load hol4`.
+
+==============================================================================
+3. OPTIONS                                                      *hol4-options*
+
+Passed to |hol4.setup()|; these are the defaults: >lua
+    {
+      hol = nil,
+      check_proofs = false,
+      goals_follow = true,
+      walk_budget_ms = nil,
+      proof_timeout_ms = nil,
+      picker = nil,
+      marks = { proved = '✓', checking = '⋯', failed = '✗' },
+      goals = {
+        position = 'auto',
+        width = nil,
+        height = 15,
+        keys = { info = 'K', close = 'q' },
+      },
+      eval = {
+        border = 'rounded',
+        max_width = 100,
+        max_height = 15,
+        enter = true,
+        keys = { close = { 'q', '<Esc>' } },
+      },
+      search = { limit = 200 },
+      hover_width = nil,
+    }
+<
+Each call to |hol4.setup()| starts again from these defaults; within a table
+such as `goals`, what you leave out keeps its default.
+
+                                                                *hol4-opt-hol*
+hol ~
+  `hol` for a directory no `Holmake` has built yet. Default: the `bin/hol` of
+  the HOL checkout the plugin is in, else `hol` on your PATH.
+
+                                                       *hol4-opt-check_proofs*
+check_proofs ~
+  Start with proof checking on. See |hol4-proofs|.
+
+                                                       *hol4-opt-goals_follow*
+goals_follow ~
+  Start with the goals pane following the cursor.
+
+                                                     *hol4-opt-walk_budget_ms*
+walk_budget_ms ~
+  How long, in milliseconds, working out a goal state may run before it's cut
+  off. A tactic slower than this reports an error rather than a state and a
+  time. Default: the server's, 1500.
+
+                                                   *hol4-opt-proof_timeout_ms*
+proof_timeout_ms ~
+  How long, in milliseconds, proof checking lets one proof run before it
+  gives up and reports it timed out, which counts as going wrong. `0` for no
+  limit. Default: the server's, 120000 (2 minutes), which leaves a hanging
+  `metis_tac` looking like it's still being checked for a long while.
+
+                                                             *hol4-opt-picker*
+picker ~
+  `'snacks'`, `'telescope'` or `'select'`. Default: the first of those that's
+  installed. See |hol4-search|.
+
+                                                               *hol4-opt-goals*
+goals ~
+  Where the goals pane opens: `position` is `'right'`, `'below'`, or
+  `'auto'`, which is right of a window at least 160 columns wide and below
+  otherwise. `width` is its columns on the right (default: a third of the
+  window), `height` its lines below. `keys` are the pane's own: `info`
+  shows the type of the symbol under the cursor, `close` closes the pane.
+
+                                                               *hol4-opt-eval*
+eval ~
+  The eval float: its `border` (see 'winborder' for the choices), its
+  largest size, and whether the cursor goes into it as it opens. With
+  `enter = false`, |CTRL-W_w| gets there, and entering insert mode in a
+  script closes it. `keys.close` are the keys that close it.
+
+  Each of the `keys` is a key, a list of keys, or `false` for none, and is
+  mapped only in its own window: >lua
+    goals = { keys = { info = 'gK', close = false } },
+    eval = { keys = { close = 'q' } },
+<
+
+                                                             *hol4-opt-search*
+search ~
+  `limit`: the most results a theorem search asks for.
+
+                                                        *hol4-opt-hover_width*
+hover_width ~
+  The width, in columns, the server lays hovers out to. Default: the
+  server's, 100.
+
+                                                             *hol4-opt-marks*
+marks ~
+  What goes after a theorem's first line: `proved` once its proof passes,
+  `checking` while it's being checked, `failed` once it fails, diverges or
+  times out. `false` shows nothing. Setting one keeps the others' defaults.
+  See |hol4-proofs|.
+
+==============================================================================
+4. COMMANDS                                                    *hol4-commands*
+
+                                                                        *:Hol*
+:Hol goals                                                        *:Hol-goals*
+    Toggle the goals pane.
+
+:Hol refresh                                                    *:Hol-refresh*
+    Refresh the goals at the cursor.
+
+:Hol eval [code]                                                   *:Hol-eval*
+    Evaluate SML in the server's session, at the cursor, and show the output
+    in the eval window. With a range, evaluate the selected text, at its
+    start; with neither code nor a range, prompt for it. An uncaught
+    `HOL_ERR` shows as HOL would report it, with the line and column it was
+    raised at in the buffer. Whatever the code defines is thrown away
+    afterwards, except that values stay available to other evals at the same
+    position. `load`, `use` and `export_theory` are refused.
+
+                                                            *hol4-eval-window*
+    The eval window floats in the middle of the screen, and the cursor goes
+    into it, to scroll or copy from. It shows the last eval's output and says
+    `(running…)` in its title while one runs. `q` or `<Esc>` closes it and
+    goes back to the script; so does closing the script's window.
+
+:Hol search [name|term]                                          *:Hol-search*
+    Search theorems by name (the default) or by term pattern. See
+    |hol4-search|.
+
+:Hol cancel                                                      *:Hol-cancel*
+    Cancel the running eval.
+
+:Hol retry                                                        *:Hol-retry*
+    Compile again after a missing ancestor has been built outside the editor.
+
+:Hol restart                                                    *:Hol-restart*
+    Restart this buffer's server, which is needed after rebuilding an ancestor
+    it has already loaded. Use this rather than `:lsp restart`, which reuses
+    servers by directory and so can hand the buffer to another script's
+    server.
+
+:Hol checkproofs [on|off|toggle]                            *:Hol-checkproofs*
+    Turn proof checking on or off. See |hol4-proofs|.
+
+:Hol nextproof                                                *:Hol-nextproof*
+:Hol prevproof                                                *:Hol-prevproof*
+    Move to the next or previous proof that's unchecked or went wrong,
+    wrapping around the file.
+
+:Hol follow [on|off|toggle]                                      *:Hol-follow*
+    Whether the goals pane follows the cursor. Off, it keeps showing the
+    same proof step while you move and edit elsewhere, brought up to date
+    when the file recompiles; `:Hol refresh` moves it to the cursor.
+
+==============================================================================
+5. GOALS PANE                                                     *hol4-goals*
+
+Shows the goal state at the cursor: move up a proof to go back, down to go
+forward, and edit a tactic to run it again. The pane opens beside the script
+in a window at least 160 columns wide, and below it otherwise, and closes when
+the last script in its tab does.
+
+Its title shows the theorem, the step, and how long that step took. The time
+for a step inside `rpt` looks to cover its first pass only, so it can read
+low.
+
+While a slow tactic runs, the pane keeps the last state it showed and adds
+`Applying tactic…` under it.
+
+In the pane, by default (see |hol4-opt-goals|):
+    `K`    Show the type of the symbol under the cursor. This isn't LSP
+           hover, which has no file to work on here, but what the goal
+           state says about the symbol.
+    `q`    Close the pane.
+
+==============================================================================
+6. THEOREM SEARCH                                                *hol4-search*
+
+There are two searches, which read the prompt differently.
+
+Search by name (`:Hol search name`) takes each word as part of the theorem's
+name. A term pattern in double backquotes narrows it further: >
+    ADD COMM
+      arithmetic$ADD_COMM        ⊢ ∀m n. m + n = n + m
+
+    'arithmetic' MULT ASSOC
+      arithmetic$MULT_ASSOC      ⊢ ∀m n p. m * (n * p) = m * n * p
+      arithmetic$MULT_ASSOC_COMM ⊢ ∀m n p. m * (n * p) = m * p * n
+      arithmetic$MULT_COMM_ASSOC ⊢ ∀m n p. m * (n * p) = n * (m * p)
+
+    LESS EQ ``_ + _``
+      arithmetic$ADD_MONO_LESS_EQ ⊢ ∀m n p. m + n ≤ m + p ⇔ n ≤ p
+      arithmetic$LESS_EQ_ADD      ⊢ ∀m n. m ≤ m + n
+      arithmetic$LESS_EQ_EXISTS   ⊢ ∀m n. m ≤ n ⇔ ∃p. n = m + p
+<
+Search by term (`:Hol search term`) takes the prompt as a term pattern. A
+name fragment in double quotes narrows it further: >
+    x * (y + z)
+      arithmetic$LEFT_ADD_DISTRIB ⊢ ∀m n p. p * (m + n) = p * m + p * n
+      numpair$tri_formula         ⊢ tri n = n * (n + 1) DIV 2
+      numpair$twotri_formula      ⊢ 2 * tri n = n * (n + 1)
+
+    MAP f (MAP g l)
+      list$MAP_COMPOSE ⊢ ∀f g l. MAP f (MAP g l) = MAP (f ∘ g) l
+      list$MAP_MAP_o   ⊢ ∀f g l. MAP f (MAP g l) = MAP (f ∘ g) l
+
+    x + y = y + x "COMM"
+      arithmetic$ADD_COMM ⊢ ∀m n. m + n = n + m
+<
+In both, `'theory'` keeps to that theory, and every part of the prompt
+narrows the search further. An unclosed quote counts as closed at the end of
+the prompt, so results show up while it's being typed.
+
+In a term pattern, a variable (`x`, `_`) matches anything, and a constant only
+itself. The pattern is read in the current script's context, so a constant
+that script doesn't have, such as `+` before arithmetic, is read as a variable
+too, and matches far more than intended. Only the theories the script has
+loaded are searched.
+
+Results appear as you type in Snacks or Telescope. With neither, or with
+`picker = 'select'`, the plugin prompts for the search first and then shows
+the results in |vim.ui.select()|.
+
+Confirming a result jumps to where the theorem was proved, if its theory
+recorded that.
+
+==============================================================================
+7. PROOF CHECKING                                                *hol4-proofs*
+
+Elaboration doesn't run tactics, which is what makes it fast, so a proof is
+taken on trust until it's checked. With proof checking on, a pool of workers
+replays each proof in the background, which costs what the proofs cost.
+Proofs that fail get a diagnostic on the theorem's name. After the theorem's
+first line, proofs that pass get a `✓`, proofs being checked a `⋯`, and
+proofs that failed or timed out a `✗` (see |hol4-opt-marks| and
+|hol4-opt-proof_timeout_ms|).
+
+With proof checking off, a theorem gets a `✓` when the goals pane shows its
+proof solved, which it does with the cursor after the last tactic. An edit
+takes the ticks off the proof it's in and every proof after it.
+
+                                                                 *hol4-status*
+|hol4.status()| returns a tally for a statusline, such as `⊢12/14!1`: 12 of 14
+checked, 1 went wrong. It's empty once every proof has been checked. >lua
+    -- lualine
+    {
+      function() return require('hol4').status() end,
+      cond = function() return package.loaded['hol4'] ~= nil end,
+    }
+<
+                                                             *Hol4ProofStates*
+The `User Hol4ProofStates` autocommand fires when the tally changes.
+
+`:Hol nextproof` and `:Hol prevproof` move through the proofs the tally is
+short of: those still being checked (`checking`), those an edit reached and
+the next pass will take up (`not checked`), and those that went wrong (`failed`,
+`diverged`, or `not checked (timed out)`).
+
+==============================================================================
+8. KEYMAPS                                                      *hol4-keymaps*
+
+The plugin defines none outside the goals pane. Visual-mode mappings should
+call the Lua functions, which use the exact selection: >lua
+    vim.api.nvim_create_autocmd('FileType', {
+      pattern = 'hol4script',
+      callback = function(ev)
+        local hol = require('hol4')
+        local function map(mode, lhs, rhs)
+          vim.keymap.set(mode, lhs, rhs, { buffer = ev.buf })
+        end
+        map('n', '<localleader>g', require('hol4.goals').toggle)
+        map('n', '<localleader>s', hol.eval_line)
+        map('v', '<localleader>s', hol.eval_visual)
+        map('n', '<localleader>S', hol.eval_prompt)
+        map('n', '<localleader>f', require('hol4.search').by_name)
+        map('n', '<localleader>m', require('hol4.search').by_term)
+        map('n', ']p', hol.next_proof)
+        map('n', '[p', hol.prev_proof)
+      end,
+    })
+<
+==============================================================================
+9. LUA API                                                          *hol4-api*
+
+A position `pos` is `{row, col}`, with a 1-based row and a 0-based byte column,
+as |nvim_win_get_cursor()| returns.
+
+`require('hol4')`:
+
+hol4.setup({opts})                                              *hol4.setup()*
+    See |hol4-options|.
+
+hol4.eval({code}, {bufnr}, {pos})                                *hol4.eval()*
+hol4.eval_line()                                            *hol4.eval_line()*
+hol4.eval_visual()                                        *hol4.eval_visual()*
+hol4.eval_prompt()                                        *hol4.eval_prompt()*
+    See |:Hol-eval|. {bufnr} and {pos} default to the current ones.
+    `eval_line()` evaluates the cursor's line.
+
+hol4.cancel()                                                  *hol4.cancel()*
+    See |:Hol-cancel|.
+
+hol4.retry_compile()                                    *hol4.retry_compile()*
+    See |:Hol-retry|.
+
+hol4.restart()                                                *hol4.restart()*
+    See |:Hol-restart|.
+
+hol4.set_check_proofs({on})                          *hol4.set_check_proofs()*
+    See |:Hol-checkproofs|. The current state is `hol4.check_proofs`.
+
+hol4.set_goals_follow({on})                          *hol4.set_goals_follow()*
+    See |:Hol-follow|. The current state is `require('hol4.goals').follow`.
+
+hol4.status({buf})                                             *hol4.status()*
+    See |hol4-status|. {buf} defaults to the current buffer.
+
+hol4.next_proof()                                          *hol4.next_proof()*
+hol4.prev_proof()                                          *hol4.prev_proof()*
+    See |:Hol-nextproof|.
+
+`require('hol4.goals')`:
+
+goals.open()                                                *hol4.goals.open()*
+goals.close()                                              *hol4.goals.close()*
+goals.toggle()                                            *hol4.goals.toggle()*
+goals.is_open()                                          *hol4.goals.is_open()*
+goals.refresh()                                          *hol4.goals.refresh()*
+    See |hol4-goals|.
+
+`require('hol4.search')`:
+
+search.by_name()                                      *hol4.search.by_name()*
+search.by_term()                                      *hol4.search.by_term()*
+    See |hol4-search|.
+
+search.open({opts})                                        *hol4.search.open()*
+    A search with {opts}: `mode`, `'name'` (the default) or `'term'`;
+    `limit`, the most results to ask for (default: the |hol4-opt-search|
+    option); and `picker`, which overrides the option of that name.
+
+==============================================================================
+10. HIGHLIGHTS                                              *hol4-highlights*
+
+Used by the goals pane, proof marks and the eval window, with these default
+links:
+
+    `Hol4GoalsBound`    `@variable.parameter`    bound variables
+    `Hol4GoalsFree`     `@variable.builtin`      free variables
+    `Hol4GoalsConst`    `@function`              constants
+    `Hol4GoalsTyvar`    `@type`                  type variables
+    `Hol4GoalsTitle`    `WinBar`                 the pane's title, focused or not
+    `Hol4GoalsApplying` `Comment`                `Applying tactic…`
+    `Hol4ProofOk`       `DiagnosticOk`           a proof's `✓`
+    `Hol4ProofChecking` `Comment`                a proof's `⋯`
+    `Hol4ProofFailed`   `DiagnosticError`        a proof's `✗`
+    `Hol4EvalText`      `NormalFloat`            an error's text
+    `Hol4EvalError`     `DiagnosticError`        an error's first line
+    `Hol4EvalWarning`   `DiagnosticWarn`         a warning's first line
+    `Hol4EvalLabel`     `@label`                 `Function:`, `Reason:`...
+    `Hol4EvalType`      `@type`                  the type in a type error
+    `Hol4EvalOrigin`    `@function`              what raised a `HOL_ERR`
+    `Hol4EvalDetail`    `Comment`                where it was raised
+
+ vim:tw=78:ts=8:ft=help:norl:

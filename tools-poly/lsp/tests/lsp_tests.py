@@ -4654,6 +4654,64 @@ def test_declResults_survives_the_final_newline_arriving():
         c.close()
 
 
+def test_declResults_selection_to_EOF_answers_once_per_declaration():
+    """A selection reaching the end of a file with no final newline
+    answers once for each declaration, not twice for the last.
+
+    The synthetic end-of-theory declaration is zero-width at `(size,
+    size)`, so without a newline it sits inside any selection that
+    reaches EOF *and* shares the last real declaration's stop -- which
+    is the whole of the binding match.  Both spans therefore found the
+    same values and the last declaration was rendered twice.  The
+    second phase is the control: with the newline the synthetic
+    declaration moves off that stop and the answer was always right,
+    so a count that is wrong only in the first phase is the bug and
+    not the selection arithmetic."""
+    c = Client("/tmp")
+    try:
+        _init(c, "/tmp")
+        uri = "file:///tmp/declresults_eof_sel.sml"
+        # Line 9 is `val x = 10', line 10 is `val y = 11', and the file
+        # stops at that line's last byte.
+        src = _DECLRESULTS_EOF_HEAD + "val x = 10\nval y = 11"
+        _did_open(c, uri, src, 1)
+        assert_true(c.wait_for_method("$/compileCompleted", 30),
+                    "compileCompleted")
+        r = _send_declresults(c, 381, uri, (9, 0), (10, 10))
+        texts = _declresults_texts(r)
+        assert_true(texts is not None and len(texts) == 2,
+                    f"two declarations answered, not three ({r!r})")
+        assert_true("x" in texts[0] and "10" in texts[0],
+                    f"`val x = 10' first ({texts[0]!r})")
+        assert_true("y" in texts[1] and "11" in texts[1],
+                    f"`val y = 11' second ({texts[1]!r})")
+        assert_eq(r["result"].get("tornEnd"), False, "end not torn")
+        # The other face of the same collision: a cursor at EOF used to
+        # answer under the synthetic declaration's zero-width range
+        # rather than the range of the declaration it was describing.
+        rc = _send_declresults(c, 382, uri, (10, 10), (10, 10))
+        tc = _declresults_texts(rc)
+        assert_true(tc is not None and len(tc) == 1 and "y" in tc[0],
+                    f"the cursor answers for `val y = 11' ({rc!r})")
+        rng = rc["result"]["results"][0]["range"]
+        assert_true(rng["start"] != rng["end"],
+                    f"under the declaration's own range ({rng!r})")
+        # Control: with the final newline typed, the same selection
+        # gives the same two answers.
+        idx_before = c.total_msgs()
+        _did_change_full(c, uri, src + "\n", 2)
+        assert_true(c.wait_for_method("$/compileCompleted", 30, idx_before),
+                    "second compileCompleted")
+        r2 = _send_declresults(c, 383, uri, (9, 0), (10, 10))
+        t2 = _declresults_texts(r2)
+        assert_true(t2 is not None and len(t2) == 2,
+                    f"still two declarations answered ({r2!r})")
+        assert_true("x" in t2[0] and "y" in t2[1],
+                    f"in source order ({t2!r})")
+    finally:
+        c.close()
+
+
 def test_goalState_outside_proof():
     """Slice B: cursor outside any `Proof … QED` block returns null."""
     c = Client("/tmp")
@@ -14010,6 +14068,8 @@ TESTS = [
                                      test_declResults_answers_for_an_unterminated_last_declaration),
     ("declResults_survives_the_final_newline_arriving",
                                      test_declResults_survives_the_final_newline_arriving),
+    ("declResults_selection_to_EOF_answers_once_per_declaration",
+                                     test_declResults_selection_to_EOF_answers_once_per_declaration),
     ("goalState_outside_proof",      test_goalState_outside_proof),
     ("goalState_between_two_theorems",
                                      test_goalState_between_two_theorems),
