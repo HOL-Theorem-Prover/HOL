@@ -46,6 +46,13 @@ val new : {thydataty : string,
            other_tds : t * TheoryDelta.t -> t option} ->
           {export : t -> unit, segment_data : {thyname : string} -> t option,
            set : t -> unit}
+(* new with a load that does nothing: theory loads don't call it *)
+val new_noload : {thydataty : string,
+                  merge : {old : t, new : t} -> t,
+                  other_tds : t * TheoryDelta.t -> t option} ->
+                 {export : t -> unit,
+                  segment_data : {thyname : string} -> t option,
+                  set : t -> unit}
 
 val pp_sexp : Type.hol_type PP.pprinter -> Term.term PP.pprinter ->
               Thm.thm PP.pprinter -> t PP.pprinter

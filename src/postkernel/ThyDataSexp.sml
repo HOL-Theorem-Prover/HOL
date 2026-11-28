@@ -306,7 +306,7 @@ fun reader (rd as {strings,terms}) s = (* necessary eta-expansion! *)
   end
 
 structure LTD = LoadableThyData
-fun new {thydataty, load, other_tds, merge} =
+fun new0 {thydataty, load, other_tds, merge} =
   let
     val (todata, fromdata) =
         LTD.new{thydataty = thydataty, pp = bare_toString,
@@ -319,10 +319,13 @@ fun new {thydataty, load, other_tds, merge} =
                     (LTD.segment_data{thy = thyname, thydataty = thydataty}))
 
     fun onload thyname =
-      case segment_data{thyname = thyname} of
-          NONE => load {thyname = thyname, data = NONE}
-        | SOME s =>
-            load {thyname = thyname, data = SOME s}
+      case load of
+          NONE => ()
+        | SOME load =>
+          case segment_data{thyname = thyname} of
+              NONE => load {thyname = thyname, data = NONE}
+            | SOME s =>
+                load {thyname = thyname, data = SOME s}
 
     fun hook0 td =
       case segment_data {thyname = current_theory()} of
@@ -355,9 +358,20 @@ fun new {thydataty, load, other_tds, merge} =
 
   in
     register_hook ("ThmSetData.onload." ^ thydataty, hook);
-    List.app onload (ancestry "-");
+    if Option.isSome load then List.app onload (ancestry "-") else ();
     {export = export, segment_data = segment_data, set = set}
   end
+
+fun new {thydataty, load, other_tds, merge} =
+    new0 {thydataty = thydataty, load = SOME load, other_tds = other_tds,
+          merge = merge}
+
+(* new without a load function: a theory load runs no load hook for this
+   data, and making it doesn't replay one over the theories already
+   loaded.  Other code may still read the data (with segment_data). *)
+fun new_noload {thydataty, other_tds, merge} =
+    new0 {thydataty = thydataty, load = NONE, other_tds = other_tds,
+          merge = merge}
 
 fun bind NONE f = NONE
   | bind (SOME a) f = f a
