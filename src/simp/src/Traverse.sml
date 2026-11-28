@@ -19,7 +19,12 @@
 structure Traverse :> Traverse =
 struct
 
-open HolKernel Drule Conv Psyntax Abbrev liteLib Trace Travrules Opening;
+open Abbrev
+
+local
+open Feedback Lib Term Thm Drule Conv Psyntax liteLib Trace
+     Travrules Opening
+in
 
 infix THENQC THENCQC ORELSEC IFCQC
 
@@ -306,8 +311,14 @@ type traverse_data = {limit : int option,
                       relation: term};
 
 fun TRAVERSE (data as {limit,dprocs,rewriters,travrules,relation}) thms =
-   let val context' = add_context rewriters dprocs (initial_context data,thms)
+   let val context = initial_context data
+       val context' =
+           case thms of
+               [] => context
+             | _ => add_context rewriters dprocs (context,thms)
    in TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules relation [] context'
    end;
+
+end
 
 end (* struct *)

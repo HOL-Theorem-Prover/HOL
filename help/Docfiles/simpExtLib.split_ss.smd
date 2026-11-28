@@ -1,0 +1,41 @@
+>>__ load "simpExtLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `split_ss`
+
+``` hol4
+simpExtLib.split_ss : simpExtLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Splits case expressions during extension simplification.
+
+`split_ss` is a fragment named `"split"`. Its looper, `"splitter"`,
+applies `splitLib.SPLIT_TAC` with the split rules for the datatypes whose
+case constants occur fully applied in the goal, and with the rules that
+have the persistent `[split]` attribute. The fragment also rewrites
+`(b ==> t) /\ (~b ==> t)` to `t`.
+
+`ExclX "split:name"` excludes a `[split]` rule from one call, and
+`ExclX "case:ty"` the splitting of type `ty`.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpExtLib.++ (simpExtLib.lift_simpset boolSimps.bool_ss,
+     simpExtLib.split_ss);
+>> simpExtLib.GEN_SIMP_TAC {safe = false} ss []
+     ([], “P (if b then 1 else 2) : bool”) (Context.snapshot());
+```
+
+### See also
+
+[`splitLib.enable_split_attribute`](#splitLib.enable_split_attribute),
+[`splitLib.exclude_split`](#splitLib.exclude_split),
+[`simpExtLib.add_split`](#simpExtLib.add_split),
+[`simpExtLib.Split`](#simpExtLib.Split),
+[`simpExtLib.ExclX`](#simpExtLib.ExclX).

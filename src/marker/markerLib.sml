@@ -78,6 +78,9 @@ fun Cong th = EQ_MP (SYM(SPEC (concl th) markerTheory.Cong_def)) th;
 
 fun unCong th = PURE_REWRITE_RULE [Cong_def] th;
 
+fun Split th = EQ_MP (SYM (SPEC (concl th) markerTheory.Split_def)) th
+fun destSplit th = PURE_REWRITE_RULE [Split_def] th
+
 fun genmktagged th nm =
     let val v = mk_var(nm, alpha)
     in
@@ -86,12 +89,14 @@ fun genmktagged th nm =
 val Excl = genmktagged markerTheory.Exclude_def
 val FRAG = genmktagged markerTheory.FRAG_def
 val ExclSF = genmktagged markerTheory.ExcludeFrag_def
+val ExclX = genmktagged markerTheory.ExcludeX_def
 
 
 fun mk_marker_const nm = prim_mk_const{Thy = "marker", Name = nm}
 val Excl_t = mk_marker_const "Exclude"
 val ExclSF_t = mk_marker_const "ExcludeFrag"
 val FRAG_t = mk_marker_const "FRAG"
+val ExclX_t = mk_marker_const "ExcludeX"
 fun gendest_tagged t th =
     let val c = concl th
         val f = rator c
@@ -102,6 +107,7 @@ fun gendest_tagged t th =
 val destExcl = gendest_tagged Excl_t
 val destFRAG = gendest_tagged FRAG_t
 val destExclSF = gendest_tagged ExclSF_t
+val destExclX = gendest_tagged ExclX_t
 
 val Req0_t = mk_marker_const "Req0"
 val Req0_th = EQT_ELIM markerTheory.Req0_def
@@ -117,30 +123,54 @@ fun dest_ReqD th =
     if HOLset.member(hypset th, ReqD_t) then SOME (PROVE_HYP ReqD_th th)
     else NONE
 
-fun req0_modify tac th =
-    case dest_Req0 th of
-        NONE => (tac,th)
-      | SOME th => (Ho_Rewrite.REQUIRE0_TAC th o tac, th)
-fun reqD_modify tac th =
-    case dest_ReqD th of
-        NONE => (tac,th)
-      | SOME th => (Ho_Rewrite.REQUIRE_DECREASE_TAC th o tac, th)
-
-fun mk_require_tac tac thl =
+(* th's Req0 and ReqD wrappers: the theorem each wraps, and th without
+   them *)
+fun requirement th =
     let
-      fun recurse (accths,acctac) ths =
-          case ths of
-              [] => acctac (List.rev accths)
-            | th::rest =>
-              let
-                val (tac,th) = req0_modify tac th
-                val (tac,th) = reqD_modify tac th
-              in
-                recurse (th::accths,tac) rest
-              end
+      val req0 = dest_Req0 th
+      val reqD = dest_ReqD (getOpt (req0, th))
     in
-      recurse ([], tac) thl
+      {req0 = req0, reqD = reqD,
+       plain = getOpt (reqD, getOpt (req0, th))}
     end
+
+(* The checks a requirement asks for.  Ho_Rewrite's checks print their
+   theorem when applied to it, so build them only when they are used. *)
+fun require_check {req0, reqD, plain} =
+    let
+      val check = case req0 of
+                      NONE => I
+                    | SOME p => Ho_Rewrite.REQUIRE0_TAC p
+    in
+      case reqD of
+          NONE => check
+        | SOME p => Ho_Rewrite.REQUIRE_DECREASE_TAC p o check
+    end
+
+(* Only the last theorem's checks apply. The worker is recursive so that
+   Poly/ML does not inline it: inlined, it lets RW_TAC
+   and the like expand the whole simplifier tactic chain at every call
+   site, and scripts become much slower to compile. *)
+fun collect_requirements tac (acc,checked) [] = checked (List.rev acc)
+  | collect_requirements tac (acc,_) (th :: rest) =
+      let
+        val (check,th) =
+          case dest_Req0 th of
+              NONE => (tac,th)
+            | SOME p => (Ho_Rewrite.REQUIRE0_TAC p o tac,p)
+        val (check,th) =
+          case dest_ReqD th of
+              NONE => (check,th)
+            | SOME p => (Ho_Rewrite.REQUIRE_DECREASE_TAC p o check,p)
+      in
+        collect_requirements tac (th :: acc,check) rest
+      end
+
+fun mk_require_tac tac = collect_requirements tac ([],tac)
+
+(* Every theorem's checks *)
+fun require_all thl =
+    List.foldl (fn (th,acc) => require_check (requirement th) o acc) I thl
 
 (*---------------------------------------------------------------------------*)
 (* Support for abbreviations.                                                *)
@@ -669,10 +699,12 @@ datatype directive =
   | DIgnAsm of string
   | DAbbr of string
   | DLabel of string
+  | DSplit of thm
+  | DExclX of string
 
-fun has_marker_head marker th =
-    same_const marker (#1 (strip_comb (concl th)))
-    handle HOL_ERR _ => false
+fun marker_head tm = if is_comb tm then marker_head (rator tm) else tm
+
+fun has_marker_head marker th = same_const marker (marker_head (concl th))
 
 fun dest_directive th =
     let
@@ -684,27 +716,41 @@ fun dest_directive th =
                   SOME p => SOME (DReqD p)
                 | NONE => Option.map DBounded
                                      (total BoundedRewrites.DEST_BOUNDED th)
-      fun head () =
-          if has_marker_head AC_tm th then SOME (DAC (unAC th))
-          else if has_marker_head Cong_tm th then SOME (DCong (unCong th))
-          else if aconv (concl th) NoAsms_t then SOME DNoAsms
-          else if has_marker_head IgnAsm_t th then
-            SOME (DIgnAsm (#1 (dest_var (rand (concl th)))))
-          else if is_abbr th then SOME (DAbbr (dest_abbr th))
-          else NONE
-      val named = [(destExcl, DExcl), (destExclSF, DExclSF),
-                   (destFRAG, DFRAG), (total dest_label_ref, DLabel)]
     in
       case wrapper () of
           SOME d => SOME d
         | NONE =>
-          case head () of
-              SOME d => SOME d
-            | NONE => get_first (fn (dest, mk) => Option.map mk (dest th))
-                                named
+          let
+            val c = concl th
+            val head = marker_head c
+          in
+            if same_const AC_tm head then SOME (DAC (unAC th))
+            else if same_const Cong_tm head then SOME (DCong (unCong th))
+            else if same_const Split_tm head then SOME (DSplit (destSplit th))
+            else if aconv c NoAsms_t then SOME DNoAsms
+            else if same_const IgnAsm_t head then
+              SOME (DIgnAsm (#1 (dest_var (rand c))))
+            else if same_const boolSyntax.equality head then
+              if is_abbr th then SOME (DAbbr (dest_abbr th))
+              else Option.map DLabel (total dest_label_ref th)
+            else if same_const Excl_t head then Option.map DExcl (destExcl th)
+            else if same_const ExclSF_t head then
+              Option.map DExclSF (destExclSF th)
+            else if same_const FRAG_t head then Option.map DFRAG (destFRAG th)
+            else if same_const ExclX_t head then
+              Option.map DExclX (destExclX th)
+            else NONE
+          end
     end
 
 val is_directive = Option.isSome o dest_directive
+
+fun strip_wrappers th =
+    case dest_directive th of
+        SOME (DReq0 p) => strip_wrappers p
+      | SOME (DReqD p) => strip_wrappers p
+      | SOME (DBounded (p,_)) => strip_wrappers p
+      | _ => th
 
 datatype tacoptions = TO_NoAsms | TO_IgnAsm of string |
                       TO_Abbr of string | TO_Label of string |
@@ -780,11 +826,45 @@ fun filter_then asms aslPs thltac (gl as (asl0,g)) =
       thltac (map ASSUME asl @ asms) gl
     end
 
+fun prepare_taclist classify asl arg =
+    process_tacoptions (map classify arg) asl [] [] []
+
 fun process_taclist_then {arg} thltac (gl as (asl,g)) =
-    let val tacoptions = map dest_tacmarked arg
-        val {pre,asms,aslPs} = process_tacoptions tacoptions asl [] [] []
+    let val {pre,asms,aslPs} = prepare_taclist dest_tacmarked asl arg
     in
       Tactical.THEN(pre, filter_then asms aslPs (mk_require_tac thltac)) gl
+    end
+
+(* As dest_tacmarked, but also recognising an assumption-policy directive
+   under hypothesis-carried wrappers (Req0, ReqD, bounds) *)
+fun dest_bound_tacmarked th =
+    case dest_tacmarked th of
+        TO_thm _ =>
+          if aconv (concl th) NoAsms_t then TO_NoAsms
+          else if has_marker_head IgnAsm_t th then
+            TO_IgnAsm (#1 (dest_var (rand (concl th))))
+          else if is_abbr th then TO_Abbr (dest_abbr th)
+          else (case total dest_label_ref th of
+                    SOME s => TO_Label s | NONE => TO_thm th)
+      | option => option
+
+(* Bounds on an assumption-policy directive qualify the directive, not a
+   rewrite.  Every argument's requirement checks are kept, including those
+   on directives.  The arguments are stripped of their wrappers here,
+   because thltac may use them on later goals: one that still carried its
+   wrapper would take its marker$ hypothesis into that goal's
+   justification. *)
+fun process_taclist_then_bind {arg} thltac (gl as (asl,g)) =
+    let
+      val {pre,asms,aslPs} = prepare_taclist dest_bound_tacmarked asl arg
+      val check = require_all arg
+      val asms = map (#plain o requirement) asms
+      fun recur next = filter_then [] aslPs next
+    in
+      (* thltac is applied only after pre succeeds, so a failing Abbr
+         comes before anything thltac does with the arguments *)
+      Tactical.THEN
+        (pre, check (fn goal => recur (thltac asms recur) goal)) gl
     end
 
 (* ----------------------------------------------------------------------

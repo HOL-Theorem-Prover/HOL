@@ -1,0 +1,29 @@
+## `strip_wrappers`
+
+``` hol4
+markerLib.strip_wrappers : thm -> thm
+```
+
+------------------------------------------------------------------------
+
+Removes the requirement and bound wrappers from a theorem-list argument.
+
+The `Req0`, `ReqD`, `Once` and `Ntimes` wrappers are carried as
+hypotheses. `strip_wrappers th` removes all of them, however nested,
+leaving the theorem they wrap. A theorem without these wrappers is
+returned unchanged.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>> markerLib.strip_wrappers (simpLib.Req0 (Once (ASSUME “p:bool”)));
+```
+
+### See also
+
+[`BoundedRewrites.Once`](#BoundedRewrites.Once),
+[`markerLib.Split`](#markerLib.Split).
