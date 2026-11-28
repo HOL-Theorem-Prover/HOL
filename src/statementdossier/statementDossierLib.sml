@@ -32,6 +32,14 @@ type presentation = {about : string, omit_types : name list,
 (* Supporting statements printed longer than this many lines are folded *)
 val supporting_fold_lines = 40
 
+(* Print a case expression with the catch-all arms that pattern
+   completion expanded folded back (wildcard_case) *)
+val {get = wildcard_arms, flag = case_wildcards, ...} =
+    HOLFlags.create_btrace(
+      {group = "statementdossier", name = "case_wildcards"},
+      true
+    )
+
 fun key ({Thy, Name} : name) = Thy ^ "$" ^ Name
 
 fun name_of_const c =
@@ -120,6 +128,214 @@ fun script_theories dirs =
    term left to right (operator before operands).  Numerals count as
    atoms, so their encoding (NUMERAL, BIT1, ...) is left out. *)
 fun theorem_terms th = hyp th @ [concl th]
+
+(* Case expression t as printed with fewer arms: what it splits on,
+   whether to print that with its type, and the arms.  The arms are the
+   rows of patternMatchesLib.case2pmatch true t, which nests a case that
+   splits on a pattern variable into its patterns and folds the arms
+   that pattern completion made of one catch-all back into it, with
+   generated variables renamed.  Rows left with the same right-hand
+   side, using none of their pattern variables, become one final
+   catch-all variable, as does a lone catch-all that is not a variable.
+   NONE unless that gives fewer arms than t's own rows (as
+   TypeBase.strip_case gives them).  Raises HOL_ERR unless the arms,
+   compiled as the parser compiles a case, give back t up to the names
+   of bound variables, or if the printed arms might not read back as
+   these: when _ is overloaded, when a pattern variable has the name of
+   a constant, or when a right-hand side has a free variable named like
+   one the parser makes of a printed _ (_0, _1, ...), which the _ would
+   capture.  What it splits on is printed with its type when a term in
+   the patterns prints through an overloaded name with several
+   meanings, which arms that are no longer printed may have been all
+   that resolved. *)
+fun wildcard_case t =
+  let
+    fun uscore_name s =
+      String.isPrefix "_" s andalso
+      CharVector.all (fn c => c = #"_" orelse Char.isDigit c) s
+    val oinfo = term_grammar.overload_info (Parse.term_grammar ())
+    fun ambiguous c =
+      case Option.mapPartial (Overload.info_for_name oinfo)
+                             (Overload.overloading_of_term oinfo c) of
+        SOME {actual_ops, ...} => length actual_ops > 1
+      | NONE => false
+    fun refuse why = raise mk_HOL_ERR "statementDossierLib" "wildcard_case" why
+    val (split_on, rows0) = TypeBase.strip_case t
+    val rows =
+        map ((fn (_, p, _, r) => (p, r)) o
+             patternMatchesSyntax.dest_PMATCH_ROW_ABS)
+            (#2 (patternMatchesSyntax.dest_PMATCH
+                   (patternMatchesLib.case2pmatch true t)))
+        (* case2pmatch can fail with Empty, when it drops every row *)
+        handle Interrupt => raise Interrupt
+             | e => refuse ("case2pmatch: " ^ General.exnMessage e)
+    fun rename (p, r) =
+      let
+        val gs = List.filter is_genvar (free_vars p)
+        val (s, _) =
+            List.foldl (fn (g, (s, avoid)) =>
+                           let val v = variant avoid (mk_var ("x", type_of g))
+                           in ((g |-> v) :: s, v :: avoid) end)
+                       ([], free_vars t @ free_vars p @ free_vars r) gs
+      in (subst s p, subst s r) end
+    val rows = map rename rows
+    (* Rows left with the same right-hand side, using none of their
+       pattern variables, as one final catch-all *)
+    fun merges body (p, r) =
+      aconv r body andalso not (List.exists (C free_in r) (free_vars p))
+    val merged =
+      List.foldl (fn ((_, r), best) =>
+                     let val g = List.filter (merges r) rows
+                     in if length g > length best then g else best end)
+                 [] rows
+    val rows' =
+      case merged of
+        [(p, body)] =>
+          if is_var p then rows
+          else List.filter (not o merges body) rows @
+               [(variant (free_vars t) (mk_var ("x", type_of split_on)), body)]
+      | (_, body) :: _ :: _ =>
+          List.filter (not o merges body) rows @
+          [(variant (free_vars t) (mk_var ("x", type_of split_on)), body)]
+      | _ => rows
+    fun gives rows =
+      let
+        val (v, f) =
+          dest_abs (Lib.with_flag (Feedback.emit_MESG, false)
+                                  TypeBase.mk_pattern_fn rows)
+      in aconv (subst [v |-> split_on] f) t end
+      handle HOL_ERR _ => false
+    val shorter = List.filter (fn rs => length rs < length rows0) [rows', rows]
+  in
+    if null rows0 orelse null shorter then NONE
+    else if List.exists (fn (_, r) =>
+                List.exists (uscore_name o #1 o dest_var) (free_vars r)) rows
+    then refuse "a _ would capture a free variable"
+    else if Overload.is_overloaded oinfo "_" then refuse "_ is overloaded"
+    else
+      case List.find gives shorter of
+        SOME rows =>
+          if List.exists (fn (p, _) =>
+                List.exists (Overload.is_overloaded oinfo o #1 o dest_var)
+                            (free_vars p)) rows
+          then refuse "a pattern variable has the name of a constant"
+          else
+            SOME (split_on,
+                  List.exists
+                    (List.exists ambiguous o find_terms (K true) o #1) rows,
+                  rows)
+      | NONE => refuse "the arms give another term"
+  end
+
+(* A user printer for case expressions with a wildcard arm, laid out as
+   term_pp lays out a case.  As there, a case is parenthesised when it
+   is an operand of a function application or an operator to its left,
+   and in a set comprehension. *)
+fun wildcard_case_pp (tyg, _) backend sys
+                     (ppfns : term_pp_types.ppstream_funs)
+                     (_, lgrav, rgrav) depth t =
+  let
+    open term_pp_types term_pp_utils smpp
+    val (split_on, annotate, rows) =
+      (case wildcard_case t of SOME c => c | NONE => raise UserPP_Failed)
+      handle HOL_ERR _ => raise UserPP_Failed
+    val _ = HOLFlags.get_bflag term_pp.cases orelse raise UserPP_Failed
+    val {add_string, add_break, ublock, ...} = ppfns
+    fun pr rgrav t =
+      sys {gravs = (Top, Top, rgrav), binderp = false,
+           depth = decdepth depth} t
+    val parens =
+      (case rgrav of Prec _ => true | _ => false) orelse
+      (case lgrav of
+         Prec (_, s) => s = GrammarSpecials.fnapp_special
+       | _ => false)
+    val casebar = add_break (1, 0) >> add_string "|" >> add_string " "
+    val uscore =
+      GrammarSpecials.mk_fakeconst_name {fake = "_", original = NONE}
+    fun arm rgrav (l, r) =
+      let
+        val (used, unused) = List.partition (C free_in r) (free_vars l)
+        val l = subst (map (fn v => v |-> mk_var (uscore, type_of v)) unused) l
+      in
+      record_bvars used
+        (ublock PP.CONSISTENT 0
+           (pr Top l >> add_string " " >> add_string "=>" >>
+            add_break (1, 2) >> ublock PP.CONSISTENT 0 (pr rgrav r)))
+      end
+    (* As term_pp does after printing a type, so that the closing
+       parenthesis is not spaced off as if it could merge with the : *)
+    val after_type =
+      fupdate (fn {seen_frees, current_bvars, in_gspec, ...} =>
+                  {seen_frees = seen_frees, current_bvars = current_bvars,
+                   last_string = " ", in_gspec = in_gspec}) >> return ()
+    val scrutinee =
+      if annotate then
+        add_string "(" >> pr Top split_on >> add_string " :" >>
+        type_pp.pp_type_with_depth tyg backend (decdepth depth)
+                                   (type_of split_on) >>
+        after_type >> add_string ")"
+      else pr Top split_on
+    val body =
+      ublock PP.CONSISTENT 0
+        (add_string "case" >> add_break (1, 2) >> scrutinee >>
+         add_break (1, 0) >> add_string "of") >>
+      (if HOLFlags.get_bflag term_pp.print_firstcasebar then casebar
+       else add_break (1, 2)) >>
+      (if length rows > 1 then
+         pr_list (arm (Prec (0, "casebar"))) casebar (Lib.butlast rows) >>
+         casebar
+       else nothing) >>
+      arm (if parens then Top else rgrav) (List.last rows)
+  in
+    get_gspec >-
+    (fn gspec =>
+        if gspec orelse parens then
+          ublock PP.CONSISTENT 1 (add_string "(" >> body >> add_string ")")
+        else ublock PP.CONSISTENT 0 body)
+  end
+
+(* Printing under the user printer above, if the flag is set *)
+fun with_wildcard_arms f x =
+  if wildcard_arms () then
+    let
+      val name = "statementDossierLib.wildcard_case"
+      val pat = mk_var ("t", alpha)
+      fun remove () = ignore (Parse.temp_remove_user_printer (name, pat))
+      val () = Parse.temp_add_user_printer (name, pat, wildcard_case_pp)
+      val result = f x handle e => (remove (); raise e)
+    in
+      remove (); result
+    end
+  else f x
+
+(* How many case expressions in the terms print with a wildcard arm, and
+   how many have arms to merge that fail wildcard_case's check, reaching
+   them as the printer does: through the arms of each case it prints. *)
+fun wildcard_counts tms =
+  let
+    fun walk (t, acc as (merged, failed)) =
+      case TypeBase.strip_case t of
+        (_, []) =>
+          (case dest_term t of
+             COMB (f, x) => walk (x, walk (f, acc))
+           | LAMB (_, b) => walk (b, acc)
+           | _ => acc)
+      | (x, rows) =>
+          let
+            val (acc, rows) =
+                (case wildcard_case t of
+                   SOME (_, _, rows') =>
+                     ((HOLset.add (merged, t), failed), rows')
+                 | NONE => (acc, rows))
+                handle HOL_ERR _ => ((merged, HOLset.add (failed, t)), rows)
+          in
+            List.foldl (fn ((_, r), acc) => walk (r, acc)) (walk (x, acc))
+                       rows
+          end
+    val (merged, failed) = List.foldl walk (empty_tmset, empty_tmset) tms
+  in
+    (HOLset.numItems merged, HOLset.numItems failed)
+  end
 
 fun consts_lr tm =
   let
@@ -1409,6 +1625,22 @@ fun render ({about = extra_about, omit_types, reader_view,
           if shown = "Unknown" then [] else [Code shown]
       | NONE => []
     val (entries, met) = closure (not reader_view) cfg tyidx theorems
+    val (merged_cases, failed_cases) =
+      if wildcard_arms () andalso HOLFlags.get_bflag term_pp.cases then
+        wildcard_counts
+          (List.concat
+             (map (theorem_terms o #2)
+                (theorems @ supporting @
+                 List.concat (map (fn (e : entry) => #defs e @ #lemmas e)
+                                  entries))))
+      else (0, 0)
+    val () =
+      if merged_cases + failed_cases = 0 then ()
+      else print ("statementDossierLib: distinct case expressions in the \
+                  \statements and definitions printed with fewer arms: " ^
+                  Int.toString merged_cases ^
+                  "; printed in full as the merged arms failed the check: " ^
+                  Int.toString failed_cases ^ "\n")
     val bucket_maps = map (fn (n, th) => (n, buckets cfg entries th)) theorems
     fun bucket_in m c =
       getOpt (Redblackmap.peek (m, key (name_of_const c)), Plumbing)
@@ -1943,6 +2175,15 @@ fun render ({about = extra_about, omit_types, reader_view,
       [Para [Text "Recorded oracle tags, axiom dependencies and kernel \
                   \assumptions are shown beside each statement. Their absence \
                   \alone is not an independent proof audit."]] @
+      (if merged_cases = 0 then [] else
+         [Para [Text ("In " ^ Int.toString merged_cases ^ " distinct \
+                      \case expressions of the statements and definitions, \
+                      \the arms that pattern completion made of a \
+                      \catch-all are printed as that one arm, arms that \
+                      \share a right-hand side using none of their pattern \
+                      \variables as one final catch-all, and pattern \
+                      \variables an arm does not use as `_`; each was \
+                      \checked to read back as the stored term.")]]) @
       (if reader_view then
          [Para [Text ("Contents: " ^
            Int.toString (length theorems + length supporting) ^
@@ -2148,10 +2389,11 @@ fun run_with_presentation presentation (cfg : config) =
       end
   in
     HOLFlags.with_bflags [(Parse.avoid_unicode, false)]
-      (fn () => let val doc as (_, _, href) = render presentation cfg in
-                  List.app (write doc) (#outputs cfg);
-                  Option.app (write_snippets cfg href) (#snippets cfg)
-                end) ()
+      (with_wildcard_arms
+         (fn () => let val doc as (_, _, href) = render presentation cfg in
+                     List.app (write doc) (#outputs cfg);
+                     Option.app (write_snippets cfg href) (#snippets cfg)
+                   end)) ()
   end
 
 fun run cfg = run_with_presentation

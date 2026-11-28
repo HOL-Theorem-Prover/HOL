@@ -480,6 +480,105 @@ val _ = check "Each constant of a mutual recursion shows its equations"
         contains (entry_of (read html_path) name) "<code>mutual_def</code>")
      ["mut_even", "mut_odd"])
 
+(* Arms sharing a right-hand side that uses none of their pattern
+   variables print as one final wildcard arm. *)
+val _ = Define `pick (m:num) n x =
+  (case (m, n) of (0, 0) => 1 | _ => 2) +
+  (case x of NONE => 0 | SOME (INL k) => k | SOME (INR k) => k)`
+val _ = save_thm ("pick_result", REFL ``pick m n x``)
+val pick_md = #1 (generate (basic ["pick_result"]))
+val _ = check "Repeated case arms print as one wildcard arm"
+  (contains pick_md "| _ => 2" andalso not (contains pick_md "(_, _)") andalso
+   contains pick_md "SOME (INR k') => k'")
+
+(* A catch-all that binds a variable under a constructor, which pattern
+   completion expanded into one arm per constructor, prints as written. *)
+val _ = Datatype `colour = Red | Green | Paint num`
+val _ = Define `paint (x:num + colour) =
+  case x of INL k => [] | INR Red => [Red; Red] | INR c => [c]`
+val _ = save_thm ("paint_result", REFL ``paint x``)
+val paint_md = #1 (generate (basic ["paint_result"]))
+val _ = check "A variable catch-all under a constructor prints as written"
+  (contains paint_md "INR Red => [Red; Red] | INR v1 => [v1] | _ => []" andalso
+   not (contains paint_md "INR (Paint"))
+
+(* A pattern variable with the name of a constant would read back as
+   that constant, so the case prints as stored. *)
+val _ = temp_overload_on ("v1", ``SUC``)
+val paint_ovl_md = #1 (generate (basic ["paint_result"]))
+val _ = temp_remove_ovl_mapping "v1" {Name = "SUC", Thy = "num"}
+val _ = check "Pattern variables named like constants print as stored"
+  (not (contains paint_ovl_md "| _ =>") andalso
+   contains paint_ovl_md "INR (Paint")
+
+(* Arms that do not compile back to the stored case, here nested in
+   another order than the parser nests them, print as stored. *)
+val _ = save_thm ("order_result", REFL
+  ``case (m:num, n:num) of
+      (a, b) => case b of
+                  0 => (case a of 0 => 1 | SUC _ => 2)
+                | SUC _ => 2``)
+val order_md = #1 (generate (basic ["order_result"]))
+val _ = check "Arms that give another term print as stored"
+  (not (contains order_md "_ =>") andalso contains order_md "(SUC")
+val pick_off_md =
+  #1 (HOLFlags.with_bflags [(case_wildcards, false)] generate
+                           (basic ["pick_result"]))
+val _ = check "With case_wildcards off, every arm prints"
+  (not (contains pick_off_md "_ =>") andalso
+   not (contains pick_off_md "read back as the stored term"))
+
+(* case2pmatch drops ARB arms, which the parser puts back: a case left
+   with one arm prints it alone, and one left with none prints as
+   stored. *)
+val _ = save_thm ("arb_result", REFL
+  ``(option_CASE (x:num option) (ARB:num) (\n. ARB),
+     case (y:num option) of NONE => (ARB:num) | SOME n => n)``)
+val arb_md = #1 (generate (basic ["arb_result"]))
+val _ = check "Cases left with one arm or none print and read back"
+  (contains arb_md "case y of SOME n => n" andalso
+   contains arb_md "case x of NONE => ARB | SOME n => ARB" andalso
+   not (contains arb_md "of |"))
+
+(* With an overloaded name left in the patterns, which the merged arms
+   may have been all that resolved, the case gives the type of what it
+   splits on. *)
+val typed_t =
+  ``case (x:(num + num) option) of
+      NONE => 0 | SOME (INL 0) => 2
+    | SOME (INL (SUC k)) => 1 | SOME (INR m) => 1``
+val _ = save_thm ("typed_result", REFL typed_t)
+val _ = temp_overload_on ("NONE", ``[] : num list``)
+val typed_md = #1 (generate (basic ["typed_result"]))
+val _ = temp_remove_ovl_mapping "NONE" {Name = "NIL", Thy = "list"}
+val _ = check "Overloaded names left in the patterns fix the type"
+  (contains typed_md "case (x :(num + num) option) of" andalso
+   contains typed_md "| _ => 1")
+
+(* The same when a compound pattern prints through such a name. *)
+val _ = save_thm ("compound_result", REFL
+  ``case (x:num option) of NONE => 2 | SOME 0 => 1 | SOME (SUC k) => 2``)
+val _ = temp_overload_on ("foo", ``SOME (0:num)``)
+val _ = temp_overload_on ("foo", ``F``)
+val compound_md = #1 (generate (basic ["compound_result"]))
+val _ = temp_remove_ovl_mapping "foo" {Name = "F", Thy = "bool"}
+val _ = temp_clear_overloads_on "foo"
+val _ = check "Compound patterns printed through overloaded names fix the type"
+  (contains compound_md "case (x :num option) of" andalso
+   contains compound_md "| _ => 2")
+
+(* A printed _ would bind the free _0 the merged arms return, so the case
+   fails the check and prints every arm. *)
+val uscore = mk_var ("_0", ``:num``)
+val _ = save_thm ("capture_result", REFL
+  ``case (x:(num + num) option) of
+      NONE => (y:num) | SOME (INL 0) => z
+    | SOME (INL (SUC k)) => ^uscore | SOME (INR m) => ^uscore``)
+val capture_md = #1 (generate (basic ["capture_result"]))
+val _ = check "Merged arms that fail the check print in full"
+  (not (contains capture_md "_ =>") andalso
+   contains capture_md "SOME (INR m) => _0")
+
 val _ = List.app OS.FileSys.remove
   [markdown_path, html_path, prose_path, snippets_in, snippets_out]
 val _ = print "statementDossierLib selftests passed\n"

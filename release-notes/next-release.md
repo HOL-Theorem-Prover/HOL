@@ -295,8 +295,10 @@ New tools
     printer annotations for highlighting, types and links. Optional prose
     sections are checked against the theorem's hypotheses and database.
     The Poly/ML `statement-dossier` command reads a TOML configuration
-    and loads the selected theories. See `src/statementdossier/README.md`
-    for examples.
+    and loads the selected theories. A `case` whose arms pattern completion
+    made of a wildcard prints with the wildcard arm where that reads back
+    as the stored term; the flag `statementdossier.case_wildcards` turns
+    this off. See `src/statementdossier/README.md` for examples.
 
 -   A Neovim plugin for HOL's language server (`hol lsp`), in
     `tools/editor-modes/vim/neovim`. Besides the server's diagnostics,
