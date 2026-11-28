@@ -364,6 +364,8 @@ local
         "`suffices_by` reduction was not proved by its tactic"
     | FBracket _  => "The tactics in these brackets left the goal \
                      \unfinished"
+    | FMBracket (_, FNextFirstProve, _, _, _) =>
+        "No tactic in `FIRST_PROVE` proved the goal"
     | FMBracket _ => "The tactics in these brackets left the goal \
                      \unfinished"
 

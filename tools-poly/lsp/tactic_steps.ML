@@ -116,11 +116,13 @@ local
     | open_ch FOpenSelect     = "$"
     | open_ch FOpenFirstLT    = "F"
   fun mid_ch FNextFirst       = "|"
+    | mid_ch FNextFirstProve  = "!"
     | mid_ch FNextTacsToLT    = ";"
     | mid_ch FNextSplit       = ","
     | mid_ch FNextSelect      = "~"
   fun close_ch FClose         = ")"
     | close_ch FCloseFirst    = ">"
+    | close_ch FCloseFirstProve = "p"
     | close_ch FCloseRepeat   = "r"
     | close_ch FCloseFirstLT  = "f"
   fun atom_ch te = case te of

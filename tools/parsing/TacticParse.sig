@@ -73,6 +73,7 @@ datatype tac_frag_open
 
 datatype tac_frag_mid
   = FNextFirst
+  | FNextFirstProve
   | FNextTacsToLT
   | FNextSplit
   | FNextSelect
@@ -80,6 +81,7 @@ datatype tac_frag_mid
 datatype tac_frag_close
   = FClose
   | FCloseFirst
+  | FCloseFirstProve
   | FCloseRepeat
   | FCloseFirstLT
 
