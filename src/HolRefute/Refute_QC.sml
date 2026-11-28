@@ -172,6 +172,13 @@ structure Refute_QC :> Refute_QC = struct
             in
               Refute_Core.rebuild_instance
                 {original = #original instance,
+                 (* a representative stands for a statement binder only
+                    where its variable is one *)
+                 binders = #binders instance @
+                   List.mapPartial (fn {x, r, ...} : transport_entry =>
+                       if Lib.op_mem Term.aconv x (#binders instance)
+                       then SOME r else NONE)
+                     entries,
                  raw_goal = List.foldr boolSyntax.mk_imp body
                    (map transport_guard entries),
                  evals_for = fn _ => evals,
@@ -309,9 +316,12 @@ structure Refute_QC :> Refute_QC = struct
             SOME answer => answer
           | NONE =>
               let
-                val answer = compute ()
+                val (answer, refused) = Refute_Facts.capture compute
                 val _ = store answer
-                val _ = Option.app SmartGen.cache_inference (#result answer)
+                (* the context keeps no program resting on a refused fact *)
+                val _ = if null refused then
+                    Option.app SmartGen.cache_inference (#result answer)
+                  else ()
               in
                 answer
               end
@@ -1137,7 +1147,17 @@ structure Refute_QC :> Refute_QC = struct
             else Refute_Core.Potential [stuck],
           bindings = ordered_bindings,
           evals = [], cert = NONE, scope = NONE, model = NONE,
-          stats = stats }
+          stats = stats,
+          (* The instance it was found at *)
+          statement = {types = Refute_Core.statement_types (#original instance),
+                       (* the values tested, before display, of the
+                          statement's binders the goal has *)
+                       values = List.map apply_report_transport
+                         (List.filter (fn (variable, _) =>
+                            Lib.op_mem Term.aconv variable
+                              (#binders instance))
+                            goal_ordered_bindings),
+                       partial = #partial Refute_Core.unlinked} }
       val next =
         {env = env, ground_env = ground_env, case_tree = case_tree,
          genuine = genuine, run_depth = run_depth} :: ignored
@@ -1460,6 +1480,15 @@ structure Refute_QC :> Refute_QC = struct
                        Compiled test =>
                          (if report then
                             say_selected (#name substrate) explicit
+                          else ();
+                          (* Whatever a
+                             substrate the library did not register
+                             reports, a candidate or exhaustion, rests on
+                             it (Refute_Eval.is_foreign_substrate) *)
+                          if Refute_Eval.is_foreign_substrate
+                               (#name substrate)
+                          then Refute_Facts.foreign
+                                 ("substrate " ^ #name substrate)
                           else ();
                           Selected (#name substrate, test))
                      | Inapplicable why =>
@@ -1848,6 +1877,7 @@ structure Refute_QC :> Refute_QC = struct
        {preflight = Refute_Extract.native_preflight,
         extract = Refute_Extract.extract_problem};
      Refute_EvalCompute.register_substrate ();
-     Refute_Core.register_backend exhaustive_backend;
-     Refute_Core.register_backend random_backend)
+     (* The library's own: trusted *)
+     Refute_Core.register_library_backend exhaustive_backend;
+     Refute_Core.register_library_backend random_backend)
 end

@@ -30,7 +30,12 @@ seeing the whole remainder, unless `upd_sequential true`, which runs them
 in turn, by weight or in the order an `Only` list gives, each with half of
 the remainder while others wait and the last with the rest.  Either
 way the search stops at `NoCounterexample` or at a counterexample reaching
-the highest certainty any selected backend declares reachable.
+the highest certainty any selected backend declares reachable and has a
+kernel theorem; `upd_abort_potential true` stops it at the first
+counterexample instead.  The
+result holds every backend's counterexamples completed within the
+deadline, ranked: a kernel theorem first, then by certainty, then by
+weight.
 
 QC `size` and model-finder `card` deepen iteratively from an initial window
 of 10.  `upd_size` / `upd_card` pin fixed bounds; `upd_iterative_size` /
@@ -59,10 +64,12 @@ Verdicts and trust
 * SETTLED, do not revisit without the owner: Refute trusts Kodkodi exactly
   as Nitpick trusts Kodkod and is never stricter.  A model-finder verdict is
   decided by the encoding (`Refute_ModelFinder_Model.fallback_certainty`),
-  never by whether a certificate was built.  The one exception is a
-  problem where a constant's equations are circular (that constant is left
-  free): its models are Potential, and only a replay that certifies one
-  makes it Genuine.  `max_potential` bounds models of the unsound liberal
+  never by whether a certificate was built.  The one exception in the
+  encoding is a problem where a constant's equations are circular (that
+  constant is left free): its models are Potential, and only a replay that
+  certifies one makes it Genuine.  (A call that refused a fact caps its
+  uncertified models after the search: "Checked facts" below.)
+  `max_potential` bounds models of the unsound liberal
   problem and those uncertified circular-constant models.  Of the other
   models of a sound problem, a Genuine one spends a `max_genuine` slot and
   a QuasiGenuine one is reported without spending either budget.
@@ -72,6 +79,59 @@ Verdicts and trust
   counterexample found at a monomorphic proxy stands.  Refuting an
   essential existential over an infinite type is out of reach (as in
   Nitpick); the `real` ersatz is rational-valued.
+* Checked facts: every theorem whose conclusion becomes part of a problem
+  (definitions, compset and normalizer rewrites, cases and induction
+  theorems, registered descriptors and ersatz rows, and the theorems of a
+  `TypeBase` entry whose constructors, case constant, cases, induction,
+  record or size an engine reads, all but its simplification set, whose
+  rewrites reach a problem only through `srw_ss` with their own tags)
+  goes through `Refute_Facts`.  One with a hypothesis or a tag other than
+  `DISK_THM` is refused when a problem uses it (the model finder's tables,
+  read whole, hold a refusal until a problem looks the proposition up), and
+  so are an ersatz, frac type, backend or QC substrate registered by the user
+  rather than the library (the library's trust goes only to the names it
+  defines, at their first registration; `register_test_backend` trusts a
+  test stub), and a codatatype registered without a witness unless it is
+  the finder's own description of a type it knows (the same case constant
+  and constructors).  With a witness, a codatatype the caller described
+  has its case constant refused where a problem applies it, and its
+  constructors where a problem uses them, since only the caller says they
+  are the type's case and free constructors; likewise a quotient
+  registered by an equivalence theorem is refused where a problem uses
+  the type unless the type's own `QUOTIENT` theorem names its abs and rep
+  with that relation.  A generator spec, cardinality or enumeration
+  resting on a refused fact is not cached.  A certificate resting on a
+  refused theorem is dropped, and the call's counterexamples without a
+  trusted one are capped at `Potential`, with a reason starting
+  `refused`; a `NoCounterexample` or `NoModel` becomes `Unknown` with
+  those reasons, and once the call has refused anything a
+  `NoCounterexample` no longer ends the search.  The cap comes after the
+  search, so a back end meters `max_genuine`/`max_potential` on the
+  certainty it found: a capped model may have spent a Genuine slot and
+  comes back Potential even with `max_potential = 0`.  Under
+  `genuine_only` capped candidates are dropped, and a call left with none
+  is `Unknown` with the reasons; an `Unknown` lists what the call refused.
+  Each back end's answer is settled against the refusals so far before it
+  can end the search, so a capped or dropped candidate does not.  A
+  user's backend never ends the search, settles nothing and has its
+  certificates dropped.  The refusals guard the `Refute` API.  The
+  internal modules' registration functions
+  (`Refute_Core.register_library_backend` and `register_test_backend`,
+  `Refute_Eval.register_library_substrate`,
+  `Refute_ModelFinder_HOL.register_library_frac_type`,
+  `Refute_ModelFinder_Model.register_library_frac_type_with_display`) are
+  the library's own and trusted: SML exports every loaded module's
+  signature to the session, so calling one deliberately grants trust.
+* Each counterexample's `statement` pairs its values with the binders of
+  the statement (outer `!`s and free variables), each value one the back
+  end traced to its binder, never one matched by name, and gives the type
+  instance, from the instance the back end searched
+  (`Refute_Core.statement_types`) or the values' types; `partial` says what
+  is missing or ambiguous, e.g. a type variable the model finder read as a
+  finite scope, a value the model left open at some point, or a model
+  finder value not traced to one binder (two binders of the goal share its
+  name and type, or it depends on another binder), along with any reasons
+  the back end gave.
 * No oracle tags.  No Refute-created type, constant, theorem or binding may
   survive in the user's theory on any path: the definitions Compute makes
   through `Refute_EvalEnum` are bracketed in a theory snapshot/revert that
@@ -198,11 +258,14 @@ Module layout
 * `Refute_Core`: types, configuration, backend registry, orchestration.
 * `Refute_Config`: configuration types and updaters shared by
   `Refute_Core` and the facade.
+* `Refute_Facts`: the checked point for theorems that become problem
+  content, and the call's record of what it refused.
 * `Refute_Session`: Refute's state in the HOL context; one call reads the
   context captured at its entry and commits its cache changes at exit.
 * `Refute_RegistrationData`: structural descriptors, typed theorem codecs,
   and ancestry storage; its load hooks never validate or start Refute.
-* `Refute_TypeBase`: `TypeBase` accessors that read the call's context.
+* `Refute_TypeBase`: `TypeBase` accessors that read the call's context
+  and check the entry they read.
 * `Refute_Gen`, `Refute_SmartGen`: generator derivation; mode inference.
 * `Refute_Eval`: substrate seam and PRNG;
   `Refute_EvalCompute`, `Refute_EvalSML`: substrates;
@@ -239,6 +302,11 @@ its descriptions available to Refute, which validates them on first use.
 Derived encoding flags are recomputed; supporting theorems need not have
 public DB names.  Codatatype constructor order and the optional witness are
 preserved, including the existing trust contract when `witness = NONE`.
+An imported description is trusted no more than a session registration:
+a codatatype other than the finder's own description has its case
+constant and constructors refused where a problem uses them, and a
+quotient no `QUOTIENT` theorem ties is refused where a problem uses its
+type (see checked facts above).
 
 For example, after defining a typedef and its bijection laws in a script:
 

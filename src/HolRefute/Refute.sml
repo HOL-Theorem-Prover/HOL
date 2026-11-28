@@ -197,7 +197,8 @@ structure Refute :> Refute = struct
   val export_quotient = Refute_ModelFinder_HOL.export_quotient
   val export_registrations = Refute_ModelFinder_HOL.export_registrations
   val harvest_registrations = Refute_ModelFinder_HOL.harvest_registrations
-  val register_frac_type = Refute_ModelFinder_HOL.register_frac_type
+  (* A caller's frac type (Refute_Facts) *)
+  val register_frac_type = Refute_ModelFinder_HOL.register_caller_frac_type
   val register_ersatz = Refute_ModelFinder_HOL.register_ersatz
   val abstract_generator = Refute_Gen.abstract_generator
 

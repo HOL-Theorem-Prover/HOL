@@ -24,16 +24,15 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
      explicit universals in the prefix.  A guarded hit is certified
      against the original formula, so a guard only narrows the search.
 
-     A [use_subtype]-transported instance is searched on [#goal], since
-     [#original] quantifies over the untransportable abstract type.  It is
-     passed open: closing it first lets [Refute_Core.normalize] turn a
-     bounded universal into a ground [EVERY ... (COUNT_LIST n)], leaving an
-     empty prefix and a counterexample that names no witness.
-     Certification always replays [#original], so it is unaffected. *)
-  fun narrowing_goal (instance : Refute_Core.instance) =
-    case #transport instance of
-        [] => Refute_Core.normalize (#original instance)
-      | _ => Refute_Core.normalize (#goal instance)
+     An instance is searched on its normal goal before finite quantifiers
+     are expanded ([#normal]), open, with the statement's binders free; a
+     [use_subtype]-transported one's is of its transported goal, since
+     [#original] quantifies over the untransportable abstract type.
+     Closing it first would let normalization turn a bounded universal
+     into a ground [EVERY ... (COUNT_LIST n)], leaving an empty prefix and
+     a counterexample that names no witness.  Certification always
+     replays [#original], so it is unaffected. *)
+  fun narrowing_goal (instance : Refute_Core.instance) = #normal instance
 
   (* A narrowing problem is one PNF formula rather than a list of plans.
      Compile each monomorphic/cardinality instance independently and
@@ -339,5 +338,6 @@ structure Refute_QC_Narrow :> Refute_QC_Narrow = struct
      run = run,
      render = NONE}
 
-  fun register_backend () = Refute_Core.register_backend backend
+  (* The library's own: trusted (Refute_Facts) *)
+  fun register_backend () = Refute_Core.register_library_backend backend
 end

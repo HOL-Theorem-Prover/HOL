@@ -318,7 +318,11 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
 
   (* Positive and negative results are cached in the context.  The source
      stamp prevents a transient current-theory presentation from poisoning a
-     later definition with the same name after snapshot/revert. *)
+     later definition with the same name after snapshot/revert.  A result
+     whose synthesis refused a fact (Refute_Facts) is not cached: a later
+     call synthesizes it again, and so refuses it again.  The source
+     equations are read, and checked, on every call, before the cache is
+     looked at. *)
   val intro_cache = Refute_Session.state "intro_clauses"
     ([] : inference_clause cache_entry list)
 
@@ -339,14 +343,15 @@ structure Refute_SmartGen :> Refute_SmartGen = struct
             SOME {result, ...} => result
           | NONE =>
               let
-                val result =
+                val (result, refused) = Refute_Facts.capture (fn () =>
                   case source of
                       SOME (_, equations) => synthesize constant equations
-                    | NONE => NONE
-                val _ = Refute_Session.update cache (fn entries =>
-                  {constant = constant, stamp = stamp, result = result} ::
-                  List.filter (fn {constant = other, ...} =>
-                    not (same_constant constant other)) entries)
+                    | NONE => NONE)
+                val _ = if not (null refused) then ()
+                  else Refute_Session.update cache (fn entries =>
+                    {constant = constant, stamp = stamp, result = result} ::
+                    List.filter (fn {constant = other, ...} =>
+                      not (same_constant constant other)) entries)
               in
                 result
               end

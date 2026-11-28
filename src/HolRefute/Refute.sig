@@ -6,6 +6,7 @@ signature Refute = sig
 
   datatype certainty = datatype Refute_Core.certainty
   type model_report = Refute_Core.model_report
+  type statement_instance = Refute_Core.statement_instance
   type counterexample = Refute_Core.counterexample
   (* [NoCounterexample] says that the whole relevant space was covered and
      no counterexample is possible.  A clean search limited to non-covering
@@ -72,10 +73,17 @@ signature Refute = sig
   val MODEL_REFUTE_TAC  : Abbrev.tactic
 
   (* Replaces a backend of the same name.  [certainty_ceiling] must bound
-     what [run] can return: a search stops once a result reaches the best
-     ceiling among the selected backends.  A nested Refute call from
-     [run] raises, so the backend yields [Unknown]. *)
+     what [run] can return: a search stops once a result with a kernel
+     certificate reaches the best ceiling among the selected backends.  A
+     nested Refute call from [run] raises, so the backend yields
+     [Unknown].  It is a back end the
+     library did not make: its candidates never count (they are
+     [Potential], with the reason, and a certificate it gives is dropped,
+     being its own claim too), and its answer that none exists settles
+     nothing.  Its counterexamples carry [unlinked] as their
+     [statement]; Refute fills that in. *)
   val register_backend : backend -> unit
+  val unlinked : statement_instance
   val register_generator : hol_type -> custom_gen -> unit
   (* Registers a QC generator for every concrete instance of a type
      operator, built from constructor constants whose declared result type

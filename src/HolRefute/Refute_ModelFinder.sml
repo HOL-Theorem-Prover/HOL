@@ -507,7 +507,7 @@ fun replace_stats stats (cex : Refute_Core.counterexample) =
   {backend = #backend cex, substrate = #substrate cex,
    certainty = #certainty cex, bindings = #bindings cex,
    evals = #evals cex, cert = #cert cex, scope = #scope cex,
-   model = #model cex, stats = stats}
+   model = #model cex, stats = stats, statement = #statement cex}
 
 (* HOL4 has no type classes or sorts, so all goal type variables occupy
    Isabelle's single default-sort equivalence class.  Keeping the
@@ -612,6 +612,60 @@ fun abandoned_mono_verdict report exn =
     | Util.BAD (location, detail) => (report (location, detail); false)
     | _ => raise exn
 
+(* The statement's values are the model's own,
+   before display formatting: the bindings and the Skolem values by the
+   binders they stand for (Refute_Core's [link_candidate]).  A Skolem
+   stands for a binder only when its provenance names one place in the
+   goal's quantifier prefix [prefix] and it depends on no other binder (a
+   statement's binder is under no existential); its value is then keyed
+   by that prefix binder's own name and type.  Any other Skolem's value is
+   left out and marked: a binder sharing its name and type with another
+   in the goal has no such place, a prefix binder that is not the
+   statement's own has no key ([Refute_Core.normalize_closed]), and a
+   dependent one is a function of the binders it depends on, not one
+   binder's value.  The type instance
+   is that of the goal as searched, after any type variables were merged,
+   under which each key is its statement binder. *)
+fun with_raw_values instance_types (prefix : (string * Type.hol_type) list)
+      (replay_hints : MFM.replay_hint list)
+      ({bindings, skolems, ...} : MFM.reconstruction)
+      (cex : Refute_Core.counterexample) : Refute_Core.counterexample =
+  let
+    fun binder ({provenance = SOME {origin = SOME index, arity = 0, ...},
+                 ...} : MFM.replay_hint) =
+          if index < length prefix then SOME (List.nth (prefix, index))
+          else NONE
+      | binder _ = NONE
+    fun keyed ((name, value), hint) =
+      case binder hint of
+          SOME (binder_name, binder_type) =>
+            if binder_name = name andalso
+               Type.compare (binder_type, Term.type_of value) = EQUAL
+            then SOME (Term.mk_var (binder_name, binder_type), value)
+            else NONE
+        | NONE => NONE
+    val keys =
+      if length replay_hints = length skolems then
+        map keyed (ListPair.zip (skolems, replay_hints))
+      else map (fn _ => NONE) skolems
+    val pairs = ListPair.zip (skolems, keys)
+    val values =
+      List.filter (Term.is_var o #1) bindings @ List.mapPartial #2 pairs
+    val {types, values = given, partial} = #statement cex
+    val untraced_reasons = Lib.mk_set (List.mapPartial
+      (fn ((name, _), NONE) =>
+            SOME ("value of " ^ name ^ " is not traced to one binder")
+        | _ => NONE) pairs)
+  in
+    {backend = #backend cex, substrate = #substrate cex,
+     certainty = #certainty cex, bindings = #bindings cex,
+     evals = #evals cex, cert = #cert cex, scope = #scope cex,
+     model = #model cex, stats = #stats cex,
+     statement = {types = (case types of [] => instance_types | _ => types),
+                  values = given @ values,
+                  partial = partial @ untraced_reasons}}
+  end
+
 fun run_instance deadline started (config : Refute_Core.config)
       incremental solver (initial_max_potential, initial_max_genuine)
       reject_problem
@@ -628,9 +682,24 @@ fun run_instance deadline started (config : Refute_Core.config)
       if #falsify mf then boolSyntax.mk_imp (original, boolSyntax.F)
       else original
     val (_, closure, _) = Refute_Cert.closure_of original
-    val (_, _, pnf) = Refute_Cert.normalize_to_pnf Conv.QCONV closure
-    val prefix_origins = Refute_Skolem.mark_source_ambiguities original
-      (Refute_Skolem.prefix_binders pnf)
+    (* The replay's prefix, position for position ([normalize_to_pnf]),
+       with only the statement's own binders under their names, at the
+       types [original] gives them *)
+    val binders =
+      case Lib.total (Term.match_term (#original instance)) original of
+          SOME (_, types) => map (Term.inst types) (#binders instance)
+        | NONE => #binders instance
+    val (normal, traced) = Refute_Core.normalize_closed
+      (binders @ Term.free_vars original) closure
+    val pnf = Refute_Facts.rhs
+      (Conv.QCONV Refute_Narrow.prenex_conversion normal)
+    val prefix = Refute_Skolem.prefix_binders pnf
+    (* a prefix binder that is not the statement's own keys no value *)
+    val keys = map (fn (name, ty) =>
+        if Lib.op_mem Term.aconv (Term.mk_var (name, ty)) traced
+        then (name, ty) else ("", ty)) prefix
+    val prefix_origins =
+      Refute_Skolem.mark_source_ambiguities original prefix
     val context = MFH.make_context context_mf eval_terms
     val _ = #prefix_origins context := prefix_origins
     val fixpoint_refusal = MFH.first_fixpoint_refusal context original
@@ -854,7 +923,7 @@ fun run_instance deadline started (config : Refute_Core.config)
        certainty = Refute_Core.Potential [], bindings = [], evals = [],
        cert = NONE,
        scope = SOME (#card_assigns (#scope (metadata problem))),
-       model = NONE, stats = []}
+       model = NONE, stats = [], statement = Refute_Core.unlinked}
 
     fun reconstruct problem bounds =
       if not (valid_instance (raw_problem problem) bounds) then
@@ -916,8 +985,10 @@ fun run_instance deadline started (config : Refute_Core.config)
             MFM.Drop => (discard (); NONE)
           | MFM.Keep semantic_cex =>
               let val cex =
-                MFM.display_counterexample postprocessors displayed
-                  semantic_cex
+                with_raw_values (Refute_Core.statement_types original) keys
+                  replay_hints reconstructed
+                  (MFM.display_counterexample postprocessors displayed
+                     semantic_cex)
               in
                 if #genuine_only config andalso
                    certainty_is_potential (#certainty cex)
@@ -1605,7 +1676,8 @@ val kodkod_backend : Refute_Core.backend =
    run = run,
    render = SOME render_witness}
 
+(* The library's own: trusted (Refute_Facts) *)
 fun register_backends () =
-  Refute_Core.register_backend kodkod_backend
+  Refute_Core.register_library_backend kodkod_backend
 
 end

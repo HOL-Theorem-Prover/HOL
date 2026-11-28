@@ -10,7 +10,9 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
      every exception escaping evaluation is an evaluator defect and must
      reach the GaveUp handlers in [run] rather than be filed as a stuck
      candidate.  Stuckness is read off the shape of tm' instead. *)
-  fun eval_rhs env tm = rhs_of (eval (instantiate env tm))
+  (* The result goes through the checked point
+     (Refute_Facts) *)
+  fun eval_rhs env tm = Refute_Facts.rhs (eval (instantiate env tm))
 
   datatype boolean_value = IsTrue | IsFalse | IsStuck
 
@@ -810,6 +812,7 @@ structure Refute_EvalCompute :> Refute_EvalCompute = struct
       preflight = NONE,
       compile = compile }
 
+  (* The library's own: trusted (Refute_Facts) *)
   fun register_substrate () =
-    Refute_Eval.register_substrate compute_substrate
+    Refute_Eval.register_library_substrate compute_substrate
 end

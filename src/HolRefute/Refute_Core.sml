@@ -33,6 +33,11 @@ structure Refute_Core :> Refute_Core = struct
       consts : (term * string * term) list,
       types : (hol_type * term list * bool) list }
 
+  type statement_instance =
+    { types : (hol_type, hol_type) Lib.subst,
+      values : (term * term) list,
+      partial : string list }
+
   type counterexample =
     { backend : string,
       substrate : string,
@@ -42,7 +47,12 @@ structure Refute_Core :> Refute_Core = struct
       cert : thm option,
       scope : (hol_type * int) list option,
       model : model_report option,
-      stats : (string * int) list }
+      stats : (string * int) list,
+      statement : statement_instance }
+
+  val unlinked =
+    {types = [], values = [], partial = ["not linked to the statement"]}
+      : statement_instance
 
   datatype outcome =
       Counterexample of counterexample list
@@ -174,6 +184,8 @@ structure Refute_Core :> Refute_Core = struct
 
   type instance =
     { original : term,
+      binders : term list,
+      normal : term,
       goal : term,
       qc_gate : string list option,
       evals : term list,
@@ -1189,10 +1201,101 @@ structure Refute_Core :> Refute_Core = struct
 
   val normal_conv = Conv.QCONV (Conv.REPEATC (Conv.CHANGED_CONV normal_pass))
 
-  fun normalize tm =
-    #2 (boolSyntax.dest_eq (Thm.concl (normal_conv tm)))
+  (* [pairs] applied to every variable of [tm], bound ones included:
+     alpha-safe when each new variable is fresh in [tm]. *)
+  fun rename_everywhere pairs tm =
+    if Term.is_var tm then
+      (case List.find (fn (from, _) => Term.aconv from tm) pairs of
+           SOME (_, to) => to
+         | NONE => tm)
+    else if Term.is_comb tm then
+      let val (f, x) = Term.dest_comb tm
+      in Term.mk_comb (rename_everywhere pairs f, rename_everywhere pairs x)
+      end
+    else if Term.is_abs tm then
+      let val (v, body) = Term.dest_abs tm
+      in Term.mk_abs (rename_everywhere pairs v, rename_everywhere pairs body)
+      end
+    else tm
+
+  (* The rewrites include HOL's implicit ones, so
+     the theorem goes through the checked point.
+
+     The statement's binders are traced through it: each is marked with a
+     fresh name while the rewrites run ([pairs]: each binder with its
+     marker in [marked]), and the result is returned with the binders it
+     still has, under their own names.  The rewrites can drop a binder (a
+     vacuous one) and bring in a variable of its name and type (an inner
+     binder pulled out, a bounded quantifier's own): such a variable keeps
+     its name if the binder is gone and is renamed apart if not, and is
+     never among the binders returned. *)
+  fun normalize_marked pairs marked tm =
+    let
+      val normal =
+        #2 (boolSyntax.dest_eq (Refute_Facts.concl (normal_conv marked)))
+      val present = List.filter (fn (_, marker) =>
+        Lib.op_mem Term.aconv marker (Term.all_vars normal)) pairs
+      val binders = map #1 present
+      val others = List.filter (fn v => Lib.op_mem Term.aconv v binders)
+        (Term.all_vars normal)
+      val (apart, _) = List.foldl (fn (other, (apart, avoid)) =>
+          let val fresh = Term.variant avoid other
+          in (apart @ [(other, fresh)], fresh :: avoid) end)
+        ([], Term.all_vars normal @ map #1 pairs) others
+    in
+      (rename_everywhere
+         (apart @ map (fn (binder, marker) => (marker, binder)) present)
+         normal,
+       binders)
+    end
     handle Interrupt => raise Interrupt
-         | _ => tm
+         | _ => (tm, map #1 pairs)
+
+  fun marker_for variable = (variable, Term.genvar (Term.type_of variable))
+  fun mark_free pairs tm =
+    Term.subst (map (fn (variable, marker) =>
+      {redex = variable, residue = marker}) pairs) tm
+
+  (* [tm] with the statement's [binders] free *)
+  fun normalize binders tm =
+    let val pairs = map marker_for binders
+    in normalize_marked pairs (mark_free pairs tm) tm end
+
+  (* [tm] with the statement's [binders] bound along its outer [!]s and
+     implications *)
+  fun normalize_closed binders tm =
+    let
+      fun mark [] tm = (tm, [])
+        | mark expected tm =
+            case Lib.total boolSyntax.dest_forall tm of
+                SOME (variable, body) =>
+                  if Lib.op_mem Term.aconv variable expected then
+                    let
+                      val pair as (_, marker) = marker_for variable
+                      val (marked, pairs) =
+                        mark (Lib.op_set_diff Term.aconv expected [variable])
+                          (mark_free [pair] body)
+                    in
+                      (boolSyntax.mk_forall (marker, marked), pair :: pairs)
+                    end
+                  (* a vacuous [!] that is not a statement binder (the
+                     instance drops it) is stepped over, so the binders
+                     after it are still traced *)
+                  else if not (Term.free_in variable body) then
+                    let val (marked, pairs) = mark expected body
+                    in (boolSyntax.mk_forall (variable, marked), pairs) end
+                  else (tm, [])
+              | NONE =>
+                  case Lib.total boolSyntax.dest_imp_only tm of
+                      SOME (assumption, rest) =>
+                        let val (marked, pairs) = mark expected rest
+                        in (boolSyntax.mk_imp (assumption, marked), pairs)
+                        end
+                    | NONE => (tm, [])
+      val (marked, pairs) = mark binders tm
+    in
+      normalize_marked pairs marked tm
+    end
 
   fun expand_quantifiers tm =
     let
@@ -1393,20 +1496,26 @@ structure Refute_Core :> Refute_Core = struct
      depend on it.  Shared by [make_instance] and [Refute_QC]'s
      [use_subtype] transform, so a transported goal gets the same
      simplification as its hand-written equivalent. *)
-  fun rebuild_instance {original, raw_goal, evals_for, card, transport} =
+  fun rebuild_instance {original, binders, raw_goal, evals_for, card,
+                        transport} =
     let
-      val goal = expand_quantifiers
-        (strip_outer_forall_body (normalize raw_goal))
+      val (normal, binders) = normalize binders raw_goal
+      val normal = strip_outer_forall_body normal
+      val goal = expand_quantifiers normal
       val evals = evals_for goal
     in
-      {original = original, goal = goal,
+      {original = original, binders = binders, normal = normal,
+       goal = goal,
        qc_gate = compute_qc_gate goal evals, evals = evals, card = card,
        size_matters = instance_size_matters goal,
        transport = transport} : instance
     end
 
   type preprocessed_forms =
-    {mono_instances : instance list, poly_original : instance list}
+    {mono_instances : instance list, poly_original : instance list,
+     (* the caller's free variables renamed away from the marker, each
+        with its fresh name *)
+     renaming : (term * term) list}
 
   (* Installed by [Refute_QC] at load time with the [use_subtype] rewrite:
      [Refute_ModelFinder_HOL] owns the typedef harvest the transform needs
@@ -1429,6 +1538,34 @@ structure Refute_Core :> Refute_Core = struct
      fall to the generic [exception_reason] dump. *)
   exception InstantiateError of string
 
+  (* The statement with each outer binder of its goal (under its [n]
+     assumptions) renamed, by name, apart from the binders before it and
+     from the free variables of [terms]: the same term, alpha-renamed,
+     whose binders and free variables each have a name of their own,
+     which no type instance makes two share.  A value keyed by a name then
+     belongs to one binder. *)
+  fun distinct_binders terms n statement =
+    let
+      fun rename avoid tm =
+        case Lib.total boolSyntax.dest_forall tm of
+            NONE => tm
+          | SOME (binder, body) =>
+              let val fresh = Term.prim_variant avoid binder
+              in
+                boolSyntax.mk_forall (fresh,
+                  rename (fresh :: avoid)
+                    (Term.subst [{redex = binder, residue = fresh}] body))
+              end
+      fun under 0 avoid tm = rename avoid tm
+        | under n avoid tm =
+            case Lib.total boolSyntax.dest_imp_only tm of
+                SOME (assumption, rest) =>
+                  boolSyntax.mk_imp (assumption, under (n - 1) avoid rest)
+              | NONE => rename avoid tm
+    in
+      under n (Term.free_varsl terms) statement
+    end
+
   fun preprocess_forms (cfg : config) (problem : problem) =
     let
       val assumptions =
@@ -1438,9 +1575,11 @@ structure Refute_Core :> Refute_Core = struct
       val unrenamed_evals = #evals problem @ #evals cfg
       (* `_` is the shared model/narrowing marker.  Vary a colliding user
          free once for every backend, before any marker can be introduced. *)
-      val (renamed, _) = Refute_ModelFinder_Names.rename_irrelevant_collisions
-        (unrenamed_goal :: unrenamed_evals)
-      val original_goal = hd renamed
+      val (renamed, renaming) =
+        Refute_ModelFinder_Names.rename_irrelevant_collisions
+          (unrenamed_goal :: unrenamed_evals)
+      val original_goal =
+        distinct_binders renamed (length assumptions) (hd renamed)
       val input_evals = tl renamed
       val types = monomorphic_types (#qc cfg)
       val input_terms = original_goal :: input_evals
@@ -1495,12 +1634,24 @@ structure Refute_Core :> Refute_Core = struct
       val unpinned_carrier_vars =
         List.filter (fn tyvar => not (Lib.mem tyvar width_vars))
           unpinned_tyvars
+      (* The goal's binders, under the assumptions, and the goal with
+         them free.  Their names are the statement's own
+         ([distinct_binders]), so none meets an assumption's variable. *)
+      fun open_goal 0 tm = boolSyntax.strip_forall tm
+        | open_goal n tm =
+            case Lib.total boolSyntax.dest_imp_only tm of
+                SOME (assumption, rest) =>
+                  let val (binders, body) = open_goal (n - 1) rest
+                  in (binders, boolSyntax.mk_imp (assumption, body)) end
+              | NONE => boolSyntax.strip_forall tm
       fun make_instance card theta =
-        let val original = Term.inst theta original_goal
+        let
+          val original = Term.inst theta original_goal
+          val (binders, raw_goal) = open_goal (length assumptions) original
+          val binders = binders @ Term.free_vars original
         in
           rebuild_instance
-            {original = original,
-             raw_goal = strip_outer_forall_body original,
+            {original = original, binders = binders, raw_goal = raw_goal,
              evals_for = fn goal => add_equation_eval_terms goal
                (map (Term.inst theta) input_evals),
              card = card, transport = []}
@@ -1562,7 +1713,8 @@ structure Refute_Core :> Refute_Core = struct
         map (Refute_Session.read mono_instance_transform cfg)
           raw_mono_instances
     in
-      {mono_instances = mono_instances, poly_original = poly_original}
+      {mono_instances = mono_instances, poly_original = poly_original,
+       renaming = renaming}
     end
 
   fun instances_for_form MonoInstances
@@ -1594,6 +1746,199 @@ structure Refute_Core :> Refute_Core = struct
                   String.concatWith ", " cards)]
           end
       | _ => result
+
+  (* The statement a candidate is about, filled
+     in from the values the back end gave in [statement], its scope, and
+     the instances the backend was given.  A back end gives a value only
+     for a variable it can trace to a binder of the statement, under that
+     binder's name and type ([normalize], [Refute_Skolem]); its displayed
+     bindings and Skolems are never read for it.  What cannot be paired,
+     and a type variable no value or instance fixes, is named in
+     [partial]. *)
+  (* The running call's statement, for [statement_types]: Refute calls run
+     one at a time (Refute_Facts). *)
+  val running_statement =
+    Synchronized.var "running_statement" (NONE : term option)
+
+  fun statement_types tm =
+    case Synchronized.value running_statement of
+        NONE => []
+      | SOME statement =>
+          #2 (Term.match_term statement tm)
+          handle Feedback.HOL_ERR _ => []
+
+  fun link_candidate (forms : preprocessed_forms) assumption_count
+        (backend : backend) (cex : counterexample) =
+    let
+      val statement = #original (hd (#poly_original forms))
+      (* the goal's own binders sit under the assumptions *)
+      fun goal_of 0 tm = tm
+        | goal_of n tm =
+            case Lib.total boolSyntax.dest_imp_only tm of
+                SOME (_, rest) => goal_of (n - 1) rest
+              | NONE => tm
+      (* each with a name of its own ([distinct_binders]) *)
+      val binders =
+        #1 (boolSyntax.strip_forall (goal_of assumption_count statement)) @
+        Term.free_vars_lr statement
+      fun name_of variable = #1 (Term.dest_var variable)
+      (* The values the back end gave, as tested, before display
+         formatting, each keyed by the binder it traced it to *)
+      val given = List.filter (Term.is_var o #1) (#values (#statement cex))
+      (* a back end's own type instance and reasons come first *)
+      val given_partial = List.filter
+        (fn reason => not (Lib.mem reason (#partial unlinked)))
+        (#partial (#statement cex))
+      fun same (name, value, _) (other, other_value, _) =
+        name = other andalso Term.aconv value other_value
+      val shown =
+        List.foldl (fn (row, kept) =>
+            if List.exists (same row) kept then kept else kept @ [row]) []
+          (map (fn (variable, value) =>
+                  (name_of variable, value, Term.type_of variable)) given)
+      fun named name ty =
+        Lib.op_mk_set Term.aconv
+          (map #2 (List.filter (fn (other, other_value, _) =>
+             other = name andalso
+             Refute_Util.same_type (Term.type_of other_value) ty) shown))
+      (* A value keyed by a binder fits only a binder of the statement that
+         is that binder under the back end's type instance, never one whose
+         type merely instantiates to the value's. *)
+      fun keyed_by key_type binder =
+        Refute_Util.same_type
+          (Type.type_subst (#types (#statement cex)) (Term.type_of binder))
+          key_type
+      fun pair ((name, value, key_type), (paired, theta, partial)) =
+        if length (named name (Term.type_of value)) > 1 then
+          (paired, theta,
+           if Lib.mem ("more than one value is named " ^ name) partial
+           then partial
+           else partial @ ["more than one value is named " ^ name])
+        else
+        let
+          fun agrees {redex, residue} =
+            case Lib.subst_assoc (Refute_Util.same_type redex) theta of
+                NONE => true
+              | SOME other => Refute_Util.same_type other residue
+          val fitting = List.filter (fn binder =>
+            name_of binder = name andalso
+            keyed_by key_type binder andalso
+            not (Lib.op_mem Term.aconv binder (map #1 paired)) andalso
+            Lib.can (Type.match_type (Term.type_of binder))
+              (Term.type_of value)) binders
+          (* the type instance tells binders of one name apart *)
+          val fitting =
+            case fitting of
+                _ :: _ :: _ =>
+                  (case List.filter (fn binder =>
+                          List.all agrees (Type.match_type
+                            (Term.type_of binder) (Term.type_of value)))
+                          fitting of
+                       [] => fitting
+                     | agreeing => agreeing)
+              | _ => fitting
+        in
+        case fitting of
+            _ :: _ :: _ =>
+              (paired, theta,
+               partial @ ["value of " ^ name ^
+                          " fits more than one binder of the statement"])
+          | [binder] =>
+              let
+                val more = Type.match_type (Term.type_of binder)
+                  (Term.type_of value)
+                fun known {redex, residue = _} =
+                  Option.isSome
+                    (Lib.subst_assoc (Refute_Util.same_type redex) theta)
+                (* a value with a part the back end left open (a model's
+                   unknown point, a narrowing's any-value hole) is not a
+                   closed instance *)
+                val open_part =
+                  if Refute_ModelFinder_Names.contains_display_marker value
+                  then ["value of " ^ name ^ " leaves a part open"]
+                  else []
+              in
+                if List.all agrees more then
+                  ((binder, value) :: paired,
+                   theta @ List.filter (not o known) more,
+                   partial @ open_part)
+                else
+                  (paired, theta,
+                   partial @ ["value of " ^ name ^
+                              " disagrees on the type instance"])
+              end
+          | [] =>
+              (paired, theta,
+               partial @ ["value of " ^ name ^
+                          " belongs to no binder of the statement"])
+        end
+      val (paired, theta, partial) =
+        List.foldl pair ([], #types (#statement cex), given_partial) shown
+      val unvalued = List.filter (fn binder =>
+        not (Lib.op_mem Term.aconv binder (map #1 paired))) binders
+      val partial = partial @ map (fn binder =>
+        "no value for " ^ name_of binder) unvalued
+      val instances = instances_for_form (#input backend) forms
+      fun instance_residue tyvar =
+        let
+          fun residue (instance : instance) =
+            Lib.subst_assoc (Refute_Util.same_type tyvar)
+              (#2 (Term.match_term statement (#original instance)))
+            handle Feedback.HOL_ERR _ => NONE
+        in
+          case map residue instances of
+              SOME first :: rest =>
+                if List.all (fn SOME other => Refute_Util.same_type other first
+                              | NONE => false) rest
+                then SOME first else NONE
+            | _ => NONE
+        end
+      fun resolve (tyvar, (theta, partial)) =
+        case Lib.subst_assoc (Refute_Util.same_type tyvar) theta of
+            SOME residue =>
+              if not (Refute_Util.same_type residue tyvar) then
+                (theta, partial)
+              else resolve_open tyvar (theta, partial)
+          | NONE => resolve_open tyvar (theta, partial)
+      and resolve_open tyvar (theta, partial) =
+        let
+          val theta = List.filter (fn {redex, ...} =>
+            not (Refute_Util.same_type redex tyvar)) theta
+        in
+          case instance_residue tyvar of
+              SOME residue =>
+                if Refute_Util.same_type residue tyvar then
+                  (theta, partial @ [open_type tyvar])
+                else (theta @ [{redex = tyvar, residue = residue}], partial)
+            | NONE => (theta, partial @ [open_type tyvar])
+        end
+      and open_type tyvar =
+        case Option.mapPartial
+               (List.find (Refute_Util.same_type tyvar o #1))
+               (#scope cex) of
+            SOME (_, size) =>
+              "type variable " ^ Parse.type_to_string tyvar ^
+              " is a type of " ^ Int.toString size ^ " elements"
+          | NONE =>
+              "type variable " ^ Parse.type_to_string tyvar ^
+              " has no instance"
+      val (theta, partial) =
+        List.foldl resolve (theta, partial)
+          (Term.type_vars_in_term statement)
+      (* a free variable renamed away from the marker is the caller's *)
+      fun restore binder =
+        case List.find (Term.aconv binder o #2) (#renaming forms) of
+            SOME (original, _) => original
+          | NONE => binder
+      val paired = map (fn (binder, value) => (restore binder, value)) paired
+    in
+      {backend = #backend cex, substrate = #substrate cex,
+       certainty = #certainty cex, bindings = #bindings cex,
+       evals = #evals cex, cert = #cert cex, scope = #scope cex,
+       model = #model cex, stats = #stats cex,
+       statement = {types = theta, values = rev paired, partial = partial}}
+      : counterexample
+    end
 
   structure Private = struct
     val {get = trace_level, flag = trace, ...} =
@@ -1813,10 +2158,44 @@ structure Refute_Core :> Refute_Core = struct
         if backend_before entry other then entry :: other :: rest
         else other :: insert_backend entry rest
 
-  fun register_backend (backend : backend) =
+  fun install_backend (backend : backend) =
     Refute_Session.publish backend_registry (fn registry =>
       insert_backend (#name backend, backend)
         (List.filter (fn (name, _) => name <> #name backend) registry))
+
+  (* A back end the library did not register is a registration the finder
+     did not make: its candidates never count, and their certificates are
+     dropped ([best_result]).  Trust goes only to the back ends the
+     library defines, at their first registration; any later registration
+     under one of their names is the caller's. *)
+  val library_backend_names =
+    ["exhaustive", "random", "narrowing", "kodkod"]
+
+  val trusted_backends =
+    Refute_Session.state "trusted_backends" ([] : string list)
+
+  fun is_registered name =
+    List.exists (fn (other, _) => other = name)
+      (Refute_Session.read backend_registry)
+
+  fun register_trusted trusted (backend : backend) =
+    (Refute_Session.publish trusted_backends (fn names =>
+       List.filter (fn name => name <> #name backend) names @
+       (if trusted then [#name backend] else []));
+     install_backend backend)
+
+  fun register_library_backend (backend : backend) =
+    register_trusted
+      (Lib.mem (#name backend) library_backend_names andalso
+       not (is_registered (#name backend))) backend
+
+  val register_backend = register_trusted false
+
+  (* Test fixtures only: a stub standing in for a library back end. *)
+  val register_test_backend = register_trusted true
+
+  fun is_foreign_backend (backend : backend) =
+    not (Lib.mem (#name backend) (Refute_Session.read trusted_backends))
 
   fun family_backend_names family =
     List.mapPartial
@@ -2060,62 +2439,118 @@ structure Refute_Core :> Refute_Core = struct
           then candidate
           else best) cex cexs))
 
+  (* The order in which a caller takes
+     candidates: one with a kernel certificate before one without, then by
+     certainty, so that one that can count (Genuine) comes before one
+     that cannot. *)
+  fun candidate_rank (cex : counterexample) =
+    2 * certainty_rank (#certainty cex) +
+    (if Option.isSome (#cert cex) then 10 else 0)
+
+  (* A result ends the search only when no
+     candidate can come before its best: a certified one reaching
+     [ceiling], the best certainty a selected backend can give (Genuine
+     unless every one declares less).  An uncertified one at the ceiling
+     does not end it, since another backend may still give a certified
+     one of the same certainty.
+     Totality outranks an in-flight Potential candidate.  A Genuine
+     counterexample racing this result would expose a soundness bug in one
+     of the backends; the ordinary first decisive result still wins. *)
   fun decisive cfg ceiling (Counterexample cexs) =
         not (null cexs) andalso
         (#abort_potential cfg orelse
-         (case best_certainty cexs of
-              SOME certainty =>
-                certainty_rank certainty >= certainty_rank ceiling
-            | NONE => false))
-    (* Totality outranks an in-flight Potential candidate.  A Genuine
-       counterexample racing this result would expose a soundness bug in one
-       of the backends; the ordinary first decisive result still wins. *)
+         List.exists (fn (cex : counterexample) =>
+           Option.isSome (#cert cex) andalso
+           certainty_rank (#certainty cex) >= certainty_rank ceiling) cexs)
     | decisive _ _ NoCounterexample = true
     (* Model search is auxiliary when it is selected alongside refutation.
        In particular, it must not preempt a QC counterexample or proof of
        whole-space exhaustion. *)
     | decisive _ _ _ = false
 
-  (* The highest-ranked witness list among the jobs' results of the shape
-     [select] accepts; a lighter backend wins ties. *)
-  fun best_result select make jobs =
+  (* A candidate resting on what [reasons] name
+     counts only with a trusted kernel certificate: without one it is
+     Potential, with [reasons] first.  A certificate that is not trusted
+     is dropped. *)
+  fun refused_candidate reasons (cex : counterexample) =
     let
-      fun candidate (backend : backend, result_ref) =
-        case Option.mapPartial select (!result_ref) of
-            SOME cexs =>
-              Option.map (fn certainty =>
-                (backend, cexs, certainty_rank certainty))
-                (best_certainty cexs)
-          | NONE => NONE
-      fun better ((backend, _, rank), (best_backend, _, best_rank)) =
-        rank > best_rank orelse
-        (rank = best_rank andalso
-         #weight backend < #weight best_backend)
-      fun choose (candidate, NONE) = SOME candidate
-        | choose (candidate, SOME best) =
-            SOME (if better (candidate, best) then candidate else best)
+      val cert =
+        Option.mapPartial (Option.filter Refute_Facts.trusted) (#cert cex)
+      val certainty =
+        if null reasons orelse Option.isSome cert then #certainty cex
+        else
+          case #certainty cex of
+              Genuine => Potential reasons
+            | QuasiGenuine more => Potential (reasons @ more)
+            | Potential more => Potential (reasons @ more)
     in
-      case List.foldl choose NONE (List.mapPartial candidate jobs) of
-          SOME (_, cexs, _) => SOME (make cexs)
-        | NONE => NONE
+      {backend = #backend cex, substrate = #substrate cex,
+       certainty = certainty, bindings = #bindings cex,
+       evals = #evals cex, cert = cert, scope = #scope cex,
+       model = #model cex, stats = #stats cex,
+       statement = #statement cex} : counterexample
     end
 
-  val best_counterexample_result =
+  fun without_cert (cex : counterexample) =
+    {backend = #backend cex, substrate = #substrate cex,
+     certainty = #certainty cex, bindings = #bindings cex,
+     evals = #evals cex, cert = NONE, scope = #scope cex,
+     model = #model cex, stats = #stats cex,
+     statement = #statement cex} : counterexample
+
+  (* Candidates in [candidate_rank] order, stable among equals. *)
+  fun rank_candidates cexs =
+    map #2 (Listsort.sort (fn ((i, left), (j, right)) =>
+      case Int.compare (candidate_rank right, candidate_rank left) of
+          EQUAL => Int.compare (i, j)
+        | order => order) (Lib.enumerate 0 cexs))
+
+  (* Every candidate of every job whose result
+     has the shape [select] accepts, the lighter backend first, each linked
+     to the statement.  They are ranked once the call's refusals are known
+     ([without_refused]), so a refusal that caps two of them leaves the
+     lighter first. *)
+  fun best_result select make link jobs =
+    let
+      val by_weight = Listsort.sort (fn ((left : backend, _), (right, _)) =>
+        Int.compare (#weight left, #weight right)) jobs
+      (* its certificate, too, is the back end's own claim *)
+      fun foreign (backend : backend) =
+        if is_foreign_backend backend then
+          refused_candidate
+            ["refused registration the finder did not make: back end " ^
+             #name backend] o without_cert
+        else Lib.I
+      fun found (backend, result_ref) =
+        case Option.mapPartial select (!result_ref) of
+            SOME cexs => map (link backend o foreign backend) cexs
+          | NONE => []
+    in
+      case List.concat (map found by_weight) of
+          [] => NONE
+        | cexs => SOME (make cexs)
+    end
+
+  fun best_counterexample_result link =
     best_result (fn Counterexample cexs => SOME cexs | _ => NONE)
-      Counterexample
+      Counterexample link
 
+  (* A back end the finder did not make settles
+     nothing (see [is_foreign_backend]). *)
   fun has_no_counterexample jobs =
-    List.exists (fn (_, result_ref) =>
-      case !result_ref of
-          SOME NoCounterexample => true
-        | _ => false) jobs
+    List.exists (fn (backend, result_ref) =>
+      not (is_foreign_backend backend) andalso
+      (case !result_ref of
+           SOME NoCounterexample => true
+         | _ => false)) jobs
 
-  val best_model_result =
-    best_result (fn Model models => SOME models | _ => NONE) Model
+  fun best_model_result link =
+    best_result (fn Model models => SOME models | _ => NONE) Model link
 
   fun has_no_model jobs =
-    List.exists (fn (_, result_ref) =>
-      case !result_ref of SOME NoModel => true | _ => false) jobs
+    List.exists (fn (backend, result_ref) =>
+      not (is_foreign_backend backend) andalso
+      (case !result_ref of SOME NoModel => true | _ => false)) jobs
 
   fun exception_reason (Refute_RegistrationData.Invalid error) =
         exception_reason (Feedback.HOL_ERR error)
@@ -2275,6 +2710,51 @@ structure Refute_Core :> Refute_Core = struct
 
   fun add_reasons (more, reasons) = List.foldl add_reason reasons more
 
+  (* A call that refused a fact
+     (Refute_Facts) gives candidates that count only with a trusted
+     kernel certificate, and its claim that none or no model exists
+     rests on what it refused; an Unknown says what was refused.  Under
+     [genuine_only] a candidate it caps (or one already capped, a foreign
+     back end's) is dropped, as the back ends drop their own Potential
+     ones, and a list it empties is Unknown with the dropped candidates'
+     reasons.  Each back end's answer passes through it before it can end
+     the search ([run_backend]), and the call's answer at the end. *)
+  fun without_refused (cfg : config) refused result =
+    let
+      fun add_new (reason, reasons) =
+        if Lib.mem reason reasons then reasons else reasons @ [reason]
+      fun merged more = List.foldl add_new refused more
+      fun is_potential (cex : counterexample) =
+        case #certainty cex of Potential _ => true | _ => false
+      fun reasons_of (cex : counterexample) =
+        case #certainty cex of Potential reasons => reasons | _ => []
+      fun settle make found =
+        let
+          val found = map (refused_candidate refused) found
+        in
+          if #genuine_only cfg andalso not (null found) andalso
+             List.all is_potential found
+          then
+            Unknown (merged (List.concat (map reasons_of found)) @
+                     ["no Genuine candidate is left"])
+          else if #genuine_only cfg then
+            make (rank_candidates (List.filter (not o is_potential) found))
+          else make (rank_candidates found)
+        end
+    in
+    case result of
+        Counterexample cexs => settle Counterexample cexs
+      | Model models => settle Model models
+      | NoCounterexample =>
+          if null refused then result
+          else Unknown (refused @ ["no counterexample, resting on the above"])
+      | NoModel =>
+          if null refused then result
+          else Unknown (refused @ ["no model, resting on the above"])
+      | Unknown reasons =>
+          if null refused then result else Unknown (merged reasons)
+    end
+
   fun run_backend context budget (cfg : config) ceiling forms
         (backend, result_ref) =
     let
@@ -2316,7 +2796,15 @@ structure Refute_Core :> Refute_Core = struct
         raw_result
       val _ = result_ref := SOME result
     in
-      if decisive cfg ceiling result then SOME result else NONE
+      (* A back end the finder did not make
+         never ends the search, and the others' answers end it only as
+         the call's refusals so far leave them ([without_refused]): a
+         negative answer or a candidate they cap, or one [genuine_only]
+         drops, must not discard the other back ends' candidates *)
+      if not (is_foreign_backend backend) andalso
+         decisive cfg ceiling
+           (without_refused cfg (Refute_Facts.refused ()) result)
+      then SOME result else NONE
     end) ()) ()
     end
 
@@ -2326,6 +2814,12 @@ structure Refute_Core :> Refute_Core = struct
         case !result_ref of
             SOME (Unknown reasons) =>
               map (fn reason => #name backend ^ ": " ^ reason) reasons
+          (* See [has_no_counterexample] *)
+          | SOME (NoCounterexample | NoModel) =>
+              if is_foreign_backend backend then
+                ["refused registration the finder did not make: back end " ^
+                 #name backend ^ " answered that none exists"]
+              else []
           | SOME _ => []
           | NONE => [#name backend ^ " was interrupted"]
     in
@@ -2431,6 +2925,10 @@ structure Refute_Core :> Refute_Core = struct
             let
           val forms = Timeout.apply (#remaining search_context ())
             (preprocess_forms cfg) problem
+          val assumption_count =
+            if #no_assms cfg then 0 else length (#assumptions problem)
+          val _ = Synchronized.change running_statement
+            (Lib.K (SOME (#original (hd (#poly_original forms)))))
           fun registration_instances registration =
             instances_for_form (#input registration) forms
           val context = Refute_Session.current ()
@@ -2500,10 +2998,11 @@ structure Refute_Core :> Refute_Core = struct
                 (Potential ["no selected backend"]) selected
               val jobs = map (fn registration =>
                 (registration, ref NONE : outcome option ref)) selected
+              val link = link_candidate forms assumption_count
               fun noncounterexample_result () =
                 if has_no_counterexample jobs then NoCounterexample
                 else
-                  case best_model_result jobs of
+                  case best_model_result link jobs of
                       SOME result => result
                     | NONE =>
                         if has_no_model jobs then NoModel
@@ -2536,10 +3035,20 @@ structure Refute_Core :> Refute_Core = struct
                     (run_backend (Refute_Session.current ())
                       (SharedBudget search_context) cfg ceiling forms) jobs
             in
+              (* Every candidate completed
+                 within the budget, not only the winner's.  A
+                 NoCounterexample that ended the search before another
+                 worker refused a fact rests on that refusal now, so the
+                 candidates are kept rather than dropped for it. *)
               case winner of
-                  SOME result => result
-                | NONE =>
-                    (case best_counterexample_result jobs of
+                  SOME NoCounterexample =>
+                    if Refute_Facts.any_refused () then
+                      (case best_counterexample_result link jobs of
+                           SOME result => result
+                         | NONE => NoCounterexample)
+                    else NoCounterexample
+                | _ =>
+                    (case best_counterexample_result link jobs of
                          SOME result => result
                        | NONE => noncounterexample_result ())
             end
@@ -2553,11 +3062,14 @@ structure Refute_Core :> Refute_Core = struct
              | Timeout.TIMEOUT _ => Unknown ["search timed out"]
              | Interrupt => raise Interrupt
              | e => Unknown [exception_reason e]
-      val result = Thread_Data.setmp active_search_context
-        (SOME search_context)
-        (Portable.finally release_run_resources attempt) ()
+      val (result, refused) = Refute_Facts.recording
+        (Thread_Data.setmp active_search_context (SOME search_context)
+          (Portable.finally release_run_resources
+            (Portable.finally (fn () =>
+               Synchronized.change running_statement (Lib.K NONE))
+             attempt)))
     in
-      finish result
+      finish (without_refused cfg refused result)
     end
 
   val quiet_mutex = Mutex.mutex ()

@@ -30,7 +30,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      cases : term list,
      (* Derived from a [p = lfp F] (or [gfp]) definition, whose leastness
         is the definition's. *)
-     derived : bool}
+     derived : bool,
+     (* the theorems it rests on, checked wherever it is used *)
+     facts : thm list}
   type fixpoint_cache = (kname * fixpoint_group option) list
   type type_operator = {Thy : string, Tyop : string}
   type ersatz = {original : kname, replacement : kname}
@@ -272,7 +274,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      needs : term list option,
      tac_timeout : Time.time,
      evals : term list,
-     case_names : (kname * (int * int)) list,
+     (* Each case constant with its constructor count, its scrutinee's
+        position and the theorems its case semantics rests on *)
+     case_names : (kname * (int * int * thm list)) list,
+     (* The case constants of codatatypes the
+        caller described, refused where a problem applies one *)
+     caller_cases : kname list,
      def_tables : const_table * const_table,
      nondef_table : const_table,
      nondefs : term list,
@@ -342,6 +349,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
 
   (* Buckets are stored newest-first (KNametab.cons_list); table_lookup
      restores insertion order. *)
+  (* A refusal [theorem_term] held for an entry
+     is recorded when the entry matches the constant at hand
+     ([def_props_for_const], [nondef_props_for_const]). *)
   fun table_lookup table constant =
     case Lib.total const_key constant of
         SOME key => rev (KNametab.lookup_list table key)
@@ -354,8 +364,14 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     end
 
   (* Closed, as Isabelle's close_form closes schematic Vars, so theorem
-     frees are not mistaken for freely interpreted model constants. *)
-  val theorem_term = Refute_Util.theorem_term
+     frees are not mistaken for freely interpreted model constants.
+     The tables read every definition, and a
+     problem uses few: a refusal waits for a lookup to match (or a check
+     where a theorem is used whole), Refute_Facts.defer. *)
+  fun theorem_term theorem =
+    Refute_Facts.defer theorem
+      (Refute_Util.close_free (boolSyntax.list_mk_imp
+         (Thm.hyp theorem, Thm.concl theorem)))
 
   fun clauses_of theorem = map theorem_term (Drule.CONJUNCTS theorem)
 
@@ -429,9 +445,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         not (List.exists (Term.aconv variable) variables))
         (Term.free_vars_lr equation)
     in
-      SOME (boolSyntax.list_mk_forall
+      SOME (Refute_Facts.carry term (boolSyntax.list_mk_forall
         (variables @ new_variables,
-         boolSyntax.list_mk_imp (premises, equation)))
+         boolSyntax.list_mk_imp (premises, equation))))
     end
     handle HOL_ERR _ =>
       (Refute_Core.Private.warn "Refute_ModelFinder_HOL"
@@ -1023,22 +1039,25 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     if is_built_in_const constant then []
     else
       let
+        (* each with the table's own entry, which a refusal is held on *)
         val props =
           case frac_target_for_constant constant of
-              NONE => table_lookup table constant
+              NONE =>
+                map (fn prop => (prop, prop)) (table_lookup table constant)
             | SOME target =>
                 let val key = original_const_key constant
                 in
                   rev (KNametab.lookup_list table key)
-                  |> map (specialize_frac_prop target constant)
+                  |> map (fn entry =>
+                       (entry, specialize_frac_prop target constant entry))
                 end
       in
         props
-        |> List.mapPartial (fn prop =>
+        |> List.mapPartial (fn (entry, prop) =>
              case matching_instantiations constant prop of
                  first :: _ =>
                    if has_matching_iterator_markers constant first then
-                     SOME first
+                     (Refute_Facts.use entry; SOME first)
                    else NONE
                | [] => NONE)
       end
@@ -1060,7 +1079,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     end
 
   fun nondef_props_for_const table constant =
-    List.concat (map (all_instantiations constant)
+    List.concat (map (fn entry =>
+        case all_instantiations constant entry of
+            [] => []
+          | instances => (Refute_Facts.use entry; instances))
       (table_lookup table constant))
     |> Util.distinct_terms
 
@@ -1566,6 +1588,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
            "discharged; Refute cannot derive its unrolling equation\n")
       fun install kind case_thm =
         let
+          (* Checked: the group is used *)
+          val () = Refute_Facts.check case_thm
           val cases = quantified_conjuncts case_thm
           val rules =
             case derived_fixpoint_rule_theorem case_thm of
@@ -1574,7 +1598,8 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           val group : fixpoint_group =
             {kind = kind, stem = #Name (original_const_key constant),
              members = [original_const_key constant],
-             rules = rules, cases = cases, derived = true}
+             rules = rules, cases = cases, derived = true,
+             facts = [case_thm]}
           fun extend table props = List.foldl
             (fn (prop, entries) =>
               let val (head, value) = pair_for_prop prop
@@ -1639,7 +1664,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           in fixpoint_cache := (key, derived) :: !fixpoint_cache; derived end
       in
         case key_lookup key (!fixpoint_cache) of
-            SOME result => result
+            (* checked again on each use: a call's refusals are its own *)
+            SOME result =>
+              (Option.app (List.app Refute_Facts.check o #facts) result;
+               result)
           | NONE =>
               if kind = NoFp then cache_derived ()
               else
@@ -1669,9 +1697,14 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
                          val _ = if valid then () else
                            raise err "fixpoint_group_of_const"
                              "malformed fixpoint theorem group"
+                         (* Checked: the
+                            group is used *)
+                         val () = List.app Refute_Facts.check
+                           [cases_theorem, rules_theorem]
                          val group : fixpoint_group =
                            {kind = kind, stem = stem, members = members,
-                            rules = rules, cases = cases, derived = false}
+                            rules = rules, cases = cases, derived = false,
+                            facts = [cases_theorem, rules_theorem]}
                          fun install (member, entries) =
                            (member, SOME group) ::
                            List.filter (fn (other, _) =>
@@ -2030,7 +2063,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             MATCH_MP_TAC (Drule.SPECL outer induction) THEN
             REPEAT CONJ_TAC THEN step
         in
-          Lib.can Tactical.TAC_PROOF (([], goal), tactic)
+          (* Checked: an induction theorem
+             proves the encoding's premise *)
+          (Refute_Facts.check (Tactical.TAC_PROOF (([], goal), tactic));
+           true)
         end
         handle HOL_ERR _ => false
     in
@@ -2445,7 +2481,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           List.nth (argument_tys, index)))
       val tuple = tuple_term arguments
       fun size_function ty =
-        TypeBasePure.type_size (Refute_TypeBase.theTypeBase ()) ty
+        Refute_TypeBase.type_size ty
       fun component_size (argument, ty) =
         Term.mk_comb (size_function ty, argument)
       fun abstraction body =
@@ -2539,7 +2575,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         handle HOL_ERR _ => NONE
 
       val whole_functions = List.mapPartial (fn ty =>
-        Lib.total (TypeBasePure.type_size (Refute_TypeBase.theTypeBase ())) ty)
+        Lib.total Refute_TypeBase.type_size ty)
         tuple_tys
       val whole = if length whole_functions = length tuple_tys then
           case_measure whole_functions
@@ -2551,7 +2587,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       fun component_function argument_tys index =
         tuple_abstraction argument_tys (fn arguments =>
           Term.mk_comb
-            (TypeBasePure.type_size (Refute_TypeBase.theTypeBase ())
+            (Refute_TypeBase.type_size
                (List.nth (argument_tys, index)),
              List.nth (arguments, index)))
 
@@ -2607,22 +2643,34 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
       val tactic = EXISTS_TAC candidate THEN CONJ_TAC THENL
         [TotalDefn.WF_TAC,
          TotalDefn.TC_SIMP_TAC (TotalDefn.termination_ss ()) []]
-      fun prove () = ignore (TAC_PROOF (([], proposition), tactic))
+      fun prove () = TAC_PROOF (([], proposition), tactic)
     in
-      Util.apply_within_budget timeout (fn () => (prove (); true)) ()
+      Util.apply_within_budget timeout (fn () => SOME (prove ())) ()
     end
-    handle Timeout.TIMEOUT _ => false
-         | HOL_ERR _ => false
+    handle Timeout.TIMEOUT _ => NONE
+         | HOL_ERR _ => NONE
 
-  (* [candidates] is forced only on a cache miss. *)
+  (* [candidates] is forced only on a cache miss.  The proof is checked
+     (the termination simpset may hold any theorem), and one resting on a
+     refused theorem is not cached, so that each call using it records the
+     refusal. *)
   fun cached_wf_result timeout proposition candidates =
     case cached_wf_lookup timeout proposition of
         SOME result => result
       | NONE =>
           let
-            val result = List.exists
-              (prove_wf_candidate timeout proposition) (candidates ())
-            val _ = cache_wf timeout proposition result
+            val refused = ref false
+            fun proved candidate =
+              case prove_wf_candidate timeout proposition candidate of
+                  SOME theorem =>
+                    (Refute_Facts.check theorem;
+                     if Refute_Facts.trusted theorem then ()
+                     else refused := true;
+                     true)
+                | NONE => false
+            val result = List.exists proved (candidates ())
+            val _ = if !refused then ()
+                    else cache_wf timeout proposition result
           in result end
 
   fun uncached_is_well_founded_group context members rules =
@@ -2829,8 +2877,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         THEN REPEAT CONJ_TAC THEN
         InductiveDefinition.MONO_TAC (!IndDefLib.the_monoset)
     in
+      (* Checked: the monoset's theorems prove
+         the encoding's premise *)
       Util.apply_within_budget timeout
-        (Lib.can Tactical.TAC_PROOF) (([], goal), tactic)
+        (fn problem =>
+           (Refute_Facts.check (Tactical.TAC_PROOF problem); true)
+           handle HOL_ERR _ => false) (([], goal), tactic)
     end
     handle Timeout.TIMEOUT _ => false
          | HOL_ERR _ => false
@@ -3259,9 +3311,13 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      [Refute_TypeBase.fetch] is a type-net lookup, so asking at a specialized
      instance can pick a different entry for one operator - [:'a word] finds
      the constructor-free word entry while [:('a,'b) cart] finds the cart
-     entry - and callers would then disagree about [cart]. *)
+     entry - and callers would then disagree about [cart].  Whether a type
+     has constructors classifies it, also on a scan of every type, so the
+     entry is not checked here: the constructors a problem is encoded
+     with are read through [Refute_TypeBase.fetch]
+     ([uncached_data_type_constrs]). *)
   fun database_constructors ty =
-    (case Refute_TypeBase.fetch (generic_instance ty) of
+    (case Refute_TypeBase.peek (generic_instance ty) of
          SOME info => TypeBasePure.constructors_of info
        | NONE => [])
     handle HOL_ERR _ => []
@@ -4092,16 +4148,71 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         else SOME {class = persisted, input = SOME (#2 (List.last history))}
       end
 
+  (* A registration's theorems go through the
+     checked point (Refute_Facts) whenever a problem uses it, since the
+     registry keeps only what was derived from them.  A codatatype with
+     no witness, other than the very description the finder knows itself
+     ([builtin_codatatypes]: the same case constant and constructors, at
+     any type instance), is
+     the caller's assertion that the type is codata: a registration the
+     finder did not make.  Built-in classes have no description. *)
+  fun is_builtin_description tyop case_const constructors =
+    case builtin_codatatype_for tyop of
+        SOME (info : codatatype_info) =>
+          Term.same_const (#case_const info) case_const andalso
+          length (#constructors info) = length constructors andalso
+          List.all (fn c => List.exists (Term.same_const c) constructors)
+            (#constructors info)
+      | NONE => false
+
+  fun check_descriptor descriptor =
+    case descriptor of
+        Refute_RegistrationData.Codata
+          {tyop, case_const, constructors, witness = NONE} =>
+          if is_builtin_description tyop case_const constructors then ()
+          else
+            Refute_Facts.foreign
+              ("codatatype " ^ operator_name tyop ^ " without a witness")
+      | Refute_RegistrationData.Codata {witness = SOME witness, ...} =>
+          Refute_Facts.check witness
+      | Refute_RegistrationData.Typedef {absrep_thms, ...} =>
+          List.app Refute_Facts.check absrep_thms
+      | Refute_RegistrationData.Quotient {equiv_thm, ...} =>
+          Refute_Facts.check equiv_thm
+
   fun resolve_operator operator =
     resolve_class persistent_class operator
       (Refute_RegistrationData.history (Refute_Session.context ()) operator)
 
   fun class_of_operator operator = Option.map #class (resolve_operator operator)
 
+  (* The class of a type the problem has: its description is checked. *)
+  (* Frac types registered through the Refute
+     API, registrations the finder did not make (Refute_Facts); the
+     library's rat and real are not. *)
+  val foreign_frac_types =
+    Refute_Session.state "foreign_frac_types" ([] : type_operator list)
+
+  fun note_foreign_frac_type tyop =
+    Refute_Session.publish foreign_frac_types (fn old => tyop :: old)
+
+  fun check_frac (Frac {tyop, ...}) =
+        if List.exists (same_type_operator tyop)
+             (Refute_Session.read foreign_frac_types)
+        then Refute_Facts.foreign ("frac type " ^ operator_name tyop)
+        else ()
+    | check_frac _ = ()
+
+  fun used_class_of_operator operator =
+    case resolve_operator operator of
+        SOME {class, input} =>
+          (Option.app check_descriptor input; check_frac class; SOME class)
+      | NONE => NONE
+
   fun class_of_type ty =
     case Lib.total type_operator_of ty of
         NONE => NONE
-      | SOME operator => class_of_operator operator
+      | SOME operator => used_class_of_operator operator
 
   fun codatatype_for operator =
     case class_of_operator operator of
@@ -4983,6 +5094,34 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         SOME (Codatatype _) => true
       | _ => false
 
+  (* A quotient registered by a total
+     equivalence theorem says nothing of the type, its abs or its rep: the
+     type gets the relation's classes as its carrier, and abs and rep
+     quotient semantics, on the caller's word unless the type's own
+     QUOTIENT theorem (define_quotient_type's [<ty>_QUOTIENT]) names them
+     with the same relation.  Checked wherever the problem uses the type.
+     A bare QUOTIENT registration was cross-checked when it was
+     registered. *)
+  fun quotient_tied ({qty, abs, rep, equiv_thm, partial, ...}
+                     : quotient_info) =
+    partial orelse
+    (let
+       val {Thy, Tyop, ...} = Type.dest_thy_type qty
+       val theorem = DB.fetch Thy (Tyop ^ "_QUOTIENT")
+       val (relation, theorem_abs, theorem_rep) = dest_bare_quotient theorem
+       val (terms, _) =
+         Term.match_term relation (dest_total_equivalence equiv_thm)
+     in
+       Refute_Facts.trusted theorem andalso null terms andalso
+       Term.same_const theorem_abs abs andalso
+       Term.same_const theorem_rep rep
+     end handle HOL_ERR _ => false)
+
+  fun check_quotient_tied (info as {qty, ...} : quotient_info) =
+    if quotient_tied info then ()
+    else Refute_Facts.foreign ("quotient " ^ Parse.type_to_string qty ^
+      " whose abs and rep no QUOTIENT theorem ties to its relation")
+
   fun quotient_for_type ty =
     let
       val info =
@@ -4992,8 +5131,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     in
       case info of
           NONE => NONE
-        | SOME {qty, rty, abs, rep, equiv_thm, partial} =>
-            let val theta = Type.match_type qty ty
+        | SOME (registered as {qty, rty, abs, rep, equiv_thm, partial}) =>
+            let
+              val () = check_quotient_tied registered
+              val theta = Type.match_type qty ty
             in
               SOME
                 {qty = ty, rty = Type.type_subst theta rty,
@@ -5412,16 +5553,26 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     Term.mk_thy_const
       {Thy = "refute", Name = "Quot", Ty = Type.-->(rty, qty)}
 
+  (* A codatatype's constructors are encoded as
+     free and injective, and as covering the type: a witness says only that
+     a cyclic value exists, so a caller's description, other than the very
+     one the finder knows, is a registration the finder did not make
+     wherever the problem uses its constructors (Refute_Facts). *)
   fun registered_constructors ty =
     let val operator = type_operator_of ty
     in
-      case codatatype_for operator of
-          SOME {constructors, ...} =>
-            map (fn constructor =>
+      case (case used_class_of_operator operator of
+                SOME (Codatatype info) => SOME info
+              | _ => NONE) of
+          SOME {tyop, case_const, constructors} =>
+            (if is_builtin_description tyop case_const constructors then ()
+             else Refute_Facts.foreign ("constructors of codatatype " ^
+               operator_name tyop ^ " the caller described");
+             map (fn constructor =>
               Term.inst
                 (Type.match_type
                   (#2 (boolSyntax.strip_fun (Term.type_of constructor))) ty)
-                constructor) constructors
+                constructor) constructors)
         | NONE =>
             (case quotient_for_type ty of
                  SOME {rty, ...} => [quot_constructor rty ty]
@@ -5435,7 +5586,10 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      [mk_cart] takes a function into [:'a finite_image], whose defining
      predicate mentions [FINITE UNIV] and [ARB] (fcpScript.sml) and has no
      faithful interpretation here.  Word types are the interpreted case
-     above; everything else under [cart] refuses by name. *)
+     above; everything else under [cart] refuses by name.  A datatype's
+     constructors are encoded as free and covering the type, which its
+     TypeBase entry's theorems state, checked where the entry is read
+     ([Refute_TypeBase.fetch]). *)
   fun uncached_data_type_constrs ty =
     if is_interpreted_type ty then []
     else if Option.isSome (cart_type_parts ty) then
@@ -5453,8 +5607,9 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           constructors as _ :: _ => constructors
         | [] =>
             (case Refute_TypeBase.fetch ty of
-                 SOME info => map (TypeBasePure.cinst ty)
-                   (TypeBasePure.constructors_of info)
+                 SOME info =>
+                   map (TypeBasePure.cinst ty)
+                     (TypeBasePure.constructors_of info)
                | NONE => [])
 
   fun data_type_constrs
@@ -5760,8 +5915,12 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         in
           search (0, TypeBasePure.fields_of info)
         end
+      (* the entry is checked only once it holds the field *)
+      fun found info =
+        Option.map (fn field => (Refute_TypeBase.check_entry info; field))
+          (search_type info)
     in
-      Lib.get_first search_type (Refute_TypeBase.elts ())
+      Lib.get_first found (Refute_TypeBase.elts ())
     end handle HOL_ERR _ => NONE
 
   fun dest_record_get term = find_field #accessor term
@@ -5848,15 +6007,35 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
      {original = {Thy = "finite_map", Name = "FDOM"},
       replacement = {Thy = "refute", Name = "fdom'"}}]
 
+  (* The ersatz rows registered through the
+     Refute API ([register_ersatz], and [register_frac_type] as Refute
+     exports it), once registered, are registrations the finder did not
+     make (Refute_Facts); the library's own rows ([builtin_ersatz], the
+     rat and real frac types) are not.  A row is told by its original and
+     its replacement, so a caller's row does not taint a library row for
+     the same original. *)
+  val foreign_ersatz =
+    Refute_Session.state "foreign_ersatz" ([] : ersatz list)
+
+  fun note_foreign_ersatz rows =
+    Refute_Session.publish foreign_ersatz (fn old => rows @ old)
+
+  fun is_foreign_ersatz ({original, replacement} : ersatz) =
+    List.exists (fn ({original = o', replacement = r'} : ersatz) =>
+        same_key original o' andalso same_key replacement r')
+      (Refute_Session.read foreign_ersatz)
+
   fun register_ersatz replacement =
-    with_registration (fn () =>
+    ((* marked before it is installed: no call sees it without its mark *)
+     note_foreign_ersatz [replacement];
+     with_registration (fn () =>
       let
         fun same_original ({original, ...} : ersatz) =
           same_key original (#original replacement)
       in
         ersatz_registry () := replacement ::
           List.filter (not o same_original) (!(ersatz_registry ()))
-      end)
+      end))
 
   fun append_new_ersatz (entry, table) =
     if List.exists (fn ({original, ...} : ersatz) =>
@@ -5887,10 +6066,18 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
           val ty = TypeBasePure.ty_of info
           val constructors = TypeBasePure.constructors_of info
           val case_const = TypeBasePure.case_const_of info
+          (* A scan of every type, not a use:
+             the class unchecked (Refute_Facts) *)
+          val class = class_of_operator (type_operator_of ty)
         in
-          if null constructors orelse is_codatatype ty orelse
-             not (is_data_type ty) then NONE
-          else SOME (const_key case_const, (length constructors, 0))
+          if null constructors orelse
+             (case class of SOME (Codatatype _) => true | _ => false) orelse
+             is_interpreted_type ty orelse
+             not (Option.isSome class orelse is_raw_free_datatype ty)
+          then NONE
+          else SOME (const_key case_const,
+                     (length constructors, 0,
+                      Refute_TypeBase.entry_theorems info))
         end handle HOL_ERR _ => NONE
       val raw = List.mapPartial entry (Refute_TypeBase.elts ())
       (* Revalidation, not a formality: a registration that passed at
@@ -5901,7 +6088,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
         let val (_, scrutinee_index) = validate_codatatype_shape info
         in
           SOME (const_key case_const,
-                (length constructors, scrutinee_index))
+                (length constructors, scrutinee_index, []))
         end
         handle HOL_ERR _ =>
           (Refute_Core.Private.warn "Refute_ModelFinder_HOL" "case_names"
@@ -5911,6 +6098,15 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     in
       raw @ List.mapPartial registered_entry registered
     end
+
+  (* A registered codatatype's case constant
+     is given case semantics on the caller's word unless it is the very
+     description the finder knows (Refute_Facts). *)
+  fun caller_case_names () =
+    List.mapPartial (fn {tyop, case_const, constructors} =>
+        if is_builtin_description tyop case_const constructors then NONE
+        else SOME (const_key case_const))
+      (current_codatatype_registry ())
 
   fun constructor_name constructor =
     case Lib.total Term.dest_thy_const constructor of
@@ -6879,10 +7075,14 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
     in
       case List.find (fn ({original, ...} : ersatz) =>
              same_key original key) table of
-          SOME {replacement = {Thy, Name}, ...} =>
-            SOME (retype_constant "ersatz"
+          SOME (row as {replacement = {Thy, Name}, original}) =>
+            (if is_foreign_ersatz row then
+               Refute_Facts.foreign ("ersatz for " ^ #Thy original ^ "$" ^
+                                       #Name original)
+             else ();
+             SOME (retype_constant "ersatz"
               (Term.prim_mk_const {Thy = Thy, Name = Name})
-              (Term.type_of constant))
+              (Term.type_of constant)))
         | NONE => NONE
     end
 
@@ -6990,17 +7190,22 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
               eligible andalso
               (choice_predicate_attempts := !choice_predicate_attempts + 1;
                (* Built here, so an ineligible or already-cached
-                  predicate never pays for it. *)
-               Lib.can bossLib.DECIDE
-                 (boolSyntax.mk_neg (choice_predicate_nonempty predicate)))
+                  predicate never pays for it.  The theorem that leaves
+                  the choice guard out goes through the checked point. *)
+               case Lib.total bossLib.DECIDE
+                      (boolSyntax.mk_neg
+                         (choice_predicate_nonempty predicate)) of
+                   SOME thm => (Refute_Facts.check thm; true)
+                 | NONE => false)
           in
             choice_empty_cache := (predicate, result) :: !choice_empty_cache;
             result
           end
 
   fun unfold_defs_in_term
-        (context as {case_names, ersatz_table, whacks, total_consts,
-                     whack_weakening, choice_guard_inserted, ...}
+        (context as {case_names, caller_cases, ersatz_table, whacks,
+                     total_consts, whack_weakening, choice_guard_inserted,
+                     ...}
            : mf_context) term =
     let
       fun whack_matches pattern candidate =
@@ -7071,8 +7276,16 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
             else
               case List.find (fn (other, _) => same_key key other)
                      case_names of
-                  SOME (_, (constructor_count, scrutinee_index)) =>
-                    let val needed = constructor_count + 1
+                  SOME (_, (constructor_count, scrutinee_index, facts)) =>
+                    let
+                      val needed = constructor_count + 1
+                      val () = List.app Refute_Facts.check facts
+                      val () =
+                        if List.exists (same_key key) caller_cases
+                        then Refute_Facts.foreign ("case constant " ^
+                          #Thy key ^ "$" ^ #Name key ^
+                          " of a codatatype the caller described")
+                        else ()
                     in
                       if length arguments < needed then
                         do_term depth (eta_expand
@@ -7385,6 +7598,7 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
        tac_timeout = Time.fromReal (#tac_timeout mf),
        evals = evals,
        case_names = case_names (),
+       caller_cases = caller_case_names (),
        def_tables = def_tables,
        nondef_table = nondef_table,
        nondefs = nondefs,
@@ -7416,7 +7630,35 @@ structure Refute_ModelFinder_HOL :> Refute_ModelFinder_HOL = struct
   val register_codatatype = registration_api register_codatatype
   val register_quotient = registration_api register_quotient
   val register_typedef = registration_api register_typedef
-  val register_frac_type = registration_api register_frac_type
+  val register_library_frac_type = registration_api register_frac_type
+
+  (* A caller's frac type is a registration the
+     finder did not make (Refute_Facts), marked so before it is
+     installed, so no call sees it without its mark; one that fails
+     validation withdraws its own marks, one occurrence each, and no
+     other.  Any other exception (an interrupt, which can come after the
+     type is installed) keeps them. *)
+  fun register_caller_frac_type (registration as {tyop, ersatz} : frac_info) =
+    let
+      fun drop_one same item [] = []
+        | drop_one same item (other :: rest) =
+            if same item other then rest
+            else other :: drop_one same item rest
+      fun same_row ({original, replacement} : ersatz)
+                   ({original = o', replacement = r'} : ersatz) =
+        same_key original o' andalso same_key replacement r'
+    in
+      note_foreign_frac_type tyop;
+      note_foreign_ersatz ersatz;
+      register_library_frac_type registration
+      handle error as HOL_ERR _ =>
+        (Refute_Session.publish foreign_frac_types
+           (drop_one same_type_operator tyop);
+         Refute_Session.publish foreign_ersatz (fn marked =>
+           List.foldl (fn (row, rest) => drop_one same_row row rest)
+             marked ersatz);
+         raise error)
+    end
   val export_codatatype = registration_api export_codatatype
   val export_typedef = registration_api export_typedef
   val export_quotient = registration_api export_quotient

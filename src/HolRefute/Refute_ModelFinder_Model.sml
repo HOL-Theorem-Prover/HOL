@@ -254,9 +254,10 @@ fun qualifying_frac_binding binding =
    fail, and it changes nothing when it does; the display registration
    cannot fail, and masking interrupts across both means neither lands
    without the other. *)
-fun register_frac_type_with_display (frac_info, pattern, postprocessor) =
+fun register_library_frac_type_with_display
+      (frac_info, pattern, postprocessor) =
   Thread_Attributes.uninterruptible (fn _ => fn () =>
-    (MFH.register_frac_type frac_info;
+    (MFH.register_library_frac_type frac_info;
      register_term_postprocessor pattern postprocessor)) ()
 
 (* Per-type running counters plus the numbers already handed out, so
@@ -1974,7 +1975,8 @@ fun display_counterexample postprocessors
        (#bindings cex),
      evals = map (displayed_value (#evals reconstructed)) (#evals cex),
      cert = #cert cex, scope = #scope cex,
-     model = SOME (model_report reconstructed), stats = #stats cex}
+     model = SOME (model_report reconstructed), stats = #stats cex,
+     statement = #statement cex}
   end
 
 fun valid_replay_sidecar ({holes} : replay_sidecar) =
@@ -2229,7 +2231,8 @@ fun replace_cex (cex : Refute_Core.counterexample) certainty bindings
       evals cert model =
   {backend = #backend cex, substrate = #substrate cex,
    certainty = certainty, bindings = bindings, evals = evals,
-   cert = cert, scope = #scope cex, model = model, stats = #stats cex}
+   cert = cert, scope = #scope cex, model = model, stats = #stats cex,
+   statement = #statement cex}
 
 fun fallback_certainty sound genuine reasons =
   if sound andalso genuine then Refute_Core.Genuine

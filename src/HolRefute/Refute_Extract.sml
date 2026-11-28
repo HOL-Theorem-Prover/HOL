@@ -993,18 +993,15 @@ structure Refute_Extract :> Refute_Extract = struct
   fun lookup_pending ({pending, ...} : context) constant =
     List.exists (same_term constant) (!pending)
 
-  fun equations_of theorem =
-    let
-      fun split tm =
-        let val (_, body) = boolSyntax.strip_forall tm
-        in
-          case Lib.total boolSyntax.dest_conj body of
-            SOME (left, right) => split left @ split right
-          | NONE => [body]
-        end
+  fun split_equations tm =
+    let val (_, body) = boolSyntax.strip_forall tm
     in
-      split (Thm.concl theorem)
+      case Lib.total boolSyntax.dest_conj body of
+        SOME (left, right) => split_equations left @ split_equations right
+      | NONE => [body]
     end
+
+  fun equations_of theorem = split_equations (Refute_Facts.concl theorem)
 
   (* The callable arity of an emitted definition is the number of arguments
      on its equation lhs, not the number of arrows in the constant's type.
@@ -1050,7 +1047,10 @@ structure Refute_Extract :> Refute_Extract = struct
           SOME (left, _) =>
             let val (head, _) = boolSyntax.strip_comb left
             in Term.is_const head andalso Term.same_const head constant end
-        | NONE => false) (equations_of theorem)
+        | NONE => false)
+        (* Only the theorem selected is read
+           through the checked point, by its caller *)
+        (split_equations (Thm.concl theorem))
       fun from_info info =
         let
           val theorems =
@@ -1059,7 +1059,10 @@ structure Refute_Extract :> Refute_Extract = struct
             handle Feedback.HOL_ERR _ =>
               TypeBasePure.accessors_of info @ TypeBasePure.updates_of info
         in
-          List.find has_head theorems
+          (* the entry is checked only once it holds the theorem *)
+          Option.map (fn theorem =>
+              (Refute_TypeBase.check_entry info; theorem))
+            (List.find has_head theorems)
         end
     in
       Lib.get_first from_info (Refute_TypeBase.elts ())
@@ -1577,6 +1580,7 @@ structure Refute_Extract :> Refute_Extract = struct
         NONE => NONE
       | SOME (info, fields, (is_update, selected)) =>
           let
+            val () = Refute_TypeBase.check_entry info
             val generic_ty = TypeBasePure.ty_of info
             val generic_head = if is_update then
               #fupd (#2 (List.nth (fields, selected)))
@@ -2870,7 +2874,7 @@ structure Refute_Extract :> Refute_Extract = struct
       fun group_for constant =
         List.find (List.exists (same_term constant)) groups
       fun constants_in (_, _, _, theorem) =
-        HolKernel.find_terms Term.is_const (Thm.concl theorem)
+        HolKernel.find_terms Term.is_const (Refute_Facts.concl theorem)
       fun same_group left right =
         List.all (fn constant => List.exists (same_term constant) right)
           left andalso

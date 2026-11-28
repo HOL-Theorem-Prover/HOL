@@ -27,6 +27,21 @@ signature Refute_Core = sig
       consts : (term * string * term) list,
       types : (hol_type * term list * bool) list }
 
+  (* What a candidate says about the statement
+     Refute was given (its goal, with the assumptions as antecedents):
+     [types] instantiates the statement's type variables, [values] pairs
+     each binder of the statement (an outer universal of the goal or a
+     free variable, at its type in the statement) with the candidate's
+     value for it, and [partial] names what the back end left open, empty
+     when both are complete.  Refute fills it in for every back end's
+     candidates; a back end may give the values of its instance's binders
+     in [values], the instance's types ([statement_types]) and what it
+     left open in [partial], beforehand ([unlinked] otherwise). *)
+  type statement_instance =
+    { types : (hol_type, hol_type) Lib.subst,
+      values : (term * term) list,
+      partial : string list }
+
   type counterexample =
     { backend : string,
       substrate : string,
@@ -36,7 +51,11 @@ signature Refute_Core = sig
       cert : thm option,
       scope : (hol_type * int) list option,
       model : model_report option,
-      stats : (string * int) list }
+      stats : (string * int) list,
+      statement : statement_instance }
+
+  (* The [statement] a back end gives its candidates. *)
+  val unlinked : statement_instance
 
   datatype outcome =
       Counterexample of counterexample list
@@ -54,6 +73,12 @@ signature Refute_Core = sig
 
   type instance =
     { original : term,
+      (* The statement's binders (its free variables and the outer [!]s
+         under its assumptions) that [normal] and [goal] have, free,
+         under their own names ([normalize_closed]) *)
+      binders : term list,
+      (* [goal] before finite quantifiers are expanded *)
+      normal : term,
       goal : term,
       qc_gate : string list option,
       evals : term list,
@@ -65,6 +90,10 @@ signature Refute_Core = sig
          value from a candidate binding for [r].  Empty unless
          [Refute_QC]'s transform fired on this instance. *)
       transport : (term * term * term) list }
+
+  (* The type instance taking the running call's
+     statement to [tm], an instance of it (empty outside a call). *)
+  val statement_types : term -> (hol_type, hol_type) Lib.subst
 
   datatype requirement =
       AnyGoal
@@ -140,19 +169,32 @@ signature Refute_Core = sig
   (* The rewrites and the unwinding conversions together. *)
   val normal_conv : term -> thm
   val has_bounded_quantifier : term -> bool
-  val normalize : term -> term
+  (* [tm] normalized, with the statement's [binders] bound along its
+     outer [!]s and implications, and the binders the result still has
+     under their own names: no other variable of the result shares a
+     returned binder's name and type. *)
+  val normalize_closed : term list -> term -> term * term list
   val has_unexpanded_binder : term -> bool
   val register_literal_constants : (term -> term list option) -> unit
   val nonexecutable_constants : term list -> term list
   val show_constants : term list -> string
   val rebuild_instance :
-    {original : term, raw_goal : term, evals_for : term -> term list,
+    {original : term, binders : term list, raw_goal : term,
+     evals_for : term -> term list,
      card : int, transport : (term * term * term) list} -> instance
   val register_mono_instance_transform :
     (config -> instance -> instance) -> unit
   val show_config : unit -> unit
   val register_run_release : string -> (unit -> unit) -> unit
+  (* [register_backend] is a registration the finder did not make: its
+     candidates never count, and their certificates are dropped.  The
+     library registers its own with [register_library_backend], which
+     trusts only the names the library defines, at their first
+     registration.  [register_test_backend] trusts any back end: for test
+     fixtures only. *)
   val register_backend : backend -> unit
+  val register_library_backend : backend -> unit
+  val register_test_backend : backend -> unit
   val family_backend_names : backend_family -> string list
   val lookup_stat : ''a -> (''a * 'b) list -> 'b option
   (* One QC substrate call's candidate counters; the stats list is only

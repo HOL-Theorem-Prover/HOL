@@ -373,7 +373,13 @@ datatype outcome =
 ```
 
 A `counterexample` records its `backend`, `substrate`, `certainty`,
-`bindings`, `evals`, `cert`, `scope`, `model` and `stats`.
+`bindings`, `evals`, `cert`, `scope`, `model`, `stats` and
+`statement`.  The `statement` relates the candidate to the searched
+statement: `types` is the type instance tested, `values` gives the
+values of the statement's own binders and free variables, and
+`partial` says why either is incomplete.  A back end added with
+`register_backend` gives `Refute.unlinked` as the `statement` of its
+counterexamples, and Refute fills it in.
 
 | Function | Searches |
 |---|---|
