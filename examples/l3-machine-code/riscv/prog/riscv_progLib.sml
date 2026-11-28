@@ -37,6 +37,7 @@ val (_, mk_riscv_c_PC, dest_riscv_c_PC, _) = riscv_2 "riscv_c_PC"
 val (_, mk_riscv_MEM, dest_riscv_MEM, is_riscv_MEM) = riscv_2 "riscv_MEM8"
 val (_, mk_riscv_gpr, dest_riscv_gpr, is_riscv_gpr) = riscv_3 "riscv_c_gpr"
 val (_, _, dest_riscv_PC, _) = riscv_1 "riscv_PC"
+val (_, _, dest_riscv_PC_noC, _) = riscv_1 "riscv_PC_noC"
 val (_, _, dest_riscv_REG, _) = riscv_2 "riscv_REG"
 val st = Term.mk_var ("s", ``:riscv_state``)
 val id_tm = ``^st.procID``
@@ -72,10 +73,23 @@ local
            andalso can (match_term ``^st.MEM8 _``) l
       | NONE => false
   fun hide_with_genvar (x: term) = x |-> Term.genvar (Term.type_of x)
+  (* A step theorem's state may update the hidden logs c_update (as
+     writeCSR, writeFPRS and writeFPRD do) and log.  hide_hidden replaces
+     the new values by variables, so that the postcondition reads no hidden
+     component.  The update functions are named by TypeBasePure, as in
+     riscv_write_footprint below: literal names such as
+     riscv_state_c_update_fupd no longer match HOL's record constants. *)
+  val hidden_fupds =
+    List.map
+      (fn f => "riscv$" ^
+               TypeBasePure.mk_recordtype_fieldfupd
+                 {tyname = "riscv_state", fieldname = f})
+      ["c_update", "log"]
   fun to_hide tm =
     case boolSyntax.dest_strip_comb tm of
-       ("riscv$riscv_state_c_update_fupd", [t, _]) => combinSyntax.dest_K_1 t
-     | ("riscv$riscv_state_log_fupd", [t, _]) => combinSyntax.dest_K_1 t
+       (c, [t, _]) =>
+         if Lib.mem c hidden_fupds then combinSyntax.dest_K_1 t
+         else raise ERR "" ""
      | _ => raise ERR "" ""
   fun hide_hidden tm =
     let
@@ -142,7 +156,8 @@ val state_id =
        ["c_NextFetch", "c_PC", "c_Skip"],
        ["c_NextFetch", "c_PC", "c_Skip", "c_gpr"],
        ["MEM8", "c_PC"],
-       ["MEM8", "c_PC", "c_Skip"]
+       ["MEM8", "c_PC", "c_Skip"],
+       ["MEM8", "c_PC", "c_Skip", "c_gpr"]  (* AMOs write memory and rd *)
       ]
 
 val riscv_frame = riscv_progTheory.riscv_frame
@@ -157,7 +172,8 @@ local
        | "riscv_prog$riscv_procID" => 1
        | "riscv_prog$riscv_c_NextFetch" => 16
        | "riscv_prog$riscv_c_MCSR" => 17
-       | "riscv_prog$riscv_c_PC" => 18
+       | "riscv_prog$riscv_c_privilege" => 18
+       | "riscv_prog$riscv_c_PC" => 19
        | _ => ~1)
       handle HOL_ERR r => (print_term tm; raise HOL_ERR r)
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
@@ -270,17 +286,22 @@ in
        (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm)
 end
 
+val rvc = ref true
+
 local
   fun mkselnm ty f = TypeBasePure.mk_recordtype_fieldsel{tyname=ty,fieldname=f}
   val id0 = wordsSyntax.mk_wordii (0, 8)
   val rv64 = wordsSyntax.mk_wordii (2, 2)
   val rv64_rule =
     PURE_REWRITE_RULE
-      [GSYM riscv_progTheory.riscv_REG_def, GSYM riscv_progTheory.riscv_PC_def]
-  val (_, mk_mcpuid, _, _) =
-      HolKernel.syntax_fns1 "riscv" (mkselnm "MachineCSR" "mcpuid")
-  val (_, mk_ArchBase, _, _) =
-      HolKernel.syntax_fns1 "riscv" (mkselnm "mcpuid" "ArchBase")
+      [GSYM riscv_progTheory.riscv_REG_def, GSYM riscv_progTheory.riscv_PC_def,
+       GSYM riscv_progTheory.riscv_PC_noC_def]
+  val (_, mk_misa, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "MachineCSR" "misa")
+  val (_, mk_MXL, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "misa" "MXL")
+  val (_, mk_C, _, _) =
+      HolKernel.syntax_fns1 "riscv" (mkselnm "misa" "C")
   val pre = progSyntax.strip_star o temporal_stateSyntax.dest_pre' o Thm.concl
 
 
@@ -292,24 +313,36 @@ val SOME tm = List.find is_riscv_ID (pre th)
        SOME tm =>
          let
            val (id, mcsr) = dest_riscv_ID tm
-           val archbase = boolSyntax.mk_eq (mk_ArchBase (mk_mcpuid mcsr), rv64)
+           val mxl = boolSyntax.mk_eq (mk_MXL (mk_misa mcsr), rv64)
+           val c = mk_C (mk_misa mcsr)
+           val config =
+             boolSyntax.mk_conj (mxl, if !rvc then c else mk_neg c)
          in
            th |> Thm.INST [id |-> id0]
               |> rv64_rule
-              |> PURE_REWRITE_RULE [ASSUME archbase]
+              |> PURE_REWRITE_RULE (Drule.CONJUNCTS (ASSUME config))
               |> Conv.CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
               |> REWRITE_RULE []
-              |> Thm.DISCH archbase
+              |> Thm.DISCH config
               |> Conv.CONV_RULE stateLib.MOVE_COND_CONV
               |> helperLib.MERGE_CONDS_RULE
               |> stateLib.introduce_triple_definition
-                   (true, riscv_progTheory.riscv_RV64I_def)
+                   (true, if !rvc then riscv_progTheory.riscv_RV64I_def
+                          else riscv_progTheory.riscv_RV64I_noC_def)
          end
      | NONE => raise ERR "specialize_to_rv64i" "no ID assertion"
   val to_rv64 = ref true
 in
   fun set_to_rv64 b = to_rv64 := b
   fun spec_to_rv64 thm = if !to_rv64 then specialize_to_rv64i thm else thm
+  fun hide_rv64 thm =
+    if not (!to_rv64) then thm
+    else if !rvc then
+      thm |> helperLib.HIDE_POST_RULE ``riscv_RV64I``
+          |> helperLib.HIDE_PRE_RULE ``riscv_RV64I``
+    else
+      thm |> helperLib.HIDE_POST_RULE ``riscv_RV64I_noC``
+          |> helperLib.HIDE_PRE_RULE ``riscv_RV64I_noC``
   fun reg_idx tm =
     if !to_rv64 then fst (dest_riscv_REG tm) else #2 (dest_riscv_gpr tm)
 end
@@ -324,12 +357,17 @@ local
     Q.INST [`p1`|->`emp`, `p2`|->`emp`]
   val RISCV_PC_INTRO0 = rule RISCV_PC_INTRO
   val RISCV_TEMPORAL_PC_INTRO0 = rule RISCV_TEMPORAL_PC_INTRO
+  val RISCV_PC_noC_INTRO0 = rule RISCV_PC_noC_INTRO
+  val RISCV_TEMPORAL_PC_noC_INTRO0 = rule RISCV_TEMPORAL_PC_noC_INTRO
   fun MP_RISCV_PC_INTRO th =
      Lib.tryfind (fn thm => MATCH_MP thm th)
         [RISCV_PC_INTRO, RISCV_PC_INTRO0,
-         RISCV_TEMPORAL_PC_INTRO, RISCV_TEMPORAL_PC_INTRO0]
+         RISCV_TEMPORAL_PC_INTRO, RISCV_TEMPORAL_PC_INTRO0,
+         RISCV_PC_noC_INTRO, RISCV_PC_noC_INTRO0,
+         RISCV_TEMPORAL_PC_noC_INTRO, RISCV_TEMPORAL_PC_noC_INTRO0]
   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric,
-                          cond_branch_aligned]
+                          cond_branch_aligned, cond_branch_aligned_noC,
+                          jal_aligned_noC]
   fun RISCV_PC_bump_intro th =
     let
       val c = riscv_c_PC_def |> SPEC_ALL |> concl |> lhs |> repeat rator
@@ -353,16 +391,18 @@ in
        |> stateLib.introduce_triple_definition (true, riscv_progTheory.riscv_ID_def)
        |> helperLib.HIDE_PRE_RULE ``riscv_c_Skip id``
        |> stateLib.introduce_triple_definition
-             (false, riscv_progTheory.riscv_ID_PC_def)
+             (false, if !rvc then riscv_progTheory.riscv_ID_PC_def
+                     else riscv_progTheory.riscv_ID_PC_noC_def)
        |> RISCV_PC_bump_intro
        |> helperLib.MERGE_CONDS_RULE
        |> PURE_REWRITE_RULE [jal_aligned, jalr_aligned,
                              DECIDE ``a /\ (b ==> a) = a``,
-                             DECIDE ``a /\ c /\ (b ==> a) = c /\ a``]
+                             DECIDE ``a /\ c /\ (b ==> a) = c /\ a``,
+                             DECIDE ``a /\ (b ==> c ==> a) = a``,
+                             DECIDE ``a /\ d /\ (b ==> c ==> a) = d /\ a``]
        |> spec_to_rv64
        |> memory_introduction
-       |> helperLib.HIDE_POST_RULE ``riscv_RV64I``
-       |> helperLib.HIDE_PRE_RULE ``riscv_RV64I``
+       |> hide_rv64
 end
 
 local
@@ -382,7 +422,44 @@ local
       val Skip_conv = SIMP_CONV (srw_ss())
                        [riscvTheory.Skip_def,combinTheory.APPLY_UPDATE_THM]
     in REWRITE_RULE (map Skip_conv tms) thm end
-  val pc_assum = ``¬word_bit 0 (s.c_PC s.procID)``
+  val pc_assum_noC = ``aligned 2 (s.c_PC s.procID)``
+  val rvc_tm = ``(s.c_MCSR s.procID).misa.C``
+  val aligned_rwts =
+    Drule.CONJUNCTS
+      (UNDISCH (Q.INST [`pc` |-> `s.c_PC s.procID`] word_bit_aligned_noC))
+  (* The M-mode contract as riscv_ID (riscv_progTheory.riscv_ID_def) states
+     it: that no PMP entry is locked and that every entry is OFF or NAPOT,
+     which the step theorem has as word-level conjuncts, become
+     pmp_unlocked and pmp_off_or_napot of the MCSR, and the parts of the
+     contract that the instruction does not need (mstatus.MPRV clear unless
+     it accesses data, pmp_off_or_napot unless it accesses 8 bytes) are
+     added, as misa.C is below, so that every spec has the same
+     riscv_ID. *)
+  val mcsr_tm = ``s.c_MCSR s.procID``
+  fun fold_rule def th =
+    let
+      val eq = Thm.SPEC mcsr_tm def
+      val p = boolSyntax.lhs (Thm.concl eq)
+    in
+      List.foldl (Lib.uncurry PROVE_HYP) (ADD_ASSUM p th)
+        (Drule.CONJUNCTS (Thm.EQ_MP eq (Thm.ASSUME p)))
+    end
+  val contract_rule =
+    ADD_ASSUM ``~^mcsr_tm.mstatus.MPRV`` o
+    ADD_ASSUM ``~^mcsr_tm.mstatus.MIE`` o
+    fold_rule riscv_stepTheory.pmp_unlocked_def o
+    fold_rule riscv_stepTheory.pmp_off_or_napot_def
+  fun config_rule thm =
+    if !rvc then
+      thm |> riscv_stepLib.riscv_rvc_rule true
+          |> ADD_ASSUM rvc_tm
+          |> contract_rule
+    else
+      thm |> riscv_stepLib.riscv_rvc_rule false
+          |> ADD_ASSUM (boolSyntax.mk_neg rvc_tm)
+          |> ADD_ASSUM pc_assum_noC
+          |> utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV aligned_rwts)
+          |> contract_rule
 in
   val spec =
     stateLib.spec
@@ -396,10 +473,59 @@ in
       [dword, word5]
       EXTRA_TAC STATE_TAC
   val intro_spec = riscv_introduction o spec
+  (* No specs for the F and D instructions, LR and SC.  The F and D step
+     theorems assume mstatus.FS <> Off, but riscv_RV64I hides the MCSR, and
+     most of them read or write fcsr, in the hidden c_UCSR; LR and SC use
+     the load reservation, the hidden c_ReserveLoad.  riscv_spec rejects
+     them by the state they use (each F and D instruction reads or writes an
+     FPR), rather than give a spec that does not compose (for FSD, one whose
+     precondition is not ~riscv_RV64I but an existential over the MCSR with
+     mstatus.FS <> Off) or fail inside stateLib. *)
+  (* Nor for the CSR instructions, ECALL, EBREAK and MRET.  riscv_step
+     steps a CSR instruction only for a known CSR number, which an opcode
+     pattern of riscv_dict does not give; and the others write the MCSR and
+     the privilege (the trap entry, the return from it), which riscv_ID
+     fixes. *)
+  val system_msg = "CSR instructions, ECALL, EBREAK and MRET are not supported"
+  local
+    fun names f =
+      let
+        val r = {tyname = "riscv_state", fieldname = f}
+      in
+        [TypeBasePure.mk_recordtype_fieldsel r,
+         TypeBasePure.mk_recordtype_fieldfupd r]
+      end
+    val unsupported =
+      List.concat (List.map names ["c_fpr", "c_UCSR", "c_ReserveLoad"])
+    val fixed =
+      List.map
+        (fn f => TypeBasePure.mk_recordtype_fieldfupd
+                   {tyname = "riscv_state", fieldname = f})
+        ["c_MCSR", "c_privilege"]
+    fun is_in l tm =
+      case Lib.total Term.dest_thy_const tm of
+         SOME {Thy = "riscv", Name, ...} => Lib.mem Name l
+       | _ => false
+  in
+    fun check_supported thm =
+      if List.exists (Lib.can (HolKernel.find_term (is_in unsupported)))
+           (Thm.concl thm :: Thm.hyp thm)
+        then raise ERR "riscv_spec"
+               "F, D, LR and SC instructions are not supported"
+      else if Lib.can (HolKernel.find_term (is_in fixed)) (Thm.concl thm)
+        then raise ERR "riscv_spec" system_msg
+      else thm
+  end
+  fun step tm =
+    riscv_stepLib.riscv_step tm
+    handle e as HOL_ERR herr =>
+      if String.isPrefix "the CSR number" (Feedback.message_of herr)
+        then raise ERR "riscv_spec" system_msg
+      else raise e
   fun riscv_spec tm =
     let
-       val thm = riscv_stepLib.riscv_step tm
-       val thm = DISCH pc_assum thm |> UNDISCH
+       val thm = check_supported (step tm)
+       val thm = config_rule thm
        val thm = eval_Skip thm
        val t = riscv_mk_pre_post thm
        val thm_ts = combinations (thm, t)
@@ -445,11 +571,26 @@ local
   val WGROUND_RW_CONV =
     Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
     THENC utilsLib.WGROUND_CONV
+  val ALIGNED_CONV =
+    Conv.DEPTH_CONV
+      (fn tm =>
+         case Lib.total ((alignmentSyntax.dest_aligned ##
+                          alignmentSyntax.dest_aligned) o boolSyntax.dest_imp) tm of
+            SOME (_, (_, w)) =>
+              if wordsSyntax.is_word_literal w
+                then Conv.RAND_CONV
+                       (REWRITE_CONV [alignmentTheory.aligned_extract]
+                        THENC utilsLib.WGROUND_CONV
+                        THENC REWRITE_CONV []) tm
+              else raise ERR "ALIGNED_CONV" ""
+          | NONE => raise ERR "ALIGNED_CONV" "")
   val PRE_COND_CONV =
     helperLib.PRE_CONV
        (DEPTH_COND_CONV
           (WGROUND_RW_CONV
-           THENC REWRITE_CONV []
+           THENC ALIGNED_CONV
+           THENC REWRITE_CONV [jalr_target_aligned,
+                               DECIDE ``a /\ (b ==> a) = a``]
            THENC NOT_F_CONV)
         THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
   val cnv =
@@ -459,6 +600,7 @@ local
     THENC OPC_CONV bitstringLib.v2w_n2w_CONV
     THENC POST_CONV WGROUND_RW_CONV
     THENC helperLib.POST_CONV (stateLib.PC_CONV "riscv_prog$riscv_PC")
+    THENC helperLib.POST_CONV (stateLib.PC_CONV "riscv_prog$riscv_PC_noC")
 in
   fun simp_triple_rule thm =
     riscv_rename (Conv.CONV_RULE cnv thm)
@@ -479,6 +621,7 @@ local
   val spec_label_set = ref (Redblackset.empty String.compare)
   val init_net = utilsLib.mk_rw_net (fn _ => raise ERR "" "") []
   val spec_rwts = ref init_net
+  val other_specs = ref (Redblackset.empty String.compare, init_net)
   val add1 = utilsLib.add_to_rw_net get_opcode
   val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
   fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
@@ -498,13 +641,27 @@ local
   fun find_opc opc =
     List.filter (fn (_, p) => Lib.can (Term.match_term p) opc)
       riscv_stepLib.riscv_dict
-  val split_branches = stateLib.split_cond true dest_riscv_PC
+  val split_branches =
+    stateLib.split_cond true
+      (fn tm => dest_riscv_PC tm handle HOL_ERR _ => dest_riscv_PC_noC tm)
 in
   fun riscv_config rv64 =
     ( set_to_rv64 rv64
     ; spec_label_set := Redblackset.empty String.compare
     ; spec_rwts := init_net
+    ; other_specs := (Redblackset.empty String.compare, init_net)
     )
+  fun riscv_rvc () = !rvc
+  fun riscv_rvc_config b =
+    if b = !rvc then ()
+    else let
+           val (labels, rwts) = !other_specs
+         in
+           other_specs := (!spec_label_set, !spec_rwts)
+           ; spec_label_set := labels
+           ; spec_rwts := rwts
+           ; rvc := b
+         end
 (*
 val (s,tm) = hd (find_opc opc)
 *)
@@ -519,6 +676,9 @@ val (s,tm) = hd (find_opc opc)
     fn s =>
       let
         val opc = riscv_stepLib.hex_to_padded_opcode s
+        val () = if !rvc orelse 16 < length (fst (listSyntax.dest_list opc))
+                   then ()
+                 else err "requires the C extension" s
         fun loop e =
           if (print "\n"; List.exists addInstruction (find_opc opc))
             then riscv_spec_hex () s
