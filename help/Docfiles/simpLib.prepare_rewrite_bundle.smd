@@ -1,0 +1,61 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `prepare_rewrite_bundle`
+
+``` hol4
+simpLib.prepare_rewrite_arguments :
+  simpLib.simpset -> thm list -> simpLib.simpset * thm list
+simpLib.prepare_rewrite_bundle :
+  simpLib.simpset -> thm list -> simpLib.rewrite_bundle
+simpLib.rewrite_bundle_rules : simpLib.rewrite_bundle ->
+  (thm * simpLib.rewrite_source list) list
+simpLib.combine_rewrite_bundles :
+  simpLib.rewrite_bundle list -> simpLib.rewrite_bundle
+simpLib.install_rewrite_bundle : simpLib.rewrite_bundle ->
+  (simpLib.rewrite_source * thm) list ->
+  simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Prepares a theorem-list argument once, for use in several simplifier calls.
+
+`prepare_rewrite_arguments ss ths` applies the directives in `ths` (such
+as `simpLib.ExclX`, `SF` and `Split`) to `ss`, returning the resulting
+simpset and the remaining theorems.
+
+`prepare_rewrite_bundle ss ths` turns the theorems `ths`, which should
+contain no directives, into rewrites using the rewrite maker of `ss`,
+without adding them to `ss`. `install_rewrite_bundle bundle views ss` adds
+them to `ss`, together with the views `views` (see
+`simpLib.rewrite_views`). `rewrite_bundle_rules bundle` returns each
+theorem of the bundle with the handles of the rewrites made from it.
+`combine_rewrite_bundles` joins bundles.
+
+The rewrites of a bundle are made only once: wherever it is installed,
+bounded rewrites (`Once`, `Ntimes`) share one count of remaining uses.
+`simpLib.GEN_GLOBAL_SIMP_TAC_CHILD_FIRST_BOUND` takes a bundle already
+installed in its simpset.
+
+### Failure
+
+`prepare_rewrite_arguments` fails if a directive fails.
+`install_rewrite_bundle` fails if the bundle is already installed in the
+simpset, and `combine_rewrite_bundles` if a bundle occurs twice. Views
+whose source is not a rewrite of the bundle are ignored.
+
+### Example
+
+``` hol4
+>>_ val (ss, ths) = simpLib.prepare_rewrite_arguments
+     boolSimps.bool_ss
+     [BoundedRewrites.Once boolTheory.AND_CLAUSES];
+>>_ val bundle = simpLib.prepare_rewrite_bundle ss ths;
+>>_ val ss' = simpLib.install_rewrite_bundle bundle [] ss;
+>> simpLib.SIMP_CONV ss' [] “T ∧ p”;
+```
+
+### See also
+
+[`simpLib.rewrite_source_handles`](#simpLib.rewrite_source_handles),
+[`simpLib.GEN_GLOBAL_SIMP_TAC`](#simpLib.GEN_GLOBAL_SIMP_TAC).

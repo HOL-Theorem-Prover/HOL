@@ -1,0 +1,52 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `SIMP_CONV_CHILD_FIRST`
+
+``` hol4
+simpLib.SIMP_CONV_CHILD_FIRST : Traverse.child_first_policy ->
+  simpLib.simpset -> thm list -> conv
+Traverse.charge_only : (unit -> unit) -> Traverse.child_first_policy
+```
+
+------------------------------------------------------------------------
+
+Simplifies a term, simplifying subterms before the terms containing them.
+
+``` hol4
+type child_first_policy =
+  {charge : unit -> unit, keep_abstraction : term -> bool}
+```
+
+`SIMP_CONV_CHILD_FIRST policy ss ths` is as `simpLib.SIMP_CONV ss ths`,
+but simplifies the subterms of a term (as congruence rules allow) before
+trying to rewrite the term itself. Before descending into an application
+`f (λx. t)`, the abstraction argument is eta-contracted where possible,
+unless `f` is a binder such as `$!` or `#keep_abstraction policy` holds of
+the application; the `ETA_CONV` rewrite also leaves the abstractions that
+the policy keeps.
+
+`#charge policy` is called before each step. It may count steps, or raise
+an exception to stop simplification. Exceptions raised by the policy are
+passed on, rather than counting as the failure of a rewrite.
+`Traverse.charge_only f` is the policy that calls `f` and keeps no
+abstraction.
+
+### Failure
+
+Fails if the policy raises an exception. Otherwise, as `SIMP_CONV`.
+
+### Example
+
+``` hol4
+>> val steps = ref 0;
+>>_ val policy = Traverse.charge_only (fn () => steps := !steps + 1);
+>>_ val ss = boolSimps.bool_ss;
+>> simpLib.SIMP_CONV_CHILD_FIRST policy ss [] “T ∧ (p ∨ F)”;
+>> !steps;
+```
+
+### See also
+
+[`simpLib.prepare_child_first`](#simpLib.prepare_child_first),
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC),
+[`simpLib.GEN_GLOBAL_SIMP_TAC`](#simpLib.GEN_GLOBAL_SIMP_TAC).

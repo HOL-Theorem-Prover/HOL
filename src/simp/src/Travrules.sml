@@ -15,7 +15,13 @@
 structure Travrules :> Travrules =
 struct
 
-open HolKernel Drule Psyntax liteLib Trace Opening;
+open Abbrev
+
+local
+open Feedback Lib Term Thm Drule Psyntax liteLib Opening
+in
+
+val samerel = Opening.samerel
 
 fun WRAP x = STRUCT_WRAP "Travrules" x;
 fun ERR x = STRUCT_ERR "Travrules" x;
@@ -71,7 +77,7 @@ fun ERR x = STRUCT_ERR "Travrules" x;
 
    fun merge_travrules tl = let
      val ts = map dest tl
-     fun uniquify l = let
+     fun sort_unique l = let
        val sorted = Listsort.sort (inv_img_cmp rel_of_preorder Term.compare) l
        fun recurse acc [] = acc
          | recurse acc [h] = h::acc
@@ -83,6 +89,11 @@ fun ERR x = STRUCT_ERR "Travrules" x;
      in
        recurse [] sorted
      end
+     (* Appending an ordinary equality-only fragment supplies the same
+        preorder twice. Keep the fresh singleton produced by the merge. *)
+     fun uniquify (l as [p,q]) =
+           if Portable.pointer_eq (p,q) then [q] else sort_unique l
+       | uniquify l = sort_unique l
    in
      TRAVRULES {relations=uniquify (flatten (map #relations ts)),
                 congprocs=foldl (op @) [] (map #congprocs ts),
@@ -104,18 +115,22 @@ val EQ_tr = gen_mk_travrules
    congprocs=[Opening.EQ_CONGPROC],
    weakenprocs=[]}
 
-fun cong2proc rels th = let
+fun gen_cong2proc mk_congproc rels th = let
   open Opening
   val r = rel_of_congrule th
   val PREORDER(_,_,refl) = find_relation r rels
 in
-  CONGPROC refl th
+  mk_congproc refl th
 end
+val cong2proc = gen_cong2proc Opening.CONGPROC
 
-fun mk_travrules relns congs =
+fun gen_mk_travrules0 mk_congproc relns congs =
     TRAVRULES {relations=relns,
-               congprocs=map (cong2proc relns) congs,
+               congprocs=map (gen_cong2proc mk_congproc relns) congs,
                weakenprocs=[]}
+val mk_travrules = gen_mk_travrules0 Opening.CONGPROC
+val mk_threaded_travrules = gen_mk_travrules0 Opening.THREADED_CONGPROC
 
+end
 
 end (* struct *)

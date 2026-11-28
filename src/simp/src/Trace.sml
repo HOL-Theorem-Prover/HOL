@@ -1,6 +1,6 @@
 structure Trace :> Trace =
 struct
-open Feedback boolSyntax Rsyntax Abbrev;
+open Feedback Abbrev;
 
 val print_term = Lib.say o Parse.term_to_string
 val print_thm = Parse.print_thm
@@ -48,7 +48,8 @@ fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
     (say "  "; print_term tm; say " matches congruence rule "; print_thm thm; say "\n")
   | tty_trace (PRODUCE (tm,s,thm)) =
     (say "  "; print_term tm; say " via "; say s; say " simplifies to: ";
-     print_term (rhs (concl thm)) handle HOL_ERR _ => print_thm thm; say "\n")
+     print_term (boolSyntax.rhs (concl thm))
+       handle HOL_ERR _ => print_thm thm; say "\n")
   | tty_trace (IGNORE (s,thm)) =
     (say "  Ignoring "; say s; say " rewrite\n     "; print_thm thm; say "\n")
   | tty_trace (MORE_CONTEXT thm) =

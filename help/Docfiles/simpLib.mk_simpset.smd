@@ -11,6 +11,13 @@ Creates a simpset by combining a list of `ssfrag` values.
 
 This function creates a `simpset` value by repeatedly adding (as per the
 `++` operator) `simpset` fragment values to the base `empty_ss`.
+Fragments may carry strategy settings (loopers, solvers and split rules,
+made with `simpLib.looper_ss`, `simpLib.solver_ss`, `simpLib.safe_solver_ss`
+and `simpLib.split_ss`) as well as rewrites, so these too are added in order.
+
+`simpLib.ssfrags_of ss` gives only the fragments of `ss`: a simpset
+rebuilt from them loses the deletions, exclusions, limit and settings of
+`ss`.
 
 ### Failure
 
@@ -22,4 +29,6 @@ function.
 ### See also
 
 [`simpLib.++`](#simpLib..KAL), [`simpLib.rewrites`](#simpLib.rewrites),
-[`simpLib.SIMP_CONV`](#simpLib.SIMP_CONV)
+[`simpLib.SIMP_CONV`](#simpLib.SIMP_CONV),
+[`simpLib.filter_rewrites`](#simpLib.filter_rewrites),
+[`simpLib.prepare_rewrite_bundle`](#simpLib.prepare_rewrite_bundle)

@@ -1,0 +1,29 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `remove_solver`
+
+``` hol4
+simpLib.remove_solver : string -> simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Removes all solvers of the given name from both safe and unsafe lists.
+
+### Failure
+
+Never fails. Missing names leave the set unchanged.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.add_unsafe_solver
+     (simpLib.mk_tactic_solver ("decide", DECIDE_TAC))
+     boolSimps.bool_ss;
+>>_ val without_decide = simpLib.remove_solver "decide" ss;
+```
+
+### See also
+
+[`simpLib.add_unsafe_solver`](#simpLib.add_unsafe_solver),
+[`simpLib.add_safe_solver`](#simpLib.add_safe_solver).

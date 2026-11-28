@@ -1,0 +1,53 @@
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `enable_split_attribute`
+
+``` hol4
+splitLib.enable_split_attribute : unit -> unit
+```
+
+------------------------------------------------------------------------
+
+Enables the persistent `[split]` theorem attribute.
+
+After `enable_split_attribute ()`, a theorem declared with the `split`
+attribute (`Theorem name[split]: ...`) is recorded as a split rule. The
+rules are exported with the theory, used by `simpLib.split_ss`, and
+returned by `splitLib.split_thms` and `splitLib.named_split_thms`. Before
+the attribute is enabled, these return no rules. Split rules passed
+directly (`splitLib.SPLIT_TAC`, `simpLib.Split`, `simpLib.add_split`)
+and datatype case splitting do not need the attribute.
+
+Calling the function again has no effect.
+
+### Failure
+
+Fails if a `split` attribute or theorem set has already been registered by
+other code.
+
+### Comments
+
+A theory's `[split]` rules are only loaded when the attribute is already
+enabled when the theory is loaded. A script declaring `[split]` rules
+should therefore use the library `splitPersistLib`, which enables the
+attribute when it is loaded, and make it a dependency of the exported
+theory:
+
+``` hol4
+Theory mySplits
+Libs
+  splitLib splitPersistLib
+
+val _ = Theory.add_ML_dependency "splitPersistLib"
+```
+
+This is needed in the earliest theory declaring `[split]` rules;
+descendant theories then see the rules, and their retraction by
+`splitLib.exclude_split`. After `Context.restore` to a point before the
+attribute was enabled, call `enable_split_attribute ()` again.
+
+### See also
+
+[`splitLib.exclude_split`](#splitLib.exclude_split),
+[`simpLib.split_ss`](#simpLib.split_ss),
+[`splitLib.SPLIT_TAC`](#splitLib.SPLIT_TAC),
+[`simpLib.Split`](#simpLib.Split).

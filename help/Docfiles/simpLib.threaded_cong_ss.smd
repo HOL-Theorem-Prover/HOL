@@ -1,0 +1,57 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `threaded_cong_ss`
+
+``` hol4
+simpLib.threaded_cong_ss : thm list -> simpLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Creates a fragment of threaded congruence rules.
+
+In a congruence rule (see `simpLib.SSFRAG`), the variables
+standing for simplified subterms occur in the conclusion. In a threaded
+rule, such a variable may instead be used only in a later antecedent,
+which combines earlier results into the final one. For example, `Q` and
+`g` below are the results of the first two simplifications, and the third
+antecedent uses them to produce the result `h`:
+
+``` hol4
+   |- (!x. P x = Q x) ==> (!x. Q x ==> (f x = g x)) ==>
+      (!x. (Q x /\ g x) = h x) ==>
+      ((?x. P x /\ f x) = (?x. h x))
+```
+
+Beta-redexes created by instantiating higher-order variables in the
+right-hand side of the conclusion are reduced. `threaded_cong_ss ths` is an
+unnamed fragment containing the rules `ths`; congruence rules given to
+`simpLib.SSFRAG` or `simpLib.Cong` are not threaded.
+
+### Failure
+
+Never fails. Using a malformed rule can make adding the fragment, or
+simplifying with the result, fail.
+
+### Example
+
+``` hol4
+>>_ val threaded = prove(
+      “(!x:'a. P x = Q x) ==> (!x:'a. Q x ==> (f x = g x)) ==>
+       (!x:'a. (Q x /\ g x) = h x) ==>
+       ((?x:'a. P x /\ f x) = (?x:'a. h x))”,
+      DISCH_TAC THEN DISCH_TAC THEN
+      DISCH_THEN (fn rebuilt => REWRITE_TAC [GSYM rebuilt]) THEN
+      AP_TERM_TAC THEN ABS_TAC THEN ASM_REWRITE_TAC [] THEN
+      ASM_CASES_TAC “Q (x:'a) : bool” THEN RES_TAC THEN ASM_REWRITE_TAC []);
+>>_ val ss = simpLib.++ (boolSimps.bool_ss,
+     simpLib.threaded_cong_ss [threaded]);
+>> simpLib.SIMP_CONV ss [ASSUME “!y:'a. bnd y ==> (bdy y <=> bdy' y)”]
+     “?x:'a. bnd x /\ bdy x”;
+```
+
+### See also
+
+[`simpLib.SSFRAG`](#simpLib.SSFRAG),
+[`simpLib.Cong`](#simpLib.Cong),
+[`simpLib.mk_simpset`](#simpLib.mk_simpset).

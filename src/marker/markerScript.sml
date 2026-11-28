@@ -119,6 +119,14 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="AC"},name=
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="bool",Name="/\\"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Cong"},name=(["Unwanted"],"id")}
 
+(* Directives for the simplifier's splits and exclusions *)
+val Split_def = new_definition ("Split_def", “Split (x:bool) = x”)
+val _ = remove_ovl_mapping "Split" {Name="Split",Thy="marker"}
+val _ = OpenTheoryMap.OpenTheory_const_name
+  {const={Thy="marker",Name="Split"}, name=(["Unwanted"],"id")}
+val ExcludeX_def = new_definition ("ExcludeX_def", “ExcludeX (x:'a) = T”)
+val _ = remove_ovl_mapping "ExcludeX" {Name="ExcludeX",Thy="marker"}
+
 
 (*---------------------------------------------------------------------------*)
 (* Support for random user-supplied labels.                                  *)

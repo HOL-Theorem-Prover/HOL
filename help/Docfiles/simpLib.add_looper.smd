@@ -1,0 +1,42 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `add_looper`
+
+``` hol4
+simpLib.add_looper : string * (simpLib.simpset -> tactic) ->
+  simpLib.simpset -> simpLib.simpset
+```
+
+------------------------------------------------------------------------
+
+Adds a named looper to a simpset.
+
+A looper is a tactic that `simpLib.GEN_SIMP_TAC` tries when
+simplification and the final solvers leave a goal unsolved; the
+subgoals it produces are simplified again. `add_looper (name, mk) ss`
+adds the looper `mk`, which is passed the simpset in use, after the
+existing loopers. A looper with the same name is replaced in place.
+
+A looper should fail (or raise `Conv.UNCHANGED`) when it does not apply,
+and make progress when it succeeds.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.add_looper ("conj", fn _ => CONJ_TAC)
+     boolSimps.bool_ss;
+>> simpLib.GEN_SIMP_TAC {safe = false} ss [] ([], “p ∧ q”)
+     (Context.snapshot());
+```
+
+### See also
+
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC),
+[`simpLib.del_looper`](#simpLib.del_looper),
+[`simpLib.set_looper`](#simpLib.set_looper),
+[`simpLib.looper_ss`](#simpLib.looper_ss),
+[`simpLib.ExclX`](#simpLib.ExclX).

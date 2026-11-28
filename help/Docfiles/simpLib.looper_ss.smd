@@ -1,0 +1,31 @@
+>>__ load "simpLib";
+>>__ Parse.temp_set_grammars $ valOf $ grammarDB {thyname="hol"};
+## `looper_ss`
+
+``` hol4
+simpLib.looper_ss : string * (simpLib.simpset -> tactic) ->
+  simpLib.ssfrag
+```
+
+------------------------------------------------------------------------
+
+Creates a fragment containing one looper.
+
+Adding `looper_ss (name, mk)` to a simpset has the same effect as
+`simpLib.add_looper (name, mk)`. The fragment is unnamed.
+
+### Failure
+
+Never fails.
+
+### Example
+
+``` hol4
+>>_ val ss = simpLib.++ (boolSimps.bool_ss,
+     simpLib.looper_ss ("conj", fn _ => CONJ_TAC));
+```
+
+### See also
+
+[`simpLib.add_looper`](#simpLib.add_looper),
+[`simpLib.GEN_SIMP_TAC`](#simpLib.GEN_SIMP_TAC).

@@ -176,11 +176,11 @@ val cong_reducer =
   end;
 
 
-fun reducer_addRwts (REDUCER {name,addcontext,apply,initial}) rwts =
-  REDUCER {name=name,addcontext=addcontext, apply=apply, initial=addcontext (initial,rwts)}
+fun reducer_addRwts reducer rwts = addctxt rwts reducer
 
 
-fun eq_reducer_wrapper (eq_reducer as REDUCER data)= let
+fun eq_reducer_wrapper eq_reducer = let
+  val data = dest_reducer eq_reducer
   val name = #name data
   val initial = #initial data
   val addcontext = #addcontext data

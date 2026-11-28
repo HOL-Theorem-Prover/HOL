@@ -628,4 +628,348 @@ val _ =
                      concl (markerLib.IgnAsm ‘x = _’))]
   end
 
+(* Configured traversals *)
+val _ = let
+  open Traverse
+  fun child_first charge = {charge = charge, keep_abstraction = K false}
+  fun gives msg conv t want =
+      (tprint msg;
+       require_msg (check_result (fn th => rhs (concl th) ~~ want))
+                   thm_to_string (QCONV conv) t)
+  val f = “f : 'a -> 'a” and g = “g : 'a -> 'a” and h = “h : 'a -> 'a”
+  val x = “x : 'a” and a = “a : 'a” and b = “b : 'a”
+  val Px = “(P : 'a -> bool) x”
+  val fg_rule = ASSUME “!y:'a. ^f (^g y) = ^a”
+  val g_rule = ASSUME “!y:'a. ^g y = ^b”
+  val h_rule = ASSUME “!y:'a. ^h y = ^g y”
+  val cond_rule = ASSUME “!y:'a. (P : 'a -> bool) y ==> (^h y = ^b)”
+  fun ss rules = bool_ss ++ rewrites rules
+  fun solve_from_context ({context_thms, ...} : simp_prover_ctxt) t =
+      case List.find (fn th => concl th ~~ t) context_thms of
+          SOME th => th
+        | NONE => raise mk_HOL_ERR "selftest" "solve" "not in context"
+  val budget = mk_HOL_ERR "selftest" "charge" "budget exhausted"
+  fun error_of (HOL_ERR e) = SOME (top_function_of e, message_of e)
+    | error_of _ = NONE
+  fun escapes msg exn traversal t =
+      (tprint msg;
+       require_msg
+         (check_result
+            (fn e => isSome (error_of exn) andalso
+                     Option.mapPartial error_of e = error_of exn))
+         (fn NONE => "no exception" | SOME e => General.exnMessage e)
+         (fn t => (ignore (traversal t); NONE) handle e => SOME e)
+         t)
+in
+  gives "Child-first traversal rewrites the argument first"
+        (SIMP_CONV_CHILD_FIRST (child_first (fn () => ()))
+           (ss [fg_rule, g_rule]) [])
+        “^f (^g ^x)” “^f ^b”;
+  gives "Root-only traversal rewrites the root once"
+        (ROOT_REWRITE (xtraversedata_for_ss (ss [h_rule, g_rule])) [])
+        “^h (^g ^x)” “^g (^g ^x)”;
+  gives "Solvers see solver-only context; reducers don't"
+        (TRAVERSE_WITH_CONTEXT ParentFirst
+           (xtraversedata_for_ss
+              (set_unsafe_solvers
+                 [{name = "context", solve = solve_from_context}]
+                 (ss [cond_rule])))
+           {reducer_context = [], solver_context = [ASSUME Px]})
+        “^Px /\ (^h ^x = ^a)” “^Px /\ (^b = ^a)”;
+  gives "Subgoaler proves a side condition"
+        (SIMP_CONV (set_subgoaler (fn _ => EQT_INTRO o ASSUME)
+                      (ss [cond_rule])) [])
+        “^h ^x” b;
+  escapes "Child-first charge exception escapes the traversal" budget
+          (SIMP_CONV_CHILD_FIRST (child_first (fn () => raise budget))
+                                 (ss [g_rule]) [])
+          “^f (^g ^x)”;
+  (* The check fails once, at the solver call for the side condition *)
+  let
+    val late = mk_HOL_ERR "selftest" "check" "late abort"
+    val seen = ref false and fired = ref false
+    fun observe t = if t ~~ Px then seen := true else ()
+    fun check () =
+        if !seen andalso not (!fired) then (fired := true; raise late)
+        else ()
+  in
+    escapes "An abort check's exception escapes the traversal" late
+            (CHILD_FIRST_WITH_ABORT check (SOME observe)
+               (child_first (fn () => ()))
+               (xtraversedata_for_ss (ss [cond_rule]))
+               {reducer_context = [], solver_context = []})
+            “^h ^x”
+  end
+end
+
+(* Solvers, loopers, splits and side-condition settings *)
+val _ = let
+  val p = mk_var("p", bool) and q = mk_var("q", bool)
+  val r = mk_var("r", bool)
+  fun goals_to_string (gs, _) =
+      String.concatWith "; " (map (term_to_string o snd) gs)
+  fun leaves msg tac g want =
+      (tprint msg;
+       require_msg
+         (check_result
+            (fn (gs, _) => ListPair.allEq (fn ((_, c), w) => c ~~ w)
+                                          (gs, want)))
+         goals_to_string (runtac (VALID tac)) g)
+  fun gives msg conv t want =
+      (tprint msg;
+       require_msg (check_result (fn th => rhs (concl th) ~~ want))
+                   thm_to_string (QCONV conv) t)
+  val taut_ss =
+      add_safe_solver (mk_tactic_solver ("taut", tautLib.TAUT_TAC)) bool_ss
+  val contrapos = “(p ==> q) ==> ~q ==> ~p”
+  val cond_rule = ASSUME “!x:'a. P x ==> (f x = (a:'a))”
+  val bool_split = splitLib.type_split_of bool
+  val cond_goal = “P (if b then x else (y:'a)) : bool”
+  val split_goal = “(b ==> P (x:'a)) /\ (~b ==> P y)”
+  val threaded = prove(
+    “(!x:'a. P x = Q x) ==> (!x:'a. Q x ==> (f x = g x)) ==>
+     (!x:'a. (Q x /\ g x) = h x) ==>
+     ((?x:'a. P x /\ f x) = (?x:'a. h x))”,
+    DISCH_TAC THEN DISCH_TAC THEN
+    DISCH_THEN (fn rebuilt => REWRITE_TAC [GSYM rebuilt]) THEN
+    AP_TERM_TAC THEN ABS_TAC THEN ASM_REWRITE_TAC [] THEN
+    ASM_CASES_TAC “Q (x:'a) : bool” THEN RES_TAC THEN ASM_REWRITE_TAC [])
+  fun global concl_in_fixpoint imp_rebuild imp_premises : xsimptac_config =
+      {base = {strip = true, elimvars = false, droptrues = true,
+               oldestfirst = true},
+       concl_in_fixpoint = concl_in_fixpoint, imp_rebuild = imp_rebuild,
+       imp_premises = imp_premises}
+  val (once_ss, once_ths) =
+      prepare_rewrite_arguments pureSimps.pure_ss
+                                [Once AND_CLAUSES]
+  val bundled_ss =
+      install_rewrite_bundle (prepare_rewrite_bundle once_ss once_ths) []
+                             once_ss
+  val TTp = “T /\ T /\ p”
+in
+  leaves "Looper splits the simplified goal"
+         (SIMP_TAC (add_looper ("conj", K CONJ_TAC) bool_ss) [])
+         ([], mk_conj(p, q)) [p, q];
+  leaves "ExclX looper: excludes a looper"
+         (SIMP_TAC (add_looper ("conj", K CONJ_TAC) bool_ss)
+                   [ExclX "looper:conj"])
+         ([], mk_conj(p, q)) [mk_conj(p, q)];
+  leaves "ExclX rule: excludes a rewrite"
+         (SIMP_TAC bool_ss [ExclX "rule:EXISTS_SIMP"])
+         ([], “?x:'a. p”) [“?x:'a. p”];
+  leaves "A limit bounds the loopers of one call"
+         (SIMP_TAC (limit 1 (add_looper ("conj", K CONJ_TAC) bool_ss)) [])
+         ([], list_mk_conj [p, q, r]) [p, mk_conj(q, r)];
+  tprint "Safe solvers are used only in safe mode";
+  require_msg (check_result (equal (0, 1)))
+    (fn (m, n) => Int.toString m ^ " and " ^ Int.toString n ^ " goals")
+    (fn g => (length (fst (runtac (GEN_SIMP_TAC {safe = true} taut_ss []) g)),
+              length (fst (runtac (GEN_SIMP_TAC {safe = false} taut_ss [])
+                                  g))))
+    ([], contrapos);
+  leaves "ExclX solver: excludes a solver"
+         (GEN_SIMP_TAC {safe = true} taut_ss [ExclX "solver:taut"])
+         ([], contrapos) [contrapos];
+  gives "Side-condition depth 0 leaves conditional rewrites unused"
+        (SIMP_CONV (set_cond_depth 0 bool_ss)
+                   [cond_rule, ASSUME “(P:'a -> bool) b”])
+        “(f:'a -> 'a) b” “(f:'a -> 'a) b”;
+  gives "Term order decides permutative rewrites"
+        (SIMP_CONV (set_term_ord (fn (s, t) => Term.compare (t, s)) bool_ss)
+                   [CONJ_COMM])
+        (mk_conj(p, q)) (mk_conj(q, p));
+  leaves "Split splits a conditional" (SIMP_TAC bool_ss [Split bool_split])
+         ([], cond_goal) [split_goal];
+  tprint "type_asm_split_of gives an assumption rule";
+  require_msg (check_result I) Bool.toString
+    (splitLib.is_asm_split o splitLib.type_asm_split_of) bool;
+  leaves "SPLIT_TAC splits a conditional"
+         (splitLib.SPLIT_TAC [bool_split]) ([], cond_goal) [split_goal];
+  tprint "[split] theorems are split rules until excluded";
+  require_msg (check_result (equal (["scratch$bool_split"], [])))
+    (fn (l1, l2) => String.concatWith "," l1 ^ "; " ^
+                    String.concatWith "," l2)
+    (fn th =>
+        (splitLib.enable_split_attribute ();
+         HOLFlags.set_flag (Theory.save_thm_reporting, 0);
+         ignore (save_thm ("bool_split[split]", th));
+         let val recorded = map #1 (splitLib.named_split_thms ())
+         in
+           splitLib.exclude_split "bool_split";
+           (recorded, map #1 (splitLib.named_split_thms ()))
+         end))
+    bool_split;
+  leaves "ExclX excludes a split rule"
+         (SIMP_TAC (add_split bool_split bool_ss)
+                   [ExclX ("split:" ^ splitLib.split_thm_name bool_split)])
+         ([], cond_goal) [cond_goal];
+  leaves "split_ss splits a datatype's case expressions"
+         (SIMP_TAC (bool_ss ++ split_ss) []) ([], cond_goal) [split_goal];
+  leaves "ExclX case: excludes a datatype from split_ss"
+         (SIMP_TAC (bool_ss ++ split_ss) [ExclX "case:bool"])
+         ([], cond_goal) [cond_goal];
+  leaves "ExclX excludes a case split by its display name"
+         (SIMP_TAC (bool_ss ++ split_ss) [ExclX "split.case bool"])
+         ([], cond_goal) [cond_goal];
+  gives "Threaded congruence rule"
+        (SIMP_CONV (bool_ss ++ threaded_cong_ss [threaded])
+                   [ASSUME “!y:'a. bnd y ==> (bdy y <=> bdy' y)”])
+        “?x:'a. bnd x /\ bdy x” “?x:'a. bnd x /\ bdy' x”;
+  leaves "imp_premises moves premises to the assumptions"
+         (GEN_GLOBAL_SIMP_TAC {safe = false} (global true false true)
+                              bool_ss [])
+         ([], “(x = (a:'a)) ==> (y = x) ==> P y”) [“(P:'a -> bool) a”];
+  tprint "concl_in_fixpoint simplifies assumptions a looper adds";
+  require_msg
+    (check_result (fn ([(asl, _)], _) => tmem “(Q:'a -> bool) a” asl
+                    | _ => false))
+    goals_to_string
+    (runtac (VALID (GEN_GLOBAL_SIMP_TAC {safe = false}
+                      (global true false false)
+                      (add_looper ("strip", K STRIP_TAC) bool_ss) [])))
+    ([“(Q:'a -> bool) x”], “(x = (a:'a)) ==> P x”);
+  leaves "imp_rebuild rewrites an assumption and the conclusion together"
+         (GEN_GLOBAL_SIMP_TAC {safe = false} (global false true false)
+                              bool_ss [IMP_DISJ_THM])
+         ([p], q) [mk_disj(mk_neg p, q)];
+  let
+    val f = “f : 'a -> 'a” and g = “g : 'a -> 'a”
+    val a = “a : 'a” and b = “b : 'a”
+    val x = “x : 'a”
+    val Qx = “(Q : 'a -> bool) x” and Rx = “(R : 'a -> bool) x”
+    (* f (g x) = a only if f (g x) is rewritten before g x *)
+    val fg_rule = ASSUME “!y:'a. ^f (^g y) = ^a”
+    val g_rule = ASSUME “!y:'a. ^g y = ^b”
+    val whole = ASSUME “!y:'a. (^f (^g y) = ^a) ==>
+                               (((Q : 'a -> bool) y ==> (R : 'a -> bool) y)
+                                = T)”
+    val no_charge = mk_HOL_ERR "selftest" "charge" "charged"
+    fun child_first_global ths =
+        GEN_GLOBAL_SIMP_TAC_CHILD_FIRST
+          {charge = fn () => raise no_charge, keep_abstraction = K false}
+          {safe = false} (global false false true)
+          (bool_ss ++ rewrites [fg_rule, g_rule]) ths
+  in
+    (* The rules are assumed, so the tactic's theorem has their hypotheses
+       and is not checked with VALID *)
+    tprint "Child-first global root rewrites solve side conditions \
+           \parent-first, without charging";
+    require_msg (check_result (null o fst)) goals_to_string
+                (runtac (child_first_global [whole])) ([], mk_imp (Qx, Rx))
+  end;
+  gives "A rewrite bundle's bound is shared across calls"
+        (SIMP_CONV bundled_ss [] THENC SIMP_CONV bundled_ss []) TTp
+        “T /\ p”;
+  let
+    (* The Once allowance of once_ss is shared across its calls *)
+    val once_ss =
+        install_rewrite_bundle (prepare_rewrite_bundle once_ss once_ths) []
+                               once_ss
+    val {normalize, arguments, ...} =
+        prepare_child_first {charge = K (), keep_abstraction = K false}
+                            once_ss
+    val fTpTq = “(f:bool -> bool -> bool) (T /\ p) (T /\ q)”
+  in
+    (* normalize uses the Once rewrite, then restores its one use *)
+    gives "Prepared conversions restore the Once count afterwards"
+          (normalize [] THENC SIMP_CONV once_ss []) TTp p;
+    (* SIMP_CONV has used up the allowance; normalize starts afresh *)
+    gives "Each prepared normalize starts with the full Once allowance"
+          (normalize [] THENC normalize []) TTp p;
+    tprint "Prepared arguments share one Once allowance";
+    require_msg
+      (check_result
+         (fn th => tmem (rhs (concl th))
+                        [“(f:bool -> bool -> bool) p (T /\ q)”,
+                         “(f:bool -> bool -> bool) (T /\ p) q”]))
+      thm_to_string (arguments []) fTpTq
+  end;
+  let
+    val a = ASSUME “(fa:'a -> 'a) x = y”
+    and b = ASSUME “(fb:'a -> 'a) x = z”
+    val av = ASSUME “(fv:'a -> 'a) x = y”
+    val ab_ss = pureSimps.pure_ss ++ rewrites [CONJ a b]
+    fun handle_of th ss =
+        valOf (List.find (fn h => concl (#2 (source_rewrite h)) ~~ concl th)
+                         (rewrite_source_handles ss))
+    val (once_ss, once_ths) =
+        prepare_rewrite_arguments pureSimps.pure_ss [Once a]
+    val bundle = prepare_rewrite_bundle once_ss once_ths
+    val h = hd (#2 (hd (rewrite_bundle_rules bundle)))
+    val viewed_ss = install_rewrite_bundle bundle [(h, av)] once_ss
+    val faxfvx = “P ((fa:'a -> 'a) x) ((fv:'a -> 'a) x) : bool”
+  in
+    tprint "A rewrite view shares its handle's uses";
+    require_msg
+      (check_result
+         (fn th => tmem (rhs (concl th))
+                        [“P (y:'a) ((fv:'a -> 'a) x) : bool”,
+                         “P ((fa:'a -> 'a) x) (y:'a) : bool”]))
+      thm_to_string (SIMP_CONV viewed_ss []) faxfvx;
+    gives "A suspended rewrite source no longer rewrites"
+          (SIMP_CONV (suspend_rewrite_sources [handle_of a ab_ss] ab_ss) [])
+          “Q ((fa:'a -> 'a) x) ((fb:'a -> 'a) x) : bool”
+          “Q ((fa:'a -> 'a) x) (z:'a) : bool”;
+    tprint "Rewrite source handles survive rebuilding the simpset";
+    require (check_result I)
+      (fn ss =>
+          let val rebuilt = remove_ssfrags ["drop"]
+                              (ss ++ name_ss "drop" (rewrites [av]))
+          in
+            ListPair.allEq same_rewrite_source
+              (rewrite_source_handles ss, rewrite_source_handles rebuilt)
+          end) ab_ss;
+    tprint "rewrite_context_changes reports an added conversion's key";
+    require (check_result I)
+      (fn ss =>
+          let
+            val fv_ss = std_conv_ss {name = "fv", conv = NO_CONV,
+                                     pats = [“(fv:'a -> 'a) x”]}
+            val {keys, rebuild, ...} =
+                rewrite_context_changes (ss, ss ++ fv_ss)
+          in
+            not rebuild andalso
+            List.exists (fn (_, k) => k ~~ “(fv:'a -> 'a) x”) keys
+          end) ab_ss
+  end
+end
+
+(* User reducers *)
+val _ = let
+  exception Unused
+  val seen = ref ([] : string list)
+  val p = mk_var("p", bool) and q = mk_var("q", bool)
+  fun ord_name term_ord =
+      case term_ord (p, q) of LESS => "<" | EQUAL => "=" | GREATER => ">"
+  fun note s tm = (seen := s :: !seen; NO_CONV tm)
+  val config = Traverse.CONFIG_REDUCER
+    {name = SOME "config", initial = Unused, addcontext = #1,
+     apply = fn {cond_depth, term_ord, ...} =>
+       note ("config " ^ (case cond_depth of NONE => "none"
+                                           | SOME n => Int.toString n) ^
+             ord_name term_ord)}
+  val context = Traverse.CONTEXT_REDUCER
+    {name = SOME "context", initial = Unused, addcontext = #1,
+     apply = fn {cond_depth, term_ord, ...} =>
+       note ("context " ^ Int.toString cond_depth ^ ord_name term_ord)}
+  val ss = set_term_ord (fn _ => GREATER)
+             (set_cond_depth 2
+                (pureSimps.pure_ss ++ dproc_ss config ++ dproc_ss context))
+  fun run () =
+      (seen := [];
+       ignore (QCONV (SIMP_CONV ss []) p);
+       #apply (Traverse.dest_reducer config)
+         {solver = K (K TRUTH), conv = K (K TRUTH), context = Unused,
+          stack = [], relation = (equality, K TRUTH)} p
+         handle HOL_ERR _ => TRUTH;
+       !seen)
+in
+  tprint "User reducers get the side-condition depth and term order";
+  require_msg
+    (check_result (fn l => Lib.mem "config 2>" l andalso
+                           Lib.mem "context 2>" l andalso
+                           List.exists (String.isPrefix "config none") l))
+    (String.concatWith ", ") run ()
+end
+
 val _ = exit_count0 failcount
