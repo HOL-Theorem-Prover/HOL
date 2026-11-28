@@ -645,9 +645,18 @@ val track = with_tracking
 
 fun tyi_to_ssdata tyinfo =
     let
-      val {name, thy, convs, rewrs} = simpCommon.tyi_frag_parts tyinfo
+      val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
+      val tyname = thy ^ "$" ^ tyop
+      val {rewrs = rws0, convs} = TypeBasePure.simpls_of tyinfo;
+      fun name_of th i =
+          case DB.revlookup th of
+              DB_dtype.Stored {Thy, Name} :: _ => {Thy = Thy, Name = Name}
+            | _ => {Thy = "", Name = tyname ^ " simpl. " ^ Int.toString i}
+      fun reduce (th, (i,A)) =
+          (i + 1, (SOME (name_of th i), th) :: A)
+      val (_, rewrs) = liteLib.foldl reduce (1,[]) rws0
     in
-      SSFRAG_CON {name = SOME name,
+      SSFRAG_CON {name = SOME ("Datatype "^tyname),
                   convs = map (fn c => {thypart=SOME thy,cd = c}) convs,
                   rewrs = rewrs, filter = NONE,
                   dprocs = [], ac = [], congs = [], relsimps = []}

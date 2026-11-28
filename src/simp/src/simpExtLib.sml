@@ -3167,17 +3167,7 @@ val track = Cond_rewr.with_tracking
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun tyi_to_ssdata tyinfo =
-    let
-      val {name, thy, convs, rewrs} = simpCommon.tyi_frag_parts tyinfo
-      val convs = map (lift_conv (SOME thy)) convs
-      val rewrs = map source_slot rewrs
-    in
-      SSFRAG_CON
-        {name=SOME name, convs=convs, rewrs=rewrs, ac=[], views=[],
-         filter=NONE, dprocs=[], congs=[], threaded_congs=[], relsimps=[],
-         loopers=[], unsafe_solvers=[], safe_solvers=[]}
-    end
+fun tyi_to_ssdata tyinfo = lift_ssfrag (simpLib.tyi_to_ssdata tyinfo)
 
 fun type_ssfrag ty = simpCommon.type_ssfrag tyi_to_ssdata ty
 

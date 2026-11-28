@@ -216,18 +216,28 @@ val _ = let
   val y = ``cond_ext_y:bool``
   val z = ``cond_ext_z:bool``
   fun mk l r = mk_thm ([], mk_eq (l,r))
+  (* Each equation with terms to rewrite and the expected result: a
+     permutation rewrites only downward in the term ordering, an equation
+     whose sides are equal never. *)
+  fun cx (l,r) = mk_conj (l,r)
+  fun dx (l,r) = mk_disj (l,r)
   val eqns =
-    [("perm",mk (mk_conj (x,y)) (mk_conj (y,x))),
-     ("nested perm",mk (mk_conj (x,mk_disj (y,z)))
-                       (mk_conj (z,mk_disj (x,y)))),
-     ("fewer variables",mk (mk_conj (x,y)) (mk_conj (x,x))),
-     ("other shape",mk (mk_conj (x,y)) (mk_disj (y,x))),
-     ("same shape",mk (mk_conj (x,y)) (mk_conj (x,y)))]
-  fun swapped t = subst [x |-> y, y |-> x] t
+    [("perm",mk (cx (x,y)) (cx (y,x)),
+      [(cx (x,y),NONE), (cx (y,x),SOME (cx (x,y)))]),
+     ("nested perm",mk (cx (x,dx (y,z))) (cx (z,dx (x,y))),
+      [(cx (x,dx (y,z)),NONE), (cx (y,dx (x,z)),NONE),
+       (cx (z,dx (x,y)),SOME (cx (y,dx (z,x))))]),
+     ("fewer variables",mk (cx (x,y)) (cx (x,x)),
+      [(cx (x,y),SOME (cx (x,x))), (cx (y,x),SOME (cx (y,y)))]),
+     ("other shape",mk (cx (x,y)) (dx (y,x)),
+      [(cx (x,y),SOME (dx (y,x))), (cx (y,x),SOME (dx (x,y)))]),
+     ("same shape",mk (cx (x,y)) (cx (x,y)),
+      [(cx (x,y),NONE), (cx (y,x),NONE)])]
   fun outcome f = case Exn.capture f () of
                       Exn.Res th => SOME th
                     | Exn.Exn _ => NONE
-  fun agree (nm,th) tm =
+  (* All three runners rewrite tm to want, or all refuse it *)
+  fun rewrites th (tm,want) =
     let val ord = outcome (fn () =>
           Cond_rewr.COND_REWR_CONV ("agree",th) false solver [] tm)
         val ext = outcome (fn () =>
@@ -236,23 +246,14 @@ val _ = let
         val cfg = outcome (fn () =>
           #configured (Cond_rewrExt.COND_REWR_CONVS ("agree",th) false)
             (default solver [] NONE) tm)
-    in case (ord,ext,cfg) of
-           (NONE,NONE,NONE) => true
-         | (SOME a,SOME b,SOME c) => same a b andalso same a c
-         | _ => false
-    end
-  val _ = check "engines accept and refuse the same permutative rewrites"
-    (List.all (fn (nm,th) =>
-         let val l = lhs (concl th) in
-           agree (nm,th) l andalso agree (nm,th) (swapped l)
-         end) eqns)
-  val _ = check "permutative rewrites are refused in one orientation"
-    (let val th = #2 (hd eqns)
-         val l = lhs (concl th)
-         val rs = map (fn t => isSome (outcome (fn () =>
-               Cond_rewr.COND_REWR_CONV ("perm",th) false solver [] t)))
-               [l,swapped l]
-     in List.exists (fn b => b) rs andalso List.exists not rs end)
+        fun as_wanted res =
+          case (res,want) of
+              (NONE,NONE) => true
+            | (SOME th',SOME r) => aconv (concl th') (mk_eq (tm,r))
+            | _ => false
+    in List.all as_wanted [ord,ext,cfg] end
+  val _ = check "engines rewrite each permutative fixture as expected"
+    (List.all (fn (_,th,cases) => List.all (rewrites th) cases) eqns)
   val _ = check "AC legacy proof agrees with direct ordinary constructor"
     (same (#legacy pair solver [] down) want andalso
      same (Cond_rewr.COND_REWR_CONV ("commute",perm) false

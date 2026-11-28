@@ -928,22 +928,6 @@ end
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun tyi_frag_parts tyinfo =
-    let
-      val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
-      val tyname = thy ^ "$" ^ tyop
-      val {rewrs = rws0, convs} = TypeBasePure.simpls_of tyinfo;
-      fun name_of th i =
-          case DB.revlookup th of
-              DB_dtype.Stored {Thy, Name} :: _ => {Thy = Thy, Name = Name}
-            | _ => {Thy = "", Name = tyname ^ " simpl. " ^ Int.toString i}
-      fun reduce (th, (i,A)) =
-          (i + 1, (SOME (name_of th i), th) :: A)
-      val (_, rewrs) = liteLib.foldl reduce (1,[]) rws0
-    in
-      {name = "Datatype "^tyname, thy = thy, convs = convs, rewrs = rewrs}
-    end
-
 fun type_ssfrag tyi_to_ssdata ty =
     case TypeBase.fetch ty of
         NONE => raise ERR ("type_ssfrag", "No TypeBase info for type")

@@ -157,11 +157,6 @@ sig
        asm_simp_tac : 's -> thm list -> tactic} ->
       simptac_config -> 's -> thm list -> tactic
 
-  val tyi_frag_parts :
-      TypeBasePure.tyinfo ->
-      {name : string, thy : string,
-       convs : convdata list, rewrs : (thname option * thm) list}
-
   val type_ssfrag : (TypeBasePure.tyinfo -> 'f) -> hol_type -> 'f
 
   val pp_ssfrag :
