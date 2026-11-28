@@ -282,6 +282,13 @@ New theories
     correctness equation. AKS numeric computations and elliptic prime-field
     computations now share this implementation.
 
+-   `diagdom` (in `src/real`): a symmetric real matrix whose rows are
+    (weighted) diagonally dominant has a non-negative quadratic form,
+    and a positive one when the dominance is strict
+    (`DIAGONALLY_DOMINANT_PSD`, `DIAGONALLY_DOMINANT_PD`).  Matrices are
+    functions `num -> num -> real` and sums are `real_sigma`'s `sum`
+    over `count n`.
+
 -  `lebesgue_measure`: The equivalence of Lebesgue and Gauge integration.
    A (measurable) function is Lebesgue integrable iff it is Gauge absolutely integrable.
    Theorems in this theory (*e.g.*, `lebesgue_eq_gauge_integral`, `lebesgue_eq_gauge_integral_alt`, *etc.*) can be used to calculate concrete Lebesgue integrals found in Probability applications, etc. (in form of `integral lborel (Normal o f)` where `f IN borel_measurable borel`) by Fundamental Theorem of Calculus (FTC) from `integration` theory, if the anti-derivative of `f` is known (or computable by external CAS software).
